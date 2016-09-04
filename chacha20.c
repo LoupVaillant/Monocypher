@@ -137,8 +137,8 @@ chacha20_rounds(uint32_t output[16], const crypto_chacha_ctx *ctx)
     output[15] = x15;
 }
 
-static void
-chacha20_block(uint8_t output[64], const crypto_chacha_ctx *ctx)
+void
+crypto_block_chacha20(uint8_t output[64], crypto_chacha_ctx *ctx)
 {
     uint32_t buffer[16];
     chacha20_rounds(buffer, ctx);
@@ -172,13 +172,21 @@ chacha20_block(uint8_t output[64], const crypto_chacha_ctx *ctx)
         uint32_t sum = buffer[i] + ctx->input[i];
         store32_le(output + i*4, sum);
     }
+
+    // finally, we increment the counter
+    ctx->input[12]++;
+    if (!ctx->input[12])   // The counter is not secret, so this conditional
+        ctx->input[13]++;  // doesn't introduce any timing attack.
 }
 
-// This one is the same as chacha20_block, only it gives you only
+// This one is like crypto_block_chacha20, only it gives you only
 // half the output (256 bytes). It's basically the same as HSalsa20,
 // except build on ChaCha.  It is provably as secure as ChaCha20
+//
+// It's only used for XChacha20, so we just use it to initialize the key
+// space of an output context
 static void
-half_chacha20_block(uint32_t output[8], const crypto_chacha_ctx *ctx)
+init_Xkey(crypto_chacha_ctx *output, const crypto_chacha_ctx *ctx)
 {
     uint32_t buffer[16];
     chacha20_rounds(buffer, ctx);
@@ -196,8 +204,8 @@ half_chacha20_block(uint32_t output[8], const crypto_chacha_ctx *ctx)
     //
     // This lets us avoid a couple additional loads and additions,
     // for even moar speed.
-    memcpy(output, buffer     , sizeof(uint32_t) * 4);
-    memcpy(output, buffer + 12, sizeof(uint32_t) * 4);
+    memcpy(output->input + 4, buffer     , sizeof(uint32_t) * 4); // constant
+    memcpy(output->input + 8, buffer + 12, sizeof(uint32_t) * 4); // nonce, ctr
 }
 
 //////////////////////////////
@@ -239,15 +247,10 @@ init_key(crypto_chacha_ctx *ctx, const uint8_t key[32])
 }
 
 static void
-init_ctr(crypto_chacha_ctx *ctx, uint64_t ctr)
-{
-    ctx->input[12] = (uint32_t) ctr;                   // LSB
-    ctx->input[13] = (uint32_t) (ctr >> (uint64_t)32); // MSB
-}
-
-static void
 init_nonce(crypto_chacha_ctx *ctx, const uint8_t nonce[8])
 {
+    ctx->input[12] = 0; // counter
+    ctx->input[13] = 0; // counter
     ctx->input[14] = load32_le(nonce + 0);
     ctx->input[15] = load32_le(nonce + 4);
 }
@@ -261,33 +264,30 @@ init_big_nonce(crypto_chacha_ctx *ctx, const uint8_t nonce[16])
     ctx->input[15] = load32_le(nonce + 12);
 }
 
-static void
-init_chacha20(crypto_chacha_ctx *ctx,
-              const uint8_t      key[32],
-              const uint8_t      nonce[8],
-              uint64_t           ctr)
+///////////////////
+/// Exposed API ///
+///////////////////
+void
+crypto_init_chacha20(crypto_chacha_ctx *ctx,
+                     const uint8_t      key[32],
+                     const uint8_t      nonce[8])
 {
     init_constant(ctx       );
     init_key     (ctx, key  );
-    init_ctr     (ctx, ctr  );
     init_nonce   (ctx, nonce);
 }
 
-// Initializes a chacha context, with a bigger nonce.
-//
-// It uses a cascade scheme where a first block is initialised with
-// the first 128 bits of the nounce (and no counter), and a second block
-// is initialised with a derived key from the first block, and the
-// last 64 bits of the nonce.
-//
-// It's slower than regular initialization, but that big nonce can now
-// be selected at random without fear of collision.
-static void
-init_Xchacha20(crypto_chacha_ctx *ctx,
-               const uint8_t      key[32],
-               const uint8_t      nonce[24],
-               uint64_t           ctr)
+void
+crypto_init_Xchacha20(crypto_chacha_ctx *ctx,
+                      const uint8_t      key[32],
+                      const uint8_t      nonce[24])
 {
+    // Chacha20 doesn't have enough nonce space to accomodate for a 192 bits
+    // nonce.  So we're using a cascade scheme, where a first block is
+    // initialised with the first 128 bits of the nounce (and no counter),
+    // and a second block is initialised with a derived key from the first
+    // block, and the last 64 bits of the nonce.
+
     // initialise a first block
     crypto_chacha_ctx init_ctx;
     init_constant (&init_ctx       );
@@ -296,25 +296,20 @@ init_Xchacha20(crypto_chacha_ctx *ctx,
 
     // set up the cascade
     init_constant(ctx            );
-    init_ctr     (ctx, ctr       );
+    init_Xkey    (ctx, &init_ctx );
     init_nonce   (ctx, nonce + 16);
-    half_chacha20_block(ctx->input + 5, &init_ctx); // init derived key
 }
 
-//////////////////
-/// Encryption ///
-//////////////////
-static void
-encrypt_chacha20(crypto_chacha_ctx *ctx,
-                 const uint8_t     *plain_text,
-                 uint8_t           *cipher_text,
-                 size_t             msg_length)
+void
+crypto_encrypt_chacha20(crypto_chacha_ctx *ctx,
+                        const uint8_t     *plain_text,
+                        uint8_t           *cipher_text,
+                        size_t             msg_length)
 {
     size_t remaining_bytes = msg_length;
     for (;;) {
         uint8_t random_block[64];
-        chacha20_block(random_block, ctx);
-        increment_counter(ctx); // the only modification of the context
+        crypto_block_chacha20(random_block, ctx);
 
         // XOR the last pseudo-random block with the input,
         // then end the loop.
@@ -333,73 +328,21 @@ encrypt_chacha20(crypto_chacha_ctx *ctx,
     }
 }
 
-void
-crypto_encrypt_chacha20(const uint8_t  key[32],
-                        const uint8_t  nonce[8],
-                        uint64_t       ctr,
-                        const uint8_t *plain_text,
-                        uint8_t       *cipher_text,
-                        size_t         msg_length)
-{
-    crypto_chacha_ctx ctx;
-    init_chacha20(&ctx, key, nonce, ctr);
-    encrypt_chacha20(&ctx, plain_text, cipher_text, msg_length);
-}
-
-
-void
-crypto_encrypt_Xchacha20(const uint8_t  key[32],
-                         const uint8_t  nonce[24],
-                         uint64_t       ctr,
-                         const uint8_t *plain_text,
-                         uint8_t       *cipher_text,
-                         size_t         msg_length)
-{
-    crypto_chacha_ctx ctx;
-    init_Xchacha20(&ctx, key, nonce, ctr);
-    encrypt_chacha20(&ctx, plain_text, cipher_text, msg_length);
-}
-
-void
-crypto_block_chacha20(const uint8_t key[32],
-                      const uint8_t nonce[8],
-                      uint64_t      ctr,
-                      uint8_t       output[64])
-{
-    crypto_chacha_ctx ctx;
-    init_chacha20(&ctx, key, nonce, ctr);
-    chacha20_block(output, &ctx);
-}
-
-void
-crypto_block_Xchacha20(const uint8_t key[32],
-                       const uint8_t nonce[24],
-                       uint64_t      ctr,
-                       uint8_t       output[64])
-{
-    crypto_chacha_ctx ctx;
-    init_Xchacha20(&ctx, key, nonce, ctr);
-    chacha20_block(output, &ctx);
-}
-
 ///////////////////////////////
 /// Random number generator ///
 ///////////////////////////////
 void
-crypto_init_rng(crypto_rng_context *ctx,
-                const uint8_t       key[32],
-                const uint8_t       nonce[8])
+crypto_init_rng(crypto_rng_context *ctx, const uint8_t key[32])
 {
-    init_chacha20(&ctx->chacha_ctx, key, nonce, 0);
+    // note how we allwas use the same nonce
+    crypto_init_chacha20(&ctx->chacha_ctx, key, (uint8_t*)"01234567");
     ctx->remaining_bytes = 0;
 }
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 void
-crypto_random_bytes(crypto_rng_context *ctx,
-                    uint8_t            *out,
-                    size_t              nb_bytes)
+crypto_random_bytes(crypto_rng_context *ctx, uint8_t *out, size_t nb_bytes)
 {
     // Consume any remaining byte from a previous
     // call to random_bytes
@@ -413,14 +356,14 @@ crypto_random_bytes(crypto_rng_context *ctx,
 
     // fill the output stream block by block
     while (nb_bytes >= 64) {
-        chacha20_block(out, &ctx->chacha_ctx);
+        crypto_block_chacha20(out, &ctx->chacha_ctx);
         increment_counter(&ctx->chacha_ctx);
         out      += 64;
         nb_bytes -= 64;
     }
 
     // Generate one last block and finish this
-    chacha20_block(ctx->reminder, &ctx->chacha_ctx); // there was no reminder
+    crypto_block_chacha20(ctx->reminder, &ctx->chacha_ctx); // no reminder
     increment_counter(&ctx->chacha_ctx);
     memcpy(out, ctx->reminder, nb_bytes); // those two lines work even
     ctx->remaining_bytes = 64 - nb_bytes; // when nb_bytes is already 0
