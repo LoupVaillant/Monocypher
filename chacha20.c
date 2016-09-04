@@ -301,6 +301,9 @@ init_Xchacha20(crypto_chacha_ctx *ctx,
     half_chacha20_block(ctx->input + 5, &init_ctx); // init derived key
 }
 
+//////////////////
+/// Encryption ///
+//////////////////
 static void
 encrypt_chacha20(crypto_chacha_ctx *ctx,
                  const uint8_t     *plain_text,
@@ -330,9 +333,6 @@ encrypt_chacha20(crypto_chacha_ctx *ctx,
     }
 }
 
-//////////////////
-/// Encryption ///
-//////////////////
 void
 crypto_encrypt_chacha20(const uint8_t  key[32],
                         const uint8_t  nonce[8],
