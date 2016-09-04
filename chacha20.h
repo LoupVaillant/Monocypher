@@ -13,7 +13,6 @@ typedef struct crypto_chacha_ctx {
     uint32_t input[16];
 } crypto_chacha_ctx;
 
-
 // Initializes a chacha context.
 //
 // WARNING: DON'T USE THE SAME NONCE AND KEY TWICE
@@ -58,7 +57,7 @@ void
 crypto_block_chacha20(uint8_t output[64], crypto_chacha_ctx *ctx);
 
 // Encrypts the plain_text by XORing it with a pseudo-random
-// stream of numbers, seeded by the provided chacha20 contex.
+// stream of numbers, seeded by the provided chacha20 context.
 // It is built on top of crypto_chacha20_block, and can be safely
 // used with it, thus:
 //
@@ -72,8 +71,6 @@ crypto_encrypt_chacha20(crypto_chacha_ctx *ctx,
 
 
 ////////////////////////////////////////////////////////////////////////////////
-
-// Experimental: random number generator
 
 typedef struct crypto_rng_context {
     crypto_chacha_ctx chacha_ctx;
