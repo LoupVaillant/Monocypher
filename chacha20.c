@@ -159,10 +159,10 @@ chacha20_block(uint8_t output[64], const crypto_chacha_ctx *ctx)
     // don't try the whole key space.
     //
     // As of 2016, "low enough" means 6 or 7 rounds.  We use 20.
-    // This shoul be enough to prevent anyone from breaking them all
+    // This should be enough to prevent anyone from breaking them all
     // in the forseeable future.
     //
-    // Note that in principle, we don't have to add the constants nonce
+    // Note that in principle, we don't have to add the constant, nonce,
     // and counter: that part could be reversed by the attacker anyway
     // so we'd be just as secure if we didn't.  However that only improves
     // the performance of naive implementations such as this one.  With
