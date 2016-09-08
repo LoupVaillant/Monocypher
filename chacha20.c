@@ -187,8 +187,14 @@ init_Xkey(crypto_chacha_ctx *output, const crypto_chacha_ctx *ctx)
     //
     // This lets us avoid a couple additional loads and additions,
     // for even moar speed.
-    memcpy(output->input + 4, buffer     , sizeof(uint32_t) * 4); // constant
-    memcpy(output->input + 8, buffer + 12, sizeof(uint32_t) * 4); // nonce, ctr
+    output->input[ 4] = buffer[ 0]; // constant
+    output->input[ 5] = buffer[ 1]; // constant
+    output->input[ 6] = buffer[ 2]; // constant
+    output->input[ 7] = buffer[ 3]; // constant
+    output->input[ 8] = buffer[12]; // nonce
+    output->input[ 9] = buffer[13]; // nonce
+    output->input[10] = buffer[14]; // counter
+    output->input[11] = buffer[15]; // counter
 }
 
 //////////////////////////////
