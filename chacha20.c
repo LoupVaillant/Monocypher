@@ -51,10 +51,9 @@ increment_counter(crypto_chacha_ctx *ctx)
         ctx->input[13]++;
 }
 
-///////////////////////
-/// Round functions ///
-///////////////////////
-
+////////////
+/// Core ///
+////////////
 
 // Mangles the chacha context into a random-looking output.
 //
@@ -64,24 +63,17 @@ increment_counter(crypto_chacha_ctx *ctx)
 static void
 chacha20_rounds(uint32_t output[16], const crypto_chacha_ctx *ctx)
 {
-    // Local variables instead of indices, to facilitate optimisations
-    // TODO: test this shit.  The speed increase might be small.
-    uint32_t x0  = ctx->input[ 0];
-    uint32_t x1  = ctx->input[ 1];
-    uint32_t x2  = ctx->input[ 2];
-    uint32_t x3  = ctx->input[ 3];
-    uint32_t x4  = ctx->input[ 4];
-    uint32_t x5  = ctx->input[ 5];
-    uint32_t x6  = ctx->input[ 6];
-    uint32_t x7  = ctx->input[ 7];
-    uint32_t x8  = ctx->input[ 8];
-    uint32_t x9  = ctx->input[ 9];
-    uint32_t x10 = ctx->input[10];
-    uint32_t x11 = ctx->input[11];
-    uint32_t x12 = ctx->input[12];
-    uint32_t x13 = ctx->input[13];
-    uint32_t x14 = ctx->input[14];
-    uint32_t x15 = ctx->input[15];
+    // Local variables instead of indices, to facilitate optimisations.
+    // Compared to a local array, this is almost 10% faster on my machine
+    // (2016 laptop, intel i5 Skylake, 64 bits Linux, GCC version 5.4, -O2)
+    uint32_t x0  = ctx->input[ 0];    uint32_t x1  = ctx->input[ 1];
+    uint32_t x2  = ctx->input[ 2];    uint32_t x3  = ctx->input[ 3];
+    uint32_t x4  = ctx->input[ 4];    uint32_t x5  = ctx->input[ 5];
+    uint32_t x6  = ctx->input[ 6];    uint32_t x7  = ctx->input[ 7];
+    uint32_t x8  = ctx->input[ 8];    uint32_t x9  = ctx->input[ 9];
+    uint32_t x10 = ctx->input[10];    uint32_t x11 = ctx->input[11];
+    uint32_t x12 = ctx->input[12];    uint32_t x13 = ctx->input[13];
+    uint32_t x14 = ctx->input[14];    uint32_t x15 = ctx->input[15];
 
     for (int i = 20; i > 0; i -= 2) { // 20 rounds, 2 rounds per loop.
         // The ctx is viewed as a matrix, whose indices are like
@@ -119,22 +111,14 @@ chacha20_rounds(uint32_t output[16], const crypto_chacha_ctx *ctx)
         QUARTERROUND(x3, x4,  x9, x14); // diagonal 4
     }
 
-    output[ 0] = x0;
-    output[ 1] = x1;
-    output[ 2] = x2;
-    output[ 3] = x3;
-    output[ 4] = x4;
-    output[ 5] = x5;
-    output[ 6] = x6;
-    output[ 7] = x7;
-    output[ 8] = x8;
-    output[ 9] = x9;
-    output[10] = x10;
-    output[11] = x11;
-    output[12] = x12;
-    output[13] = x13;
-    output[14] = x14;
-    output[15] = x15;
+    output[ 0] = x0;    output[ 1] = x1;
+    output[ 2] = x2;    output[ 3] = x3;
+    output[ 4] = x4;    output[ 5] = x5;
+    output[ 6] = x6;    output[ 7] = x7;
+    output[ 8] = x8;    output[ 9] = x9;
+    output[10] = x10;   output[11] = x11;
+    output[12] = x12;   output[13] = x13;
+    output[14] = x14;   output[15] = x15;
 }
 
 void
@@ -145,7 +129,7 @@ crypto_block_chacha20(uint8_t output[64], crypto_chacha_ctx *ctx)
 
     // Now our buffer is seriously garbled.  However, it is still easy
     // to deduce the initial context from it: just invert the quarter
-    // rounds and apply that in reverse order.
+    // rounds (it's a school exercise, really).
     //
     // So we perform a final operation: we add the initial context to
     // the buffer.  Half of this initial context is made up of the key,
@@ -154,20 +138,19 @@ crypto_block_chacha20(uint8_t output[64], crypto_chacha_ctx *ctx)
     //
     // This effectively removes half the intel the attacker needs to
     // reverse the computation, forcing him to try all 2^256 possibilities.
-    // Well that's the idea anyway.  the security of  this trick is not
+    // Well that's the idea anyway.  The security of  this trick is not
     // proven, and with few enough rounds, there are clever schemes that
     // don't try the whole key space.
     //
-    // As of 2016, "low enough" means 6 or 7 rounds.  We use 20.
+    // As of 2016, "few enough" means 6 or 7 rounds.  We use 20.
     // This should be enough to prevent anyone from breaking them all
-    // in the forseeable future.
+    // in the forseeable future (say the experts).
     //
     // Note that in principle, we don't have to add the constant, nonce,
-    // and counter: that part could be reversed by the attacker anyway
-    // so we'd be just as secure if we didn't.  However that only improves
-    // the performance of naive implementations such as this one.  With
-    // SIMD, it's faster to just add the lot, so that's what the standard
-    // does.
+    // and counter: that part could be reversed by the attacker anyway.
+    // However, that would only improve the performance of naive
+    // implementations such as this one.  With SIMD, instructions, it's
+    // faster to just add the lot, so that's what the standard does.
     for (unsigned i = 0; i < 16; i++) {
         uint32_t sum = buffer[i] + ctx->input[i];
         store32_le(output + i*4, sum);
