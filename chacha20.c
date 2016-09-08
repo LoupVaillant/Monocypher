@@ -169,7 +169,8 @@ crypto_block_chacha20(uint8_t output[64], crypto_chacha_ctx *ctx)
 // It's only used for XChacha20, so we just use it to initialize the key
 // space of an output context
 static void
-init_Xkey(crypto_chacha_ctx *output, const crypto_chacha_ctx *ctx)
+init_Xkey(      crypto_chacha_ctx *restrict output,
+          const crypto_chacha_ctx *restrict ctx)
 {
     uint32_t buffer[16];
     chacha20_rounds(buffer, ctx);
@@ -191,10 +192,10 @@ init_Xkey(crypto_chacha_ctx *output, const crypto_chacha_ctx *ctx)
     output->input[ 5] = buffer[ 1]; // constant
     output->input[ 6] = buffer[ 2]; // constant
     output->input[ 7] = buffer[ 3]; // constant
-    output->input[ 8] = buffer[12]; // nonce
-    output->input[ 9] = buffer[13]; // nonce
-    output->input[10] = buffer[14]; // counter
-    output->input[11] = buffer[15]; // counter
+    output->input[ 8] = buffer[12]; // counter
+    output->input[ 9] = buffer[13]; // counter
+    output->input[10] = buffer[14]; // nonce
+    output->input[11] = buffer[15]; // nonce
 }
 
 //////////////////////////////
@@ -209,10 +210,10 @@ init_constant(crypto_chacha_ctx *ctx)
     //
     // Among other things, this constant prevents the existence of
     // the all zero context, which would map to an all zero output;
-    // and is "assymetric" enough to guarantee good mangling.
+    // it is also "asymetric" enough to guarantee good mangling.
     //
-    // Also, the very exstence of a constant reduces reduces the amount
-    // of the context that's under the control of the attacker (a fourth
+    // Also, the very exstence of a constant reduces the amount of
+    // context that's under the control of the attacker (a fourth
     // instead of a whole half).
     //
     // Simply put: keep the constant, it's safer that way.
@@ -323,7 +324,7 @@ crypto_encrypt_chacha20(crypto_chacha_ctx *ctx,
 void
 crypto_init_rng(crypto_rng_context *ctx, const uint8_t key[32])
 {
-    // note how we allwas use the same nonce
+    // note how we always use the same nonce
     crypto_init_chacha20(&ctx->chacha_ctx, key, (uint8_t*)"01234567");
     ctx->remaining_bytes = 0;
 }
