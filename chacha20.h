@@ -1,5 +1,5 @@
-#ifndef __CHACHA20__
-#define __CHACHA20__
+#ifndef CHACHA20_H
+#define CHACHA20_H
 
 #include <inttypes.h>
 #include <stddef.h>
@@ -93,4 +93,4 @@ crypto_init_rng(crypto_rng_context *ctx, const uint8_t key[32]);
 void
 crypto_random_bytes(crypto_rng_context *ctx, uint8_t *out, size_t nb_bytes);
 
-#endif // __CHACHA20__
+#endif // CHACHA20_H
