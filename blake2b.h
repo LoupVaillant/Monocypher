@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-// state context
+// blake2b context
 typedef struct {
     uint8_t  b[128]; // input buffer
     uint64_t h[8];   // chained state
@@ -16,7 +16,7 @@ typedef struct {
 // Initializes the context with user defined parameters:
 // outlen: the length of the hash.  Must be between 1 and 64.
 // keylen: length of the key.       Must be between 0 and 64.
-// key   : some secret key.  May be NULL if keylen is 0.
+// key   : some secret key.         May be NULL if keylen is 0.
 // Any deviation from these invariants results in UNDEFINED BEHAVIOR
 void
 crypto_general_blake2b_init(crypto_blake2b_ctx *ctx, size_t outlen,

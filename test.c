@@ -4,7 +4,11 @@
 #include <stddef.h>
 #include <string.h>
 #include "chacha20.h"
+#include "blake2b.h"
 
+/////////////////////////
+/// General utilities ///
+/////////////////////////
 static void*
 alloc(size_t size)
 {
@@ -37,6 +41,9 @@ uint_of_char(unsigned char c)
     exit(1);
 }
 
+////////////////////////
+/// Vector of octets ///
+////////////////////////
 typedef struct {
     uint8_t *buffer;
     size_t   buf_size;
@@ -84,6 +91,8 @@ vec_push_back(vector *v, uint8_t e)
     v->size++;
 }
 
+// Read a line into a vector
+// Free the vector's memory with vec_del()
 static vector
 read_hex_line(FILE *input_file)
 {
@@ -101,11 +110,14 @@ read_hex_line(FILE *input_file)
     return v;
 }
 
+////////////////////////
+/// The tests proper ///
+////////////////////////
 static int
 test_chacha20(char* filename)
 {
-    int status = 0;
-    FILE *file = file_open(filename);
+    int   status = 0;
+    FILE *file   = file_open(filename);
     while (getc(file) != EOF) {
         vector key    = read_hex_line(file);
         vector nonce  = read_hex_line(file);
@@ -127,9 +139,36 @@ test_chacha20(char* filename)
     return status;
 }
 
+static int
+test_blake2b(char* filename)
+{
+    int   status = 0;
+    FILE *file   = file_open(filename);
+    while (getc(file) != EOF) {
+        vector in   = read_hex_line(file);
+        vector key  = read_hex_line(file);
+        vector hash = read_hex_line(file);
+        vector out  = vec_new(hash.size);
+
+        crypto_general_blake2b(out.buffer, out.size,
+                               key.buffer, key.size,
+                               in .buffer, in .size);
+        status |= memcmp(out.buffer, hash.buffer, out.size);
+
+        vec_del(&out);
+        vec_del(&hash);
+        vec_del(&key);
+        vec_del(&in);
+    }
+    printf("%s: blake2b\n", status != 0 ? "FAILED" : "OK");
+    fclose(file);
+    return status;
+}
+
 int main(void)
 {
     int status = 0;
     status |= test_chacha20("vectors_chacha20.txt");
+    status |= test_blake2b ("vectors_blake2b.txt" );
     return status;
 }
