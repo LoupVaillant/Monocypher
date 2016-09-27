@@ -8,3 +8,4 @@ $CC $CFLAGS -c blake2b.c
 $CC $CFLAGS -c test.c
 
 $CC $CFLAGS -o test test.o chacha20.o blake2b.o
+$CC $CFLAGS -o speed_blake2b speed_blake2b.c blake2b.o
