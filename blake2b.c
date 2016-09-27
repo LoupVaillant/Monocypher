@@ -4,27 +4,25 @@
 
 // Cyclic right rotation.
 
-#ifndef ROTR64
-#define ROTR64(x, y)  (((x) >> (y)) ^ ((x) << (64 - (y))))
-#endif
+uint64_t
+rotr64(uint64_t x, uint64_t y)
+{
+    return (x >> y) ^ (x << (64 - y));
+}
 
-// Little-endian byte access.
-#define B2B_GET64(p)                                \
-    (( (uint64_t) ((uint8_t *) (p))[0]       ) ^    \
-     (((uint64_t) ((uint8_t *) (p))[1]) <<  8) ^    \
-     (((uint64_t) ((uint8_t *) (p))[2]) << 16) ^    \
-     (((uint64_t) ((uint8_t *) (p))[3]) << 24) ^    \
-     (((uint64_t) ((uint8_t *) (p))[4]) << 32) ^    \
-     (((uint64_t) ((uint8_t *) (p))[5]) << 40) ^    \
-     (((uint64_t) ((uint8_t *) (p))[6]) << 48) ^    \
-     (((uint64_t) ((uint8_t *) (p))[7]) << 56))
-
-// G Mixing function.
-#define B2B_G(a, b, c, d, x, y) {                                   \
-        v[a] = v[a] + v[b] + x;   v[d] = ROTR64(v[d] ^ v[a], 32);   \
-        v[c] = v[c] + v[d]    ;   v[b] = ROTR64(v[b] ^ v[c], 24);   \
-        v[a] = v[a] + v[b] + y;   v[d] = ROTR64(v[d] ^ v[a], 16);   \
-        v[c] = v[c] + v[d]    ;   v[b] = ROTR64(v[b] ^ v[c], 63); }
+uint64_t
+load64_le(uint8_t *p)
+{
+    return
+        ( (uint64_t) (p)[0]       ) ^
+        (((uint64_t) (p)[1]) <<  8) ^
+        (((uint64_t) (p)[2]) << 16) ^
+        (((uint64_t) (p)[3]) << 24) ^
+        (((uint64_t) (p)[4]) << 32) ^
+        (((uint64_t) (p)[5]) << 40) ^
+        (((uint64_t) (p)[6]) << 48) ^
+        (((uint64_t) (p)[7]) << 56);
+}
 
 // Initialization Vector.
 static const uint64_t blake2b_iv[8] = {
@@ -35,9 +33,10 @@ static const uint64_t blake2b_iv[8] = {
 };
 
 // Compression function. "last" flag indicates last block.
-static void blake2b_compress(crypto_blake2b_ctx *ctx, int last)
+static void
+blake2b_compress(crypto_blake2b_ctx *ctx, int last)
 {
-    const uint8_t sigma[12][16] = {
+    static const uint8_t sigma[12][16] = {
         { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
         { 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
         { 11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
@@ -64,9 +63,15 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int last)
         v[14] = ~v[14];
 
     for (i = 0; i < 16; i++) {          // get little-endian words
-        m[i] = B2B_GET64(&ctx->b[8 * i]);
+        m[i] = load64_le(&ctx->b[8 * i]);
     }
     for (i = 0; i < 12; i++) {          // twelve rounds
+#define B2B_G(a, b, c, d, x, y)                                         \
+        v[a] = v[a] + v[b] + x;   v[d] = rotr64(v[d] ^ v[a], 32);       \
+        v[c] = v[c] + v[d]    ;   v[b] = rotr64(v[b] ^ v[c], 24);       \
+        v[a] = v[a] + v[b] + y;   v[d] = rotr64(v[d] ^ v[a], 16);       \
+        v[c] = v[c] + v[d]    ;   v[b] = rotr64(v[b] ^ v[c], 63)
+
         B2B_G( 0, 4,  8, 12, m[sigma[i][ 0]], m[sigma[i][ 1]]);
         B2B_G( 1, 5,  9, 13, m[sigma[i][ 2]], m[sigma[i][ 3]]);
         B2B_G( 2, 6, 10, 14, m[sigma[i][ 4]], m[sigma[i][ 5]]);
@@ -115,7 +120,7 @@ crypto_blake2b_init(crypto_blake2b_ctx *ctx)
 
 void
 crypto_blake2b_update(crypto_blake2b_ctx *ctx,
-                      const void *in, size_t inlen)       // data bytes
+                      const uint8_t *in, size_t inlen)
 {
     size_t i;
 
@@ -133,7 +138,7 @@ crypto_blake2b_update(crypto_blake2b_ctx *ctx,
 }
 
 void
-crypto_blake2b_final(crypto_blake2b_ctx *ctx, void *out)
+crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *out)
 {
     size_t i;
 
@@ -153,9 +158,9 @@ crypto_blake2b_final(crypto_blake2b_ctx *ctx, void *out)
 }
 
 void
-crypto_general_blake2b(void *out, size_t outlen,
-                       const void *key, size_t keylen,
-                       const void *in, size_t inlen)
+crypto_general_blake2b(      uint8_t*out, size_t outlen,
+                       const uint8_t*key, size_t keylen,
+                       const uint8_t*in, size_t inlen)
 {
     crypto_blake2b_ctx ctx;
     crypto_blake2b_general_init(&ctx, outlen, key, keylen);
@@ -164,7 +169,7 @@ crypto_general_blake2b(void *out, size_t outlen,
 }
 
 void
-crypto_blake2b(void *out, const void *in, size_t inlen)
+crypto_blake2b(uint8_t *out, const uint8_t *in, size_t inlen)
 {
     crypto_general_blake2b(out, 64, 0, 0, in, inlen);
 }

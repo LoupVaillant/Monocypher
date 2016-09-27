@@ -20,7 +20,7 @@ typedef struct {
 // Any deviation from these invariants results in UNDEFINED BEHAVIOR
 void
 crypto_general_blake2b_init(crypto_blake2b_ctx *ctx, size_t outlen,
-                            const void         *key, size_t keylen);
+                            const uint8_t      *key, size_t keylen);
 
 // Convenience function: 64 bytes hash, no secret key.
 void
@@ -28,21 +28,21 @@ crypto_blake2b_init(crypto_blake2b_ctx *ctx);
 
 // Add "inlen" bytes from "in" into the hash.
 void
-crypto_blake2b_update(crypto_blake2b_ctx *ctx, const void *in, size_t inlen);
+crypto_blake2b_update(crypto_blake2b_ctx *ctx, const uint8_t *in, size_t inlen);
 
 // Generate the message digest (size given in init).
 void
-crypto_blake2b_final(crypto_blake2b_ctx *ctx, void *out);
+crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *out);
 
 // All-in-one convenience function.
 void
-crypto_general_blake2b(void       *out, size_t outlen, // digest
-                       const void *key, size_t keylen, // optional secret key
-                       const void *in , size_t inlen); // data to be hashed
+crypto_general_blake2b(      uint8_t *out, size_t outlen, // digest
+                       const uint8_t *key, size_t keylen, // optional secret key
+                       const uint8_t *in , size_t inlen); // data to be hashed
 
 // All-in-one convenience function: 64 bytes hash, no secret key.
 void
-crypto_blake2b(void *out, const void *in, size_t inlen);
+crypto_blake2b(uint8_t *out, const uint8_t *in, size_t inlen);
 
 
 
