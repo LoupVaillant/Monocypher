@@ -5,6 +5,7 @@
 #include <string.h>
 #include "chacha20.h"
 #include "blake2b.h"
+#include "poly1305.h"
 
 /////////////////////////
 /// General utilities ///
@@ -61,11 +62,18 @@ vec_new(size_t buf_size)
 }
 
 static vector
-vec_zero(size_t size)
+vec_uninitialized(size_t size)
 {
     vector v = vec_new(size);
-    memset(v.buffer, 0, size);
     v.size = size;
+    return v;
+}
+
+static vector
+vec_zero(size_t size)
+{
+    vector v = vec_uninitialized(size);
+    memset(v.buffer, 0, size);
     return v;
 }
 
@@ -148,11 +156,11 @@ test_blake2b(char* filename)
         vector in   = read_hex_line(file);
         vector key  = read_hex_line(file);
         vector hash = read_hex_line(file);
-        vector out  = vec_new(hash.size);
+        vector out  = vec_uninitialized(hash.size);
 
-        crypto_general_blake2b(out.buffer, out.size,
-                               key.buffer, key.size,
-                               in .buffer, in .size);
+        crypto_general_blake2b(out.buffer, hash.size,
+                               key.buffer, key .size,
+                               in .buffer, in  .size);
         status |= memcmp(out.buffer, hash.buffer, out.size);
 
         vec_del(&out);
@@ -165,10 +173,35 @@ test_blake2b(char* filename)
     return status;
 }
 
+static int
+test_poly1305(char *filename)
+{
+    int   status = 0;
+    FILE *file   = file_open(filename);
+    while (getc(file) != EOF) {
+        vector key = read_hex_line(file);
+        vector msg = read_hex_line(file);
+        vector tag = read_hex_line(file);
+        vector out = vec_uninitialized(tag.size);
+
+        crypto_poly1305_auth(out.buffer, msg.buffer, msg.size, key.buffer);
+        status |= memcmp(out.buffer, tag.buffer, out.size);
+
+        vec_del(&out);
+        vec_del(&tag);
+        vec_del(&msg);
+        vec_del(&key);
+    }
+    printf("%s: poly1305\n", status != 0 ? "FAILED" : "OK");
+    fclose(file);
+    return status;
+}
+
 int main(void)
 {
     int status = 0;
     status |= test_chacha20("vectors_chacha20.txt");
     status |= test_blake2b ("vectors_blake2b.txt" );
+    status |= test_poly1305("vectors_poly1305.txt");
     return status;
 }
