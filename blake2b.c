@@ -3,14 +3,13 @@
 #include "blake2b.h"
 
 // Cyclic right rotation.
-
-uint64_t
+static uint64_t
 rotr64(uint64_t x, uint64_t y)
 {
     return (x >> y) ^ (x << (64 - y));
 }
 
-uint64_t
+static uint64_t
 load64_le(uint8_t *p)
 {
     return
@@ -66,11 +65,11 @@ blake2b_compress(crypto_blake2b_ctx *ctx, int last)
         m[i] = load64_le(&ctx->b[8 * i]);
     }
     for (i = 0; i < 12; i++) {          // twelve rounds
-#define B2B_G(a, b, c, d, x, y)                                         \
-        v[a] = v[a] + v[b] + x;   v[d] = rotr64(v[d] ^ v[a], 32);       \
-        v[c] = v[c] + v[d]    ;   v[b] = rotr64(v[b] ^ v[c], 24);       \
-        v[a] = v[a] + v[b] + y;   v[d] = rotr64(v[d] ^ v[a], 16);       \
-        v[c] = v[c] + v[d]    ;   v[b] = rotr64(v[b] ^ v[c], 63)
+#define B2B_G(a, b, c, d, x, y)                                   \
+        v[a] += v[b] + x;   v[d] = rotr64(v[d] ^ v[a], 32);       \
+        v[c] += v[d]    ;   v[b] = rotr64(v[b] ^ v[c], 24);       \
+        v[a] += v[b] + y;   v[d] = rotr64(v[d] ^ v[a], 16);       \
+        v[c] += v[d]    ;   v[b] = rotr64(v[b] ^ v[c], 63)
 
         B2B_G( 0, 4,  8, 12, m[sigma[i][ 0]], m[sigma[i][ 1]]);
         B2B_G( 1, 5,  9, 13, m[sigma[i][ 2]], m[sigma[i][ 3]]);
