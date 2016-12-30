@@ -2,3 +2,4 @@
 *~
 *.o
 test
+speed_blake2b
