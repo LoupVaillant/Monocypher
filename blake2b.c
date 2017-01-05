@@ -89,7 +89,7 @@ blake2b_compress(crypto_blake2b_ctx *ctx, int last)
 void
 crypto_blake2b_general_init(crypto_blake2b_ctx *ctx,
                             size_t              outlen,
-                            const void         *key,
+                            const uint8_t      *key,
                             size_t              keylen)
 {
 

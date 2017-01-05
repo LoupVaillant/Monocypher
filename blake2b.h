@@ -19,7 +19,7 @@ typedef struct {
 // key   : some secret key.         May be NULL if keylen is 0.
 // Any deviation from these invariants results in UNDEFINED BEHAVIOR
 void
-crypto_general_blake2b_init(crypto_blake2b_ctx *ctx, size_t outlen,
+crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t outlen,
                             const uint8_t      *key, size_t keylen);
 
 // Convenience function: 64 bytes hash, no secret key.
