@@ -6,6 +6,7 @@
 #include "chacha20.h"
 #include "blake2b.h"
 #include "poly1305.h"
+#include "argon2i.h"
 
 /////////////////////////
 /// General utilities ///
@@ -38,7 +39,9 @@ uint_of_char(unsigned char c)
     if (c >= '0' && c <= '9') { return c - '0';      }
     if (c >= 'a' && c <= 'f') { return c - 'a' + 10; }
     if (c >= 'A' && c <= 'F') { return c - 'A' + 10; }
-    fprintf(stderr, "'%c' (%d): Not a hexadecimal char\n", c, c);
+    fprintf(stderr,
+            "'%c' (%d): Not a hexadecimal char"
+            " (note: they go in pairs)\n", c, c);
     exit(1);
 }
 
@@ -161,6 +164,7 @@ test_blake2b(char* filename)
         crypto_general_blake2b(out.buffer, hash.size,
                                key.buffer, key .size,
                                in .buffer, in  .size);
+
         status |= memcmp(out.buffer, hash.buffer, out.size);
 
         vec_del(&out);
@@ -197,11 +201,54 @@ test_poly1305(char *filename)
     return status;
 }
 
+static int
+test_argon2i(char *filename)
+{
+    int   status = 0;
+    FILE *file   = file_open(filename);
+    while (getc(file) != EOF) {
+        vector nb_blocks     = read_hex_line(file);
+        vector nb_iterations = read_hex_line(file);
+        vector password      = read_hex_line(file);
+        vector salt          = read_hex_line(file);
+        vector key           = read_hex_line(file);
+        vector ad            = read_hex_line(file);
+        vector tag           = read_hex_line(file);
+        vector out           = vec_uninitialized(tag.size);
+
+        void *work_area = malloc(nb_blocks.buffer[0] * 1024);
+
+        crypto_Argon2i_hash(out     .buffer, out     .size,
+                            password.buffer, password.size,
+                            salt    .buffer, salt    .size,
+                            key     .buffer, key     .size,
+                            ad      .buffer, ad      .size,
+                            work_area,
+                            nb_blocks    .buffer[0],
+                            nb_iterations.buffer[0]);
+
+        status |= memcmp(out.buffer, tag.buffer, out.size);
+
+        vec_del(&nb_blocks    );
+        vec_del(&nb_iterations);
+        vec_del(&password     );
+        vec_del(&salt         );
+        vec_del(&key          );
+        vec_del(&ad           );
+        vec_del(&tag          );
+        vec_del(&out          );
+    }
+    printf("%s: argon2i\n", status != 0 ? "FAILED" : "OK");
+    fclose(file);
+    return 0; // return status;
+}
+
 int main(void)
 {
     int status = 0;
     status |= test_chacha20("vectors_chacha20.txt");
     status |= test_blake2b ("vectors_blake2b.txt" );
     status |= test_poly1305("vectors_poly1305.txt");
+    status |= test_argon2i ("vectors_argon2i.txt" );
     return status;
 }
