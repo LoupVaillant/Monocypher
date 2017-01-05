@@ -1,6 +1,10 @@
 #include "argon2i.h"
 #include "blake2b.h"
 
+/////////////////
+/// Utilities ///
+/////////////////
+
 static uint64_t
 load64_le(const uint8_t s[8])
 {
@@ -45,12 +49,24 @@ rotr64(uint64_t x, uint64_t y)
     return (x >> y) ^ (x << (64 - y));
 }
 
-static size_t
-min(size_t a, size_t b)
+static uint32_t
+min(uint32_t a, uint32_t b)
 {
     return a <= b ? a : b;
 }
 
+// updates a blake2 hash with a 32 bit word, little endian.
+static void
+blake_update_32(crypto_blake2b_ctx *ctx, uint32_t input)
+{
+    uint8_t buf[4];
+    store32_le(buf, input);
+    crypto_blake2b_update(ctx, buf, 4);
+}
+
+//////////////////
+// Argon2 block //
+//////////////////
 typedef struct block {
     uint64_t a[128]; // 1024 octets in 128 64-bit words
 } block;
@@ -87,14 +103,13 @@ xor_block(block *out, const block *in)
     }
 }
 
-static void
-blake_update_32(crypto_blake2b_ctx *ctx, uint32_t input)
-{
-    uint8_t buf[4];
-    store32_le(buf, input);
-    crypto_blake2b_update(ctx, buf, 4);
-}
+////////////////////
+// Argon2i proper //
+////////////////////
 
+// Hash with a virtually unlimited digest size.
+// Doesn't extract more entropy than the base hash function.
+// Mainly used for filling a whole kilobyte block with pseudo-random bytes.
 static void
 extended_hash(uint8_t       *digest, uint32_t digest_size,
               const uint8_t *input , uint32_t input_size)
@@ -126,7 +141,7 @@ extended_hash(uint8_t       *digest, uint32_t digest_size,
     }
 }
 
-// Computes Z from R in place
+// Core of the compression function G.  Computes Z from R in place.
 static void
 g_rounds(block *work_block)
 {
@@ -167,8 +182,12 @@ g_rounds(block *work_block)
     }
 }
 
+// The compression function G
+// may overwrite result completely  (xcopy == copy_block),
+// or XOR result with the old block (xcopy ==  xor_block)
 static void
-binary_g(block *result, block *x, block *y, void (*xcopy) (block*, const block*))
+binary_g(block *result, const block *x, const block *y,
+         void (*xcopy) (block*, const block*))
 {
     // put R = X ^ Y into tmp
     block tmp;
@@ -180,17 +199,17 @@ binary_g(block *result, block *x, block *y, void (*xcopy) (block*, const block*)
     xor_block(result, &tmp); // result =  R ^ Z (or R ^ Z ^ old)
 }
 
-// applies the "two rounds compression function" on the input, in place
+// unary version of the compression function.
+// The missing argument is implied zero.
+// Does the transformation in place.
 static void
-g_square(block *work_block)
+unary_g(block *work_block)
 {
     // work_block == R
     block tmp;
-    for (int i = 0; i < 2; i++) {
-        copy_block(&tmp, work_block); // tmp = R
-        g_rounds(work_block);         // work_block = Z
-        xor_block(work_block, &tmp);  // work_block = Z ^ R
-    }
+    copy_block(&tmp, work_block); // tmp = R
+    g_rounds(work_block);         // work_block = Z
+    xor_block(work_block, &tmp);  // work_block = Z ^ R
 }
 
 typedef struct gidx_ctx {
@@ -217,8 +236,11 @@ gidx_refresh(gidx_ctx *ctx)
     for (int i = 7; i < 128; i++) {
         ctx->b.a[i] = 0;
     }
-    // shuffle the block into something weakly pseudorandom
-    g_square(&(ctx->b));
+
+    // Shuffle the block thus: ctx->b = G((G(ctx->b, zero)), zero)
+    // Applies the G "square" function to get cheap pseudo-random numbers.
+    unary_g(&(ctx->b));
+    unary_g(&(ctx->b)); // square means apply it twice
 }
 
 static void
@@ -246,37 +268,38 @@ gidx_next(gidx_ctx *ctx)
         ctx->ctr++;
         gidx_refresh(ctx);
     }
-    // we don't need J2, because there's only one lane.
-    uint64_t j1 = ctx->b.a[ctx->index] & 0xffffffff;
+    // saves and increment the index
+    uint32_t index = ctx->index;
+    ctx->index++; // updates index for the next call
 
     // Computes the area size.
     // Pass 0 : all already finished segments plus already constructed
     //          blocks in this segment
     // Pass 1+: 3 last segments plus already constructed
-    //          blocks in this segment
-    // THIS IS NOT WHAT THE SPEC SAYS.  HERE I COPY THE REFERENCE IMPLEMENTATION
-    //uint32_t area_size  = first_pass ? current_block - 1 : lane_size - 2;
-    _Bool    first_pass    = ctx->pass_number == 0;
-    uint32_t slice_size    = ctx->nb_blocks / 4;
-    uint32_t area_size     = ((first_pass ? ctx->slice_number : 3)
-                              * slice_size + ctx->index - 1);
+    //          blocks in this segment  THE SPEC SUGGESTS OTHERWISE.
+    //          I CONFORM TO THE REFERENCE IMPLEMENTATION.
+    _Bool    first_pass = ctx->pass_number == 0;
+    uint32_t slice_size = ctx->nb_blocks / 4;
+    uint32_t area_size  = ((first_pass ? ctx->slice_number : 3)
+                           * slice_size + index - 1);
 
-    uint32_t next_slice    = (ctx->slice_number == 3
-                              ? 0
-                              : (ctx->slice_number + 1) * slice_size);
+    // Computes the starting position of the reference area.
+    // CONTRARY TO WHAT THE SPEC SUGGESTS, IT STARTS AT THE
+    // NEXT SEGMENT, NOT THE NEXT BLOCK.
+    uint32_t next_slice = (ctx->slice_number == 3
+                           ? 0
+                           : (ctx->slice_number + 1) * slice_size);
+    uint32_t start_pos  = first_pass ? 0 : next_slice;
 
-    // Generates the actual index from J1
-    uint64_t x             = (j1 * j1)       >> 32;
-    uint64_t y             = (area_size * x) >> 32;
-    uint64_t z             = area_size - 1 - y;
-    uint32_t start_pos     = first_pass ? 0 : next_slice;
-    uint32_t actual_pos    = (start_pos + z) % ctx->nb_blocks;
-
-    ctx->index++; // updates index for the next call
-
-    return actual_pos;
+    // Generates the actual index from J1 (no need for J2, there's only one lane)
+    uint64_t j1         = ctx->b.a[index] & 0xffffffff; // pseudo-random number
+    uint64_t x          = (j1 * j1)       >> 32;
+    uint64_t y          = (area_size * x) >> 32;
+    uint64_t z          = area_size - 1 - y;
+    return (start_pos + z) % ctx->nb_blocks;
 }
 
+// Main algorithm
 void
 crypto_Argon2i_hash(uint8_t       *tag,       uint32_t tag_size,
                     const uint8_t *password,  uint32_t password_size,
@@ -289,7 +312,6 @@ crypto_Argon2i_hash(uint8_t       *tag,       uint32_t tag_size,
 {
     // work area seen as blocks (must be suitably aligned)
     block *blocks = work_area;
-
     {
         crypto_blake2b_ctx ctx;
         crypto_blake2b_init(&ctx);
