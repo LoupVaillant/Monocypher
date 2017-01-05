@@ -1,11 +1,6 @@
 #include "argon2i.h"
 #include "blake2b.h"
 
-// tests
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 static uint64_t
 load64_le(const uint8_t s[8])
 {
@@ -275,7 +270,6 @@ gidx_next(gidx_ctx *ctx)
     uint64_t y             = (area_size * x) >> 32;
     uint64_t z             = area_size - 1 - y;
     uint32_t start_pos     = first_pass ? 0 : next_slice;
-    printf("s%d_%d", start_pos, area_size);
     uint32_t actual_pos    = (start_pos + z) % ctx->nb_blocks;
 
     ctx->index++; // updates index for the next call
@@ -318,50 +312,6 @@ crypto_Argon2i_hash(uint8_t       *tag,       uint32_t tag_size,
         uint8_t initial_hash[72]; // 64 bytes plus 2 words for future hashes
         crypto_blake2b_final(&ctx, initial_hash);
 
-        /* // debug stuff */
-        /* int input_size = 40 + password_size + salt_size + key_size + ad_size; */
-        /* int i          = 0; */
-        /* uint8_t *input      = malloc(input_size); */
-        /* store32_le(input + i, 4            ); i += 4; */
-        /* store32_le(input + i, tag_size     ); i += 4; */
-        /* store32_le(input + i, nb_blocks    ); i += 4; */
-        /* store32_le(input + i, nb_iterations); i += 4; */
-        /* store32_le(input + i, 0x13         ); i += 4; */
-        /* store32_le(input + i, 1            ); i += 4; */
-        /* store32_le(input + i, password_size); i += 4; */
-        /* memcpy    (input + i, password, password_size); i += password_size; */
-        /* store32_le(input + i,           salt_size    ); i += 4; */
-        /* memcpy    (input + i, salt,     salt_size    ); i += salt_size; */
-        /* store32_le(input + i,           key_size     ); i += 4; */
-        /* memcpy    (input + i, key,      key_size     ); i += key_size; */
-        /* store32_le(input + i,           ad_size      ); i += 4; */
-        /* memcpy    (input + i, ad,       ad_size      ); i += ad_size; */
-        /* printf("input_size, i: %d, %d", input_size, i); */
-        /* for (int i = 0; i < input_size; i++) { */
-        /*     if (i % 4 == 0) { */
-        /*         printf("\n"); */
-        /*     } */
-        /*     printf("%02x", input[i]); */
-        /* } */
-        /* printf("\n"); */
-        /* printf("Memory     : %d\n", nb_blocks    ); */
-        /* printf("Iterations : %d\n", nb_iterations); */
-        /* printf("Parallelism: %d\n", 4            ); */
-        /* printf("Tag length : %d\n", tag_size     ); */
-        /* printf("Pwd length : %d\n", password_size); */
-        /* printf("Slt length : %d\n", salt_size    ); */
-        /* printf("Key length : %d\n", key_size     ); */
-        /* printf("AD  length : %d\n", ad_size      ); */
-
-        printf("Pre-hashing digest:\n");
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                printf("%02x ", initial_hash[8*i + j]);
-            }
-            printf("\n");
-        }
-        // end debug stuff
-
         // fill first 2 blocks
         block   tmp_block;
         uint8_t hash_area[1024];
@@ -402,22 +352,12 @@ crypto_Argon2i_hash(uint8_t       *tag,       uint32_t tag_size,
                  current++) {
                 uint32_t previous  = current == 0 ? nb_blocks - 1 : current - 1;
                 uint32_t reference = gidx_next(&ctx);
-                // debug stuff
-                printf("(%2d,%2d,%2d)   ", current, previous, reference);
-                // end debug stuff
                 binary_g(blocks + current,
                          blocks + previous,
                          blocks + reference,
                          xcopy);
             }
-            printf("\n");
         }
-        // debug stuff
-        for (uint32_t i = 0; i < nb_blocks; i++) {
-            printf("blocks[%2d]: %016lx\n", i, blocks[i].a[0]);
-        }
-        printf("\n");
-        // end debug stuf
     }
     // hash the very last block with H' into the output tag
     uint8_t final_block[1024];
