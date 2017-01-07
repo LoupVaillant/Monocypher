@@ -10,30 +10,38 @@ rotr64(uint64_t x, uint64_t y)
 }
 
 static uint64_t
-load64_le(uint8_t *p)
+load64_le(uint8_t *s)
 {
+    // portable, slow way
     return
-        ( (uint64_t) (p)[0]       ) ^
-        (((uint64_t) (p)[1]) <<  8) ^
-        (((uint64_t) (p)[2]) << 16) ^
-        (((uint64_t) (p)[3]) << 24) ^
-        (((uint64_t) (p)[4]) << 32) ^
-        (((uint64_t) (p)[5]) << 40) ^
-        (((uint64_t) (p)[6]) << 48) ^
-        (((uint64_t) (p)[7]) << 56);
+        ((uint64_t)s[0]      ) ^
+        ((uint64_t)s[1] <<  8) ^
+        ((uint64_t)s[2] << 16) ^
+        ((uint64_t)s[3] << 24) ^
+        ((uint64_t)s[4] << 32) ^
+        ((uint64_t)s[5] << 40) ^
+        ((uint64_t)s[6] << 48) ^
+        ((uint64_t)s[7] << 56);
 }
 
 // Initialization Vector.
 static const uint64_t blake2b_iv[8] = {
-    0x6A09E667F3BCC908, 0xBB67AE8584CAA73B,
-    0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
-    0x510E527FADE682D1, 0x9B05688C2B3E6C1F,
-    0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179
+    0x6a09e667f3bcc908, 0xbb67ae8584caa73b,
+    0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
+    0x510e527fade682d1, 0x9b05688c2b3e6c1f,
+    0x1f83d9abfb41bd6b, 0x5be0cd19137e2179
 };
 
-// Compression function. "last" flag indicates last block.
+// increment a 128-bit "word".
 static void
-blake2b_compress(crypto_blake2b_ctx *ctx, int last)
+incr(uint64_t x[2], uint64_t y)
+{
+    x[0] += y;                 // increment the low word
+    if (x[0] < y) { x[1]++; }  // handle overflow
+}
+
+static void
+blake2b_compress(crypto_blake2b_ctx *ctx, _Bool last_block)
 {
     static const uint8_t sigma[12][16] = {
         { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
@@ -49,22 +57,25 @@ blake2b_compress(crypto_blake2b_ctx *ctx, int last)
         { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
         { 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 }
     };
-    int i;
-    uint64_t v[16], m[16];
 
-    for (i = 0; i < 8; i++) {           // init work variables
-        v[i] = ctx->h[i];
+    // init work variables (before shuffling them)
+    uint64_t v[16];
+    for (int i = 0; i < 8; i++) {
+        v[i    ] = ctx->hash[i];
         v[i + 8] = blake2b_iv[i];
     }
-    v[12] ^= ctx->t[0];                 // low 64 bits of offset
-    v[13] ^= ctx->t[1];                 // high 64 bits
-    if (last)                           // last block flag set ?
-        v[14] = ~v[14];
+    v[12] ^= ctx->input_size[0]; // low 64 bits of offset
+    v[13] ^= ctx->input_size[1]; // high 64 bits
+    if (last_block) { v[14] = ~v[14]; }
 
-    for (i = 0; i < 16; i++) {          // get little-endian words
-        m[i] = load64_le(&ctx->b[8 * i]);
+    // load the input buffer
+    uint64_t m[16];
+    for (int i = 0; i < 16; i++) {
+        m[i] = load64_le(&ctx->buf[i * 8]);
     }
-    for (i = 0; i < 12; i++) {          // twelve rounds
+
+    // shuffle the work variables with the 12 rounds
+    for (int i = 0; i < 12; i++) {
 #define B2B_G(a, b, c, d, x, y)                                   \
         v[a] += v[b] + x;   v[d] = rotr64(v[d] ^ v[a], 32);       \
         v[c] += v[d]    ;   v[b] = rotr64(v[b] ^ v[c], 24);       \
@@ -81,33 +92,31 @@ blake2b_compress(crypto_blake2b_ctx *ctx, int last)
         B2B_G( 3, 4,  9, 14, m[sigma[i][14]], m[sigma[i][15]]);
     }
 
-    for( i = 0; i < 8; ++i ) {
-        ctx->h[i] ^= v[i] ^ v[i + 8];
+    // accumulate the work variables into the hash
+    for(int i = 0; i < 8; i++) {
+        ctx->hash[i] ^= v[i] ^ v[i + 8];
     }
 }
 
 void
-crypto_blake2b_general_init(crypto_blake2b_ctx *ctx,
-                            size_t              outlen,
-                            const uint8_t      *key,
-                            size_t              keylen)
+crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t outlen,
+                            const uint8_t      *key, size_t keylen)
 {
-
-    for (size_t i = 0; i < 8; i++) {      // state, "param block"
-        ctx->h[i] = blake2b_iv[i];
+    // Initial hash == initialization vector...
+    for (int i = 0; i < 8; i++) {
+        ctx->hash[i] = blake2b_iv[i];
     }
+    ctx->hash[0]      ^= 0x01010000 ^ (keylen << 8) ^ outlen;  // ...mostly
+    ctx->input_size[0] = 0;       // input count low word
+    ctx->input_size[1] = 0;       // input count high word
+    ctx->c             = 0;       // pointer within buffer
+    ctx->output_size   = outlen;  // size of the final hash
 
-    ctx->h[0]  ^= 0x01010000 ^ (keylen << 8) ^ outlen;
-    ctx->t[0]   = 0;                        // input count low word
-    ctx->t[1]   = 0;                        // input count high word
-    ctx->c      = 0;                        // pointer within buffer
-    ctx->outlen = outlen;
-    for (size_t i = keylen; i < 128; i++) { // zero input block
-        ctx->b[i] = 0;
-    }
+    // If there's a key, put it in the first block, then pad with zeroes
     if (keylen > 0) {
-        crypto_blake2b_update(ctx, key, keylen);
-        ctx->c = 128;                       // at the end
+        for (size_t i = 0     ; i < keylen; i++) { ctx->buf[i] = key[i]; }
+        for (size_t i = keylen; i < 128   ; i++) { ctx->buf[i] = 0;      }
+        ctx->c = 128; // mark the block as used
     }
 }
 
@@ -118,48 +127,40 @@ crypto_blake2b_init(crypto_blake2b_ctx *ctx)
 }
 
 void
-crypto_blake2b_update(crypto_blake2b_ctx *ctx,
-                      const uint8_t *in, size_t inlen)
+crypto_blake2b_update(crypto_blake2b_ctx *ctx, const uint8_t *in, size_t inlen)
 {
-    size_t i;
-
-    for (i = 0; i < inlen; i++) {
-        if (ctx->c == 128) {            // buffer full ?
-            ctx->t[0] += ctx->c;        // add counters
-            if (ctx->t[0] < ctx->c) {   // carry overflow ?
-                ctx->t[1]++;            // high word
-            }
-            blake2b_compress(ctx, 0);   // compress (not last)
-            ctx->c = 0;                 // counter to zero
+    for (size_t i = 0; i < inlen; i++) {
+        // If the buffer is full, increment the counters and
+        // add (compress) the current buffer to the hash
+        if (ctx->c == 128) {
+            ctx->c = 0;
+            incr(ctx->input_size, 128);
+            blake2b_compress(ctx, 0); // not last time -> 0
         }
-        ctx->b[ctx->c++] = ((const uint8_t *) in)[i];
+        // By now the buffer is not full.  We add one input byte.
+        ctx->buf[ctx->c] = in[i];
+        ctx->c++;
     }
 }
 
 void
 crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *out)
 {
-    size_t i;
+    // update input size, pad then compress the buffer
+    incr(ctx->input_size, ctx->c);
+    for (int i = ctx->c; i < 128; i++) { ctx->buf[i] = 0; }
+    blake2b_compress(ctx, 1); // last time -> 1
 
-    ctx->t[0] += ctx->c;                // mark last block offset
-    if (ctx->t[0] < ctx->c)             // carry overflow
-        ctx->t[1]++;                    // high word
-
-    while (ctx->c < 128)                // fill up with zeros
-        ctx->b[ctx->c++] = 0;
-    blake2b_compress(ctx, 1);           // final block flag = 1
-
-    // little endian convert and store
-    for (i = 0; i < ctx->outlen; i++) {
-        ((uint8_t *) out)[i] =
-            (ctx->h[i >> 3] >> (8 * (i & 7))) & 0xFF;
+    // copy the hash in the output (little endian of course)
+    for (int i = 0; i < ctx->output_size; i++) {
+        out[i] = (ctx->hash[i / 8] >> (8 * (i & 7))) & 0xFF;
     }
 }
 
 void
 crypto_general_blake2b(      uint8_t*out, size_t outlen,
                        const uint8_t*key, size_t keylen,
-                       const uint8_t*in, size_t inlen)
+                       const uint8_t*in,  size_t inlen)
 {
     crypto_blake2b_ctx ctx;
     crypto_blake2b_general_init(&ctx, outlen, key, keylen);

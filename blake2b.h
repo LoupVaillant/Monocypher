@@ -6,11 +6,11 @@
 
 // blake2b context
 typedef struct {
-    uint8_t  b[128]; // input buffer
-    uint64_t h[8];   // chained state
-    uint64_t t[2];   // total number of bytes
-    size_t   c;      // pointer for b[]
-    size_t   outlen; // digest size
+    uint8_t  buf[128];      // input buffer
+    uint64_t hash[8];       // chained state
+    uint64_t input_size[2]; // total number of bytes
+    uint8_t  c;             // pointer for buf[]
+    uint8_t  output_size;   // digest size
 } crypto_blake2b_ctx;
 
 // Initializes the context with user defined parameters:
@@ -35,6 +35,7 @@ void
 crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *out);
 
 // All-in-one convenience function.
+// outlen, keylen, and key work the same as they do in the general_init function
 void
 crypto_general_blake2b(      uint8_t *out, size_t outlen, // digest
                        const uint8_t *key, size_t keylen, // optional secret key
