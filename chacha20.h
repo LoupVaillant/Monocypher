@@ -10,7 +10,9 @@
 // - Dont't modify it, except through the crypto_*_chacha20 below.
 // - Never duplicate it.
 typedef struct crypto_chacha_ctx {
-    uint32_t input[16];
+    uint32_t input[16];       // current input, unencrypted
+    uint8_t  random_pool[64]; // last input, encrypted
+    uint8_t  pool_index;      // pointer to random_pool
 } crypto_chacha_ctx;
 
 // Initializes a chacha context.
@@ -44,53 +46,22 @@ crypto_init_Xchacha20(crypto_chacha_ctx *ctx,
                       const uint8_t      key[32],
                       const uint8_t      nonce[24]);
 
-// Outputs a single block from the provided context, then increments
-// the counter of that context by 1.  Can safely be called several
-// times over the same context like this:
-//    crypto_block_chacha20(output      , ctx);
-//    crypto_block_chacha20(output +  64, ctx);
-//    crypto_block_chacha20(output + 128, ctx);
-//    crypto_block_chacha20(output + 192, ctx);
-// Since che context will in fact have been changed at each call,
-// the resulting outputs will be completely different.
-void
-crypto_block_chacha20(uint8_t output[64], crypto_chacha_ctx *ctx);
-
 // Encrypts the plain_text by XORing it with a pseudo-random
 // stream of numbers, seeded by the provided chacha20 context.
-// It is built on top of crypto_chacha20_block, and can be safely
-// used with it, thus:
+// It can safely be chained thus:
 //
-//    crypto_block_chacha20(output, ctx);
-//    crypto_encrypt_chacha20(ctx, plaint_t, cipher_t, length);
+//    crypto_encrypt_chacha20(ctx, plaint_0, cipher_0, length_0);
+//    crypto_encrypt_chacha20(ctx, plaint_1, cipher_1, length_1);
+//    crypto_encrypt_chacha20(ctx, plaint_2, cipher_2, length_2);
+//
+// plain_text is allowed to be null (0), in which case it will be
+// interpreted as an all zero input.  The cipher_text will then
+// contain the raw chacha20 stream.  Useful as a random number
+// generator.
 void
 crypto_encrypt_chacha20(crypto_chacha_ctx *ctx,
                         const uint8_t     *plain_text,
                         uint8_t           *cipher_text,
                         size_t             msg_length);
-
-
-////////////////////////////////////////////////////////////////////////////////
-
-typedef struct crypto_rng_context {
-    crypto_chacha_ctx chacha_ctx;
-    uint8_t           reminder[64];
-    size_t            remaining_bytes;
-} crypto_rng_context;
-
-// Inits a cryptographically secure Random Number Generator, with the
-// given key and nonce.  The output of that RNG will depend entirely
-// on the key and nonce.
-// NEVER USE THE SAME KEY FOR THIS AND MESSAGE ENCRYPTION.
-// If you do, you could leak the very key stream used to encrypt
-// your messages.  They'd be instantly deciphered.
-void
-crypto_init_rng(crypto_rng_context *ctx, const uint8_t key[32]);
-
-// provides pseudo-random bytes, deterministically (the output and
-// the end state of ctx depends entirely on the initial state of ctx).
-// It's a chacha20 stream, really.
-void
-crypto_random_bytes(crypto_rng_context *ctx, uint8_t *out, size_t nb_bytes);
 
 #endif // CHACHA20_H

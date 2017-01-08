@@ -72,14 +72,6 @@ vec_uninitialized(size_t size)
     return v;
 }
 
-static vector
-vec_zero(size_t size)
-{
-    vector v = vec_uninitialized(size);
-    memset(v.buffer, 0, size);
-    return v;
-}
-
 static void
 vec_del(vector *v)
 {
@@ -133,11 +125,11 @@ test_chacha20(char* filename)
         vector key    = read_hex_line(file);
         vector nonce  = read_hex_line(file);
         vector stream = read_hex_line(file);
-        vector out    = vec_zero(stream.size);
+        vector out    = vec_uninitialized(stream.size);
 
         crypto_chacha_ctx ctx;
         crypto_init_chacha20(&ctx, key.buffer, nonce.buffer);
-        crypto_encrypt_chacha20(&ctx, out.buffer, out.buffer, out.size);
+        crypto_encrypt_chacha20(&ctx, 0, out.buffer, out.size);
         status |= memcmp(out.buffer, stream.buffer, out.size);
 
         vec_del(&out);
@@ -229,6 +221,7 @@ test_argon2i(char *filename)
 
         status |= memcmp(out.buffer, tag.buffer, out.size);
 
+        free(work_area);
         vec_del(&nb_blocks    );
         vec_del(&nb_iterations);
         vec_del(&password     );
