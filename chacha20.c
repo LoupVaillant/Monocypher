@@ -5,12 +5,6 @@
 /////////////////
 
 static uint32_t
-rotl32 (uint32_t x, uint32_t n)
-{
-    return (x << n) | (x >> (32 - n));
-}
-
-static uint32_t
 load32_le(const uint8_t s[4])
 {
     // Portable, slow way.
@@ -41,12 +35,13 @@ chacha20_rounds(uint32_t out[16], const uint32_t in[16])
     for (int i = 0; i < 16; i++)
         out[i] = in[i];
 
-    for (int i = 20; i > 0; i -= 2) { // 20 rounds, 2 rounds per loop.
+    for (int i = 0; i < 10; i++) { // 20 rounds, 2 rounds per loop.
+#define ROT_L32(x, n) x = (x << n) | (x >> (32 - n))
 #define QUARTERROUND(a, b, c, d)           \
-        a = a + b;  d = rotl32(d ^ a, 16); \
-        c = c + d;  b = rotl32(b ^ c, 12); \
-        a = a + b;  d = rotl32(d ^ a,  8); \
-        c = c + d;  b = rotl32(b ^ c,  7)
+        a += b;  d ^= a;  ROT_L32(d, 16);  \
+        c += d;  b ^= c;  ROT_L32(b, 12);  \
+        a += b;  d ^= a;  ROT_L32(d,  8);  \
+        c += d;  b ^= c;  ROT_L32(b,  7)
 
         QUARTERROUND(out[0], out[4], out[ 8], out[12]); // column 0
         QUARTERROUND(out[1], out[5], out[ 9], out[13]); // column 1
