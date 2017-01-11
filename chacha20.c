@@ -60,10 +60,11 @@ chacha20_rounds(uint32_t out[16], const uint32_t in[16])
 static void
 init_constant(crypto_chacha_ctx *ctx)
 {
-    ctx->input[0]  = load32_le((uint8_t*)"expa");
-    ctx->input[1]  = load32_le((uint8_t*)"nd 3");
-    ctx->input[2]  = load32_le((uint8_t*)"2-by");
-    ctx->input[3]  = load32_le((uint8_t*)"te k");
+    ctx->input[0]   = load32_le((uint8_t*)"expa");
+    ctx->input[1]   = load32_le((uint8_t*)"nd 3");
+    ctx->input[2]   = load32_le((uint8_t*)"2-by");
+    ctx->input[3]   = load32_le((uint8_t*)"te k");
+    ctx->pool_index = 64; // the random pool starts empty
 }
 
 static void
@@ -93,7 +94,19 @@ crypto_init_chacha20(crypto_chacha_ctx *ctx,
     init_constant(ctx       );
     init_key     (ctx, key  );
     init_nonce   (ctx, nonce);
-    ctx->pool_index = 64; // the random pool starts empty
+}
+
+void
+crypto_init_ietf_chacha20(crypto_chacha_ctx *ctx,
+                          const uint8_t      key[32],
+                          const uint8_t      nonce[12])
+{
+    init_constant(ctx);
+    init_key(ctx, key);
+    ctx->input[12] = 0;
+    ctx->input[13] = load32_le(nonce    );
+    ctx->input[14] = load32_le(nonce + 4);
+    ctx->input[15] = load32_le(nonce + 8);
 }
 
 void
@@ -104,7 +117,7 @@ crypto_init_Xchacha20(crypto_chacha_ctx *ctx,
     crypto_chacha_ctx init_ctx;
     init_constant (&init_ctx     );
     init_key      (&init_ctx, key);
-    // init big nonce
+    // init big nonce (first 16 bytes)
     for (int i = 0; i < 4; i++)
         init_ctx.input[i + 12] = load32_le(nonce +  i*4);
 
@@ -116,8 +129,7 @@ crypto_init_Xchacha20(crypto_chacha_ctx *ctx,
         ctx->input[i + 4] = buffer[i     ]; // constant
         ctx->input[i + 8] = buffer[i + 12]; // counter and nonce
     }
-    init_nonce(ctx, nonce + 16);
-    ctx->pool_index = 64; // the random pool starts empty
+    init_nonce(ctx, nonce + 16); // init big nonce (last 8 bytes)
 }
 
 void

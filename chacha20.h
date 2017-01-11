@@ -36,11 +36,22 @@ crypto_init_chacha20(crypto_chacha_ctx *ctx,
                      const uint8_t      key[32],
                      const uint8_t      nonce[8]);
 
-// Initializes a chacha context, with a bigger nonce (192 bits).
+// Initializes a chacha context, with a slightly bigger nonce (96 bits),
+// barely enough to be selected at random (if in doubt, don't).
 //
-// It's slower than regular initialization, but that big nonce can now
-// be selected at random without fear of collision.  No more complex,
-// stateful headache.
+// The price you pay for this nonce is a smaller counter, which cannot
+// handle messages biger than 128Gib.
+// WARNING: ANY MESSAGE THAT EXCEEDS 128Gib WILL SPILL ITS SECRETS.
+void
+crypto_init_ietf_chacha20(crypto_chacha_ctx *ctx,
+                          const uint8_t      key[32],
+                          const uint8_t      nonce[12]);
+
+// Initializes a chacha context, with an even bigger nonce (192 bits),
+// more than enough to be selected at random.
+//
+// The price you pay for that is a slower initialization.  The security
+// guarantees are the same as regular initialization.
 void
 crypto_init_Xchacha20(crypto_chacha_ctx *ctx,
                       const uint8_t      key[32],
