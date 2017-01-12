@@ -42,7 +42,7 @@ crypto_poly1305_auth(uint8_t        mac[16],
                      const uint8_t  key[32]);
 
 // Constant time equality verification
-// returns 1 if it matches, 0 otherwise.
+// returns 0 if it matches, something else otherwise.
 int
 crypto_poly1305_verify(const uint8_t mac1[16], const uint8_t mac2[16]);
 

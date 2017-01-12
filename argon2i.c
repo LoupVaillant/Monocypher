@@ -135,7 +135,7 @@ extended_hash(uint8_t       *digest, uint32_t digest_size,
             in  += 32;
             out += 32;
         }
-        crypto_general_blake2b(digest + out, digest_size - (32 * r),
+        crypto_blake2b_general(digest + out, digest_size - (32 * r),
                                0, 0, // no key
                                digest + in , 64);
     }
@@ -146,11 +146,11 @@ static void
 g_rounds(block *work_block)
 {
 #define LSB(x) ((x) & 0xffffffff)
-#define G(a, b, c, d)                                           \
-    a += b + 2 * LSB(a) * LSB(b);  d = rotr64(d ^ a, 32);       \
-    c += d + 2 * LSB(c) * LSB(d);  b = rotr64(b ^ c, 24);       \
-    a += b + 2 * LSB(a) * LSB(b);  d = rotr64(d ^ a, 16);       \
-    c += d + 2 * LSB(c) * LSB(d);  b = rotr64(b ^ c, 63)
+#define G(a, b, c, d)                                            \
+    a += b + 2 * LSB(a) * LSB(b);  d ^= a;  d = rotr64(d, 32);   \
+    c += d + 2 * LSB(c) * LSB(d);  b ^= c;  b = rotr64(b, 24);   \
+    a += b + 2 * LSB(a) * LSB(b);  d ^= a;  d = rotr64(d, 16);   \
+    c += d + 2 * LSB(c) * LSB(d);  b ^= c;  b = rotr64(b, 63)
 #define ROUND(v0,  v1,  v2,  v3,  v4,  v5,  v6,  v7,    \
               v8,  v9, v10, v11, v12, v13, v14, v15)    \
     G(v0, v4,  v8, v12);  G(v1, v5,  v9, v13);          \
@@ -301,7 +301,7 @@ gidx_next(gidx_ctx *ctx)
 
 // Main algorithm
 void
-crypto_Argon2i_hash(uint8_t       *tag,       uint32_t tag_size,
+crypto_argon2i_hash(uint8_t       *tag,       uint32_t tag_size,
                     const uint8_t *password,  uint32_t password_size,
                     const uint8_t *salt,      uint32_t salt_size,
                     const uint8_t *key,       uint32_t key_size,
@@ -385,4 +385,19 @@ crypto_Argon2i_hash(uint8_t       *tag,       uint32_t tag_size,
     uint8_t final_block[1024];
     store_block(final_block, blocks + (nb_blocks - 1));
     extended_hash(tag, tag_size, final_block, 1024);
+}
+
+void
+crypto_argon2i(uint8_t        tag[32],
+               const uint8_t *password,  uint32_t password_size,
+               const uint8_t *salt,      uint32_t salt_size,
+               void    *work_area,
+               uint32_t nb_blocks,
+               uint32_t nb_iterations)
+{
+    crypto_argon2i_hash(tag     , 32,
+                        password, password_size,
+                        salt    , salt_size,
+                        0, 0, 0, 0,
+                        work_area, nb_blocks, nb_iterations);
 }

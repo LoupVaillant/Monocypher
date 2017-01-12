@@ -87,7 +87,7 @@ init_nonce(crypto_chacha_ctx *ctx, const uint8_t nonce[8])
 /// Exposed API ///
 ///////////////////
 void
-crypto_init_chacha20(crypto_chacha_ctx *ctx,
+crypto_chacha20_init(crypto_chacha_ctx *ctx,
                      const uint8_t      key[32],
                      const uint8_t      nonce[8])
 {
@@ -97,20 +97,7 @@ crypto_init_chacha20(crypto_chacha_ctx *ctx,
 }
 
 void
-crypto_init_ietf_chacha20(crypto_chacha_ctx *ctx,
-                          const uint8_t      key[32],
-                          const uint8_t      nonce[12])
-{
-    init_constant(ctx);
-    init_key(ctx, key);
-    ctx->input[12] = 0;
-    ctx->input[13] = load32_le(nonce    );
-    ctx->input[14] = load32_le(nonce + 4);
-    ctx->input[15] = load32_le(nonce + 8);
-}
-
-void
-crypto_init_Xchacha20(crypto_chacha_ctx *ctx,
+crypto_chacha20_Xinit(crypto_chacha_ctx *ctx,
                       const uint8_t      key[32],
                       const uint8_t      nonce[24])
 {
@@ -121,9 +108,11 @@ crypto_init_Xchacha20(crypto_chacha_ctx *ctx,
     for (int i = 0; i < 4; i++)
         init_ctx.input[i + 12] = load32_le(nonce +  i*4);
 
-    init_constant(ctx);
+    // chacha20 rounds (reversible if we reveal all the buffer)
     uint32_t buffer[16];
-    chacha20_rounds(buffer, ctx->input);
+    chacha20_rounds(buffer, init_ctx.input);
+
+    init_constant(ctx);
     // init key
     for (int i = 0; i < 4; i++) {
         ctx->input[i + 4] = buffer[i     ]; // constant
@@ -133,7 +122,7 @@ crypto_init_Xchacha20(crypto_chacha_ctx *ctx,
 }
 
 void
-crypto_encrypt_chacha20(crypto_chacha_ctx *ctx,
+crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                         const uint8_t     *plain_text,
                         uint8_t           *cipher_text,
                         size_t             msg_length)
@@ -158,4 +147,12 @@ crypto_encrypt_chacha20(crypto_chacha_ctx *ctx,
             ^ ctx->random_pool[ctx->pool_index];
         ctx->pool_index++;
     }
+}
+
+void
+crypto_chacha20_random(crypto_chacha_ctx *ctx,
+                       uint8_t           *cipher_text,
+                       size_t             msg_length)
+{
+    crypto_chacha20_encrypt(ctx, 0, cipher_text, msg_length);
 }

@@ -7,6 +7,7 @@
 #include "blake2b.h"
 #include "poly1305.h"
 #include "argon2i.h"
+#include "ae.h"
 
 /////////////////////////
 /// General utilities ///
@@ -173,8 +174,8 @@ test_chacha20(char* filename)
         vector out    = vec_uninitialized(stream.size);
 
         crypto_chacha_ctx ctx;
-        crypto_init_chacha20(&ctx, key.buffer, nonce.buffer);
-        crypto_encrypt_chacha20(&ctx, 0, out.buffer, out.size);
+        crypto_chacha20_init(&ctx, key.buffer, nonce.buffer);
+        crypto_chacha20_random(&ctx, out.buffer, out.size);
         status |= vec_cmp(&out, &stream);
 
         vec_del(&out);
@@ -183,36 +184,6 @@ test_chacha20(char* filename)
         vec_del(&key);
     }
     printf("%s: chacha20\n", status != 0 ? "FAILED" : "OK");
-    fclose(file);
-    return status;
-}
-
-static int
-test_ietf_chacha20(char* filename)
-{
-    int   status = 0;
-    FILE *file   = file_open(filename);
-    while (getc(file) != EOF) {
-        vector key    = read_hex_line(file);
-        vector nonce  = read_hex_line(file);
-        vector plain  = read_hex_line(file);
-        vector cipher = read_hex_line(file);
-        vector out    = vec_uninitialized(plain.size);
-
-        uint8_t dump[64];
-        crypto_chacha_ctx ctx;
-        crypto_init_ietf_chacha20(&ctx, key.buffer, nonce.buffer);
-        crypto_encrypt_chacha20(&ctx, 0, dump, 64);
-        crypto_encrypt_chacha20(&ctx, plain.buffer, out.buffer, out.size);
-        status |= vec_cmp(&out, &cipher);
-
-        vec_del(&out);
-        vec_del(&cipher);
-        vec_del(&plain);
-        vec_del(&nonce);
-        vec_del(&key);
-    }
-    printf("%s: ietf_chacha20\n", status != 0 ? "FAILED" : "OK");
     fclose(file);
     return status;
 }
@@ -228,7 +199,7 @@ test_blake2b(char* filename)
         vector hash = read_hex_line(file);
         vector out  = vec_uninitialized(hash.size);
 
-        crypto_general_blake2b(out.buffer, hash.size,
+        crypto_blake2b_general(out.buffer, hash.size,
                                key.buffer, key .size,
                                in .buffer, in  .size);
 
@@ -285,7 +256,7 @@ test_argon2i(char *filename)
 
         void *work_area = malloc(nb_blocks.buffer[0] * 1024);
 
-        crypto_Argon2i_hash(out     .buffer, out     .size,
+        crypto_argon2i_hash(out     .buffer, out     .size,
                             password.buffer, password.size,
                             salt    .buffer, salt    .size,
                             key     .buffer, key     .size,
@@ -308,19 +279,48 @@ test_argon2i(char *filename)
     }
     printf("%s: argon2i\n", status != 0 ? "FAILED" : "OK");
     fclose(file);
-    return 0; // return status;
+    return status;
+}
+
+static int
+test_ae()
+{
+    uint8_t key[32] = {
+        0, 1, 2, 3, 4, 5, 6, 7,
+        0, 1, 2, 3, 4, 5, 6, 7,
+        0, 1, 2, 3, 4, 5, 6, 7,
+        0, 1, 2, 3, 4, 5, 6, 7
+    };
+    uint8_t nonce[24] =  {
+        0, 1, 2, 3, 4, 5, 6, 7,
+        0, 1, 2, 3, 4, 5, 6, 7,
+        0, 1, 2, 3, 4, 5, 6, 7
+    };
+    uint8_t plaintext[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    uint8_t box[24] = {
+        0, 1, 2, 3, 4, 5, 6, 7,
+        0, 1, 2, 3, 4, 5, 6, 7,
+        0, 1, 2, 3, 4, 5, 6, 7
+    };
+    uint8_t out[8];
+
+    crypto_ae_lock(key, nonce, plaintext, 8, box);
+    int status = crypto_ae_unlock(key, nonce, box, 8, out);
+
+    printf("%s: authenticated encryption\n", status != 0 ? "FAILED" : "OK");
+    return status;
 }
 
 int main(void)
 {
     int status = 0;
-    status |= test_test_equal   ("vectors_test_equal.txt"   );
-    status |= test_test_diff    ("vectors_test_diff.txt"    );
-    status |= test_chacha20     ("vectors_chacha20.txt"     );
-    status |= test_ietf_chacha20("vectors_ietf_chacha20.txt");
-    status |= test_blake2b      ("vectors_blake2b.txt"      );
-    status |= test_poly1305     ("vectors_poly1305.txt"     );
-    status |= test_argon2i      ("vectors_argon2i.txt"      );
+    status |= test_test_equal("vectors_test_equal.txt");
+    status |= test_test_diff ("vectors_test_diff.txt" );
+    status |= test_chacha20  ("vectors_chacha20.txt"  );
+    status |= test_blake2b   ("vectors_blake2b.txt"   );
+    status |= test_poly1305  ("vectors_poly1305.txt"  );
+    status |= test_argon2i   ("vectors_argon2i.txt"   );
+    status |= test_ae        (                        );
     printf(status ? "TESTS FAILED\n" : "ALL TESTS OK\n");
     return status;
 }

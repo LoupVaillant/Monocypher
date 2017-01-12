@@ -37,7 +37,7 @@ crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *out);
 // All-in-one convenience function.
 // outlen, keylen, and key work the same as they do in the general_init function
 void
-crypto_general_blake2b(      uint8_t *out, size_t outlen, // digest
+crypto_blake2b_general(      uint8_t *out, size_t outlen, // digest
                        const uint8_t *key, size_t keylen, // optional secret key
                        const uint8_t *in , size_t inlen); // data to be hashed
 

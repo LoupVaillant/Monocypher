@@ -241,11 +241,9 @@ crypto_poly1305_auth(uint8_t        mac[16],
 
 int
 crypto_poly1305_verify(const uint8_t mac1[16], const uint8_t mac2[16]) {
-    size_t i;
     unsigned diff = 0;
-    for (i = 0; i < 16; i++) {
+    for (int i = 0; i < 16; i++) {
         diff |= (mac1[i] ^ mac2[i]);
     }
-    diff = (diff - 1) >> ((sizeof(unsigned) * 8) - 1);
-    return (diff & 1);
+    return diff;
 }

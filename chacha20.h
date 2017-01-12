@@ -32,20 +32,9 @@ typedef struct crypto_chacha_ctx {
 // all an initial nonce of 0, 1 .. n-1 respectively, and have them increment
 // their nonce  by n.  (Also make sure the nonces never wrap around.).
 void
-crypto_init_chacha20(crypto_chacha_ctx *ctx,
+crypto_chacha20_init(crypto_chacha_ctx *ctx,
                      const uint8_t      key[32],
                      const uint8_t      nonce[8]);
-
-// Initializes a chacha context, with a slightly bigger nonce (96 bits),
-// barely enough to be selected at random (if in doubt, don't).
-//
-// The price you pay for this nonce is a smaller counter, which cannot
-// handle messages biger than 128Gib.
-// WARNING: ANY MESSAGE THAT EXCEEDS 128Gib WILL SPILL ITS SECRETS.
-void
-crypto_init_ietf_chacha20(crypto_chacha_ctx *ctx,
-                          const uint8_t      key[32],
-                          const uint8_t      nonce[12]);
 
 // Initializes a chacha context, with an even bigger nonce (192 bits),
 // more than enough to be selected at random.
@@ -53,7 +42,7 @@ crypto_init_ietf_chacha20(crypto_chacha_ctx *ctx,
 // The price you pay for that is a slower initialization.  The security
 // guarantees are the same as regular initialization.
 void
-crypto_init_Xchacha20(crypto_chacha_ctx *ctx,
+crypto_chacha20_Xinit(crypto_chacha_ctx *ctx,
                       const uint8_t      key[32],
                       const uint8_t      nonce[24]);
 
@@ -70,9 +59,16 @@ crypto_init_Xchacha20(crypto_chacha_ctx *ctx,
 // contain the raw chacha20 stream.  Useful as a random number
 // generator.
 void
-crypto_encrypt_chacha20(crypto_chacha_ctx *ctx,
+crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                         const uint8_t     *plain_text,
                         uint8_t           *cipher_text,
                         size_t             msg_length);
+
+// convenience function.
+// equivalent to encrypt_chacha20(ctx, 0, cipher_text, msg_length)
+void
+crypto_chacha20_random(crypto_chacha_ctx *ctx,
+                       uint8_t           *cipher_text,
+                       size_t             msg_length);
 
 #endif // CHACHA20_H

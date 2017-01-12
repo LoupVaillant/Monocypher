@@ -76,11 +76,11 @@ blake2b_compress(crypto_blake2b_ctx *ctx, _Bool last_block)
 
     // shuffle the work variables with the 12 rounds
     for (int i = 0; i < 12; i++) {
-#define B2B_G(a, b, c, d, x, y)                                   \
-        v[a] += v[b] + x;   v[d] = rotr64(v[d] ^ v[a], 32);       \
-        v[c] += v[d]    ;   v[b] = rotr64(v[b] ^ v[c], 24);       \
-        v[a] += v[b] + y;   v[d] = rotr64(v[d] ^ v[a], 16);       \
-        v[c] += v[d]    ;   v[b] = rotr64(v[b] ^ v[c], 63)
+#define B2B_G(a, b, c, d, x, y)                                    \
+        v[a] += v[b] + x;  v[d] ^= v[a];  v[d] = rotr64(v[d], 32); \
+        v[c] += v[d]    ;  v[b] ^= v[c];  v[b] = rotr64(v[b], 24); \
+        v[a] += v[b] + y;  v[d] ^= v[a];  v[d] = rotr64(v[d], 16); \
+        v[c] += v[d]    ;  v[b] ^= v[c];  v[b] = rotr64(v[b], 63)
 
         B2B_G( 0, 4,  8, 12, m[sigma[i][ 0]], m[sigma[i][ 1]]);
         B2B_G( 1, 5,  9, 13, m[sigma[i][ 2]], m[sigma[i][ 3]]);
@@ -158,7 +158,7 @@ crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *out)
 }
 
 void
-crypto_general_blake2b(      uint8_t*out, size_t outlen,
+crypto_blake2b_general(      uint8_t*out, size_t outlen,
                        const uint8_t*key, size_t keylen,
                        const uint8_t*in,  size_t inlen)
 {
@@ -171,5 +171,5 @@ crypto_general_blake2b(      uint8_t*out, size_t outlen,
 void
 crypto_blake2b(uint8_t *out, const uint8_t *in, size_t inlen)
 {
-    crypto_general_blake2b(out, 64, 0, 0, in, inlen);
+    crypto_blake2b_general(out, 64, 0, 0, in, inlen);
 }
