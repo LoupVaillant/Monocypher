@@ -5,12 +5,11 @@
 #include <stddef.h>
 
 typedef struct {
-    uint32_t r[5];
-    uint32_t h[5];
-    uint32_t pad[4];
-    size_t   leftover;
-    uint8_t  buffer[16];
-    uint8_t  final;
+    uint32_t r[17];
+    uint32_t h[17];
+    uint8_t  c[17];
+    size_t   c_index;
+    uint8_t  pad[16];
 } crypto_poly1305_ctx;
 
 // Initializes the poly1305 context with the secret key.
