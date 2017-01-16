@@ -1,9 +1,5 @@
 #include "chacha20.h"
 
-/////////////////
-/// Utilities ///
-/////////////////
-
 static uint32_t
 load32_le(const uint8_t s[4])
 {
@@ -24,10 +20,6 @@ store32_le(uint8_t output[4], uint32_t input)
     output[2] = (input >> 16) & 0xff;
     output[3] = (input >> 24) & 0xff;
 }
-
-////////////
-/// Core ///
-////////////
 
 static void
 chacha20_rounds(uint32_t out[16], const uint32_t in[16])
@@ -54,46 +46,50 @@ chacha20_rounds(uint32_t out[16], const uint32_t in[16])
     }
 }
 
-//////////////////////////////
-/// Context initialization ///
-//////////////////////////////
 static void
-init_constant(crypto_chacha_ctx *ctx)
+chacha20_init_key(crypto_chacha_ctx *ctx, const uint8_t key[32])
 {
+    // constant
     ctx->input[0]   = load32_le((uint8_t*)"expa");
     ctx->input[1]   = load32_le((uint8_t*)"nd 3");
     ctx->input[2]   = load32_le((uint8_t*)"2-by");
     ctx->input[3]   = load32_le((uint8_t*)"te k");
-    ctx->pool_index = 64; // the random pool starts empty
-}
-
-static void
-init_key(crypto_chacha_ctx *ctx, const uint8_t key[32])
-{
+    // key
     for (int i = 0; i < 8; i++)
         ctx->input[i + 4] = load32_le(key + i*4);
+    // pool index (the random pool starts empty)
+    ctx->pool_index = 64;
 }
 
-static void
-init_nonce(crypto_chacha_ctx *ctx, const uint8_t nonce[8])
+void
+crypto_chacha20_H(uint8_t       out[32],
+                  const uint8_t key[32],
+                  const uint8_t in [16])
 {
-    ctx->input[12] = 0; // counter
-    ctx->input[13] = 0; // counter
-    ctx->input[14] = load32_le(nonce + 0);
-    ctx->input[15] = load32_le(nonce + 4);
+    crypto_chacha_ctx ctx;
+    chacha20_init_key(&ctx, key);
+    for (int i = 0; i < 4; i++)
+        ctx.input[i + 12] = load32_le(in + i*4);
+
+    uint32_t buffer[16];
+    chacha20_rounds(buffer, ctx.input);
+    // prevents reversal of the rounds by revealing only half of the buffer.
+    for (int i = 0; i < 4; i++) {
+        store32_le(out      + i*4, buffer[i     ]); // constant
+        store32_le(out + 16 + i*4, buffer[i + 12]); // counter and nonce
+    }
 }
 
-///////////////////
-/// Exposed API ///
-///////////////////
 void
 crypto_chacha20_init(crypto_chacha_ctx *ctx,
                      const uint8_t      key[32],
                      const uint8_t      nonce[8])
 {
-    init_constant(ctx       );
-    init_key     (ctx, key  );
-    init_nonce   (ctx, nonce);
+    chacha20_init_key(ctx, key  );         // key
+    ctx->input[12] = 0;                    // counter
+    ctx->input[13] = 0;                    // counter
+    ctx->input[14] = load32_le(nonce + 0); // nonce
+    ctx->input[15] = load32_le(nonce + 4); // nonce
 }
 
 void
@@ -101,33 +97,18 @@ crypto_chacha20_Xinit(crypto_chacha_ctx *ctx,
                       const uint8_t      key[32],
                       const uint8_t      nonce[24])
 {
-    crypto_chacha_ctx init_ctx;
-    init_constant (&init_ctx     );
-    init_key      (&init_ctx, key);
-    // init big nonce (first 16 bytes)
-    for (int i = 0; i < 4; i++)
-        init_ctx.input[i + 12] = load32_le(nonce +  i*4);
-
-    // chacha20 rounds (reversible if we reveal all the buffer)
-    uint32_t buffer[16];
-    chacha20_rounds(buffer, init_ctx.input);
-
-    init_constant(ctx);
-    // init key
-    for (int i = 0; i < 4; i++) {
-        ctx->input[i + 4] = buffer[i     ]; // constant
-        ctx->input[i + 8] = buffer[i + 12]; // counter and nonce
-    }
-    init_nonce(ctx, nonce + 16); // init big nonce (last 8 bytes)
+    uint8_t derived_key[32];
+    crypto_chacha20_H(derived_key, key, nonce);
+    crypto_chacha20_init(ctx, derived_key, nonce + 16);
 }
 
 void
 crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                         const uint8_t     *plain_text,
                         uint8_t           *cipher_text,
-                        size_t             msg_length)
+                        size_t             message_size)
 {
-    for (size_t i = 0; i < msg_length; i++) {
+    for (size_t i = 0; i < message_size; i++) {
         // refill the pool if empty
         if (ctx->pool_index == 64) {
             // fill the pool
@@ -152,7 +133,7 @@ crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
 void
 crypto_chacha20_random(crypto_chacha_ctx *ctx,
                        uint8_t           *cipher_text,
-                       size_t             msg_length)
+                       size_t             message_size)
 {
-    crypto_chacha20_encrypt(ctx, 0, cipher_text, msg_length);
+    crypto_chacha20_encrypt(ctx, 0, cipher_text, message_size);
 }
