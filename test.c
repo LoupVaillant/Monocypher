@@ -216,13 +216,14 @@ static int test_ae()
     uint8_t nonce[24]    = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7,
                              0, 1, 2, 3, 4, 5, 6, 7 };
     uint8_t plaintext[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
-    uint8_t box[24]      = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7,
-                             0, 1, 2, 3, 4, 5, 6, 7 };
+    uint8_t box[24];
     uint8_t out[8];
-
-    crypto_ae_lock(key, nonce, plaintext, 8, box);
-    int status = crypto_ae_unlock(key, nonce, box, 8, out);
-
+    int status = 0;
+    crypto_ae_lock(key, nonce, plaintext, 8, box);        // make true message
+    status |= crypto_ae_unlock(key, nonce, box, 8, out);  // accept true message
+    status |= memcmp(plaintext, out, 8);                  // roundtrip
+    box[0]++;                                             // make forgery
+    status |= !crypto_ae_unlock(key, nonce, box, 8, out); // reject forgery
     printf("%s: authenticated encryption\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
