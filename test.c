@@ -69,14 +69,6 @@ static vector vec_uninitialized(size_t size)
     return v;
 }
 
-/* static vector vec_copy(const vector *v) */
-/* { */
-/*     vector w = *v; */
-/*     w.buffer = alloc(w.buf_size); */
-/*     memcpy(w.buffer, v->buffer, w.buf_size); */
-/*     return w; */
-/* } */
-
 static void vec_del(vector *v)
 {
     free(v->buffer);
@@ -127,16 +119,19 @@ static vector read_hex_line(FILE *input_file)
 ///////////////////////////
 static int meta(int (*f)(int), char *filename)
 {
-    int   status = 0;
-    FILE *file   = file_open(filename);
+    int   status     = 0;
+    FILE *file       = file_open(filename);
+    int     nb_tests = 0;
     while (getc(file) != EOF) {
         vector a = read_hex_line(file);
         vector b = read_hex_line(file);
         status |= f(vec_cmp(&a, &b));
         vec_del(&b);
         vec_del(&a);
+        nb_tests++;
     }
-    printf("%s: %s\n", status != 0 ? "FAILED" : "OK", filename);
+    printf("%s %3d tests: %s\n",
+           status != 0 ? "FAILED" : "OK", nb_tests, filename);
     fclose(file);
     return status;
 }
@@ -149,9 +144,10 @@ static int diff (int status) { return !status; }
 static int test(void (*f)(const vector[], vector*),
                 char *filename, size_t nb_vectors)
 {
-    int     status = 0;
-    FILE   *file   = file_open(filename);
-    vector *inputs = alloc(nb_vectors * sizeof(vector));
+    int     status   = 0;
+    FILE   *file     = file_open(filename);
+    vector *inputs   = alloc(nb_vectors * sizeof(vector));
+    int     nb_tests = 0;
 
     while (getc(file) != EOF) {
         for (size_t i = 0; i < nb_vectors; i++)
@@ -166,8 +162,10 @@ static int test(void (*f)(const vector[], vector*),
         vec_del(&expected);
         for (size_t i = 0; i < nb_vectors; i++)
             vec_del(inputs + i);
+        nb_tests++;
     }
-    printf("%s: %s\n", status != 0 ? "FAILED" : "OK", filename);
+    printf("%s %3d tests: %s\n",
+           status != 0 ? "FAILED" : "OK", nb_tests, filename);
     free(inputs);
     fclose(file);
     return status;
@@ -288,13 +286,13 @@ static int test_ae()
 int main(void)
 {
     int status = 0;
-    status |= meta(equal,     "vectors_test_equal.txt" );
-    status |= meta(diff,      "vectors_test_diff.txt"  );
-    status |= test(chacha20,  "vectors_chacha20.txt", 2);
-    status |= test(blake2b ,  "vectors_blake2b.txt" , 2);
-    status |= test(poly1305,  "vectors_poly1305.txt", 2);
-    status |= test(argon2i ,  "vectors_argon2i.txt" , 6);
-    status |= test(x25519  ,  "vectors_x25519.txt"  , 2);
+    status |= meta(equal,     "vectors_test_equal" );
+    status |= meta(diff,      "vectors_test_diff"  );
+    status |= test(chacha20,  "vectors_chacha20", 2);
+    status |= test(blake2b ,  "vectors_blake2b" , 2);
+    status |= test(poly1305,  "vectors_poly1305", 2);
+    status |= test(argon2i ,  "vectors_argon2i" , 6);
+    status |= test(x25519  ,  "vectors_x25519"  , 2);
 //    status |= test_x25519(); // Too Long; Didn't Run
     status |= test_ae();
     printf(status ? "TESTS FAILED\n" : "ALL TESTS OK\n");
