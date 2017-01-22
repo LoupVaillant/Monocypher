@@ -169,7 +169,7 @@ crypto_blake2b_general(      uint8_t*out, size_t outlen,
 }
 
 void
-crypto_blake2b(uint8_t *out, const uint8_t *in, size_t inlen)
+crypto_blake2b(uint8_t out[64], const uint8_t *in, size_t inlen)
 {
     crypto_blake2b_general(out, 64, 0, 0, in, inlen);
 }
