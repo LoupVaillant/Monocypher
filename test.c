@@ -9,6 +9,7 @@
 #include "argon2i.h"
 #include "ae.h"
 #include "x25519.h"
+#include "ed25519.h"
 
 /////////////////////////
 /// General utilities ///
@@ -114,33 +115,39 @@ static vector read_hex_line(FILE *input_file)
     return v;
 }
 
-///////////////////////////
-/// Test the test suite ///
-///////////////////////////
-static int meta(int (*f)(int), char *filename)
+/////////////////////////////
+/// Test helper functions ///
+/////////////////////////////
+
+// Pulls some test vectors, feed it to f, get a status back
+// The test fails if the status is not zero
+static int generic_test(int (*f)(const vector[]),
+                        char * filename, size_t nb_vectors)
 {
-    int   status     = 0;
-    FILE *file       = file_open(filename);
+    int     status   = 0;
+    FILE   *file     = file_open(filename);
+    vector *inputs   = alloc(nb_vectors * sizeof(vector));
     int     nb_tests = 0;
+
     while (getc(file) != EOF) {
-        vector a = read_hex_line(file);
-        vector b = read_hex_line(file);
-        status |= f(vec_cmp(&a, &b));
-        vec_del(&b);
-        vec_del(&a);
+        for (size_t i = 0; i < nb_vectors; i++)
+            inputs[i] = read_hex_line(file);
+
+        status |= f(inputs);
+
+        for (size_t i = 0; i < nb_vectors; i++)
+            vec_del(inputs + i);
         nb_tests++;
     }
     printf("%s %3d tests: %s\n",
            status != 0 ? "FAILED" : "OK", nb_tests, filename);
+    free(inputs);
     fclose(file);
     return status;
 }
-static int equal(int status) { return  status; }
-static int diff (int status) { return !status; }
 
-////////////////////////
-/// The tests proper ///
-////////////////////////
+// Same, except f writes to a buffer.  If it's different than
+// some expected result, the test fails.
 static int test(void (*f)(const vector[], vector*),
                 char *filename, size_t nb_vectors)
 {
@@ -171,6 +178,15 @@ static int test(void (*f)(const vector[], vector*),
     return status;
 }
 
+///////////////////////////
+/// Test the test suite ///
+///////////////////////////
+static int equal(const vector v[]) { return  vec_cmp(v, v + 1); }
+static int diff (const vector v[]) { return !vec_cmp(v, v + 1); }
+
+////////////////////////
+/// The tests proper ///
+////////////////////////
 static void chacha20(const vector in[], vector *out)
 {
     const vector *key   = in;
@@ -253,17 +269,27 @@ static int test_x25519()
 
     iterate_x25519(k, u);
     int status = memcmp(k, _1, 32);
+    printf("%s: x25519 1\n", status != 0 ? "FAILED" : "OK");
+
     for (int i = 1; i < 1000; i++)
         iterate_x25519(k, u);
     status |= memcmp(k, _1k, 32);
+    printf("%s: x25519 1K\n", status != 0 ? "FAILED" : "OK");
+
     for (int i = 1000; i < 1000000; i++)
         iterate_x25519(k, u);
     status |= memcmp(k, _100k, 32);
+    printf("%s: x25519 1M\n", status != 0 ? "FAILED" : "OK");
 
-    printf("%s: x25519\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 */
+
+/* static int ed25519(const vector in[]) */
+/* { */
+    
+/* } */
+
 static int test_ae()
 {
     uint8_t key[32]      = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7,
@@ -286,8 +312,8 @@ static int test_ae()
 int main(void)
 {
     int status = 0;
-    status |= meta(equal,     "vectors_test_equal" );
-    status |= meta(diff,      "vectors_test_diff"  );
+    status |= generic_test(equal, "vectors_test_equal", 2);
+    status |= generic_test(diff , "vectors_test_diff" , 2);
     status |= test(chacha20,  "vectors_chacha20", 2);
     status |= test(blake2b ,  "vectors_blake2b" , 2);
     status |= test(poly1305,  "vectors_poly1305", 2);
