@@ -35,7 +35,7 @@ crypto_ae_unlock_detached(const uint8_t  key[32],
     uint8_t real_mac[16];
     crypto_poly1305_auth(real_mac, ciphertext, text_size, auth_key);
 
-    if (crypto_poly1305_verify(real_mac, mac))
+    if (crypto_memcmp_16(real_mac, mac))
         return -1;
 
     crypto_chacha20_encrypt(&e_ctx, ciphertext, plaintext, text_size);

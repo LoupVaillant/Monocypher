@@ -5,12 +5,13 @@
 #include <stddef.h>
 
 typedef struct {
-    uint32_t r[17];
-    uint32_t h[17];
-    uint8_t  c[17];
+    uint32_t r[4];
+    uint32_t h[5];
+    uint32_t c[5];
+    uint32_t pad[5];
     size_t   c_index;
-    uint8_t  pad[16];
 } crypto_poly1305_ctx;
+
 
 // Initializes the poly1305 context with the secret key.
 // Call first (obviously).
@@ -18,31 +19,27 @@ typedef struct {
 // This is a ONE TIME authenticator.  If you authenticate 2 messages
 // with the same key, the attacker may deduce your secret key and
 // authenticate messages in your stead.
-void
-crypto_poly1305_init(crypto_poly1305_ctx *ctx, const uint8_t key[32]);
+void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const uint8_t key[32]);
 
 // Updates the poly1305 context with a chunk of the message
 // Can be called multiple times, once for each chunk.
 // Make sure the chunks are processed in order, without overlap or hole...
-void
-crypto_poly1305_update(crypto_poly1305_ctx *ctx, const uint8_t *m, size_t bytes);
+void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
+                            const uint8_t *m, size_t bytes);
 
 // Authenticate the message munched through previous update() calls.
 // Call last (obviously).
-void
-crypto_poly1305_finish(crypto_poly1305_ctx *ctx, uint8_t mac[16]);
+void crypto_poly1305_finish(crypto_poly1305_ctx *ctx, uint8_t mac[16]);
 
 
 // Convenience all in one function
-void
-crypto_poly1305_auth(uint8_t        mac[16],
-                     const uint8_t *m,
-                     size_t         msg_length,
-                     const uint8_t  key[32]);
+void crypto_poly1305_auth(uint8_t        mac[16],
+                          const uint8_t *m,
+                          size_t         msg_length,
+                          const uint8_t  key[32]);
 
 // Constant time equality verification
 // returns 0 if it matches, something else otherwise.
-int
-crypto_poly1305_verify(const uint8_t mac1[16], const uint8_t mac2[16]);
+int crypto_memcmp_16(const uint8_t mac1[16], const uint8_t mac2[16]);
 
 #endif // POLY1305_H
