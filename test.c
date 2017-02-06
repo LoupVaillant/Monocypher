@@ -10,6 +10,7 @@
 #include "ae.h"
 #include "x25519.h"
 #include "ed25519.h"
+#include "sha512.h"
 
 /////////////////////////
 /// General utilities ///
@@ -285,8 +286,16 @@ static int test_x25519()
 }
 */
 
-/* static int ed25519(const vector in[]) */
+static void sha512(const vector in[], vector *out)
+{
+    crypto_sha512(out->buffer, in->buffer, in->size);
+}
+
+/* static int ed25519(const vector in[], vector *out) */
 /* { */
+/*     const vector *secret  = in; */
+/*     const vector *public  = in + 1; */
+/*     const vector *message = in + 2; */
     
 /* } */
 
@@ -319,6 +328,7 @@ int main(void)
     status |= test(poly1305,  "vectors_poly1305", 2);
     status |= test(argon2i ,  "vectors_argon2i" , 6);
     status |= test(x25519  ,  "vectors_x25519"  , 2);
+    status |= test(sha512  ,  "vectors_sha512"  , 1);
 //    status |= test_x25519(); // Too Long; Didn't Run
     status |= test_ae();
     printf(status ? "TESTS FAILED\n" : "ALL TESTS OK\n");
