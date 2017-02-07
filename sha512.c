@@ -116,7 +116,7 @@ void crypto_sha512_update(crypto_sha512_ctx *ctx, const u8 *in, size_t inlen)
     }
 }
 
-void crypto_sha512_finish(crypto_sha512_ctx *ctx, u8 out[64])
+void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 out[64])
 {
     incr(ctx->m_size, ctx->m_index * 8); // size is in bits
     set_input(ctx, 128);                 // padding
@@ -145,5 +145,5 @@ void crypto_sha512(u8 *out, const u8 *m, size_t n)
     crypto_sha512_ctx ctx;
     crypto_sha512_init  (&ctx);
     crypto_sha512_update(&ctx, m, n);
-    crypto_sha512_finish(&ctx, out);
+    crypto_sha512_final (&ctx, out);
 }
