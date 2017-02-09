@@ -8,6 +8,7 @@
 #include "poly1305.h"
 #include "argon2i.h"
 #include "ae.h"
+#include "lock.h"
 #include "x25519.h"
 #include "ed25519.h"
 #include "sha512.h"
@@ -340,12 +341,32 @@ static int test_ae()
     uint8_t box[24];
     uint8_t out[8];
     int status = 0;
-    crypto_ae_lock(key, nonce, plaintext, 8, box);        // make true message
-    status |= crypto_ae_unlock(key, nonce, box, 8, out);  // accept true message
+    crypto_ae_lock(box, key, nonce, plaintext, 8);        // make true message
+    status |= crypto_ae_unlock(out, key, nonce, box, 8);  // accept true message
     status |= memcmp(plaintext, out, 8);                  // roundtrip
     box[0]++;                                             // make forgery
-    status |= !crypto_ae_unlock(key, nonce, box, 8, out); // reject forgery
+    status |= !crypto_ae_unlock(out, key, nonce, box, 8); // reject forgery
     printf("%s: authenticated encryption\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
+static int test_lock()
+{
+    uint8_t rk[32]      = { 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0,
+                            1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0 };
+    uint8_t sk[32]      = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7,
+                            0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 };
+    uint8_t pk[32]; crypto_x25519_base(pk, sk);
+    uint8_t plaintext[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    uint8_t box[56];
+    uint8_t out[8];
+    int status = 0;
+    crypto_anonymous_lock(box, rk, pk, plaintext, 8);    // make true message
+    status |= crypto_anonymous_unlock(out, sk, box, 8);  // accept true message
+    status |= memcmp(plaintext, out, 8);                 // roundtrip
+    box[32]++;                                           // make forgery
+    status |= !crypto_anonymous_unlock(out, sk, box, 8); // reject forgery
+    printf("%s: crypto_lock\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -360,9 +381,10 @@ int main(void)
     status |= test(argon2i ,  "vectors_argon2i" , 6);
     status |= test(x25519  ,  "vectors_x25519"  , 2);
     status |= test(sha512  ,  "vectors_sha512"  , 1);
-    status |= test_x25519();
     status |= test(ed25519 ,  "vectors_ed25519" , 3);
+    status |= test_x25519();
     status |= test_ae();
+    status |= test_lock();
     printf(status ? "TESTS FAILED\n" : "ALL TESTS OK\n");
     return status;
 }
