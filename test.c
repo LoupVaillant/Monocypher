@@ -291,13 +291,45 @@ static void sha512(const vector in[], vector *out)
     crypto_sha512(out->buffer, in->buffer, in->size);
 }
 
-/* static int ed25519(const vector in[], vector *out) */
-/* { */
-/*     const vector *secret  = in; */
-/*     const vector *public  = in + 1; */
-/*     const vector *message = in + 2; */
-    
-/* } */
+static void ed25519(const vector in[], vector *out)
+{
+    const vector *secret  = in;
+    const vector *public  = in + 1;
+    const vector *message = in + 2;
+
+    // test that secret an public keys match
+    uint8_t generated_public[32];
+    crypto_ed25519_public_key(generated_public, secret->buffer);
+    if (memcmp(generated_public, public->buffer, 32)) {
+        printf("FAILURE: secret/public key mismatch!\n");
+    }
+
+    // the test proper
+    crypto_ed25519_sign(out->buffer,
+                        secret->buffer,
+                        message->buffer, message->size);
+
+    // test successful signature verification
+    if (crypto_ed25519_check(out->buffer, public->buffer,
+                             message->buffer, message->size)) {
+        printf("FAILURE: signature check failed to recognise signature\n");
+    }
+    // test forgery rejections
+    uint8_t fake_signature1[64];
+    uint8_t fake_signature2[64];
+    for (int i = 0; i < 64; i++) {
+        fake_signature1[i] = out->buffer[i];
+        fake_signature2[i] = out->buffer[i];
+    }
+    fake_signature1[ 0]++; // modify R
+    fake_signature2[63]++; // modify s
+    if (!crypto_ed25519_check(fake_signature1, public->buffer,
+                              message->buffer, message->size) ||
+        !crypto_ed25519_check(fake_signature2, public->buffer,
+                              message->buffer, message->size)) {
+        printf("FAILURE: signature check failed to reject forgery\n");
+    }
+}
 
 static int test_ae()
 {
@@ -330,6 +362,7 @@ int main(void)
     status |= test(x25519  ,  "vectors_x25519"  , 2);
     status |= test(sha512  ,  "vectors_sha512"  , 1);
 //    status |= test_x25519(); // Too Long; Didn't Run
+    status |= test(ed25519 ,  "vectors_ed25519" , 3);
     status |= test_ae();
     printf(status ? "TESTS FAILED\n" : "ALL TESTS OK\n");
     return status;
