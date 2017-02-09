@@ -242,7 +242,6 @@ static void x25519(const vector in[], vector *out)
 
 // Disabling the following test, because it takes too damn long
 // I suggest you run it once, though.
-/*
 static void iterate_x25519(uint8_t k[32], uint8_t u[32])
 {
     uint8_t tmp[32];
@@ -257,14 +256,6 @@ static int test_x25519()
                          0xa1, 0x35, 0x0b, 0x3e, 0x2b, 0xb7, 0x27, 0x9f,
                          0x78, 0x97, 0xb8, 0x7b, 0xb6, 0x85, 0x4b, 0x78,
                          0x3c, 0x60, 0xe8, 0x03, 0x11, 0xae, 0x30, 0x79};
-    uint8_t _1k  [32] = {0x68, 0x4c, 0xf5, 0x9b, 0xa8, 0x33, 0x09, 0x55,
-                         0x28, 0x00, 0xef, 0x56, 0x6f, 0x2f, 0x4d, 0x3c,
-                         0x1c, 0x38, 0x87, 0xc4, 0x93, 0x60, 0xe3, 0x87,
-                         0x5f, 0x2e, 0xb9, 0x4d, 0x99, 0x53, 0x2c, 0x51};
-    uint8_t _100k[32] = {0x7c, 0x39, 0x11, 0xe0, 0xab, 0x25, 0x86, 0xfd,
-                         0x86, 0x44, 0x97, 0x29, 0x7e, 0x57, 0x5e, 0x6f,
-                         0x3b, 0xc6, 0x01, 0xc0, 0x88, 0x3c, 0x30, 0xdf,
-                         0x5f, 0x4d, 0xd2, 0xd2, 0x4f, 0x66, 0x54, 0x24};
     uint8_t k[32] = {9};
     uint8_t u[32] = {9};
 
@@ -272,19 +263,27 @@ static int test_x25519()
     int status = memcmp(k, _1, 32);
     printf("%s: x25519 1\n", status != 0 ? "FAILED" : "OK");
 
+    uint8_t _1k  [32] = {0x68, 0x4c, 0xf5, 0x9b, 0xa8, 0x33, 0x09, 0x55,
+                         0x28, 0x00, 0xef, 0x56, 0x6f, 0x2f, 0x4d, 0x3c,
+                         0x1c, 0x38, 0x87, 0xc4, 0x93, 0x60, 0xe3, 0x87,
+                         0x5f, 0x2e, 0xb9, 0x4d, 0x99, 0x53, 0x2c, 0x51};
     for (int i = 1; i < 1000; i++)
         iterate_x25519(k, u);
     status |= memcmp(k, _1k, 32);
     printf("%s: x25519 1K\n", status != 0 ? "FAILED" : "OK");
 
-    for (int i = 1000; i < 1000000; i++)
-        iterate_x25519(k, u);
-    status |= memcmp(k, _100k, 32);
-    printf("%s: x25519 1M\n", status != 0 ? "FAILED" : "OK");
-
+    // too long; didn't run
+    //uint8_t _100k[32] = {0x7c, 0x39, 0x11, 0xe0, 0xab, 0x25, 0x86, 0xfd,
+    //                     0x86, 0x44, 0x97, 0x29, 0x7e, 0x57, 0x5e, 0x6f,
+    //                     0x3b, 0xc6, 0x01, 0xc0, 0x88, 0x3c, 0x30, 0xdf,
+    //                     0x5f, 0x4d, 0xd2, 0xd2, 0x4f, 0x66, 0x54, 0x24};
+    //for (int i = 1000; i < 1000000; i++)
+    //    iterate_x25519(k, u);
+    //status |= memcmp(k, _100k, 32);
+    //printf("%s: x25519 1M\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
-*/
+
 
 static void sha512(const vector in[], vector *out)
 {
@@ -297,14 +296,14 @@ static void ed25519(const vector in[], vector *out)
     const vector *public  = in + 1;
     const vector *message = in + 2;
 
-    // test that secret an public keys match
+    // test that secret and public keys match
     uint8_t generated_public[32];
     crypto_ed25519_public_key(generated_public, secret->buffer);
     if (memcmp(generated_public, public->buffer, 32)) {
         printf("FAILURE: secret/public key mismatch!\n");
     }
 
-    // the test proper
+    // test that signature matches the test vector
     crypto_ed25519_sign(out->buffer,
                         secret->buffer,
                         message->buffer, message->size);
@@ -361,7 +360,7 @@ int main(void)
     status |= test(argon2i ,  "vectors_argon2i" , 6);
     status |= test(x25519  ,  "vectors_x25519"  , 2);
     status |= test(sha512  ,  "vectors_sha512"  , 1);
-//    status |= test_x25519(); // Too Long; Didn't Run
+    status |= test_x25519();
     status |= test(ed25519 ,  "vectors_ed25519" , 3);
     status |= test_ae();
     printf(status ? "TESTS FAILED\n" : "ALL TESTS OK\n");
