@@ -1311,7 +1311,7 @@ int crypto_unlock(u8       *plaintext,
                                   box, box + 16, text_size);
 }
 
-static const u8 null_nonce[24] = {};
+static const u8 null_nonce[24];
 
 void crypto_anonymous_lock(u8       *box,
                            const u8  random_secret_key[32],
