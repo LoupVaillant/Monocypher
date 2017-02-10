@@ -87,7 +87,7 @@ static int vec_cmp(const vector *u, const vector *v)
 {
     if (u->size != v-> size)
         return -1;
-    return memcmp(u->buffer, v->buffer, u->size);
+    return crypto_memcmp(u->buffer, v->buffer, u->size);
 }
 
 // Read a line into a vector
@@ -252,7 +252,7 @@ static int test_x25519()
     uint8_t u[32] = {9};
 
     iterate_x25519(k, u);
-    int status = memcmp(k, _1, 32);
+    int status = crypto_memcmp(k, _1, 32);
     printf("%s: x25519 1\n", status != 0 ? "FAILED" : "OK");
 
     uint8_t _1k  [32] = {0x68, 0x4c, 0xf5, 0x9b, 0xa8, 0x33, 0x09, 0x55,
@@ -261,7 +261,7 @@ static int test_x25519()
                          0x5f, 0x2e, 0xb9, 0x4d, 0x99, 0x53, 0x2c, 0x51};
     for (int i = 1; i < 1000; i++)
         iterate_x25519(k, u);
-    status |= memcmp(k, _1k, 32);
+    status |= crypto_memcmp(k, _1k, 32);
     printf("%s: x25519 1K\n", status != 0 ? "FAILED" : "OK");
 
     // too long; didn't run
@@ -271,7 +271,7 @@ static int test_x25519()
     //                     0x5f, 0x4d, 0xd2, 0xd2, 0x4f, 0x66, 0x54, 0x24};
     //for (int i = 1000; i < 1000000; i++)
     //    iterate_x25519(k, u);
-    //status |= memcmp(k, _100k, 32);
+    //status |= crypto_memcmp(k, _100k, 32);
     //printf("%s: x25519 1M\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
@@ -291,7 +291,7 @@ static void ed25519(const vector in[], vector *out)
     // test that secret and public keys match
     uint8_t generated_public[32];
     crypto_ed25519_public_key(generated_public, secret->buffer);
-    if (memcmp(generated_public, public->buffer, 32)) {
+    if (crypto_memcmp(generated_public, public->buffer, 32)) {
         printf("FAILURE: secret/public key mismatch!\n");
     }
 
@@ -334,7 +334,7 @@ static int test_ae()
     int status = 0;
     crypto_ae_lock(box, key, nonce, plaintext, 8);        // make true message
     status |= crypto_ae_unlock(out, key, nonce, box, 8);  // accept true message
-    status |= memcmp(plaintext, out, 8);                  // roundtrip
+    status |= crypto_memcmp(plaintext, out, 8);           // roundtrip
     box[0]++;                                             // make forgery
     status |= !crypto_ae_unlock(out, key, nonce, box, 8); // reject forgery
     printf("%s: authenticated encryption\n", status != 0 ? "FAILED" : "OK");
@@ -354,7 +354,7 @@ static int test_lock()
     int status = 0;
     crypto_anonymous_lock(box, rk, pk, plaintext, 8);    // make true message
     status |= crypto_anonymous_unlock(out, sk, box, 8);  // accept true message
-    status |= memcmp(plaintext, out, 8);                 // roundtrip
+    status |= crypto_memcmp(plaintext, out, 8);          // roundtrip
     box[32]++;                                           // make forgery
     status |= !crypto_anonymous_unlock(out, sk, box, 8); // reject forgery
     printf("%s: crypto_lock\n", status != 0 ? "FAILED" : "OK");
