@@ -1,16 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
-#include <stddef.h>
 #include <string.h>
-#include "chacha20.h"
-#include "blake2b.h"
-#include "poly1305.h"
-#include "argon2i.h"
-#include "ae.h"
-#include "lock.h"
-#include "x25519.h"
-#include "ed25519.h"
+#include "monocypher.h"
 #include "sha512.h"
 
 /////////////////////////
