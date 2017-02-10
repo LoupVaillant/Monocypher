@@ -1,14 +1,57 @@
 #include "monocypher.h"
 
-static uint32_t load32_le(const uint8_t s[4])
+/////////////////
+/// Utilities ///
+/////////////////
+
+// By default, ed25519 uses blake2b.
+// sha512 is provided as an option for compatibility
+// and testability against official test vectors.
+// Compile with option -DED25519_SHA512 to use with sha512
+// If you do so, you must provide the "sha512" header with
+// suitable functions.
+#ifdef ED25519_SHA512
+    #include "sha512.h"
+    #define HASH crypto_sha512
+#else
+    #define HASH crypto_blake2b
+#endif
+#define COMBINE1(x, y) x ## y
+#define COMBINE2(x, y) COMBINE1(x, y)
+#define HASH_CTX    COMBINE2(HASH, _ctx)
+#define HASH_INIT   COMBINE2(HASH, _init)
+#define HASH_UPDATE COMBINE2(HASH, _update)
+#define HASH_FINAL  COMBINE2(HASH, _final)
+
+#define FOR(i, start, end) for (size_t i = start; i < end; i++)
+#define sv static void
+typedef uint8_t   u8;
+typedef uint32_t u32;
+typedef  int64_t i64;
+typedef uint64_t u64;
+
+static u32 load32_le(const u8 s[4])
 {
-    return s[0]
-        | (s[1] <<  8)
-        | (s[2] << 16)
-        | (s[3] << 24);
+    return (u32)s[0]
+        | ((u32)s[1] <<  8)
+        | ((u32)s[2] << 16)
+        | ((u32)s[3] << 24);
 }
 
-static void store32_le(uint8_t output[4], uint32_t input)
+static u64 load64_le(const u8 s[8])
+{
+    return
+        ((u64)s[0]      ) ^
+        ((u64)s[1] <<  8) ^
+        ((u64)s[2] << 16) ^
+        ((u64)s[3] << 24) ^
+        ((u64)s[4] << 32) ^
+        ((u64)s[5] << 40) ^
+        ((u64)s[6] << 48) ^
+        ((u64)s[7] << 56);
+}
+
+sv store32_le(u8 output[4], u32 input)
 {
     output[0] =  input        & 0xff;
     output[1] = (input >>  8) & 0xff;
@@ -16,25 +59,7 @@ static void store32_le(uint8_t output[4], uint32_t input)
     output[3] = (input >> 24) & 0xff;
 }
 
-static uint64_t rotr64(uint64_t x, uint64_t y)
-{
-    return (x >> y) ^ (x << (64 - y));
-}
-
-static uint64_t load64_le(const uint8_t s[8])
-{
-    return
-        ((uint64_t)s[0]      ) ^
-        ((uint64_t)s[1] <<  8) ^
-        ((uint64_t)s[2] << 16) ^
-        ((uint64_t)s[3] << 24) ^
-        ((uint64_t)s[4] << 32) ^
-        ((uint64_t)s[5] << 40) ^
-        ((uint64_t)s[6] << 48) ^
-        ((uint64_t)s[7] << 56);
-}
-
-static void store64_le(uint8_t output[8], uint64_t input)
+sv store64_le(u8 output[8], u64 input)
 {
     output[0] =  input        & 0xff;
     output[1] = (input >>  8) & 0xff;
@@ -46,20 +71,29 @@ static void store64_le(uint8_t output[8], uint64_t input)
     output[7] = (input >> 56) & 0xff;
 }
 
-static void
-chacha20_rounds(uint32_t out[16], const uint32_t in[16])
+static u64 rotr64(u64 x, u64 n) { return (x >> n) ^ (x << (64 - n)); }
+static u32 rotl32(u32 x, u32 n) { return (x << n) ^ (x >> (32 - n)); }
+
+int crypto_memcmp(const u8 mac1[16], const u8 mac2[16], size_t n)
 {
-    for (int i = 0; i < 16; i++)
-        out[i] = in[i];
+    unsigned diff = 0;
+    FOR (i, 0, n) { diff |= (mac1[i] ^ mac2[i]); }
+    return diff;
+}
 
-    for (int i = 0; i < 10; i++) { // 20 rounds, 2 rounds per loop.
-#define ROT_L32(x, n) x = (x << n) | (x >> (32 - n))
-#define QUARTERROUND(a, b, c, d)           \
-        a += b;  d ^= a;  ROT_L32(d, 16);  \
-        c += d;  b ^= c;  ROT_L32(b, 12);  \
-        a += b;  d ^= a;  ROT_L32(d,  8);  \
-        c += d;  b ^= c;  ROT_L32(b,  7)
+/////////////////
+/// Chacha 20 ///
+/////////////////
+#define QUARTERROUND(a, b, c, d)          \
+    a += b;  d ^= a;  d = rotl32(d, 16);  \
+    c += d;  b ^= c;  b = rotl32(b, 12);  \
+    a += b;  d ^= a;  d = rotl32(d,  8);  \
+    c += d;  b ^= c;  b = rotl32(b,  7)
 
+sv chacha20_rounds(u32 out[16], const u32 in[16])
+{
+    FOR (i, 0, 16) { out[i] = in[i]; }
+    FOR (i, 0, 10) { // 20 rounds, 2 rounds per loop.
         QUARTERROUND(out[0], out[4], out[ 8], out[12]); // column 0
         QUARTERROUND(out[1], out[5], out[ 9], out[13]); // column 1
         QUARTERROUND(out[2], out[6], out[10], out[14]); // column 2
@@ -71,44 +105,40 @@ chacha20_rounds(uint32_t out[16], const uint32_t in[16])
     }
 }
 
-static void
-chacha20_init_key(crypto_chacha_ctx *ctx, const uint8_t key[32])
+sv chacha20_init_key(crypto_chacha_ctx *ctx, const u8 key[32])
 {
     // constant
-    ctx->input[0]   = load32_le((uint8_t*)"expa");
-    ctx->input[1]   = load32_le((uint8_t*)"nd 3");
-    ctx->input[2]   = load32_le((uint8_t*)"2-by");
-    ctx->input[3]   = load32_le((uint8_t*)"te k");
+    ctx->input[0] = load32_le((u8*)"expa");
+    ctx->input[1] = load32_le((u8*)"nd 3");
+    ctx->input[2] = load32_le((u8*)"2-by");
+    ctx->input[3] = load32_le((u8*)"te k");
     // key
-    for (int i = 0; i < 8; i++)
-        ctx->input[i + 4] = load32_le(key + i*4);
+    FOR (i, 0, 8) {
+        ctx->input[i+4] = load32_le(key + i*4);
+    }
     // pool index (the random pool starts empty)
     ctx->pool_index = 64;
 }
 
-void
-crypto_chacha20_H(uint8_t       out[32],
-                  const uint8_t key[32],
-                  const uint8_t in [16])
+void crypto_chacha20_H(u8 out[32], const u8 key[32], const u8 in[16])
 {
     crypto_chacha_ctx ctx;
     chacha20_init_key(&ctx, key);
-    for (int i = 0; i < 4; i++)
-        ctx.input[i + 12] = load32_le(in + i*4);
-
-    uint32_t buffer[16];
+    FOR (i, 0, 4) {
+        ctx.input[i+12] = load32_le(in + i*4);
+    }
+    u32 buffer[16];
     chacha20_rounds(buffer, ctx.input);
     // prevents reversal of the rounds by revealing only half of the buffer.
-    for (int i = 0; i < 4; i++) {
+    FOR (i, 0, 4) {
         store32_le(out      + i*4, buffer[i     ]); // constant
         store32_le(out + 16 + i*4, buffer[i + 12]); // counter and nonce
     }
 }
 
-void
-crypto_chacha20_init(crypto_chacha_ctx *ctx,
-                     const uint8_t      key[32],
-                     const uint8_t      nonce[8])
+void crypto_chacha20_init(crypto_chacha_ctx *ctx,
+                          const u8           key[32],
+                          const u8           nonce[8])
 {
     chacha20_init_key(ctx, key  );         // key
     ctx->input[12] = 0;                    // counter
@@ -117,30 +147,29 @@ crypto_chacha20_init(crypto_chacha_ctx *ctx,
     ctx->input[15] = load32_le(nonce + 4); // nonce
 }
 
-void
-crypto_chacha20_Xinit(crypto_chacha_ctx *ctx,
-                      const uint8_t      key[32],
-                      const uint8_t      nonce[24])
+void crypto_chacha20_Xinit(crypto_chacha_ctx *ctx,
+                           const u8           key[32],
+                           const u8           nonce[24])
 {
-    uint8_t derived_key[32];
+    u8 derived_key[32];
     crypto_chacha20_H(derived_key, key, nonce);
     crypto_chacha20_init(ctx, derived_key, nonce + 16);
 }
 
-void
-crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
-                        const uint8_t     *plain_text,
-                        uint8_t           *cipher_text,
-                        size_t             message_size)
+void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
+                             const u8          *plain_text,
+                             u8                *cipher_text,
+                             size_t             message_size)
 {
-    for (size_t i = 0; i < message_size; i++) {
+    FOR (i, 0, message_size) {
         // refill the pool if empty
         if (ctx->pool_index == 64) {
             // fill the pool
-            uint32_t buffer[16];
+            u32 buffer[16];
             chacha20_rounds(buffer, ctx->input);
-            for (int i = 0; i < 16; i++)
+            FOR (i, 0, 16) {
                 store32_le(ctx->random_pool + i*4, buffer[i] + ctx->input[i]);
+            }
             // update the counters
             ctx->pool_index = 0;
             ctx->input[12]++;
@@ -155,62 +184,62 @@ crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
     }
 }
 
-void
-crypto_chacha20_random(crypto_chacha_ctx *ctx,
-                       uint8_t           *cipher_text,
-                       size_t             message_size)
+void crypto_chacha20_random(crypto_chacha_ctx *ctx,
+                            u8                *cipher_text,
+                            size_t             message_size)
 {
     crypto_chacha20_encrypt(ctx, 0, cipher_text, message_size);
 }
 
 
-
-static void poly_load(uint32_t out[4], const uint8_t in[16])
+/////////////////
+/// Poly 1305 ///
+/////////////////
+sv poly_load(u32 out[4], const u8 in[16])
 {
-    for (int i = 0; i < 4; i++)
-        out[i] = load32_le(in + i*4);
+    FOR (i, 0, 4) { out[i] = load32_le(in + i*4); }
 }
 
-static void poly_add(uint32_t out[5], const uint32_t a[5], const uint32_t b[5])
+sv poly_add(u32 out[5], const u32 a[5], const u32 b[5])
 {
-    uint64_t carry = 0;
-    for (int i = 0; i < 5; i++) {
-        carry  += (int64_t)(a[i]) + b[i];
+    u64 carry = 0;
+    FOR (i, 0, 5) {
+        carry  += (i64)(a[i]) + b[i];
         out[i]  = carry & 0xffffffff; // lower 32 bits right there.
         carry >>= 32;                 // retain the carry
     }
 }
 
 // h = (h + c) * r
-static void poly_block(crypto_poly1305_ctx *ctx)
+sv poly_block(crypto_poly1305_ctx *ctx)
 {
     // h + c, without carry propagation
-    const uint64_t h0 = ctx->h[0] + (uint64_t)ctx->c[0];
-    const uint64_t h1 = ctx->h[1] + (uint64_t)ctx->c[1];
-    const uint64_t h2 = ctx->h[2] + (uint64_t)ctx->c[2];
-    const uint64_t h3 = ctx->h[3] + (uint64_t)ctx->c[3];
-    const uint64_t h4 = ctx->h[4] + (uint64_t)ctx->c[4];
+    const u64 h0 = ctx->h[0] + (u64)ctx->c[0];
+    const u64 h1 = ctx->h[1] + (u64)ctx->c[1];
+    const u64 h2 = ctx->h[2] + (u64)ctx->c[2];
+    const u64 h3 = ctx->h[3] + (u64)ctx->c[3];
+    const u64 h4 = ctx->h[4] + (u64)ctx->c[4];
 
     // Local all the things!
-    const uint64_t r0 = ctx->r[0];
-    const uint64_t r1 = ctx->r[1];
-    const uint64_t r2 = ctx->r[2];
-    const uint64_t r3 = ctx->r[3];
-    const uint64_t rr0 = (ctx->r[0] >> 2) * 5; // lose 2 bottom bits...
-    const uint64_t rr1 = (ctx->r[1] >> 2) * 5; // 2 bottom bits already cleared
-    const uint64_t rr2 = (ctx->r[2] >> 2) * 5; // 2 bottom bits already cleared
-    const uint64_t rr3 = (ctx->r[3] >> 2) * 5; // 2 bottom bits already cleared
+    const u64 r0 = ctx->r[0];
+    const u64 r1 = ctx->r[1];
+    const u64 r2 = ctx->r[2];
+    const u64 r3 = ctx->r[3];
+    const u64 rr0 = (ctx->r[0] >> 2) * 5; // lose 2 bottom bits...
+    const u64 rr1 = (ctx->r[1] >> 2) * 5; // 2 bottom bits already cleared
+    const u64 rr2 = (ctx->r[2] >> 2) * 5; // 2 bottom bits already cleared
+    const u64 rr3 = (ctx->r[3] >> 2) * 5; // 2 bottom bits already cleared
 
     // (h + c) * r, without carry propagation
-    const uint64_t x0 = h0*r0 + h1*rr3 + h2*rr2 + h3*rr1 + h4*rr0;
-    const uint64_t x1 = h0*r1 + h1*r0  + h2*rr3 + h3*rr2 + h4*rr1;
-    const uint64_t x2 = h0*r2 + h1*r1  + h2*r0  + h3*rr3 + h4*rr2;
-    const uint64_t x3 = h0*r3 + h1*r2  + h2*r1  + h3*r0  + h4*rr3;
-    const uint64_t x4 = h4 * (r0 & 3); // ...recover those 2 bits
+    const u64 x0 = h0*r0 + h1*rr3 + h2*rr2 + h3*rr1 + h4*rr0;
+    const u64 x1 = h0*r1 + h1*r0  + h2*rr3 + h3*rr2 + h4*rr1;
+    const u64 x2 = h0*r2 + h1*r1  + h2*r0  + h3*rr3 + h4*rr2;
+    const u64 x3 = h0*r3 + h1*r2  + h2*r1  + h3*r0  + h4*rr3;
+    const u64 x4 = h4 * (r0 & 3); // ...recover those 2 bits
 
     // carry propagation, put ctx->h under 2^130
-    const uint64_t msb = x4 + (x3 >> 32);
-    uint64_t       u   = (msb >> 2) * 5; // lose 2 bottom bits...
+    const u64 msb = x4 + (x3 >> 32);
+    u64       u   = (msb >> 2) * 5; // lose 2 bottom bits...
     u += (x0 & 0xffffffff)             ;  ctx->h[0] = u & 0xffffffff;  u >>= 32;
     u += (x1 & 0xffffffff) + (x0 >> 32);  ctx->h[1] = u & 0xffffffff;  u >>= 32;
     u += (x2 & 0xffffffff) + (x1 >> 32);  ctx->h[2] = u & 0xffffffff;  u >>= 32;
@@ -219,18 +248,16 @@ static void poly_block(crypto_poly1305_ctx *ctx)
 }
 
 // (re-)initializes the input counter and input buffer
-static void poly_clear_c(crypto_poly1305_ctx *ctx)
+sv poly_clear_c(crypto_poly1305_ctx *ctx)
 {
-    for (int i = 0; i < 4; i++)
-        ctx->c[i] = 0;
+    FOR (i, 0, 4) { ctx->c[i] = 0; }
     ctx->c_index = 0;
 }
 
-void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const uint8_t key[32])
+void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 {
     // initial h: zero
-    for (int i =  0; i < 5; i++)
-        ctx->h [i] = 0;
+    FOR (i, 0, 5) { ctx->h [i] = 0; }
     // initial r: first half of the key, minus a few bits
     poly_load(ctx->r, key);
     ctx->r[0] &= 0x0fffffff; // clear top 4 bits
@@ -246,7 +273,7 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const uint8_t key[32])
 }
 
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
-                            const uint8_t *m, size_t bytes)
+                            const u8 *m, size_t bytes)
 {
     while (bytes > 0) {
         if (ctx->c_index == 16) {
@@ -261,7 +288,7 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
     }
 }
 
-void crypto_poly1305_finish(crypto_poly1305_ctx *ctx, uint8_t mac[16])
+void crypto_poly1305_finish(crypto_poly1305_ctx *ctx, u8 mac[16])
 {
     // move the final 1 according to remaining input length
     ctx->c[4] = 0;
@@ -271,10 +298,10 @@ void crypto_poly1305_finish(crypto_poly1305_ctx *ctx, uint8_t mac[16])
     // ... this time with full modular reduction
     // We only need to conditionally subtract 2^130-5,
     // using bit twidling to prevent timing attacks.
-    static const uint32_t minus_p[5] = { 5, 0, 0, 0, 0xfffffffc };
-    uint32_t h_minus_p[5];
+    static const u32 minus_p[5] = { 5, 0, 0, 0, 0xfffffffc };
+    u32 h_minus_p[5];
     poly_add(h_minus_p, ctx->h, minus_p);
-    uint32_t negative = ~(-(h_minus_p[4] >> 31)); // 0 or -1 (2's complement)
+    u32 negative = ~(-(h_minus_p[4] >> 31)); // 0 or -1 (2's complement)
     for (int i = 0; i < 5; i++) {
         ctx->h[i] ^= negative & (ctx->h[i] ^ h_minus_p[i]);
     }
@@ -284,8 +311,8 @@ void crypto_poly1305_finish(crypto_poly1305_ctx *ctx, uint8_t mac[16])
         store32_le(mac + i*4, ctx->h[i]);
 }
 
-void crypto_poly1305_auth(uint8_t mac[16], const uint8_t *m,
-                          size_t  m_size , const uint8_t  key[32])
+void crypto_poly1305_auth(u8 mac[16], const u8 *m,
+                          size_t  m_size , const u8  key[32])
 {
     crypto_poly1305_ctx ctx;
     crypto_poly1305_init  (&ctx, key);
@@ -293,21 +320,12 @@ void crypto_poly1305_auth(uint8_t mac[16], const uint8_t *m,
     crypto_poly1305_finish(&ctx, mac);
 }
 
-int crypto_memcmp_16(const uint8_t mac1[16], const uint8_t mac2[16])
-{
-    unsigned diff = 0;
-    for (int i = 0; i < 16; i++) {
-        diff |= (mac1[i] ^ mac2[i]);
-    }
-    return diff;
-}
-// ripped off from the reference implentation in RFC 7693
-
-
-
+////////////////
+/// Blake2 b /// (taken from the reference
+////////////////  implentation in RFC 7693)
 
 // Initialization Vector.
-static const uint64_t blake2b_iv[8] = {
+static const u64 blake2b_iv[8] = {
     0x6a09e667f3bcc908, 0xbb67ae8584caa73b,
     0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
     0x510e527fade682d1, 0x9b05688c2b3e6c1f,
@@ -315,17 +333,15 @@ static const uint64_t blake2b_iv[8] = {
 };
 
 // increment a 128-bit "word".
-static void
-incr(uint64_t x[2], uint64_t y)
+sv incr(u64 x[2], u64 y)
 {
     x[0] += y;                 // increment the low word
     if (x[0] < y) { x[1]++; }  // handle overflow
 }
 
-static void
-blake2b_compress(crypto_blake2b_ctx *ctx, _Bool last_block)
+sv blake2b_compress(crypto_blake2b_ctx *ctx, _Bool last_block)
 {
-    static const uint8_t sigma[12][16] = {
+    static const u8 sigma[12][16] = {
         { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
         { 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
         { 11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
@@ -341,8 +357,8 @@ blake2b_compress(crypto_blake2b_ctx *ctx, _Bool last_block)
     };
 
     // init work variables (before shuffling them)
-    uint64_t v[16];
-    for (int i = 0; i < 8; i++) {
+    u64 v[16];
+    FOR (i, 0, 8) {
         v[i    ] = ctx->hash[i];
         v[i + 8] = blake2b_iv[i];
     }
@@ -351,13 +367,11 @@ blake2b_compress(crypto_blake2b_ctx *ctx, _Bool last_block)
     if (last_block) { v[14] = ~v[14]; }
 
     // load the input buffer
-    uint64_t m[16];
-    for (int i = 0; i < 16; i++) {
-        m[i] = load64_le(&ctx->buf[i * 8]);
-    }
+    u64 m[16];
+    FOR (i ,0, 16) { m[i] = load64_le(&ctx->buf[i * 8]); }
 
     // shuffle the work variables with the 12 rounds
-    for (int i = 0; i < 12; i++) {
+    FOR (i, 0, 12) {
 #define B2B_G(a, b, c, d, x, y)                                    \
         v[a] += v[b] + x;  v[d] ^= v[a];  v[d] = rotr64(v[d], 32); \
         v[c] += v[d]    ;  v[b] ^= v[c];  v[b] = rotr64(v[b], 24); \
@@ -373,22 +387,17 @@ blake2b_compress(crypto_blake2b_ctx *ctx, _Bool last_block)
         B2B_G( 2, 7,  8, 13, m[sigma[i][12]], m[sigma[i][13]]);
         B2B_G( 3, 4,  9, 14, m[sigma[i][14]], m[sigma[i][15]]);
     }
-
     // accumulate the work variables into the hash
-    for(int i = 0; i < 8; i++) {
-        ctx->hash[i] ^= v[i] ^ v[i + 8];
-    }
+    FOR (i, 0, 8) { ctx->hash[i] ^= v[i] ^ v[i+8]; }
 }
 
-void
-crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t outlen,
-                            const uint8_t      *key, size_t keylen)
+void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t outlen,
+                                 const u8      *key, size_t keylen)
 {
     // Initial hash == initialization vector...
-    for (int i = 0; i < 8; i++) {
-        ctx->hash[i] = blake2b_iv[i];
-    }
-    ctx->hash[0]      ^= 0x01010000 ^ (keylen << 8) ^ outlen;  // ...mostly
+    FOR (i, 0, 8) { ctx->hash[i] = blake2b_iv[i]; }
+    ctx->hash[0] ^= 0x01010000 ^ (keylen << 8) ^ outlen;  // ...mostly
+
     ctx->input_size[0] = 0;       // input count low word
     ctx->input_size[1] = 0;       // input count high word
     ctx->c             = 0;       // pointer within buffer
@@ -396,22 +405,20 @@ crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t outlen,
 
     // If there's a key, put it in the first block, then pad with zeroes
     if (keylen > 0) {
-        for (size_t i = 0     ; i < keylen; i++) { ctx->buf[i] = key[i]; }
-        for (size_t i = keylen; i < 128   ; i++) { ctx->buf[i] = 0;      }
+        FOR (i, 0     , keylen) { ctx->buf[i] = key[i]; }
+        FOR (i, keylen, 128   ) { ctx->buf[i] = 0;      }
         ctx->c = 128; // mark the block as used
     }
 }
 
-void
-crypto_blake2b_init(crypto_blake2b_ctx *ctx)
+void crypto_blake2b_init(crypto_blake2b_ctx *ctx)
 {
     crypto_blake2b_general_init(ctx, 64, 0, 0);
 }
 
-void
-crypto_blake2b_update(crypto_blake2b_ctx *ctx, const uint8_t *in, size_t inlen)
+void crypto_blake2b_update(crypto_blake2b_ctx *ctx, const u8 *in, size_t inlen)
 {
-    for (size_t i = 0; i < inlen; i++) {
+    FOR (i, 0, inlen) {
         // If the buffer is full, increment the counters and
         // add (compress) the current buffer to the hash
         if (ctx->c == 128) {
@@ -425,24 +432,22 @@ crypto_blake2b_update(crypto_blake2b_ctx *ctx, const uint8_t *in, size_t inlen)
     }
 }
 
-void
-crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *out)
+void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *out)
 {
     // update input size, pad then compress the buffer
     incr(ctx->input_size, ctx->c);
-    for (int i = ctx->c; i < 128; i++) { ctx->buf[i] = 0; }
+    FOR (i, ctx->c, 128) { ctx->buf[i] = 0; }
     blake2b_compress(ctx, 1); // last time -> 1
 
     // copy the hash in the output (little endian of course)
-    for (int i = 0; i < ctx->output_size; i++) {
+    FOR (i, 0, ctx->output_size) {
         out[i] = (ctx->hash[i / 8] >> (8 * (i & 7))) & 0xFF;
     }
 }
 
-void
-crypto_blake2b_general(      uint8_t*out, size_t outlen,
-                       const uint8_t*key, size_t keylen,
-                       const uint8_t*in,  size_t inlen)
+void crypto_blake2b_general(u8       *out, size_t outlen,
+                            const u8 *key, size_t keylen,
+                            const u8 *in,  size_t inlen)
 {
     crypto_blake2b_ctx ctx;
     crypto_blake2b_general_init(&ctx, outlen, key, keylen);
@@ -450,82 +455,47 @@ crypto_blake2b_general(      uint8_t*out, size_t outlen,
     crypto_blake2b_final(&ctx, out);
 }
 
-void
-crypto_blake2b(uint8_t out[64], const uint8_t *in, size_t inlen)
+void crypto_blake2b(u8 out[64], const u8 *in, size_t inlen)
 {
     crypto_blake2b_general(out, 64, 0, 0, in, inlen);
 }
 
 
-/////////////////
-/// Utilities ///
-/////////////////
+////////////////
+/// Argon2 i ///
+////////////////
+// references to R, Z, Q etc. come from the spec
 
+typedef struct { u64 a[128]; } block; // 1024 octets
 
-static uint32_t
-min(uint32_t a, uint32_t b)
-{
-    return a <= b ? a : b;
-}
+static u32 min(u32 a, u32 b) { return a <= b ? a : b; }
 
 // updates a blake2 hash with a 32 bit word, little endian.
-static void
-blake_update_32(crypto_blake2b_ctx *ctx, uint32_t input)
+sv blake_update_32(crypto_blake2b_ctx *ctx, u32 input)
 {
-    uint8_t buf[4];
+    u8 buf[4];
     store32_le(buf, input);
     crypto_blake2b_update(ctx, buf, 4);
 }
 
-//////////////////
-// Argon2 block //
-//////////////////
-typedef struct block {
-    uint64_t a[128]; // 1024 octets in 128 64-bit words
-} block;
-
-static void
-load_block(block *b, const uint8_t bytes[1024])
+sv load_block(block *b, const u8 bytes[1024])
 {
-    for (int i = 0; i < 128; i++) {
-        b->a[i] = load64_le(bytes + i * 8);
-    }
+    FOR (i, 0, 128) { b->a[i] = load64_le(bytes + i*8); }
 }
 
-static void
-store_block(uint8_t bytes[1024], const block *b)
+sv store_block(u8 bytes[1024], const block *b)
 {
-    for (int i = 0; i < 128; i++) {
-        store64_le(bytes + i * 8, b->a[i]);
-    }
+    FOR (i, 0, 128) { store64_le(bytes + i*8, b->a[i]); }
 }
 
-static void
-copy_block(block *out, const block *in)
-{
-    for (int i = 0; i < 128; i++) {
-        out->a[i] = in->a[i];
-    }
-}
-
-static void
-xor_block(block *out, const block *in)
-{
-    for (int i = 0; i < 128; i++) {
-        out->a[i] ^= in->a[i];
-    }
-}
-
-////////////////////
-// Argon2i proper //
-////////////////////
+sv copy_block(block *o, const block *in) { FOR (i, 0, 128) o->a[i]  = in->a[i]; }
+sv  xor_block(block *o, const block *in) { FOR (i, 0, 128) o->a[i] ^= in->a[i]; }
 
 // Hash with a virtually unlimited digest size.
 // Doesn't extract more entropy than the base hash function.
 // Mainly used for filling a whole kilobyte block with pseudo-random bytes.
-static void
-extended_hash(uint8_t       *digest, uint32_t digest_size,
-              const uint8_t *input , uint32_t input_size)
+sv extended_hash(u8       *digest, u32 digest_size,
+                 const u8 *input , u32 input_size)
 {
     crypto_blake2b_ctx ctx;
     crypto_blake2b_general_init(&ctx, min(digest_size, 64), 0, 0);
@@ -536,13 +506,12 @@ extended_hash(uint8_t       *digest, uint32_t digest_size,
     if (digest_size > 64) {
         // the conversion to u64 avoids integer overflow on
         // ludicrously big hash sizes.
-        uint32_t r   = (((uint64_t)digest_size + 31) / 32) - 2;
-        uint32_t i   =  1;
-        uint32_t in  =  0;
-        uint32_t out = 32;
+        u32 r   = (((u64)digest_size + 31) / 32) - 2;
+        u32 i   =  1;
+        u32 in  =  0;
+        u32 out = 32;
         while (i < r) {
-            // Input and output overlap.
-            // This shouldn't be a problem.
+            // Input and output overlap. This is intentional
             crypto_blake2b(digest + out, digest + in, 64);
             i   +=  1;
             in  += 32;
@@ -554,10 +523,6 @@ extended_hash(uint8_t       *digest, uint32_t digest_size,
     }
 }
 
-// Core of the compression function G.  Computes Z from R in place.
-static void
-g_rounds(block *work_block)
-{
 #define LSB(x) ((x) & 0xffffffff)
 #define G(a, b, c, d)                                            \
     a += b + 2 * LSB(a) * LSB(b);  d ^= a;  d = rotr64(d, 32);   \
@@ -571,6 +536,9 @@ g_rounds(block *work_block)
     G(v0, v5, v10, v15);  G(v1, v6, v11, v12);          \
     G(v2, v7,  v8, v13);  G(v3, v4,  v9, v14)
 
+// Core of the compression function G.  Computes Z from R in place.
+sv g_rounds(block *work_block)
+{
     // column rounds (work_block = Q)
     for (int i = 0; i < 128; i += 16) {
         ROUND(work_block->a[i     ], work_block->a[i +  1],
@@ -598,46 +566,42 @@ g_rounds(block *work_block)
 // The compression function G
 // may overwrite result completely  (xcopy == copy_block),
 // or XOR result with the old block (xcopy ==  xor_block)
-static void
-binary_g(block *result, const block *x, const block *y,
-         void (*xcopy) (block*, const block*))
+sv binary_g(block *result, const block *x, const block *y,
+            void (*xcopy) (block*, const block*))
 {
-    // put R = X ^ Y into tmp
     block tmp;
-    copy_block(&tmp, x);
-    xor_block (&tmp, y);
-
-    xcopy(result, &tmp);     // save R (erase or xor the old block)
-    g_rounds(&tmp);          // tmp = Z
-    xor_block(result, &tmp); // result =  R ^ Z (or R ^ Z ^ old)
+    copy_block(&tmp, x);     // tmp    = X
+    xor_block (&tmp, y);     // tmp    = X ^ Y = R
+    xcopy(result, &tmp);     // result = R     (or R ^ old)
+    g_rounds(&tmp);          // tmp    = Z
+    xor_block(result, &tmp); // result = R ^ Z (or R ^ old ^ Z)
 }
 
 // unary version of the compression function.
 // The missing argument is implied zero.
 // Does the transformation in place.
-static void
-unary_g(block *work_block)
+sv unary_g(block *work_block)
 {
     // work_block == R
     block tmp;
-    copy_block(&tmp, work_block); // tmp = R
+    copy_block(&tmp, work_block); // tmp        = R
     g_rounds(work_block);         // work_block = Z
     xor_block(work_block, &tmp);  // work_block = Z ^ R
 }
 
-typedef struct gidx_ctx {
-    block    b;
-    uint32_t pass_number;
-    uint32_t slice_number;
-    uint32_t nb_blocks;
-    uint32_t nb_iterations;
-    uint32_t ctr;
-    uint32_t index;
+typedef struct {
+    block b;
+    u32   pass_number;
+    u32   slice_number;
+    u32   nb_blocks;
+    u32   nb_iterations;
+    u32   ctr;
+    u32   index;
 } gidx_ctx;
 
-static void
-gidx_refresh(gidx_ctx *ctx)
+sv gidx_refresh(gidx_ctx *ctx)
 {
+    // seed the begining of the block...
     ctx->b.a[0] = ctx->pass_number;
     ctx->b.a[1] = 0;  // lane number (we have only one)
     ctx->b.a[2] = ctx->slice_number;
@@ -645,23 +609,17 @@ gidx_refresh(gidx_ctx *ctx)
     ctx->b.a[4] = ctx->nb_iterations;
     ctx->b.a[5] = 1;  // type: Argon2i
     ctx->b.a[6] = ctx->ctr;
-    // zero the rest of the block
-    for (int i = 7; i < 128; i++) {
-        ctx->b.a[i] = 0;
-    }
+    FOR (i, 7, 128) { ctx->b.a[i] = 0; } // then zero the rest out
 
     // Shuffle the block thus: ctx->b = G((G(ctx->b, zero)), zero)
     // Applies the G "square" function to get cheap pseudo-random numbers.
     unary_g(&(ctx->b));
-    unary_g(&(ctx->b)); // square means apply it twice
+    unary_g(&(ctx->b));
 }
 
-static void
-gidx_init(gidx_ctx *ctx,
-          uint32_t pass_number,
-          uint32_t slice_number,
-          uint32_t nb_blocks,
-          uint32_t nb_iterations)
+sv gidx_init(gidx_ctx *ctx,
+             u32 pass_number, u32 slice_number,
+             u32 nb_blocks,   u32 nb_iterations)
 {
     ctx->pass_number   = pass_number;
     ctx->slice_number  = slice_number;
@@ -669,11 +627,14 @@ gidx_init(gidx_ctx *ctx,
     ctx->nb_iterations = nb_iterations;
     ctx->ctr           = 1;   // not zero, surprisingly
     ctx->index         = pass_number == 0 && slice_number == 0 ? 2 : 0;
+    // Quirk from the reference implementation: for the first pass,
+    // ctx->index is set at 2, because the first pseudo-random index
+    // we need is used for the *third* block of the segment.
+    // Setting it at zero every time wouldn't affect security.
     gidx_refresh(ctx);
 }
 
-static uint32_t
-gidx_next(gidx_ctx *ctx)
+static u32 gidx_next(gidx_ctx *ctx)
 {
     // lazily creates the index block we need
     if (ctx->index == 128) {
@@ -682,7 +643,7 @@ gidx_next(gidx_ctx *ctx)
         gidx_refresh(ctx);
     }
     // saves and increment the index
-    uint32_t index = ctx->index;
+    u32 index = ctx->index;
     ctx->index++; // updates index for the next call
 
     // Computes the area size.
@@ -691,37 +652,36 @@ gidx_next(gidx_ctx *ctx)
     // Pass 1+: 3 last segments plus already constructed
     //          blocks in this segment.  THE SPEC SUGGESTS OTHERWISE.
     //          I CONFORM TO THE REFERENCE IMPLEMENTATION.
-    _Bool    first_pass = ctx->pass_number == 0;
-    uint32_t slice_size = ctx->nb_blocks / 4;
-    uint32_t area_size  = ((first_pass ? ctx->slice_number : 3)
-                           * slice_size + index - 1);
+    _Bool first_pass = ctx->pass_number == 0;
+    u32   slice_size = ctx->nb_blocks / 4;
+    u32   area_size  = ((first_pass ? ctx->slice_number : 3)
+                        * slice_size + index - 1);
 
     // Computes the starting position of the reference area.
     // CONTRARY TO WHAT THE SPEC SUGGESTS, IT STARTS AT THE
     // NEXT SEGMENT, NOT THE NEXT BLOCK.
-    uint32_t next_slice = (ctx->slice_number == 3
-                           ? 0
-                           : (ctx->slice_number + 1) * slice_size);
-    uint32_t start_pos  = first_pass ? 0 : next_slice;
+    u32 next_slice = (ctx->slice_number == 3
+                      ? 0
+                      : (ctx->slice_number + 1) * slice_size);
+    u32 start_pos  = first_pass ? 0 : next_slice;
 
     // Generates the actual index from J1 (no need for J2, there's only one lane)
-    uint64_t j1         = ctx->b.a[index] & 0xffffffff; // pseudo-random number
-    uint64_t x          = (j1 * j1)       >> 32;
-    uint64_t y          = (area_size * x) >> 32;
-    uint64_t z          = area_size - 1 - y;
+    u64 j1         = ctx->b.a[index] & 0xffffffff; // pseudo-random number
+    u64 x          = (j1 * j1)       >> 32;
+    u64 y          = (area_size * x) >> 32;
+    u64 z          = area_size - 1 - y;
     return (start_pos + z) % ctx->nb_blocks;
 }
 
 // Main algorithm
-void
-crypto_argon2i_hash(uint8_t       *tag,       uint32_t tag_size,
-                    const uint8_t *password,  uint32_t password_size,
-                    const uint8_t *salt,      uint32_t salt_size,
-                    const uint8_t *key,       uint32_t key_size,
-                    const uint8_t *ad,        uint32_t ad_size,
+void crypto_argon2i(u8       *tag,      u32 tag_size,
+                    const u8 *password, u32 password_size,
+                    const u8 *salt,     u32 salt_size,
+                    const u8 *key,      u32 key_size,
+                    const u8 *ad,       u32 ad_size,
                     void *work_area,
-                    uint32_t nb_blocks,
-                    uint32_t nb_iterations)
+                    u32 nb_blocks,
+                    u32 nb_iterations)
 {
     // work area seen as blocks (must be suitably aligned)
     block *blocks = work_area;
@@ -744,12 +704,12 @@ crypto_argon2i_hash(uint8_t       *tag,       uint32_t tag_size,
         blake_update_32      (&ctx,           ad_size);
         crypto_blake2b_update(&ctx, ad,       ad_size);
 
-        uint8_t initial_hash[72]; // 64 bytes plus 2 words for future hashes
+        u8 initial_hash[72]; // 64 bytes plus 2 words for future hashes
         crypto_blake2b_final(&ctx, initial_hash);
 
         // fill first 2 blocks
         block   tmp_block;
-        uint8_t hash_area[1024];
+        u8 hash_area[1024];
         store32_le(initial_hash + 64, 0); // first  additional word
         store32_le(initial_hash + 68, 0); // second additional word
         extended_hash(hash_area, 1024, initial_hash, 72);
@@ -764,29 +724,28 @@ crypto_argon2i_hash(uint8_t       *tag,       uint32_t tag_size,
 
     // Actual number of blocks
     nb_blocks -= nb_blocks % 4; // round down to 4 p (p == 1 thread)
-    const uint32_t segment_size = nb_blocks / 4;
+    const u32 segment_size = nb_blocks / 4;
 
     // fill (then re-fill) the rest of the blocks
-    for (uint32_t pass_number = 0; pass_number < nb_iterations; pass_number++) {
+    FOR (pass_number, 0, nb_iterations) {
         _Bool     first_pass  = pass_number == 0;
         // Simple copy on pass 0, XOR instead of overwrite on subsequent passes
         void (*xcopy) (block*, const block*) = first_pass ?copy_block :xor_block;
 
-        for (int segment = 0; segment < 4; segment++ ) {
-
+        FOR (segment, 0, 4) {
             gidx_ctx ctx;
             gidx_init(&ctx, pass_number, segment, nb_blocks, nb_iterations);
 
             // On the first segment of the first pass,
             // blocks 0 and 1 are already filled.
             // We use the offset to skip them.
-            uint32_t offset = first_pass && segment == 0 ? 2 : 0;
+            u32 offset = first_pass && segment == 0 ? 2 : 0;
             // current, reference, and previous are block indices
-            for (uint32_t current =  segment      * segment_size + offset;
-                 current          < (segment + 1) * segment_size;
-                 current++) {
-                uint32_t previous  = current == 0 ? nb_blocks - 1 : current - 1;
-                uint32_t reference = gidx_next(&ctx);
+            FOR (current,
+                 segment * segment_size + offset,
+                 (segment + 1) * segment_size) {
+                u32 previous  = current == 0 ? nb_blocks - 1 : current - 1;
+                u32 reference = gidx_next(&ctx);
                 binary_g(blocks + current,
                          blocks + previous,
                          blocks + reference,
@@ -795,42 +754,25 @@ crypto_argon2i_hash(uint8_t       *tag,       uint32_t tag_size,
         }
     }
     // hash the very last block with H' into the output tag
-    uint8_t final_block[1024];
+    u8 final_block[1024];
     store_block(final_block, blocks + (nb_blocks - 1));
     extended_hash(tag, tag_size, final_block, 1024);
 }
 
-void
-crypto_argon2i(uint8_t        tag[32],
-               const uint8_t *password,  uint32_t password_size,
-               const uint8_t *salt,      uint32_t salt_size,
-               void    *work_area,
-               uint32_t nb_blocks,
-               uint32_t nb_iterations)
-{
-    crypto_argon2i_hash(tag     , 32,
-                        password, password_size,
-                        salt    , salt_size,
-                        0, 0, 0, 0,
-                        work_area, nb_blocks, nb_iterations);
-}
 
-// Taken from TweetNaCl
-
-
-#define FOR(i, start, end) for (size_t i = start; i < end; i++)
-#define sv static void
-typedef int64_t gf[16];
-
-static const uint8_t _0[16];
-static const uint8_t _9[32] = { 9 };
+///////////////
+/// X-25519 /// (Taken from TweetNaCl)
+///////////////
+typedef i64 gf[16];
+static const u8 _0[16];
+static const u8 _9[32]  = { 9 };
 static const gf _121665 = { 0xdb41, 1 };
 
 sv car_25519(gf o)
 {
     FOR(i, 0, 16) {
         o[i]              += 1LL  << 16;
-        int64_t c          = o[i] >> 16;
+        i64 c              = o[i] >> 16;
         o[(i+1) * (i<15)] += c - 1 + (37 * (c-1) * (i==15));
         o[i]              -= c << 16;
     }
@@ -838,15 +780,15 @@ sv car_25519(gf o)
 
 sv sel_25519(gf p, gf q, int b)
 {
-    int64_t c = ~(b-1);
+    i64 c = ~(b-1);
     FOR(i, 0, 16) {
-        int64_t t = c & (p[i] ^ q[i]);
-        p[i]     ^= t;
-        q[i]     ^= t;
+        i64 t = c & (p[i] ^ q[i]);
+        p[i] ^= t;
+        q[i] ^= t;
     }
 }
 
-sv pack_25519(uint8_t *o, const gf n)
+sv pack_25519(u8 *o, const gf n)
 {
     gf t;
     FOR(i, 0, 16) t[i] = n[i];
@@ -871,25 +813,17 @@ sv pack_25519(uint8_t *o, const gf n)
     }
 }
 
-sv unpack_25519(gf o, const uint8_t *n)
+sv unpack_25519(gf o, const u8 *n)
 {
-    FOR(i, 0, 16) o[i] = n[2*i] + ((int64_t)n[2*i + 1] << 8);
+    FOR(i, 0, 16) o[i] = n[2*i] + ((i64)n[2*i + 1] << 8);
     o[15] &= 0x7fff;
 }
 
-sv A(gf o, const gf a, const gf b)
-{
-    FOR(i, 0, 16) o[i] = a[i] + b[i];
-}
-
-sv Z(gf o, const gf a, const gf b)
-{
-    FOR(i, 0, 16) o[i] = a[i] - b[i];
-}
-
+sv A(gf o, const gf a, const gf b) { FOR(i, 0, 16) o[i] = a[i] + b[i]; }
+sv Z(gf o, const gf a, const gf b) { FOR(i, 0, 16) o[i] = a[i] - b[i]; }
 sv M(gf o, const gf a, const gf b)
 {
-    int64_t t[31];
+    i64 t[31];
     FOR(i, 0, 31) t[i] = 0;
     FOR(i, 0, 16) FOR(j, 0, 16) t[i+j] += a[i] * b[j];
     FOR(i, 0, 15) t[i] += 38 * t[i+16];
@@ -898,10 +832,7 @@ sv M(gf o, const gf a, const gf b)
     car_25519(o);
 }
 
-sv S(gf o,const gf a)
-{
-    M(o, a, a);
-}
+sv S(gf o,const gf a) { M(o, a, a); }
 
 sv inv_25519(gf o,const gf i)
 {
@@ -915,11 +846,11 @@ sv inv_25519(gf o,const gf i)
     FOR(a, 0, 16) o[a] = c[a];
 }
 
-void crypto_x25519(uint8_t q[32], const uint8_t n[32], const uint8_t p[32])
+void crypto_x25519(u8 q[32], const u8 n[32], const u8 p[32])
 {
-    uint8_t z[32];
-    int64_t x[80];
-    int64_t r;
+    u8 z[32];
+    i64 x[80];
+    i64 r;
     gf a, b, c, d, e, f;
     FOR(i, 0, 31) z[i] = n[i];
     z[31]  = (n[31] & 127) | 64;
@@ -966,40 +897,40 @@ void crypto_x25519(uint8_t q[32], const uint8_t n[32], const uint8_t p[32])
     pack_25519(q, x+16);
 }
 
-void crypto_x25519_base(uint8_t q[32], const uint8_t n[32])
+void crypto_x25519_public_key(u8 q[32], const u8 n[32])
 {
     crypto_x25519(q, n, _9);
 }
-// Taken from TweetNaCl.
-// I tried the ref10 implementation, but that was too damn big
 
-
-#define FOR(i, start, end) for (size_t i = start; i < end; i++)
-#define sv static void
-#define sc static const
-
-typedef uint8_t   u8;
-typedef int64_t  i64;
-typedef uint64_t u64;
-typedef i64 gf[16];
-
-sc gf gf0;
-sc gf gf1 = { 1 };
-sc gf  D  = { 0x78a3, 0x1359, 0x4dca, 0x75eb, 0xd8ab, 0x4141, 0x0a4d, 0x0070,
-              0xe898, 0x7779, 0x4079, 0x8cc7, 0xfe73, 0x2b6f, 0x6cee, 0x5203};
-sc gf  D2 = { 0xf159, 0x26b2, 0x9b94, 0xebd6, 0xb156, 0x8283, 0x149a, 0x00e0,
-              0xd130, 0xeef3, 0x80f2, 0x198e, 0xfce7, 0x56df, 0xd9dc, 0x2406};
-sc gf  X  = { 0xd51a, 0x8f25, 0x2d60, 0xc956, 0xa7b2, 0x9525, 0xc760, 0x692c,
-              0xdc5c, 0xfdd6, 0xe231, 0xc0a4, 0x53fe, 0xcd6e, 0x36d3, 0x2169};
-sc gf  Y  = { 0x6658, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666,
-              0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666};
-sc gf  I  = { 0xa0b0, 0x4a0e, 0x1b27, 0xc4ee, 0xe478, 0xad2f, 0x1806, 0x2f43,
-              0xd7a7, 0x3dfb, 0x0099, 0x2b4d, 0xdf0b, 0x4fc1, 0x2480, 0x2b83};
-
-sc u64 L[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-                 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10 };
+///////////////
+/// Ed25519 /// (Taken from TweetNaCl)
+///////////////
+static const gf gf0;
+static const gf gf1    = { 1 };
+static const gf  D     = { 0x78a3, 0x1359, 0x4dca, 0x75eb,
+                           0xd8ab, 0x4141, 0x0a4d, 0x0070,
+                           0xe898, 0x7779, 0x4079, 0x8cc7,
+                           0xfe73, 0x2b6f, 0x6cee, 0x5203 };
+static const gf  D2    = { 0xf159, 0x26b2, 0x9b94, 0xebd6,
+                           0xb156, 0x8283, 0x149a, 0x00e0,
+                           0xd130, 0xeef3, 0x80f2, 0x198e,
+                           0xfce7, 0x56df, 0xd9dc, 0x2406 };
+static const gf  X     = { 0xd51a, 0x8f25, 0x2d60, 0xc956,
+                           0xa7b2, 0x9525, 0xc760, 0x692c,
+                           0xdc5c, 0xfdd6, 0xe231, 0xc0a4,
+                           0x53fe, 0xcd6e, 0x36d3, 0x2169 };
+static const gf  Y     = { 0x6658, 0x6666, 0x6666, 0x6666,
+                           0x6666, 0x6666, 0x6666, 0x6666,
+                           0x6666, 0x6666, 0x6666, 0x6666,
+                           0x6666, 0x6666, 0x6666, 0x6666 };
+static const gf  I     = { 0xa0b0, 0x4a0e, 0x1b27, 0xc4ee,
+                           0xe478, 0xad2f, 0x1806, 0x2f43,
+                           0xd7a7, 0x3dfb, 0x0099, 0x2b4d,
+                           0xdf0b, 0x4fc1, 0x2480, 0x2b83 };
+static const u64 L[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
+                           0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10 };
 
 sv set_25519(gf r, const gf a) { FOR(i, 0, 16) r[i] = a[i]; }
 
@@ -1021,19 +952,12 @@ sv pow2523(gf o,const gf i)
     FOR(a, 0, 16) o[a] = c[a];
 }
 
-static int vn(const u8 *x, const u8 *y, size_t n)
-{
-  uint32_t d = 0;
-  FOR(i, 0, n) d |= x[i] ^ y[i];
-  return (1 & ((d - 1) >> 8)) - 1;
-}
-
 static int neq_25519(const gf a, const gf b)
 {
     u8 c[32],d[32];
     pack_25519(c, a);
     pack_25519(d, b);
-    return vn(c, d, 32);
+    return crypto_memcmp(c, d, 32);
 }
 
 sv add(gf p[4], gf q[4])
@@ -1171,27 +1095,6 @@ static int unpackneg(gf r[4],const u8 p[32])
     return 0;
 }
 
-#ifdef ED25519_SHA512
-    #include "sha512.h"
-    #define HASH crypto_sha512
-#else
-    #define HASH crypto_blake2b
-#endif
-
-#define COMBINE1(x, y) x ## y
-#define COMBINE2(x, y) COMBINE1(x, y)
-#define HASH_CTX    COMBINE2(HASH, _ctx)
-#define HASH_INIT   COMBINE2(HASH, _init)
-#define HASH_UPDATE COMBINE2(HASH, _update)
-#define HASH_FINAL  COMBINE2(HASH, _final)
-
-// hash function interface
-// Typical uses: sha512 for tests vectors, blake2b for production.
-void HASH_INIT  (HASH_CTX *ctx);
-void HASH_UPDATE(HASH_CTX *ctx, const u8 *in, size_t inlen);
-void HASH_FINAL (HASH_CTX *ctx, u8 hash[64]);
-void HASH(u8 hash[64], const u8 *in, size_t inlen);
-
 sv hash_k(u8 k[64], const u8 R[32], const u8 A[32], const u8 *M, size_t M_size)
 {
     HASH_CTX ctx;
@@ -1203,8 +1106,7 @@ sv hash_k(u8 k[64], const u8 R[32], const u8 A[32], const u8 *M, size_t M_size)
     reduce(k);
 }
 
-void crypto_ed25519_public_key(uint8_t        public_key[32],
-                               const uint8_t  secret_key[32])
+void crypto_ed25519_public_key(u8 public_key[32], const u8 secret_key[32])
 {
     // hash the private key, turn the hash into a scalar
     u8 a[64];
@@ -1219,10 +1121,10 @@ void crypto_ed25519_public_key(uint8_t        public_key[32],
     pack(public_key, aB);
 }
 
-void crypto_ed25519_sign(uint8_t        signature[64],
-                         const uint8_t  secret_key[32],
-                         const uint8_t *message,
-                         size_t         message_size)
+void crypto_ed25519_sign(u8        signature[64],
+                         const u8  secret_key[32],
+                         const u8 *message,
+                         size_t    message_size)
 {
     u8 h[64];
     u8 *a      = h;       // secret scalar
@@ -1268,9 +1170,9 @@ void crypto_ed25519_sign(uint8_t        signature[64],
     modL(signature + 32, s);  // second half of the signature = s
 }
 
-int crypto_ed25519_check(const uint8_t  signature[64],
-                         const uint8_t  public_key[32],
-                         const uint8_t *message,
+int crypto_ed25519_check(const u8  signature[64],
+                         const u8  public_key[32],
+                         const u8 *message,
                          size_t         message_size)
 {
     gf aB[4];  if (unpackneg(aB, public_key)) return -1;   // -aB
@@ -1278,18 +1180,22 @@ int crypto_ed25519_check(const uint8_t  signature[64],
     gf p[4];   scalarmult(p, aB, k);                       // p = -aB k
     gf sB[4];  scalarbase(sB, signature + 32); add(p, sB); // p = s - aB k
     u8 t[32];  pack(t, p);
-    return vn(signature, t, 32); // R == s - aB k ? OK : fail
+    return crypto_memcmp(signature, t, 32); // R == s - aB k ? OK : fail
 }
 
-void crypto_ae_lock_detached(uint8_t        mac[16],
-                             uint8_t       *ciphertext,
-                             const uint8_t  key[32],
-                             const uint8_t  nonce[24],
-                             const uint8_t *plaintext,
+////////////////////////////////
+/// Authenticated encryption ///
+////////////////////////////////
+
+void crypto_ae_lock_detached(u8        mac[16],
+                             u8       *ciphertext,
+                             const u8  key[32],
+                             const u8  nonce[24],
+                             const u8 *plaintext,
                              size_t         text_size)
 {
     crypto_chacha_ctx e_ctx;
-    uint8_t           auth_key[32];
+    u8           auth_key[32];
     crypto_chacha20_Xinit (&e_ctx, key, nonce);
     crypto_chacha20_random(&e_ctx, auth_key, 32);
 
@@ -1297,129 +1203,132 @@ void crypto_ae_lock_detached(uint8_t        mac[16],
     crypto_poly1305_auth(mac, ciphertext, text_size, auth_key);
 }
 
-int crypto_ae_unlock_detached(uint8_t       *plaintext,
-                              const uint8_t  key[32],
-                              const uint8_t  nonce[24],
-                              const uint8_t  mac[16],
-                              const uint8_t *ciphertext,
+int crypto_ae_unlock_detached(u8       *plaintext,
+                              const u8  key[32],
+                              const u8  nonce[24],
+                              const u8  mac[16],
+                              const u8 *ciphertext,
                               size_t         text_size)
 {
     crypto_chacha_ctx e_ctx;
-    uint8_t           auth_key[32];
+    u8           auth_key[32];
     crypto_chacha20_Xinit (&e_ctx, key, nonce);
     crypto_chacha20_random(&e_ctx, auth_key, 32);
 
-    uint8_t real_mac[16];
+    u8 real_mac[16];
     crypto_poly1305_auth(real_mac, ciphertext, text_size, auth_key);
 
-    if (crypto_memcmp_16(real_mac, mac))
+    if (crypto_memcmp(real_mac, mac, 16))
         return -1;
 
     crypto_chacha20_encrypt(&e_ctx, ciphertext, plaintext, text_size);
     return 0;
 }
 
-void crypto_ae_lock(uint8_t       *box,
-                    const uint8_t  key[32],
-                    const uint8_t  nonce[24],
-                    const uint8_t *plaintext,
+void crypto_ae_lock(u8       *box,
+                    const u8  key[32],
+                    const u8  nonce[24],
+                    const u8 *plaintext,
                     size_t         text_size)
 {
     crypto_ae_lock_detached(box, box + 16, key, nonce, plaintext, text_size);
 }
 
-int crypto_ae_unlock(uint8_t       *plaintext,
-                     const uint8_t  key[32],
-                     const uint8_t  nonce[24],
-                     const uint8_t *box,
+int crypto_ae_unlock(u8       *plaintext,
+                     const u8  key[32],
+                     const u8  nonce[24],
+                     const u8 *box,
                      size_t         text_size)
 {
     return crypto_ae_unlock_detached(plaintext, key, nonce,
                                      box, box + 16, text_size);
 }
 
-void crypto_lock_key(uint8_t       shared_key[32],
-                     const uint8_t your_secret_key [32],
-                     const uint8_t their_public_key[32])
+/////////////////////////////////////////////
+/// Public key (authenticated) encryption ///
+/////////////////////////////////////////////
+void crypto_lock_key(u8       shared_key[32],
+                     const u8 your_secret_key [32],
+                     const u8 their_public_key[32])
 {
-    static const uint8_t _0[16];
-    uint8_t shared_secret[32];
+    static const u8 _0[16];
+    u8 shared_secret[32];
     crypto_x25519(shared_secret, your_secret_key, their_public_key);
     crypto_chacha20_H(shared_key, shared_secret, _0);
 }
 
-void crypto_lock_detached(uint8_t        mac[16],
-                          uint8_t       *ciphertext,
-                          const uint8_t  your_secret_key [32],
-                          const uint8_t  their_public_key[32],
-                          const uint8_t  nonce[24],
-                          const uint8_t *plaintext,
-                          size_t         text_size)
+void crypto_lock_detached(u8        mac[16],
+                          u8       *ciphertext,
+                          const u8  your_secret_key [32],
+                          const u8  their_public_key[32],
+                          const u8  nonce[24],
+                          const u8 *plaintext,
+                          size_t    text_size)
 {
-    uint8_t shared_key[32];
+    u8 shared_key[32];
     crypto_lock_key(shared_key, your_secret_key, their_public_key);
     crypto_ae_lock_detached(mac, ciphertext,
                             shared_key, nonce,
                             plaintext, text_size);
 }
 
-int crypto_unlock_detached(uint8_t       *plaintext,
-                           const uint8_t  your_secret_key [32],
-                           const uint8_t  their_public_key[32],
-                           const uint8_t  nonce[24],
-                           const uint8_t  mac[16],
-                           const uint8_t *ciphertext,
-                           size_t         text_size)
+int crypto_unlock_detached(u8       *plaintext,
+                           const u8  your_secret_key [32],
+                           const u8  their_public_key[32],
+                           const u8  nonce[24],
+                           const u8  mac[16],
+                           const u8 *ciphertext,
+                           size_t    text_size)
 {
-    uint8_t shared_key[32];
+    u8 shared_key[32];
     crypto_lock_key(shared_key, your_secret_key, their_public_key);
     return crypto_ae_unlock_detached(plaintext,
                                      shared_key, nonce,
                                      mac, ciphertext, text_size);
 }
 
-void crypto_lock(uint8_t       *box,
-                 const uint8_t  your_secret_key [32],
-                 const uint8_t  their_public_key[32],
-                 const uint8_t  nonce[24],
-                 const uint8_t *plaintext,
-                 size_t         text_size)
+void crypto_lock(u8       *box,
+                 const u8  your_secret_key [32],
+                 const u8  their_public_key[32],
+                 const u8  nonce[24],
+                 const u8 *plaintext,
+                 size_t    text_size)
 {
     crypto_lock_detached(box, box + 16,
                          your_secret_key, their_public_key, nonce,
                          plaintext, text_size);
 }
 
-int crypto_unlock(uint8_t       *plaintext,
-                  const uint8_t  your_secret_key [32],
-                  const uint8_t  their_public_key[32],
-                  const uint8_t  nonce[24],
-                  const uint8_t *box,
-                  size_t         text_size)
+int crypto_unlock(u8       *plaintext,
+                  const u8  your_secret_key [32],
+                  const u8  their_public_key[32],
+                  const u8  nonce[24],
+                  const u8 *box,
+                  size_t    text_size)
 {
     return crypto_unlock_detached(plaintext,
                                   your_secret_key, their_public_key, nonce,
                                   box, box + 16, text_size);
 }
 
-static const uint8_t null_nonce[24] = {};
+static const u8 null_nonce[24] = {};
 
-void crypto_anonymous_lock(uint8_t       *box,
-                           const uint8_t  random_secret_key[32],
-                           const uint8_t  their_public_key[32],
-                           const uint8_t *plaintext,
-                           size_t         text_size)
+void crypto_anonymous_lock(u8       *box,
+                           const u8  random_secret_key[32],
+                           const u8  their_public_key[32],
+                           const u8 *plaintext,
+                           size_t    text_size)
 {
-    crypto_x25519_base(box, random_secret_key); // put public key in box
+    crypto_x25519_public_key(box, random_secret_key); // put public key in box
     crypto_lock(box + 32,
                 random_secret_key, their_public_key, null_nonce,
                 plaintext, text_size);
 }
 
-int crypto_anonymous_unlock(uint8_t       *plaintext,
-                            const uint8_t  your_secret_key[32],
-                            const uint8_t *box,
-                            size_t         text_size)
+int crypto_anonymous_unlock(u8       *plaintext,
+                            const u8  your_secret_key[32],
+                            const u8 *box,
+                            size_t    text_size)
 {
     return crypto_unlock(plaintext,
                          your_secret_key, box, null_nonce,

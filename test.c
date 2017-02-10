@@ -214,14 +214,14 @@ static void argon2i(const vector in[], vector *out)
         const vector *key           = in + 4;
         const vector *ad            = in + 5;
         void         *work_area     = alloc(nb_blocks->buffer[0] * 1024);
-        crypto_argon2i_hash(out     ->buffer, out     ->size,
-                            password->buffer, password->size,
-                            salt    ->buffer, salt    ->size,
-                            key     ->buffer, key     ->size,
-                            ad      ->buffer, ad      ->size,
-                            work_area,
-                            nb_blocks    ->buffer[0],
-                            nb_iterations->buffer[0]);
+        crypto_argon2i(out     ->buffer, out     ->size,
+                       password->buffer, password->size,
+                       salt    ->buffer, salt    ->size,
+                       key     ->buffer, key     ->size,
+                       ad      ->buffer, ad      ->size,
+                       work_area,
+                       nb_blocks    ->buffer[0],
+                       nb_iterations->buffer[0]);
         free(work_area);
 }
 
@@ -347,7 +347,7 @@ static int test_lock()
                             1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0 };
     uint8_t sk[32]      = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7,
                             0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 };
-    uint8_t pk[32]; crypto_x25519_base(pk, sk);
+    uint8_t pk[32]; crypto_x25519_public_key(pk, sk);
     uint8_t plaintext[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
     uint8_t box[56];
     uint8_t out[8];

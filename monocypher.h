@@ -4,6 +4,14 @@
 #include <inttypes.h>
 #include <stddef.h>
 
+// Constant time equality verification
+// returns 0 if it matches, something else otherwise.
+int crypto_memcmp(const uint8_t mac1[16], const uint8_t mac2[16], size_t n);
+
+////////////////
+/// Chacha20 ///
+////////////////
+
 // This is a chacha20 context.
 // To use safely, just follow these guidelines:
 // - Always initialize your context with one of the crypto_init_* functions below
@@ -18,10 +26,9 @@ typedef struct crypto_chacha_ctx {
 // HChacha20.  *Kind* of a cryptographic hash, based on the chacha20 rounds.
 // Used for XChacha20, and the key derivation of the X25519 shared secret.
 // Don't use it unless you really know what you're doing.
-void
-crypto_chacha20_H(uint8_t       out[32],
-                  const uint8_t key[32],
-                  const uint8_t in [16]);
+void crypto_chacha20_H(uint8_t       out[32],
+                       const uint8_t key[32],
+                       const uint8_t in [16]);
 
 // Initializes a chacha context.
 //
@@ -34,25 +41,23 @@ crypto_chacha20_H(uint8_t       out[32],
 //
 // If you encode enough messages with a random nonce, there's a good
 // chance some of them will use the same nonce by accident. 64 bits
-// just isn't enough for this.  Use a counter instead.
+// just aren't enough.  Use a counter instead.
 //
 // If there are multiple parties sending out messages, you can give them
 // all an initial nonce of 0, 1 .. n-1 respectively, and have them increment
-// their nonce  by n.  (Also make sure the nonces never wrap around.).
-void
-crypto_chacha20_init(crypto_chacha_ctx *ctx,
-                     const uint8_t      key[32],
-                     const uint8_t      nonce[8]);
+// their nonce  by n.  (Also make sure the nonces never wrap around.)
+void crypto_chacha20_init(crypto_chacha_ctx *ctx,
+                          const uint8_t      key[32],
+                          const uint8_t      nonce[8]);
 
 // Initializes a chacha context, with a big nonce (192 bits),
 // more than enough to be selected at random.
 //
 // The price you pay for that is a slower initialization.  The security
 // guarantees are the same as regular initialization.
-void
-crypto_chacha20_Xinit(crypto_chacha_ctx *ctx,
-                      const uint8_t      key[32],
-                      const uint8_t      nonce[24]);
+void crypto_chacha20_Xinit(crypto_chacha_ctx *ctx,
+                           const uint8_t      key[32],
+                           const uint8_t      nonce[24]);
 
 // Encrypts the plain_text by XORing it with a pseudo-random
 // stream of numbers, seeded by the provided chacha20 context.
@@ -74,18 +79,19 @@ crypto_chacha20_Xinit(crypto_chacha_ctx *ctx,
 //
 // WARNING: ENCRYPTION ALONE IS NOT SECURE.  YOU NEED AUTHENTICATION AS WELL.
 // Use the provided authenticated encryption constructions.
-void
-crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
-                        const uint8_t     *plain_text,
-                        uint8_t           *cipher_text,
-                        size_t             message_size);
+void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
+                             const uint8_t     *plain_text,
+                             uint8_t           *cipher_text,
+                             size_t             message_size);
 
 // convenience function.  Same as chacha20_encrypt() with a null plain_text.
-void
-crypto_chacha20_random(crypto_chacha_ctx *ctx,
-                       uint8_t           *cipher_text,
-                       size_t             message_size);
+void crypto_chacha20_random(crypto_chacha_ctx *ctx,
+                            uint8_t           *cipher_text,
+                            size_t             message_size);
 
+/////////////////
+/// Poly 1305 ///
+/////////////////
 
 typedef struct {
     uint32_t r[4];
@@ -94,7 +100,6 @@ typedef struct {
     uint32_t pad[5];
     size_t   c_index;
 } crypto_poly1305_ctx;
-
 
 // Initializes the poly1305 context with the secret key.
 // Call first (obviously).
@@ -121,12 +126,10 @@ void crypto_poly1305_auth(uint8_t        mac[16],
                           size_t         msg_length,
                           const uint8_t  key[32]);
 
-// Constant time equality verification
-// returns 0 if it matches, something else otherwise.
-int crypto_memcmp_16(const uint8_t mac1[16], const uint8_t mac2[16]);
+////////////////
+/// Blake2 b ///
+////////////////
 
-
-// blake2b context
 typedef struct {
     uint8_t  buf[128];      // input buffer
     uint64_t hash[8];       // chained state
@@ -140,34 +143,32 @@ typedef struct {
 // keylen: length of the key.       Must be between 0 and 64.
 // key   : some secret key.         May be NULL if keylen is 0.
 // Any deviation from these invariants results in UNDEFINED BEHAVIOR
-void
-crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t outlen,
-                            const uint8_t      *key, size_t keylen);
+void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t outlen,
+                                 const uint8_t      *key, size_t keylen);
 
 // Convenience function: 64 bytes hash, no secret key.
-void
-crypto_blake2b_init(crypto_blake2b_ctx *ctx);
+void crypto_blake2b_init(crypto_blake2b_ctx *ctx);
 
 // Add "inlen" bytes from "in" into the hash.
-void
-crypto_blake2b_update(crypto_blake2b_ctx *ctx, const uint8_t *in, size_t inlen);
+void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
+                           const uint8_t *in, size_t inlen);
 
 // Generate the message digest (size given in init).
-void
-crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *out);
+void crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *out);
 
 // All-in-one convenience function.
 // outlen, keylen, and key work the same as they do in the general_init function
-void
-crypto_blake2b_general(      uint8_t *out, size_t outlen, // digest
-                       const uint8_t *key, size_t keylen, // optional secret key
-                       const uint8_t *in , size_t inlen); // data to be hashed
+void crypto_blake2b_general(uint8_t       *out, size_t outlen, // digest
+                            const uint8_t *key, size_t keylen, // optional secret
+                            const uint8_t *in , size_t inlen);
 
 // All-in-one convenience function: 64 bytes hash, no secret key.
-void
-crypto_blake2b(uint8_t out[64], const uint8_t *in, size_t inlen);
+void crypto_blake2b(uint8_t out[64], const uint8_t *in, size_t inlen);
 
 
+////////////////
+/// Argon2 i ///
+////////////////
 
 // Implements argon2i, with degree of paralelism 1,
 // because it's good enough, and threads are scary.
@@ -184,8 +185,7 @@ crypto_blake2b(uint8_t out[64], const uint8_t *in, size_t inlen);
 // - Put 128 bits of entropy in the salt.  16 random bytes work well.
 // - Use all the memory you can get away with.
 // - Use as much iterations as reasonable.  No less than 10 passes if you can.
-void
-crypto_argon2i_hash(uint8_t       *tag,       uint32_t tag_size,      // >= 4
+void crypto_argon2i(uint8_t       *tag,       uint32_t tag_size,      // >= 4
                     const uint8_t *password,  uint32_t password_size,
                     const uint8_t *salt,      uint32_t salt_size,     // >= 8
                     const uint8_t *key,       uint32_t key_size,
@@ -194,15 +194,9 @@ crypto_argon2i_hash(uint8_t       *tag,       uint32_t tag_size,      // >= 4
                     uint32_t nb_blocks,                               // >= 8
                     uint32_t nb_iterations);
 
-// Convenience function. No key, no ad, 64 bytes tag
-void
-crypto_argon2i(uint8_t        tag[32],
-               const uint8_t *password,  uint32_t password_size,
-               const uint8_t *salt,      uint32_t salt_size,     // >= 8
-               void    *work_area,
-               uint32_t nb_blocks,                               // >= 8
-               uint32_t nb_iterations);
-
+///////////////
+/// X-25519 ///
+///////////////
 
 // Computes a shared secret from your private key and their public key.
 // WARNING: DO NOT USE THE SHARED SECRET DIRECTLY.
@@ -222,28 +216,44 @@ void crypto_x25519(uint8_t       shared_secret   [32],
 
 // Generates a public key from the specified secret key.
 // Make sure the secret key is randomly selected.
+// Don't use the same key for signature and key exchange.
 //
 // Implementation detail: your secret key is a scalar, and we multiply
 // the base point (a constant) by it to obtain a public key.  That is:
 //     public_key == secret_key * base_point
 // Reversing the operation is conjectured to be infeasible
 // without quantum computers (128 bits of security).
-void crypto_x25519_base(uint8_t public_key[32], const uint8_t secret_key[32]);
+void crypto_x25519_public_key(uint8_t       public_key[32],
+                              const uint8_t secret_key[32]);
 
 
+///////////////
+/// Ed25519 ///
+///////////////
+
+// Generates a public key from the specified secret key.
+// Make sure the secret key is randomly selected.
+// Don't use the same key for signature and key exchange.
 void crypto_ed25519_public_key(uint8_t        public_key[32],
                                const uint8_t  secret_key[32]);
 
+// Produces a signature from a message and your secret key.
 void crypto_ed25519_sign(uint8_t        signature[64],
                          const uint8_t  secret_key[32],
                          const uint8_t *message,
                          size_t         message_size);
 
+// Checks that a given signature is genuine: whoever signed
+// this message must know the secret key.
 int crypto_ed25519_check(const uint8_t  signature[64],
                          const uint8_t  public_key[32],
                          const uint8_t *message,
                          size_t         message_size);
 
+
+////////////////////////////////
+/// Authenticated encryption ///
+////////////////////////////////
 
 // Authenticated encryption with XChacha20 and Poly1305.
 void crypto_ae_lock_detached(uint8_t        mac[16],
@@ -263,7 +273,7 @@ int crypto_ae_unlock_detached(uint8_t       *plaintext,
                               size_t         text_size);
 
 // Like the above, only puts the mac and the ciphertext together
-// in a "box", mac first
+// in a "box", mac first.
 void crypto_ae_lock(uint8_t       *box,      // text_size + 16
                     const uint8_t  key[32],
                     const uint8_t  nonce[24],
@@ -278,6 +288,10 @@ int crypto_ae_unlock(uint8_t       *plaintext,
                      size_t         text_size);
 
 
+/////////////////////////////////////////////
+/// Public key (authenticated) encryption ///
+/////////////////////////////////////////////
+
 // Computes a shared key with your secret key and their public key,
 // suitable for crypto_ae* functions.
 void crypto_lock_key(uint8_t       shared_key      [32],
@@ -285,7 +299,7 @@ void crypto_lock_key(uint8_t       shared_key      [32],
                      const uint8_t their_public_key[32]);
 
 // Authenticated encryption with the sender's secret key and the recipient's
-// public key.  The message leaks if one of the secret key gets compromised.
+// public key.  The message leaks if one secret key gets compromised.
 void crypto_lock_detached(uint8_t        mac[16],
                           uint8_t       *ciphertext,
                           const uint8_t  your_secret_key [32],
@@ -305,8 +319,8 @@ int crypto_unlock_detached(uint8_t       *plaintext,
                            size_t         text_size);
 
 // Like the above, only puts the mac and the ciphertext together
-// in a "box", mac first
-void crypto_lock(uint8_t       *box,
+// in a "box", mac first.
+void crypto_lock(uint8_t       *box,  // text_size + 16
                  const uint8_t  your_secret_key [32],
                  const uint8_t  their_public_key[32],
                  const uint8_t  nonce[24],
@@ -318,18 +332,27 @@ int crypto_unlock(uint8_t       *plaintext,
                   const uint8_t  your_secret_key [32],
                   const uint8_t  their_public_key[32],
                   const uint8_t  nonce[24],
-                  const uint8_t *box,
+                  const uint8_t *box,  // text_size + 16
                   size_t         text_size);
 
-void crypto_anonymous_lock(uint8_t       *box,
+// Anonymous public key encryption.
+// Throw away your random secret after use.
+// Make sure your random secret is random.
+// WARNING: provides no protection against forgery
+// (the attacker can just use his own random secret).
+void crypto_anonymous_lock(uint8_t       *box,   // text_size + 48
                            const uint8_t  random_secret_key[32],
                            const uint8_t  their_public_key[32],
                            const uint8_t *plaintext,
                            size_t         text_size);
 
+// Anonypous public key decryption.
+// You cannot know who sent this message, but you do
+// know that the message itself is unmodified.
+// Again, if this is a forgery, you can't know.
 int crypto_anonymous_unlock(uint8_t       *plaintext,
                             const uint8_t  your_secret_key[32],
-                            const uint8_t *box,
+                            const uint8_t *box,   // text_size + 48
                             size_t         text_size);
 
 #endif // MONOCYPHER_H
