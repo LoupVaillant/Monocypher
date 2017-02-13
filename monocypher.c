@@ -74,10 +74,10 @@ sv store64_le(u8 output[8], u64 input)
 static u64 rotr64(u64 x, u64 n) { return (x >> n) ^ (x << (64 - n)); }
 static u32 rotl32(u32 x, u32 n) { return (x << n) ^ (x >> (32 - n)); }
 
-int crypto_memcmp(const u8 mac1[16], const u8 mac2[16], size_t n)
+int crypto_memcmp(const u8 *p1, const u8 *p2, size_t n)
 {
     unsigned diff = 0;
-    FOR (i, 0, n) { diff |= (mac1[i] ^ mac2[i]); }
+    FOR (i, 0, n) { diff |= (p1[i] ^ p2[i]); }
     return diff;
 }
 
