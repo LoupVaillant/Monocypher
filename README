@@ -1,0 +1,98 @@
+Authors
+-------
+
+Packaged by Loup Vaillant.
+
+- Chacha20: Loup Vaillant, implemented from spec.
+- Poly1305: Loup Vaillant, implemented from spec.
+- Blake2b:  derived from https://tools.ietf.org/html/rfc7693
+- Argon2i:  Loup Vaillant, implemented from spec.
+- X25519:   taken from http://tweetnacl.cr.yp.to/
+- ed25519:  taken from http://tweetnacl.cr.yp.to/
+- High-level constructions: Loup Vaillant, implemented from specs and
+  first principles
+
+Licence
+-------
+
+For everything *but* Blake2b:
+
+  Copying and distribution of the code, with or without modification,
+  are permitted in any medium without royalty.  This code is offered
+  as-is, without any warranty.
+
+---
+
+For the Blake2b code:
+
+  Copyright (c) 2015 IETF Trust and the persons identified as authors
+  of the code. All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the
+    distribution.
+
+  - Neither the name of Internet Society, IETF or IETF Trust, nor the
+    names of specific contributors, may be used to endorse or promote
+    products derived from this software without specific prior written
+    permission.
+
+  - THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+    CONTRIBUTORS “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES,
+    INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+    MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+    BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+    TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+    ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+    TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
+    THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+
+
+Current status
+--------------
+
+Beta.  Interfaces may still change.  Needs external review.
+
+
+Test suite
+----------
+
+    $ make
+    $ ./test
+
+It should display a nice printout of all the tests, all starting with
+"OK".  If you see "FAILURE" anywhere, something has gone very wrong
+somewhere.
+
+*Do not* use Monocypher without having run the test suite at least
+once.
+
+Integration to your project
+---------------------------
+
+Just copy monocypher.c and monocypher.h.
+
+
+Customisation
+-------------
+
+If you want to use ed25519 with the official SHA-512 hash instead of
+the default Blake2b, do as the test suite does:
+
+- Compile monocypher.c with option -DED25519_SHA512, or modify the
+  relevant preprocessor directives at the beginning of monocypher.c.
+
+- Link the final program with a suitable SHA-512 implementation.  You
+  can use the sha512.c and sha512.h files provided here.
