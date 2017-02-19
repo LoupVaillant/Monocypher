@@ -6,7 +6,7 @@ CFLAGS=-O2 -Wall -Wextra -std=c11 -pedantic
 all: test
 
 clean:
-	rm -f *.o test
+	rm -f *.o *.gch test
 
 test: test.o monocypher.o sha512.o
 	$(CC) $(CFLAGS) -o $@ $^

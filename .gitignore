@@ -1,5 +1,6 @@
 # backup files
 *~
 *.o
+*.gch
 test
 speed_blake2b
