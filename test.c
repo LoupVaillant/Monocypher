@@ -17,7 +17,7 @@ static void* alloc(size_t size)
     return buffer;
 }
 
-static FILE* file_open(char *filename)
+static FILE* file_open(const char *filename)
 {
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
@@ -50,7 +50,7 @@ typedef struct {
 static vector vec_new(size_t buf_size)
 {
     vector v;
-    v.buffer   = alloc(buf_size);
+    v.buffer   = (uint8_t*)alloc(buf_size);
     v.buf_size = buf_size;
     v.size = 0;
     return v;
@@ -73,7 +73,7 @@ static void vec_push_back(vector *v, uint8_t e)
     if (v->buf_size == v->size) {
         // double initial buffer size (and then some)
         size_t   new_buf_size = v->buf_size * 2 + 1;
-        uint8_t *new_buffer   = alloc(new_buf_size);
+        uint8_t *new_buffer   = (uint8_t*)alloc(new_buf_size);
         memcpy(new_buffer, v->buffer, v->buf_size);
         free(v->buffer);
         v->buffer   = new_buffer;
@@ -115,11 +115,11 @@ static vector read_hex_line(FILE *input_file)
 // Pulls some test vectors, feed it to f, get a status back
 // The test fails if the status is not zero
 static int generic_test(int (*f)(const vector[]),
-                        char * filename, size_t nb_vectors)
+                        const char * filename, size_t nb_vectors)
 {
     int     status   = 0;
     FILE   *file     = file_open(filename);
-    vector *inputs   = alloc(nb_vectors * sizeof(vector));
+    vector *inputs   = (vector*)alloc(nb_vectors * sizeof(vector));
     int     nb_tests = 0;
 
     while (getc(file) != EOF) {
@@ -142,11 +142,11 @@ static int generic_test(int (*f)(const vector[]),
 // Same, except f writes to a buffer.  If it's different than
 // some expected result, the test fails.
 static int test(void (*f)(const vector[], vector*),
-                char *filename, size_t nb_vectors)
+                const char *filename, size_t nb_vectors)
 {
     int     status   = 0;
     FILE   *file     = file_open(filename);
-    vector *inputs   = alloc(nb_vectors * sizeof(vector));
+    vector *inputs   = (vector*)alloc(nb_vectors * sizeof(vector));
     int     nb_tests = 0;
 
     while (getc(file) != EOF) {
@@ -276,7 +276,6 @@ static int test_x25519()
     return status;
 }
 
-
 static void sha512(const vector in[], vector *out)
 {
     crypto_sha512(out->buffer, in->buffer, in->size);
@@ -294,7 +293,6 @@ static void ed25519(const vector in[], vector *out)
     if (crypto_memcmp(generated_public, public->buffer, 32)) {
         printf("FAILURE: secret/public key mismatch!\n");
     }
-
     // test that signature matches the test vector
     crypto_ed25519_sign(out->buffer,
                         secret->buffer,
