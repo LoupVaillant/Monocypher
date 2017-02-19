@@ -36,6 +36,29 @@ static const u64 K[80] = {
     0x4cc5d4becb3e42b6,0x597f299cfc657e2a,0x5fcb6fab3ad6faec,0x6c44198c4a475817
 };
 
+sv sha512_compress(crypto_sha512_ctx *ctx)
+{
+    u64 w[80];
+    FOR(i,  0, 16) { w[i] = ctx->m[i]; }
+    FOR(i, 16, 80) { w[i] = (lit_sigma1(w[i- 2]) + w[i- 7] +
+                             lit_sigma0(w[i-15]) + w[i-16]); }
+
+    u64 a = ctx->h[0];    u64 b = ctx->h[1];
+    u64 c = ctx->h[2];    u64 d = ctx->h[3];
+    u64 e = ctx->h[4];    u64 f = ctx->h[5];
+    u64 g = ctx->h[6];    u64 h = ctx->h[7];
+    FOR(i, 0, 80) {
+        u64 t1 = big_sigma1(e) + ch (e, f, g) + h + K[i] + w[i];
+        u64 t2 = big_sigma0(a) + maj(a, b, c);
+        h = g;  g = f;  f = e;  e = d  + t1;
+        d = c;  c = b;  b = a;  a = t1 + t2;
+    }
+    ctx->h[0] += a;    ctx->h[1] += b;
+    ctx->h[2] += c;    ctx->h[3] += d;
+    ctx->h[4] += e;    ctx->h[5] += f;
+    ctx->h[6] += g;    ctx->h[7] += h;
+}
+
 sv set_input(crypto_sha512_ctx *ctx, u8 input)
 {
     ctx->m[ctx->m_index / 8] |= (u64)input << (8 * (7 - (ctx->m_index % 8)));
@@ -45,37 +68,6 @@ sv reset_input(crypto_sha512_ctx *ctx)
 {
     FOR(i, 0, 16) { ctx->m[i] = 0; }
     ctx->m_index = 0;
-}
-
-sv sha512_compress(crypto_sha512_ctx *ctx)
-{
-    u64 w[80];
-    FOR(i,  0, 16) { w[i] = ctx->m[i]; }
-    FOR(i, 16, 80) { w[i] = (lit_sigma1(w[i- 2]) + w[i- 7] +
-                             lit_sigma0(w[i-15]) + w[i-16]); }
-    u64 a = ctx->h[0];
-    u64 b = ctx->h[1];
-    u64 c = ctx->h[2];
-    u64 d = ctx->h[3];
-    u64 e = ctx->h[4];
-    u64 f = ctx->h[5];
-    u64 g = ctx->h[6];
-    u64 h = ctx->h[7];
-
-    FOR(i, 0, 80) {
-        u64 t1 = big_sigma1(e) + ch (e, f, g) + h + K[i] + w[i];
-        u64 t2 = big_sigma0(a) + maj(a, b, c);
-        h = g;  g = f;  f = e;  e = d  + t1;
-        d = c;  c = b;  b = a;  a = t1 + t2;
-    }
-    ctx->h[0] += a;
-    ctx->h[1] += b;
-    ctx->h[2] += c;
-    ctx->h[3] += d;
-    ctx->h[4] += e;
-    ctx->h[5] += f;
-    ctx->h[6] += g;
-    ctx->h[7] += h;
 }
 
 // increment a 128-bit "word".
@@ -126,13 +118,12 @@ void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 out[64])
         sha512_compress(ctx);
         reset_input(ctx);
     }
-
     // compress last block
     ctx->m[14] = ctx->m_size[0];
     ctx->m[15] = ctx->m_size[1];
     sha512_compress(ctx);
 
-    // copy hash to output
+    // copy hash to output (big endian)
     FOR (i, 0, 8) {
         FOR (j, 0, 8) {
             out[8*i + 7 - j] = (ctx->h[i] >> (8*j)) & 255;
