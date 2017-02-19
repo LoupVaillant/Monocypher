@@ -1157,12 +1157,14 @@ static int ge_frombytes_neg(ge *h, const u8 s[32])
     return 0;
 }
 
+// for point additon
+static const fe D2 = { // - 2 * 121665 / 121666
+    0x2b2f159, 0x1a6e509, 0x22add7a, 0x0d4141d, 0x0038052,
+    0x0f3d130, 0x3407977, 0x19ce331, 0x1c56dff, 0x0901b67
+};
+
 sv ge_add(ge *s, const ge *p, const ge *q)
 {
-    static const fe D2 = { // - 2 * 121665 / 121666
-        0x2b2f159, 0x1a6e509, 0x22add7a, 0x0d4141d, 0x0038052,
-        0x0f3d130, 0x3407977, 0x19ce331, 0x1c56dff, 0x0901b67
-    };
     fe a, b, c, d, e, f, g, h;
     //  A = (Y1-X1) * (Y2-X2)
     //  B = (Y1+X1) * (Y2+X2)
@@ -1176,8 +1178,25 @@ sv ge_add(ge *s, const ge *p, const ge *q)
     fe_add(h, b, a);     //  H  = B + A
     fe_mul(s->X, e, f);  //  X3 = E * F
     fe_mul(s->Y, g, h);  //  Y3 = G * H
-    fe_mul(s->Z, f, g);  //  T3 = E * H !error in the explicit formula database!
-    fe_mul(s->T, e, h);  //  Z3 = F * G
+    fe_mul(s->Z, f, g);  //  Z3 = F * G
+    fe_mul(s->T, e, h);  //  T3 = E * H
+}
+
+sv ge_double(ge *s, const ge *p)
+{
+    fe a, b, c, d, e, f, g, h;
+    fe_sub(a, p->Y, p->X);  fe_sq(a, a);      //  A = (Y1-X1)^2
+    fe_add(b, p->X, p->Y);  fe_sq(b, b);      //  B = (Y1+X1)^2
+    fe_sq (c, p->T);        fe_mul(c, c, D2); //  C = T1^2 * k
+    fe_sq (d, p->Z);        fe_add(d, d, d);  //  D = Z1^2 * 2
+    fe_sub(e, b, a);                          //  E  = B - A
+    fe_sub(f, d, c);                          //  F  = D - C
+    fe_add(g, d, c);                          //  G  = D + C
+    fe_add(h, b, a);                          //  H  = B + A
+    fe_mul(s->X, e, f);                       //  X3 = E * F
+    fe_mul(s->Y, g, h);                       //  Y3 = G * H
+    fe_mul(s->Z, f, g);                       //  Z3 = F * G
+    fe_mul(s->T, e, h);                       //  T3 = E * H
 }
 
 sv ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
@@ -1192,7 +1211,7 @@ sv ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
         u8 b = (scalar[i/8] >> (i & 7)) & 1;
         ge_cswap(p, &t, b);
         ge_add(&t, &t, p);
-        ge_add(p , p , p);
+        ge_double(p, p);
         ge_cswap(p, &t, b);
     }
 }
