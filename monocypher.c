@@ -25,8 +25,10 @@
 
 #define FOR(i, start, end) for (size_t i = start; i < end; i++)
 #define sv static void
+typedef  int8_t   i8;
 typedef uint8_t   u8;
 typedef uint32_t u32;
+typedef  int32_t i32;
 typedef  int64_t i64;
 typedef uint64_t u64;
 
@@ -339,7 +341,7 @@ sv incr(u64 x[2], u64 y)
     if (x[0] < y) { x[1]++; }  // handle overflow
 }
 
-sv blake2b_compress(crypto_blake2b_ctx *ctx, _Bool last_block)
+sv blake2b_compress(crypto_blake2b_ctx *ctx, int last_block)
 {
     static const u8 sigma[12][16] = {
         { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
@@ -652,10 +654,10 @@ static u32 gidx_next(gidx_ctx *ctx)
     // Pass 1+: 3 last segments plus already constructed
     //          blocks in this segment.  THE SPEC SUGGESTS OTHERWISE.
     //          I CONFORM TO THE REFERENCE IMPLEMENTATION.
-    _Bool first_pass = ctx->pass_number == 0;
-    u32   slice_size = ctx->nb_blocks / 4;
-    u32   area_size  = ((first_pass ? ctx->slice_number : 3)
-                        * slice_size + index - 1);
+    int first_pass = ctx->pass_number == 0;
+    u32 slice_size = ctx->nb_blocks / 4;
+    u32 area_size  = ((first_pass ? ctx->slice_number : 3)
+                      * slice_size + index - 1);
 
     // Computes the starting position of the reference area.
     // CONTRARY TO WHAT THE SPEC SUGGESTS, IT STARTS AT THE
@@ -684,7 +686,7 @@ void crypto_argon2i(u8       *tag,      u32 tag_size,
                     u32 nb_iterations)
 {
     // work area seen as blocks (must be suitably aligned)
-    block *blocks = work_area;
+    block *blocks = (block*)work_area;
     {
         crypto_blake2b_ctx ctx;
         crypto_blake2b_init(&ctx);
@@ -728,7 +730,7 @@ void crypto_argon2i(u8       *tag,      u32 tag_size,
 
     // fill (then re-fill) the rest of the blocks
     FOR (pass_number, 0, nb_iterations) {
-        _Bool     first_pass  = pass_number == 0;
+        int first_pass  = pass_number == 0;
         // Simple copy on pass 0, XOR instead of overwrite on subsequent passes
         void (*xcopy) (block*, const block*) = first_pass ?copy_block :xor_block;
 
@@ -759,274 +761,461 @@ void crypto_argon2i(u8       *tag,      u32 tag_size,
     extended_hash(tag, tag_size, final_block, 1024);
 }
 
+////////////////////////////////////
+/// Arithmetic modulo 2^255 - 19 /// Taken from Supercop's ref10 implementation.
+//////////////////////////////////// A bit bigger than TweetNaCl, much faster.
+
+// field element
+typedef i32 fe[10];
+
+sv fe_0   (fe h) {                         FOR (i, 0, 10) h[i] = 0;           }
+sv fe_1   (fe h) {              h[0] = 1;  FOR (i, 1, 10) h[i] = 0;           }
+sv fe_neg (fe h, const fe f)             { FOR (i, 0, 10) h[i] = -f[i];       }
+sv fe_add (fe h, const fe f, const fe g) { FOR (i, 0, 10) h[i] = f[i] + g[i]; }
+sv fe_sub (fe h, const fe f, const fe g) { FOR (i, 0, 10) h[i] = f[i] - g[i]; }
+sv fe_copy(fe h, const fe f            ) { FOR (i, 0, 10) h[i] = f[i];        }
+
+sv fe_cswap(fe f, fe g, u32 b)
+{
+    FOR (i, 0, 10) {
+        i32 x = (f[i] ^ g[i]) & -b;
+        f[i] = f[i] ^ x;
+        g[i] = g[i] ^ x;
+    }
+}
+
+static u32 load24_le(const u8 s[3])
+{
+    return (u32)s[0]
+        | ((u32)s[1] <<  8)
+        | ((u32)s[2] << 16);
+}
+
+sv fe_carry(fe h, i64 t[10])
+{
+    i64 c0, c1, c2, c3, c4, c5, c6, c7, c8, c9;
+    c9 = (t[9] + (i64) (1<<24)) >> 25; t[0] += c9 * 19; t[9] -= c9 << 25;
+    c1 = (t[1] + (i64) (1<<24)) >> 25; t[2] += c1;      t[1] -= c1 << 25;
+    c3 = (t[3] + (i64) (1<<24)) >> 25; t[4] += c3;      t[3] -= c3 << 25;
+    c5 = (t[5] + (i64) (1<<24)) >> 25; t[6] += c5;      t[5] -= c5 << 25;
+    c7 = (t[7] + (i64) (1<<24)) >> 25; t[8] += c7;      t[7] -= c7 << 25;
+    c0 = (t[0] + (i64) (1<<25)) >> 26; t[1] += c0;      t[0] -= c0 << 26;
+    c2 = (t[2] + (i64) (1<<25)) >> 26; t[3] += c2;      t[2] -= c2 << 26;
+    c4 = (t[4] + (i64) (1<<25)) >> 26; t[5] += c4;      t[4] -= c4 << 26;
+    c6 = (t[6] + (i64) (1<<25)) >> 26; t[7] += c6;      t[6] -= c6 << 26;
+    c8 = (t[8] + (i64) (1<<25)) >> 26; t[9] += c8;      t[8] -= c8 << 26;
+    FOR (i, 0, 10) { h[i] = t[i]; }
+}
+
+sv fe_frombytes(fe h, const u8 s[32])
+{
+    i64 t[10]; // intermediate result (may overflow 32 bits)
+    t[0] =  load32_le(s);
+    t[1] =  load24_le(s +  4) << 6;
+    t[2] =  load24_le(s +  7) << 5;
+    t[3] =  load24_le(s + 10) << 3;
+    t[4] =  load24_le(s + 13) << 2;
+    t[5] =  load32_le(s + 16);
+    t[6] =  load24_le(s + 20) << 7;
+    t[7] =  load24_le(s + 23) << 5;
+    t[8] =  load24_le(s + 26) << 4;
+    t[9] = (load24_le(s + 29) & 8388607) << 2;
+    fe_carry(h, t);
+}
+
+sv fe_mul121666(fe h, const fe f)
+{
+    i64 t[10];
+    FOR(i, 0, 10) { t[i] = f[i] * (i64) 121666; }
+    fe_carry(h, t);
+}
+
+sv fe_mul(fe h, const fe f, const fe g)
+{
+    // Everything is unrolled and put in temporary variables.
+    // We could roll the loop, but that would make it twice as slow.
+    i32 f0 = f[0]; i32 f1 = f[1]; i32 f2 = f[2]; i32 f3 = f[3]; i32 f4 = f[4];
+    i32 f5 = f[5]; i32 f6 = f[6]; i32 f7 = f[7]; i32 f8 = f[8]; i32 f9 = f[9];
+    i32 g0 = g[0]; i32 g1 = g[1]; i32 g2 = g[2]; i32 g3 = g[3]; i32 g4 = g[4];
+    i32 g5 = g[5]; i32 g6 = g[6]; i32 g7 = g[7]; i32 g8 = g[8]; i32 g9 = g[9];
+    i32 F1 = f1*2; i32 F3 = f3*2; i32 F5 = f5*2; i32 F7 = f7*2; i32 F9 = f9*2;
+    i32 G1 = g1*19;  i32 G2 = g2*19;  i32 G3 = g3*19;
+    i32 G4 = g4*19;  i32 G5 = g5*19;  i32 G6 = g6*19;
+    i32 G7 = g7*19;  i32 G8 = g8*19;  i32 G9 = g9*19;
+
+    i64 h0 = f0*(i64)g0 + F1*(i64)G9 + f2*(i64)G8 + F3*(i64)G7 + f4*(i64)G6
+        +    F5*(i64)G5 + f6*(i64)G4 + F7*(i64)G3 + f8*(i64)G2 + F9*(i64)G1;
+    i64 h1 = f0*(i64)g1 + f1*(i64)g0 + f2*(i64)G9 + f3*(i64)G8 + f4*(i64)G7
+        +    f5*(i64)G6 + f6*(i64)G5 + f7*(i64)G4 + f8*(i64)G3 + f9*(i64)G2;
+    i64 h2 = f0*(i64)g2 + F1*(i64)g1 + f2*(i64)g0 + F3*(i64)G9 + f4*(i64)G8
+        +    F5*(i64)G7 + f6*(i64)G6 + F7*(i64)G5 + f8*(i64)G4 + F9*(i64)G3;
+    i64 h3 = f0*(i64)g3 + f1*(i64)g2 + f2*(i64)g1 + f3*(i64)g0 + f4*(i64)G9
+        +    f5*(i64)G8 + f6*(i64)G7 + f7*(i64)G6 + f8*(i64)G5 + f9*(i64)G4;
+    i64 h4 = f0*(i64)g4 + F1*(i64)g3 + f2*(i64)g2 + F3*(i64)g1 + f4*(i64)g0
+        +    F5*(i64)G9 + f6*(i64)G8 + F7*(i64)G7 + f8*(i64)G6 + F9*(i64)G5;
+    i64 h5 = f0*(i64)g5 + f1*(i64)g4 + f2*(i64)g3 + f3*(i64)g2 + f4*(i64)g1
+        +    f5*(i64)g0 + f6*(i64)G9 + f7*(i64)G8 + f8*(i64)G7 + f9*(i64)G6;
+    i64 h6 = f0*(i64)g6 + F1*(i64)g5 + f2*(i64)g4 + F3*(i64)g3 + f4*(i64)g2
+        +    F5*(i64)g1 + f6*(i64)g0 + F7*(i64)G9 + f8*(i64)G8 + F9*(i64)G7;
+    i64 h7 = f0*(i64)g7 + f1*(i64)g6 + f2*(i64)g5 + f3*(i64)g4 + f4*(i64)g3
+        +    f5*(i64)g2 + f6*(i64)g1 + f7*(i64)g0 + f8*(i64)G9 + f9*(i64)G8;
+    i64 h8 = f0*(i64)g8 + F1*(i64)g7 + f2*(i64)g6 + F3*(i64)g5 + f4*(i64)g4
+        +    F5*(i64)g3 + f6*(i64)g2 + F7*(i64)g1 + f8*(i64)g0 + F9*(i64)G9;
+    i64 h9 = f0*(i64)g9 + f1*(i64)g8 + f2*(i64)g7 + f3*(i64)g6 + f4*(i64)g5
+        +    f5*(i64)g4 + f6*(i64)g3 + f7*(i64)g2 + f8*(i64)g1 + f9*(i64)g0;
+
+#define CARRY_MULT                                                  \
+    i64 c0, c1, c2, c3, c4, c5, c6, c7, c8, c9;                     \
+    c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 << 26; \
+    c4 = (h4 + (i64) (1<<25)) >> 26; h5 += c4;      h4 -= c4 << 26; \
+    c1 = (h1 + (i64) (1<<24)) >> 25; h2 += c1;      h1 -= c1 << 25; \
+    c5 = (h5 + (i64) (1<<24)) >> 25; h6 += c5;      h5 -= c5 << 25; \
+    c2 = (h2 + (i64) (1<<25)) >> 26; h3 += c2;      h2 -= c2 << 26; \
+    c6 = (h6 + (i64) (1<<25)) >> 26; h7 += c6;      h6 -= c6 << 26; \
+    c3 = (h3 + (i64) (1<<24)) >> 25; h4 += c3;      h3 -= c3 << 25; \
+    c7 = (h7 + (i64) (1<<24)) >> 25; h8 += c7;      h7 -= c7 << 25; \
+    c4 = (h4 + (i64) (1<<25)) >> 26; h5 += c4;      h4 -= c4 << 26; \
+    c8 = (h8 + (i64) (1<<25)) >> 26; h9 += c8;      h8 -= c8 << 26; \
+    c9 = (h9 + (i64) (1<<24)) >> 25; h0 += c9 * 19; h9 -= c9 << 25; \
+    c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 << 26; \
+                                                                    \
+    h[0] = h0;  h[1] = h1;  h[2] = h2;  h[3] = h3;  h[4] = h4;      \
+    h[5] = h5;  h[6] = h6;  h[7] = h7;  h[8] = h8;  h[9] = h9
+    CARRY_MULT;
+}
+
+sv fe_sq(fe h, const fe f)
+{
+    i32 f0 = f[0]; i32 f1 = f[1]; i32 f2 = f[2]; i32 f3 = f[3]; i32 f4 = f[4];
+    i32 f5 = f[5]; i32 f6 = f[6]; i32 f7 = f[7]; i32 f8 = f[8]; i32 f9 = f[9];
+    i32 f0_2  = f0*2;   i32 f1_2  = f1*2;   i32 f2_2  = f2*2;   i32 f3_2 = f3*2;
+    i32 f4_2  = f4*2;   i32 f5_2  = f5*2;   i32 f6_2  = f6*2;   i32 f7_2 = f7*2;
+    i32 f5_38 = f5*38;  i32 f6_19 = f6*19;  i32 f7_38 = f7*38;
+    i32 f8_19 = f8*19;  i32 f9_38 = f9*38;
+
+    i64 h0 = f0  *(i64)f0    + f1_2*(i64)f9_38 + f2_2*(i64)f8_19
+        +    f3_2*(i64)f7_38 + f4_2*(i64)f6_19 + f5  *(i64)f5_38;
+    i64 h1 = f0_2*(i64)f1    + f2  *(i64)f9_38 + f3_2*(i64)f8_19
+        +    f4  *(i64)f7_38 + f5_2*(i64)f6_19;
+    i64 h2 = f0_2*(i64)f2    + f1_2*(i64)f1    + f3_2*(i64)f9_38
+        +    f4_2*(i64)f8_19 + f5_2*(i64)f7_38 + f6  *(i64)f6_19;
+    i64 h3 = f0_2*(i64)f3    + f1_2*(i64)f2    + f4  *(i64)f9_38
+        +    f5_2*(i64)f8_19 + f6  *(i64)f7_38;
+    i64 h4 = f0_2*(i64)f4    + f1_2*(i64)f3_2  + f2  *(i64)f2
+        +    f5_2*(i64)f9_38 + f6_2*(i64)f8_19 + f7  *(i64)f7_38;
+    i64 h5 = f0_2*(i64)f5    + f1_2*(i64)f4    + f2_2*(i64)f3
+        +    f6  *(i64)f9_38 + f7_2*(i64)f8_19;
+    i64 h6 = f0_2*(i64)f6    + f1_2*(i64)f5_2  + f2_2*(i64)f4
+        +    f3_2*(i64)f3    + f7_2*(i64)f9_38 + f8  *(i64)f8_19;
+    i64 h7 = f0_2*(i64)f7    + f1_2*(i64)f6    + f2_2*(i64)f5
+        +    f3_2*(i64)f4    + f8  *(i64)f9_38;
+    i64 h8 = f0_2*(i64)f8    + f1_2*(i64)f7_2  + f2_2*(i64)f6
+        +    f3_2*(i64)f5_2  + f4  *(i64)f4    + f9  *(i64)f9_38;
+    i64 h9 = f0_2*(i64)f9    + f1_2*(i64)f8    + f2_2*(i64)f7
+        +    f3_2*(i64)f6    + f4  *(i64)f5_2;
+    CARRY_MULT;
+}
+
+sv fe_invert(fe out, const fe z)
+{
+    /*
+    fe c; fe_copy(c, z);
+    FOR (i, 0, 254) {
+        fe_sq(c, c);
+        if(i !=251 && i!= 249) fe_mul(c, c, z);
+    }
+    fe_copy(out, c);
+    */
+    fe t0, t1, t2, t3;
+    fe_sq(t0, z );
+    fe_sq(t1, t0);
+    fe_sq(t1, t1);
+    fe_mul(t1,  z, t1);
+    fe_mul(t0, t0, t1);
+    fe_sq(t2, t0);                                fe_mul(t1 , t1, t2);
+    fe_sq(t2, t1); FOR (i, 1,   5) fe_sq(t2, t2); fe_mul(t1 , t2, t1);
+    fe_sq(t2, t1); FOR (i, 1,  10) fe_sq(t2, t2); fe_mul(t2 , t2, t1);
+    fe_sq(t3, t2); FOR (i, 1,  20) fe_sq(t3, t3); fe_mul(t2 , t3, t2);
+    fe_sq(t2, t2); FOR (i, 1,  10) fe_sq(t2, t2); fe_mul(t1 , t2, t1);
+    fe_sq(t2, t1); FOR (i, 1,  50) fe_sq(t2, t2); fe_mul(t2 , t2, t1);
+    fe_sq(t3, t2); FOR (i, 1, 100) fe_sq(t3, t3); fe_mul(t2 , t3, t2);
+    fe_sq(t2, t2); FOR (i, 1,  50) fe_sq(t2, t2); fe_mul(t1 , t2, t1);
+    fe_sq(t1, t1); FOR (i, 1,   5) fe_sq(t1, t1); fe_mul(out, t1, t0);
+
+}
+
+void fe_pow22523(fe out, const fe z)
+{
+    /*
+    fe c; fe_copy(c, z);
+    FOR(i, 0, 251) {
+        fe_sq (c, c);
+        if (i != 249) fe_mul(c, c, z);
+    }
+    fe_copy(out, c);
+    */
+    fe t0, t1, t2;
+    fe_sq(t0, z);
+    fe_sq(t1,t0);                   fe_sq(t1, t1);  fe_mul(t1, z, t1);
+    fe_mul(t0, t0, t1);
+    fe_sq(t0, t0);                                  fe_mul(t0, t1, t0);
+    fe_sq(t1, t0);  FOR (i, 1,   5) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
+    fe_sq(t1, t0);  FOR (i, 1,  10) fe_sq(t1, t1);  fe_mul(t1, t1, t0);
+    fe_sq(t2, t1);  FOR (i, 1,  20) fe_sq(t2, t2);  fe_mul(t1, t2, t1);
+    fe_sq(t1, t1);  FOR (i, 1,  10) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
+    fe_sq(t1, t0);  FOR (i, 1,  50) fe_sq(t1, t1);  fe_mul(t1, t1, t0);
+    fe_sq(t2, t1);  FOR (i, 1, 100) fe_sq(t2, t2);  fe_mul(t1, t2, t1);
+    fe_sq(t1, t1);  FOR (i, 1,  50) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
+    fe_sq(t0, t0);  FOR (i, 1,   2) fe_sq(t0, t0);  fe_mul(out, t0, z);
+
+}
+
+sv fe_tobytes(u8 s[32], const fe h)
+{
+    i32 t[11];
+    FOR (i, 0, 10) { t[i] = h[i]; }
+
+    i32 q = (19 * t[9] + (((i32) 1) << 24)) >> 25;
+    FOR (i, 0, 5) {
+        q += t[2*i  ]; q >>= 26;
+        q += t[2*i+1]; q >>= 25;
+    }
+    t[0] += 19 * q;
+    FOR (i, 0, 5) {
+        i32 carry;
+        carry = t[2*i  ] >> 26; t[2*i+1] += carry; t[2*i  ] -= carry << 26;
+        carry = t[2*i+1] >> 25; t[2*i+2] += carry; t[2*i+1] -= carry << 25;
+    }
+    store32_le(s +  0, ((u32)t[0] >>  0) | ((u32)t[1] << 26));
+    store32_le(s +  4, ((u32)t[1] >>  6) | ((u32)t[2] << 19));
+    store32_le(s +  8, ((u32)t[2] >> 13) | ((u32)t[3] << 13));
+    store32_le(s + 12, ((u32)t[3] >> 19) | ((u32)t[4] <<  6));
+    store32_le(s + 16, ((u32)t[5] <<  0) | ((u32)t[6] << 25));
+    store32_le(s + 20, ((u32)t[6] >>  7) | ((u32)t[7] << 19));
+    store32_le(s + 24, ((u32)t[7] >> 13) | ((u32)t[8] << 12));
+    store32_le(s + 28, ((u32)t[8] >> 20) | ((u32)t[9] <<  6));
+}
+
+//  Parity check.  Returns 0 if even, 1 if odd
+static int fe_isnegative(const fe f)
+{
+    u8 s[32];
+    fe_tobytes(s, f);
+    return s[0] & 1;
+}
+
+static int fe_isnonzero(const fe f)
+{
+    static const u8 zero[32];
+    u8 s[32];
+    fe_tobytes(s, f);
+    return crypto_memcmp(s, zero, 32);
+}
 
 ///////////////
-/// X-25519 /// (Taken from TweetNaCl)
-///////////////
-typedef i64 gf[16];
-static const u8 _0[16];
-static const u8 _9[32]  = { 9 };
-static const gf _121665 = { 0xdb41, 1 };
-
-sv car_25519(gf o)
+/// X-25519 /// Taken from Supercop's ref10 implementation.
+/////////////// Bigger than TweetNaCl, but over 8 times faster
+sv trim_scalar(u8 s[32])
 {
-    FOR(i, 0, 16) {
-        o[i]              += 1LL  << 16;
-        i64 c              = o[i] >> 16;
-        o[(i+1) * (i<15)] += c - 1 + (37 * (c-1) * (i==15));
-        o[i]              -= c << 16;
-    }
+    s[ 0] &= 248;
+    s[31] &= 127;
+    s[31] |= 64;
 }
 
-sv sel_25519(gf p, gf q, int b)
+void crypto_x25519(u8       shared_secret   [32],
+                   const u8 your_secret_key [32],
+                   const u8 their_public_key[32])
 {
-    i64 c = ~(b-1);
-    FOR(i, 0, 16) {
-        i64 t = c & (p[i] ^ q[i]);
-        p[i] ^= t;
-        q[i] ^= t;
+    // computes the scalar product
+    fe x1, x2, z2, x3, z3;
+    fe_frombytes(x1, their_public_key);
+
+    // restrict the possible scalar values
+    u8 e[32]; FOR (i, 0, 32) { e[i] = your_secret_key[i]; }
+    trim_scalar(e);
+
+    // Montgomery ladder
+    // We work in projective coordinates to avoid divisons: x = X / Z
+    // We don't care about the y coordinate.
+    fe_1(x2);        fe_0(z2); // "zero" point
+    fe_copy(x3, x1); fe_1(z3); // "one"  point
+    u32 swap = 0;
+    for (int pos = 254; pos >= 0; --pos) {
+        // constant time conditional swap before ladder step
+        u32 b = (e[pos / 8] >> (pos & 7)) & 1;
+        swap ^= b; // xor trick avoids swapping at the end of the loop
+        fe_cswap(x2, x3, swap);
+        fe_cswap(z2, z3, swap);
+        swap = b;  // anticipates one last swap after the loop
+
+        // Montgomery ladder step: replaces (P2, P3) by (P2*2, P2+P3)
+        // with differential addition
+        fe t0, t1;
+        fe_sub(t0, x3, z3);  fe_sub(t1, x2, z2);    fe_add(x2, x2, z2);
+        fe_add(z2, x3, z3);  fe_mul(z3, t0, x2);    fe_mul(z2, z2, t1);
+        fe_sq (t0, t1    );  fe_sq (t1, x2    );    fe_add(x3, z3, z2);
+        fe_sub(z2, z3, z2);  fe_mul(x2, t1, t0);    fe_sub(t1, t1, t0);
+        fe_sq (z2, z2    );  fe_mul121666(z3, t1);  fe_sq (x3, x3    );
+        fe_add(t0, t0, z3);  fe_mul(z3, x1, z2);    fe_mul(z2, t1, t0);
     }
+    // last swap is necessary to compensate for the xor trick
+    fe_cswap(x2, x3, swap);
+    fe_cswap(z2, z3, swap);
+
+    // normalises the coordinates: x == X / Z
+    fe_invert(z2, z2);
+    fe_mul(x2, x2, z2);
+    fe_tobytes(shared_secret, x2);
 }
 
-sv pack_25519(u8 *o, const gf n)
+void crypto_x25519_public_key(u8       public_key[32],
+                              const u8 secret_key[32])
 {
-    gf t;
-    FOR(i, 0, 16) t[i] = n[i];
-    car_25519(t);
-    car_25519(t);
-    car_25519(t);
-    FOR(j, 0, 2) {
-        gf m;
-        m[0] = t[0] - 0xffed;
-        FOR(i, 1, 15) {
-            m[i  ]  = t[i] - 0xffff - ((m[i-1] >> 16) & 1);
-            m[i-1] &= 0xffff;
-        }
-        m[15]  = t[15] - 0x7fff - ((m[14] >> 16) & 1);
-        int b  = (m[15] >> 16) & 1;
-        m[14] &= 0xffff;
-        sel_25519(t, m, 1-b);
-    }
-    FOR(i, 0, 16) {
-        o[2*i    ] = t[i] & 0xff;
-        o[2*i + 1] = t[i] >> 8;
-    }
-}
-
-sv unpack_25519(gf o, const u8 *n)
-{
-    FOR(i, 0, 16) o[i] = n[2*i] + ((i64)n[2*i + 1] << 8);
-    o[15] &= 0x7fff;
-}
-
-sv A(gf o, const gf a, const gf b) { FOR(i, 0, 16) o[i] = a[i] + b[i]; }
-sv Z(gf o, const gf a, const gf b) { FOR(i, 0, 16) o[i] = a[i] - b[i]; }
-sv M(gf o, const gf a, const gf b)
-{
-    i64 t[31];
-    FOR(i, 0, 31) t[i] = 0;
-    FOR(i, 0, 16) FOR(j, 0, 16) t[i+j] += a[i] * b[j];
-    FOR(i, 0, 15) t[i] += 38 * t[i+16];
-    FOR(i, 0, 16) o[i] = t[i];
-    car_25519(o);
-    car_25519(o);
-}
-
-sv S(gf o,const gf a) { M(o, a, a); }
-
-sv inv_25519(gf o,const gf i)
-{
-    gf c;
-    FOR(a, 0, 16) c[a] = i[a];
-    for(int a = 253; a >= 0; a--) {
-        S(c, c);
-        if(a != 2 && a != 4)
-            M(c, c, i);
-    }
-    FOR(a, 0, 16) o[a] = c[a];
-}
-
-void crypto_x25519(u8 q[32], const u8 n[32], const u8 p[32])
-{
-    u8 z[32];
-    i64 x[80];
-    i64 r;
-    gf a, b, c, d, e, f;
-    FOR(i, 0, 31) z[i] = n[i];
-    z[31]  = (n[31] & 127) | 64;
-    z[0 ] &= 248;
-    unpack_25519(x, p);
-    FOR(i, 0, 16) {
-        b[i] = x[i];
-        d[i] = a[i] = c[i] = 0;
-    }
-    a[0] = d[0] = 1;
-    for(int i = 254; i>=0; i--) {
-        r = (z[i>>3] >> (i & 7)) & 1;
-        sel_25519(a, b, r);
-        sel_25519(c, d, r);
-        A(e, a, c);
-        Z(a, a, c);
-        A(c, b, d);
-        Z(b, b, d);
-        S(d, e);
-        S(f, a);
-        M(a, c, a);
-        M(c, b, e);
-        A(e, a, c);
-        Z(a, a, c);
-        S(b, a);
-        Z(c, d, f);
-        M(a, c, _121665);
-        A(a, a, d);
-        M(c, c, a);
-        M(a, d, f);
-        M(d, b, x);
-        S(b, e);
-        sel_25519(a, b, r);
-        sel_25519(c, d, r);
-    }
-    FOR(i, 0, 16) {
-        x[i+16] = a[i];
-        x[i+32] = c[i];
-        x[i+48] = b[i];
-        x[i+64] = d[i];
-    }
-    inv_25519(x+32, x+32);
-    M(x+16, x+16, x+32);
-    pack_25519(q, x+16);
-}
-
-void crypto_x25519_public_key(u8 q[32], const u8 n[32])
-{
-    crypto_x25519(q, n, _9);
+    static const u8 base_point[32] = {9};
+    crypto_x25519(public_key, secret_key, base_point);
 }
 
 ///////////////
-/// Ed25519 /// (Taken from TweetNaCl)
+/// Ed25519 ///
 ///////////////
-static const gf gf0;
-static const gf gf1    = { 1 };
-static const gf  D     = { 0x78a3, 0x1359, 0x4dca, 0x75eb,
-                           0xd8ab, 0x4141, 0x0a4d, 0x0070,
-                           0xe898, 0x7779, 0x4079, 0x8cc7,
-                           0xfe73, 0x2b6f, 0x6cee, 0x5203 };
-static const gf  D2    = { 0xf159, 0x26b2, 0x9b94, 0xebd6,
-                           0xb156, 0x8283, 0x149a, 0x00e0,
-                           0xd130, 0xeef3, 0x80f2, 0x198e,
-                           0xfce7, 0x56df, 0xd9dc, 0x2406 };
-static const gf  X     = { 0xd51a, 0x8f25, 0x2d60, 0xc956,
-                           0xa7b2, 0x9525, 0xc760, 0x692c,
-                           0xdc5c, 0xfdd6, 0xe231, 0xc0a4,
-                           0x53fe, 0xcd6e, 0x36d3, 0x2169 };
-static const gf  Y     = { 0x6658, 0x6666, 0x6666, 0x6666,
-                           0x6666, 0x6666, 0x6666, 0x6666,
-                           0x6666, 0x6666, 0x6666, 0x6666,
-                           0x6666, 0x6666, 0x6666, 0x6666 };
-static const gf  I     = { 0xa0b0, 0x4a0e, 0x1b27, 0xc4ee,
-                           0xe478, 0xad2f, 0x1806, 0x2f43,
-                           0xd7a7, 0x3dfb, 0x0099, 0x2b4d,
-                           0xdf0b, 0x4fc1, 0x2480, 0x2b83 };
-static const u64 L[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-                           0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10 };
 
-sv set_25519(gf r, const gf a) { FOR(i, 0, 16) r[i] = a[i]; }
+// Point in a twisted Edwards curve,
+// in extended projective coordinates
+// x = X/Z, y = Y/Z, T = XY/Z
+typedef struct { fe X; fe Y; fe Z; fe T; } ge;
 
-static u8 par_25519(const gf a)
+sv ge_from_xy(ge *p, const fe x, const fe y)
 {
-    u8 d[32];
-    pack_25519(d, a);
-    return d[0] & 1;
-}
-
-sv pow2523(gf o,const gf i)
-{
-    gf c;
-    FOR(a, 0, 16) c[a] = i[a];
-    for(int a = 250; a >= 0; a--) {
-        S(c, c);
-        if(a != 1) M(c, c, i);
+    FOR (i, 0, 10) {
+        p->X[i] = x[i];
+        p->Y[i] = y[i];
     }
-    FOR(a, 0, 16) o[a] = c[a];
+    fe_1  (p->Z);
+    fe_mul(p->T, x, y);
 }
 
-static int neq_25519(const gf a, const gf b)
+sv ge_cswap(ge *p, ge *q, u32 b)
 {
-    u8 c[32],d[32];
-    pack_25519(c, a);
-    pack_25519(d, b);
-    return crypto_memcmp(c, d, 32);
+    fe_cswap(p->X, q->X, b);
+    fe_cswap(p->Y, q->Y, b);
+    fe_cswap(p->Z, q->Z, b);
+    fe_cswap(p->T, q->T, b);
 }
 
-sv add(gf p[4], gf q[4])
+sv ge_tobytes(u8 s[32], const ge *h)
 {
-    gf a, b, c, d, t, e, f, g, h;
-    Z(a, p[1], p[0]);
-    Z(t, q[1], q[0]);
-    M(a, a, t);
-    A(b, p[0], p[1]);
-    A(t, q[0], q[1]);
-    M(b, b, t);
-    M(c, p[3], q[3]);
-    M(c, c, D2);
-    M(d, p[2], q[2]);
-    A(d, d, d);
-    Z(e, b, a);
-    Z(f, d, c);
-    A(g, d, c);
-    A(h, b, a);
-
-    M(p[0], e, f);
-    M(p[1], h, g);
-    M(p[2], g, f);
-    M(p[3], e, h);
+    fe recip, x, y;
+    fe_invert(recip, h->Z);
+    fe_mul(x, h->X, recip);
+    fe_mul(y, h->Y, recip);
+    fe_tobytes(s, y);
+    s[31] ^= fe_isnegative(x) << 7;
 }
 
-sv cswap(gf p[4], gf q[4], u8 b)
+// Variable time! s must not be secret!
+static int ge_frombytes_neg(ge *h, const u8 s[32])
 {
-    FOR(i, 0, 4)
-        sel_25519(p[i],q[i],b);
+    static const fe d = {
+        -10913610,13857413,-15372611,6949391,114729,
+        -8787816,-6275908,-3247719,-18696448,-12055116
+    } ;
+    static const fe sqrtm1 = {
+        -32595792,-7943725,9377950,3500415,12389472,
+        -272473,-25146209,-2005654,326686,11406482
+    } ;
+    fe u, v, v3, vxx, check;
+    fe_frombytes(h->Y, s);
+    fe_1(h->Z);
+    fe_sq(u, h->Y);          // y^2
+    fe_mul(v, u, d);
+    fe_sub(u, u, h->Z);       // u = y^2-1
+    fe_add(v, v, h->Z);       // v = dy^2+1
+
+    fe_sq(v3, v);
+    fe_mul(v3, v3, v);        // v3 = v^3
+    fe_sq(h->X, v3);
+    fe_mul(h->X, h->X, v);
+    fe_mul(h->X, h->X, u);    // x = uv^7
+
+    fe_pow22523(h->X, h->X); // x = (uv^7)^((q-5)/8)
+    fe_mul(h->X, h->X, v3);
+    fe_mul(h->X, h->X, u);    // x = uv^3(uv^7)^((q-5)/8)
+
+    fe_sq(vxx, h->X);
+    fe_mul(vxx, vxx, v);
+    fe_sub(check, vxx, u);    // vx^2-u
+    if (fe_isnonzero(check)) {
+        fe_add(check, vxx, u);  // vx^2+u
+        if (fe_isnonzero(check)) return -1;
+        fe_mul(h->X, h->X, sqrtm1);
+    }
+
+    if (fe_isnegative(h->X) == (s[31] >> 7))
+        fe_neg(h->X, h->X);
+
+    fe_mul(h->T, h->X, h->Y);
+    return 0;
 }
 
-sv pack(u8 *r, gf p[4])
+sv ge_add(ge *s, const ge *p, const ge *q)
 {
-    gf tx, ty, zi;
-    inv_25519(zi, p[2]);
-    M(tx, p[0], zi);
-    M(ty, p[1], zi);
-    pack_25519(r, ty);
-    r[31] ^= par_25519(tx) << 7;
+    static const fe D2 = { // - 2 * 121665 / 121666
+        0x2b2f159, 0x1a6e509, 0x22add7a, 0x0d4141d, 0x0038052,
+        0x0f3d130, 0x3407977, 0x19ce331, 0x1c56dff, 0x0901b67
+    };
+    fe a, b, c, d, e, f, g, h;
+    //  A = (Y1-X1) * (Y2-X2)
+    //  B = (Y1+X1) * (Y2+X2)
+    fe_sub(a, p->Y, p->X);  fe_sub(h, q->Y, q->X);  fe_mul(a, a, h);
+    fe_add(b, p->X, p->Y);  fe_add(h, q->X, q->Y);  fe_mul(b, b, h);
+    fe_mul(c, p->T, q->T);  fe_mul(c, c, D2  );  //  C = T1 * k * T2
+    fe_add(d, p->Z, p->Z);  fe_mul(d, d, q->Z);  //  D = Z1 * 2 * Z2
+    fe_sub(e, b, a);     //  E  = B - A
+    fe_sub(f, d, c);     //  F  = D - C
+    fe_add(g, d, c);     //  G  = D + C
+    fe_add(h, b, a);     //  H  = B + A
+    fe_mul(s->X, e, f);  //  X3 = E * F
+    fe_mul(s->Y, g, h);  //  Y3 = G * H
+    fe_mul(s->Z, f, g);  //  T3 = E * H !error in the explicit formula database!
+    fe_mul(s->T, e, h);  //  Z3 = F * G
 }
 
-sv scalarmult(gf p[4], gf q[4], const u8 *s)
+sv ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
 {
-    set_25519(p[0], gf0);
-    set_25519(p[1], gf1);
-    set_25519(p[2], gf1);
-    set_25519(p[3], gf0);
+    ge t;
+    fe_0(p->X);  fe_copy(t.X, q->X);
+    fe_1(p->Y);  fe_copy(t.Y, q->Y);
+    fe_1(p->Z);  fe_copy(t.Z, q->Z);
+    fe_0(p->T);  fe_copy(t.T, q->T);
+
     for (int i = 255; i >= 0; i--) {
-        u8 b = (s[i/8] >> (i & 7)) & 1;
-        cswap(p, q, b);
-        add(q, p);
-        add(p, p);
-        cswap(p, q, b);
+        u8 b = (scalar[i/8] >> (i & 7)) & 1;
+        ge_cswap(p, &t, b);
+        ge_add(&t, &t, p);
+        ge_add(p , p , p);
+        ge_cswap(p, &t, b);
     }
 }
 
-sv scalarbase(gf p[4], const u8 *s)
+sv ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
-    gf q[4];
-    set_25519(q[0], X);
-    set_25519(q[1], Y);
-    set_25519(q[2], gf1);
-    M(q[3], X, Y);
-    scalarmult(p, q, s);
+    static const fe X = {
+        0x325d51a, 0x18b5823, 0x0f6592a, 0x104a92d, 0x1a4b31d,
+        0x1d6dc5c, 0x27118fe, 0x07fd814, 0x13cd6e5, 0x085a4db};
+    static const fe Y = {
+        0x2666658, 0x1999999, 0x0cccccc, 0x1333333, 0x1999999,
+        0x0666666, 0x3333333, 0x0cccccc, 0x2666666, 0x1999999};
+    ge base_point;
+    ge_from_xy(&base_point, X, Y);
+    ge_scalarmult(p, &base_point, scalar);
 }
 
 sv modL(u8 *r, i64 x[64])
 {
+    static const  u64 L[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
+                                0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10 };
     i64 i, j;
     for (i = 63;i >= 32;--i) {
         i64 carry = 0;
@@ -1059,43 +1248,8 @@ sv reduce(u8 r[64])
     modL(r, x);
 }
 
-static int unpackneg(gf r[4],const u8 p[32])
-{
-    gf t, chk, num, den, den2, den4, den6;
-    set_25519(r[2], gf1);
-    unpack_25519(r[1], p);
-    S(num,r [1]);
-    M(den, num, D);
-    Z(num, num, r[2]);
-    A(den, r[2], den);
-
-    S(den2, den);
-    S(den4, den2);
-    M(den6, den4, den2);
-    M(t, den6, num);
-    M(t, t, den);
-
-    pow2523(t, t);
-    M(t, t, num);
-    M(t, t, den);
-    M(t, t, den);
-    M(r[0], t, den);
-
-    S(chk, r[0]);
-    M(chk, chk, den);
-    if (neq_25519(chk, num)) M(r[0], r[0], I);
-
-    S(chk, r[0]);
-    M(chk, chk, den);
-    if (neq_25519(chk, num)) return -1;
-
-    if (par_25519(r[0]) == (p[31]>>7)) Z(r[0],gf0,r[0]);
-
-    M(r[3], r[0], r[1]);
-    return 0;
-}
-
-sv hash_k(u8 k[64], const u8 R[32], const u8 A[32], const u8 *M, size_t M_size)
+// hashes R || A || M, reduces it modulo L
+sv hash_ram(u8 k[64], const u8 R[32], const u8 A[32], const u8 *M, size_t M_size)
 {
     HASH_CTX ctx;
     HASH_INIT  (&ctx);
@@ -1106,39 +1260,32 @@ sv hash_k(u8 k[64], const u8 R[32], const u8 A[32], const u8 *M, size_t M_size)
     reduce(k);
 }
 
-void crypto_ed25519_public_key(u8 public_key[32], const u8 secret_key[32])
+void crypto_ed25519_public_key(u8       public_key[32],
+                               const u8 secret_key[32])
 {
-    // hash the private key, turn the hash into a scalar
     u8 a[64];
     HASH(a, secret_key, 32);
-    a[ 0] &= 248;
-    a[31] &= 127;
-    a[31] |= 64;
-
-    // the public key is the packed form of the point aB (B == basepoint)
-    gf aB[4];
-    scalarbase(aB, a);
-    pack(public_key, aB);
+    trim_scalar(a);
+    ge A;
+    ge_scalarmult_base(&A, a);
+    ge_tobytes(public_key, &A);
 }
 
-void crypto_ed25519_sign(u8        signature[64],
-                         const u8  secret_key[32],
-                         const u8 *message,
-                         size_t    message_size)
+void crypto_ed25519_sign(uint8_t        signature[64],
+                         const uint8_t  secret_key[32],
+                         const uint8_t *message,
+                         size_t         message_size)
 {
     u8 h[64];
     u8 *a      = h;       // secret scalar
     u8 *prefix = h + 32;  // prefix for nonce generation
     HASH(h, secret_key, 32);
+    trim_scalar(a);
 
-    // build public key from secret key
-    a[ 0] &= 248;
-    a[31] &= 127;
-    a[31] |= 64;
-    gf aB[4];
-    scalarbase(aB, a);
+    ge A;
     u8 public_key[32];
-    pack(public_key, aB);
+    ge_scalarmult_base(&A, a);
+    ge_tobytes(public_key, &A);
 
     // Constructs the "random" nonce from the secret key and message.
     // An actual random number would work just fine, and would save us
@@ -1151,36 +1298,39 @@ void crypto_ed25519_sign(u8        signature[64],
     HASH_UPDATE(&ctx, message, message_size);
     HASH_FINAL (&ctx, r);
 
-    gf rB[4];
+    ge R;
     reduce(r);
-    scalarbase(rB, r);
-    pack(signature, rB); // first half of the signature = "random" nonce
+    ge_scalarmult_base(&R, r);
+    ge_tobytes(signature, &R); // first half of the signature = "random" nonce
 
-    u8 k[64];
-    hash_k(k, signature, public_key, message, message_size);
+    u8 h_ram[64];
+    hash_ram(h_ram, signature, public_key, message, message_size);
 
-    i64 s[64]; // s = r + k a
+    i64 s[64]; // s = r + h_ram a
     FOR(i,  0, 32) s[i] = (u64) r[i];
     FOR(i, 32, 64) s[i] = 0;
     FOR(i, 0, 32) {
         FOR(j, 0, 32) {
-            s[i+j] += k[i] * (u64) a[j];
+            s[i+j] += h_ram[i] * (u64) a[j];
         }
     }
     modL(signature + 32, s);  // second half of the signature = s
 }
 
-int crypto_ed25519_check(const u8  signature[64],
-                         const u8  public_key[32],
-                         const u8 *message,
+int crypto_ed25519_check(const uint8_t  signature[64],
+                         const uint8_t  public_key[32],
+                         const uint8_t *message,
                          size_t         message_size)
 {
-    gf aB[4];  if (unpackneg(aB, public_key)) return -1;   // -aB
-    u8 k[64];  hash_k(k, signature, public_key, message, message_size);
-    gf p[4];   scalarmult(p, aB, k);                       // p = -aB k
-    gf sB[4];  scalarbase(sB, signature + 32); add(p, sB); // p = s - aB k
-    u8 t[32];  pack(t, p);
-    return crypto_memcmp(signature, t, 32); // R == s - aB k ? OK : fail
+    ge A, p, sB, diff;
+    u8 h_ram[64], R_check[32];
+    if (ge_frombytes_neg(&A, public_key)) return -1;  // -A
+    hash_ram(h_ram, signature, public_key, message, message_size);
+    ge_scalarmult(&p, &A, h_ram);                     // p    = -A*h_ram
+    ge_scalarmult_base(&sB, signature + 32);
+    ge_add(&diff, &p, &sB);                           // diff = s - A*h_ram
+    ge_tobytes(R_check, &diff);
+    return crypto_memcmp(signature, R_check, 32); // R == s - A*h_ram ? OK : fail
 }
 
 ////////////////////////////////
@@ -1251,7 +1401,7 @@ void crypto_lock_key(u8       shared_key[32],
                      const u8 your_secret_key [32],
                      const u8 their_public_key[32])
 {
-    static const u8 _0[16];
+    static const u8 _0[16] = {0};
     u8 shared_secret[32];
     crypto_x25519(shared_secret, your_secret_key, their_public_key);
     crypto_chacha20_H(shared_key, shared_secret, _0);
@@ -1311,7 +1461,7 @@ int crypto_unlock(u8       *plaintext,
                                   box, box + 16, text_size);
 }
 
-static const u8 null_nonce[24];
+static const u8 null_nonce[24] = {0};
 
 void crypto_anonymous_lock(u8       *box,
                            const u8  random_secret_key[32],
