@@ -237,6 +237,14 @@ sv chacha20(const vector in[], vector *out)
     crypto_chacha20_stream(&ctx, out->buf, out->size);
 }
 
+sv hchacha20(const vector in[], vector *out)
+{
+    const vector *key   = in;
+    const vector *input = in + 1;
+    crypto_chacha20_H(out->buf, key->buf, input->buf);
+}
+
+
 sv blake2b(const vector in[], vector *out)
 {
     const vector *msg = in;
@@ -398,6 +406,7 @@ int main(void)
     status |= generic_test(equal, "vectors_test_equal"  , 2);
     status |= generic_test(diff , "vectors_test_diff"   , 2);
     status |= test(chacha20     , "vectors_chacha20"    , 2);
+    status |= test(hchacha20    , "vectors_h_chacha20"  , 2);
     status |= test(blake2b      , "vectors_blake2b"     , 2);
     status |= test(poly1305     , "vectors_poly1305"    , 2);
     status |= test(argon2i      , "vectors_argon2i"     , 6);
