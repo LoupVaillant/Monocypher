@@ -762,8 +762,10 @@ void crypto_argon2i(u8       *tag,      u32 tag_size,
 }
 
 ////////////////////////////////////
-/// Arithmetic modulo 2^255 - 19 /// Taken from Supercop's ref10 implementation.
-//////////////////////////////////// A bit bigger than TweetNaCl, much faster.
+/// Arithmetic modulo 2^255 - 19 ///
+////////////////////////////////////
+//  Taken from Supercop's ref10 implementation.
+//  A bit bigger than TweetNaCl, over 6 times faster.
 
 // field element
 typedef i32 fe[10];
@@ -833,7 +835,7 @@ sv fe_mul121666(fe h, const fe f)
 sv fe_mul(fe h, const fe f, const fe g)
 {
     // Everything is unrolled and put in temporary variables.
-    // We could roll the loop, but that would make it twice as slow.
+    // We could roll the loop, but that would make curve25519 twice as slow.
     i32 f0 = f[0]; i32 f1 = f[1]; i32 f2 = f[2]; i32 f3 = f[3]; i32 f4 = f[4];
     i32 f5 = f[5]; i32 f6 = f[6]; i32 f7 = f[7]; i32 f8 = f[8]; i32 f9 = f[9];
     i32 g0 = g[0]; i32 g1 = g[1]; i32 g2 = g[2]; i32 g3 = g[3]; i32 g4 = g[4];
@@ -864,111 +866,41 @@ sv fe_mul(fe h, const fe f, const fe g)
     i64 h9 = f0*(i64)g9 + f1*(i64)g8 + f2*(i64)g7 + f3*(i64)g6 + f4*(i64)g5
         +    f5*(i64)g4 + f6*(i64)g3 + f7*(i64)g2 + f8*(i64)g1 + f9*(i64)g0;
 
-#define CARRY_MULT                                                  \
-    i64 c0, c1, c2, c3, c4, c5, c6, c7, c8, c9;                     \
-    c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 << 26; \
-    c4 = (h4 + (i64) (1<<25)) >> 26; h5 += c4;      h4 -= c4 << 26; \
-    c1 = (h1 + (i64) (1<<24)) >> 25; h2 += c1;      h1 -= c1 << 25; \
-    c5 = (h5 + (i64) (1<<24)) >> 25; h6 += c5;      h5 -= c5 << 25; \
-    c2 = (h2 + (i64) (1<<25)) >> 26; h3 += c2;      h2 -= c2 << 26; \
-    c6 = (h6 + (i64) (1<<25)) >> 26; h7 += c6;      h6 -= c6 << 26; \
-    c3 = (h3 + (i64) (1<<24)) >> 25; h4 += c3;      h3 -= c3 << 25; \
-    c7 = (h7 + (i64) (1<<24)) >> 25; h8 += c7;      h7 -= c7 << 25; \
-    c4 = (h4 + (i64) (1<<25)) >> 26; h5 += c4;      h4 -= c4 << 26; \
-    c8 = (h8 + (i64) (1<<25)) >> 26; h9 += c8;      h8 -= c8 << 26; \
-    c9 = (h9 + (i64) (1<<24)) >> 25; h0 += c9 * 19; h9 -= c9 << 25; \
-    c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 << 26; \
-                                                                    \
-    h[0] = h0;  h[1] = h1;  h[2] = h2;  h[3] = h3;  h[4] = h4;      \
-    h[5] = h5;  h[6] = h6;  h[7] = h7;  h[8] = h8;  h[9] = h9
-    CARRY_MULT;
+    i64 c0, c1, c2, c3, c4, c5, c6, c7, c8, c9;
+    c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 << 26;
+    c4 = (h4 + (i64) (1<<25)) >> 26; h5 += c4;      h4 -= c4 << 26;
+    c1 = (h1 + (i64) (1<<24)) >> 25; h2 += c1;      h1 -= c1 << 25;
+    c5 = (h5 + (i64) (1<<24)) >> 25; h6 += c5;      h5 -= c5 << 25;
+    c2 = (h2 + (i64) (1<<25)) >> 26; h3 += c2;      h2 -= c2 << 26;
+    c6 = (h6 + (i64) (1<<25)) >> 26; h7 += c6;      h6 -= c6 << 26;
+    c3 = (h3 + (i64) (1<<24)) >> 25; h4 += c3;      h3 -= c3 << 25;
+    c7 = (h7 + (i64) (1<<24)) >> 25; h8 += c7;      h7 -= c7 << 25;
+    c4 = (h4 + (i64) (1<<25)) >> 26; h5 += c4;      h4 -= c4 << 26;
+    c8 = (h8 + (i64) (1<<25)) >> 26; h9 += c8;      h8 -= c8 << 26;
+    c9 = (h9 + (i64) (1<<24)) >> 25; h0 += c9 * 19; h9 -= c9 << 25;
+    c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 << 26;
+
+    h[0] = h0;  h[1] = h1;  h[2] = h2;  h[3] = h3;  h[4] = h4;
+    h[5] = h5;  h[6] = h6;  h[7] = h7;  h[8] = h8;  h[9] = h9;
 }
 
-sv fe_sq(fe h, const fe f)
-{
-    i32 f0 = f[0]; i32 f1 = f[1]; i32 f2 = f[2]; i32 f3 = f[3]; i32 f4 = f[4];
-    i32 f5 = f[5]; i32 f6 = f[6]; i32 f7 = f[7]; i32 f8 = f[8]; i32 f9 = f[9];
-    i32 f0_2  = f0*2;   i32 f1_2  = f1*2;   i32 f2_2  = f2*2;   i32 f3_2 = f3*2;
-    i32 f4_2  = f4*2;   i32 f5_2  = f5*2;   i32 f6_2  = f6*2;   i32 f7_2 = f7*2;
-    i32 f5_38 = f5*38;  i32 f6_19 = f6*19;  i32 f7_38 = f7*38;
-    i32 f8_19 = f8*19;  i32 f9_38 = f9*38;
+sv fe_sq(fe h, const fe f) { fe_mul(h, f, f); }
 
-    i64 h0 = f0  *(i64)f0    + f1_2*(i64)f9_38 + f2_2*(i64)f8_19
-        +    f3_2*(i64)f7_38 + f4_2*(i64)f6_19 + f5  *(i64)f5_38;
-    i64 h1 = f0_2*(i64)f1    + f2  *(i64)f9_38 + f3_2*(i64)f8_19
-        +    f4  *(i64)f7_38 + f5_2*(i64)f6_19;
-    i64 h2 = f0_2*(i64)f2    + f1_2*(i64)f1    + f3_2*(i64)f9_38
-        +    f4_2*(i64)f8_19 + f5_2*(i64)f7_38 + f6  *(i64)f6_19;
-    i64 h3 = f0_2*(i64)f3    + f1_2*(i64)f2    + f4  *(i64)f9_38
-        +    f5_2*(i64)f8_19 + f6  *(i64)f7_38;
-    i64 h4 = f0_2*(i64)f4    + f1_2*(i64)f3_2  + f2  *(i64)f2
-        +    f5_2*(i64)f9_38 + f6_2*(i64)f8_19 + f7  *(i64)f7_38;
-    i64 h5 = f0_2*(i64)f5    + f1_2*(i64)f4    + f2_2*(i64)f3
-        +    f6  *(i64)f9_38 + f7_2*(i64)f8_19;
-    i64 h6 = f0_2*(i64)f6    + f1_2*(i64)f5_2  + f2_2*(i64)f4
-        +    f3_2*(i64)f3    + f7_2*(i64)f9_38 + f8  *(i64)f8_19;
-    i64 h7 = f0_2*(i64)f7    + f1_2*(i64)f6    + f2_2*(i64)f5
-        +    f3_2*(i64)f4    + f8  *(i64)f9_38;
-    i64 h8 = f0_2*(i64)f8    + f1_2*(i64)f7_2  + f2_2*(i64)f6
-        +    f3_2*(i64)f5_2  + f4  *(i64)f4    + f9  *(i64)f9_38;
-    i64 h9 = f0_2*(i64)f9    + f1_2*(i64)f8    + f2_2*(i64)f7
-        +    f3_2*(i64)f6    + f4  *(i64)f5_2;
-    CARRY_MULT;
-}
-
-sv fe_invert(fe out, const fe z)
+// power to a power of 2 minus a small number.
+// Timing depends on pow_2 and minus, so they shall not be secret.
+sv fe_power(fe out, const fe z, int pow_2, u8 minus)
 {
-    /*
+    minus--;
     fe c; fe_copy(c, z);
-    FOR (i, 0, 254) {
+    for (int i = pow_2 - 2; i >= 0; i--) {
         fe_sq(c, c);
-        if(i !=251 && i!= 249) fe_mul(c, c, z);
+        if (i >= 8 || !((minus >> i) & 1))
+            fe_mul(c, c, z);
     }
     fe_copy(out, c);
-    */
-    fe t0, t1, t2, t3;
-    fe_sq(t0, z );
-    fe_sq(t1, t0);
-    fe_sq(t1, t1);
-    fe_mul(t1,  z, t1);
-    fe_mul(t0, t0, t1);
-    fe_sq(t2, t0);                                fe_mul(t1 , t1, t2);
-    fe_sq(t2, t1); FOR (i, 1,   5) fe_sq(t2, t2); fe_mul(t1 , t2, t1);
-    fe_sq(t2, t1); FOR (i, 1,  10) fe_sq(t2, t2); fe_mul(t2 , t2, t1);
-    fe_sq(t3, t2); FOR (i, 1,  20) fe_sq(t3, t3); fe_mul(t2 , t3, t2);
-    fe_sq(t2, t2); FOR (i, 1,  10) fe_sq(t2, t2); fe_mul(t1 , t2, t1);
-    fe_sq(t2, t1); FOR (i, 1,  50) fe_sq(t2, t2); fe_mul(t2 , t2, t1);
-    fe_sq(t3, t2); FOR (i, 1, 100) fe_sq(t3, t3); fe_mul(t2 , t3, t2);
-    fe_sq(t2, t2); FOR (i, 1,  50) fe_sq(t2, t2); fe_mul(t1 , t2, t1);
-    fe_sq(t1, t1); FOR (i, 1,   5) fe_sq(t1, t1); fe_mul(out, t1, t0);
-
 }
-
-void fe_pow22523(fe out, const fe z)
-{
-    /*
-    fe c; fe_copy(c, z);
-    FOR(i, 0, 251) {
-        fe_sq (c, c);
-        if (i != 249) fe_mul(c, c, z);
-    }
-    fe_copy(out, c);
-    */
-    fe t0, t1, t2;
-    fe_sq(t0, z);
-    fe_sq(t1,t0);                   fe_sq(t1, t1);  fe_mul(t1, z, t1);
-    fe_mul(t0, t0, t1);
-    fe_sq(t0, t0);                                  fe_mul(t0, t1, t0);
-    fe_sq(t1, t0);  FOR (i, 1,   5) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
-    fe_sq(t1, t0);  FOR (i, 1,  10) fe_sq(t1, t1);  fe_mul(t1, t1, t0);
-    fe_sq(t2, t1);  FOR (i, 1,  20) fe_sq(t2, t2);  fe_mul(t1, t2, t1);
-    fe_sq(t1, t1);  FOR (i, 1,  10) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
-    fe_sq(t1, t0);  FOR (i, 1,  50) fe_sq(t1, t1);  fe_mul(t1, t1, t0);
-    fe_sq(t2, t1);  FOR (i, 1, 100) fe_sq(t2, t2);  fe_mul(t1, t2, t1);
-    fe_sq(t1, t1);  FOR (i, 1,  50) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
-    fe_sq(t0, t0);  FOR (i, 1,   2) fe_sq(t0, t0);  fe_mul(out, t0, z);
-
-}
+sv fe_invert  (fe out, const fe z) { fe_power(out, z, 255, 21); }
+sv fe_pow22523(fe out, const fe z) { fe_power(out, z, 252,  3); }
 
 sv fe_tobytes(u8 s[32], const fe h)
 {
@@ -1014,7 +946,8 @@ static int fe_isnonzero(const fe f)
 
 ///////////////
 /// X-25519 /// Taken from Supercop's ref10 implementation.
-/////////////// Bigger than TweetNaCl, but over 8 times faster
+///////////////
+
 sv trim_scalar(u8 s[32])
 {
     s[ 0] &= 248;
@@ -1035,14 +968,14 @@ void crypto_x25519(u8       shared_secret   [32],
     trim_scalar(e);
 
     // Montgomery ladder
-    // We work in projective coordinates to avoid divisons: x = X / Z
-    // We don't care about the y coordinate.
+    // In projective coordinates, to avoid divisons: x = X / Z
+    // We don't care about the y coordinate, it's only 1 bit of information
     fe_1(x2);        fe_0(z2); // "zero" point
     fe_copy(x3, x1); fe_1(z3); // "one"  point
-    u32 swap = 0;
+    int swap = 0;
     for (int pos = 254; pos >= 0; --pos) {
         // constant time conditional swap before ladder step
-        u32 b = (e[pos / 8] >> (pos & 7)) & 1;
+        int b = (e[pos / 8] >> (pos & 7)) & 1;
         swap ^= b; // xor trick avoids swapping at the end of the loop
         fe_cswap(x2, x3, swap);
         fe_cswap(z2, z3, swap);
@@ -1182,42 +1115,34 @@ sv ge_add(ge *s, const ge *p, const ge *q)
     fe_mul(s->T, e, h);  //  T3 = E * H
 }
 
-sv ge_double(ge *s, const ge *p)
-{
-    fe a, b, c, d, e, f, g, h;
-    fe_sub(a, p->Y, p->X);  fe_sq(a, a);      //  A = (Y1-X1)^2
-    fe_add(b, p->X, p->Y);  fe_sq(b, b);      //  B = (Y1+X1)^2
-    fe_sq (c, p->T);        fe_mul(c, c, D2); //  C = T1^2 * k
-    fe_sq (d, p->Z);        fe_add(d, d, d);  //  D = Z1^2 * 2
-    fe_sub(e, b, a);                          //  E  = B - A
-    fe_sub(f, d, c);                          //  F  = D - C
-    fe_add(g, d, c);                          //  G  = D + C
-    fe_add(h, b, a);                          //  H  = B + A
-    fe_mul(s->X, e, f);                       //  X3 = E * F
-    fe_mul(s->Y, g, h);                       //  Y3 = G * H
-    fe_mul(s->Z, f, g);                       //  Z3 = F * G
-    fe_mul(s->T, e, h);                       //  T3 = E * H
-}
+sv ge_double(ge *s, const ge *p) { ge_add(s, p, p); }
 
 sv ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
 {
+    // Simple Montgomery ladder, with straight double and add.
     ge t;
     fe_0(p->X);  fe_copy(t.X, q->X);
     fe_1(p->Y);  fe_copy(t.Y, q->Y);
     fe_1(p->Z);  fe_copy(t.Z, q->Z);
     fe_0(p->T);  fe_copy(t.T, q->T);
-
+    int swap = 0;
     for (int i = 255; i >= 0; i--) {
-        u8 b = (scalar[i/8] >> (i & 7)) & 1;
-        ge_cswap(p, &t, b);
+        int b = (scalar[i/8] >> (i & 7)) & 1;
+        swap ^= b;  // xor trick avoids unnecessary swaps
+        ge_cswap(p, &t, swap);
+        swap = b;
         ge_add(&t, &t, p);
         ge_double(p, p);
-        ge_cswap(p, &t, b);
     }
+    // one last swap makes up for the xor trick
+    ge_cswap(p, &t, swap);
 }
 
 sv ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
+    // Calls the general ge_scalarmult() with the base point.
+    // Other implementations use a precomputed table, but it
+    // takes way too much code.
     static const fe X = {
         0x325d51a, 0x18b5823, 0x0f6592a, 0x104a92d, 0x1a4b31d,
         0x1d6dc5c, 0x27118fe, 0x07fd814, 0x13cd6e5, 0x085a4db};
@@ -1235,15 +1160,15 @@ sv modL(u8 *r, i64 x[64])
                                 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10 };
-    i64 i, j;
-    for (i = 63;i >= 32;--i) {
+    unsigned i;
+    for (i = 63; i >= 32; i--) {
         i64 carry = 0;
-        for (j = i - 32;j < i - 12;++j) {
+        FOR (j, i-32, i-12) {
             x[j] += carry - 16 * x[i] * L[j - (i - 32)];
             carry = (x[j] + 128) >> 8;
             x[j] -= carry << 8;
         }
-        x[j] += carry;
+        x[i-12] += carry;
         x[i] = 0;
     }
     i64 carry = 0;
@@ -1252,7 +1177,7 @@ sv modL(u8 *r, i64 x[64])
         carry = x[j] >> 8;
         x[j] &= 255;
     }
-    FOR(j, 0, 32) x[j] -= carry * L[j];
+    FOR(j, 0, 32) { x[j] -= carry * L[j]; }
     FOR(i, 0, 32) {
         x[i+1] += x[i] >> 8;
         r[i  ]  = x[i] & 255;
@@ -1317,10 +1242,11 @@ void crypto_ed25519_sign(uint8_t        signature[64],
     HASH_UPDATE(&ctx, message, message_size);
     HASH_FINAL (&ctx, r);
 
+    // first half of the signature = "random" nonce times basepoint
     ge R;
     reduce(r);
     ge_scalarmult_base(&R, r);
-    ge_tobytes(signature, &R); // first half of the signature = "random" nonce
+    ge_tobytes(signature, &R);
 
     u8 h_ram[64];
     hash_ram(h_ram, signature, public_key, message, message_size);
