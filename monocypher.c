@@ -186,7 +186,7 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
     }
 }
 
-void crypto_chacha20_random(crypto_chacha_ctx *ctx,
+void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
                             u8                *cipher_text,
                             size_t             message_size)
 {
@@ -290,7 +290,7 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
     }
 }
 
-void crypto_poly1305_finish(crypto_poly1305_ctx *ctx, u8 mac[16])
+void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
 {
     // move the final 1 according to remaining input length
     ctx->c[4] = 0;
@@ -319,7 +319,7 @@ void crypto_poly1305_auth(u8 mac[16], const u8 *m,
     crypto_poly1305_ctx ctx;
     crypto_poly1305_init  (&ctx, key);
     crypto_poly1305_update(&ctx, m, m_size);
-    crypto_poly1305_finish(&ctx, mac);
+    crypto_poly1305_final(&ctx, mac);
 }
 
 ////////////////
@@ -1204,8 +1204,8 @@ sv hash_ram(u8 k[64], const u8 R[32], const u8 A[32], const u8 *M, size_t M_size
     reduce(k);
 }
 
-void crypto_ed25519_public_key(u8       public_key[32],
-                               const u8 secret_key[32])
+void crypto_sign_public_key(u8       public_key[32],
+                            const u8 secret_key[32])
 {
     u8 a[64];
     HASH(a, secret_key, 32);
@@ -1215,10 +1215,10 @@ void crypto_ed25519_public_key(u8       public_key[32],
     ge_tobytes(public_key, &A);
 }
 
-void crypto_ed25519_sign(uint8_t        signature[64],
-                         const uint8_t  secret_key[32],
-                         const uint8_t *message,
-                         size_t         message_size)
+void crypto_sign(u8        signature[64],
+                 const u8  secret_key[32],
+                 const u8  public_key[32],
+                 const u8 *message, size_t message_size)
 {
     u8 h[64];
     u8 *a      = h;       // secret scalar
@@ -1227,9 +1227,13 @@ void crypto_ed25519_sign(uint8_t        signature[64],
     trim_scalar(a);
 
     ge A;
-    u8 public_key[32];
-    ge_scalarmult_base(&A, a);
-    ge_tobytes(public_key, &A);
+    u8 pk_buf[32];
+    const u8 *pk = public_key;
+    if (public_key == 0) {
+        ge_scalarmult_base(&A, a);
+        ge_tobytes(pk_buf, &A);
+        pk = pk_buf;
+    }
 
     // Constructs the "random" nonce from the secret key and message.
     // An actual random number would work just fine, and would save us
@@ -1241,17 +1245,17 @@ void crypto_ed25519_sign(uint8_t        signature[64],
     HASH_UPDATE(&ctx, prefix , 32          );
     HASH_UPDATE(&ctx, message, message_size);
     HASH_FINAL (&ctx, r);
+    reduce(r);
 
     // first half of the signature = "random" nonce times basepoint
     ge R;
-    reduce(r);
     ge_scalarmult_base(&R, r);
     ge_tobytes(signature, &R);
 
     u8 h_ram[64];
-    hash_ram(h_ram, signature, public_key, message, message_size);
+    hash_ram(h_ram, signature, pk, message, message_size);
 
-    i64 s[64]; // s = r + h_ram a
+    i64 s[64]; // s = r + h_ram * a
     FOR(i,  0, 32) s[i] = (u64) r[i];
     FOR(i, 32, 64) s[i] = 0;
     FOR(i, 0, 32) {
@@ -1262,10 +1266,9 @@ void crypto_ed25519_sign(uint8_t        signature[64],
     modL(signature + 32, s);  // second half of the signature = s
 }
 
-int crypto_ed25519_check(const uint8_t  signature[64],
-                         const uint8_t  public_key[32],
-                         const uint8_t *message,
-                         size_t         message_size)
+int crypto_check(const u8  signature[64],
+                 const u8  public_key[32],
+                 const u8 *message,  size_t message_size)
 {
     ge A, p, sB, diff;
     u8 h_ram[64], R_check[32];
@@ -1278,70 +1281,9 @@ int crypto_ed25519_check(const uint8_t  signature[64],
     return crypto_memcmp(signature, R_check, 32); // R == s - A*h_ram ? OK : fail
 }
 
-////////////////////////////////
-/// Authenticated encryption ///
-////////////////////////////////
-
-void crypto_ae_lock_detached(u8        mac[16],
-                             u8       *ciphertext,
-                             const u8  key[32],
-                             const u8  nonce[24],
-                             const u8 *plaintext,
-                             size_t         text_size)
-{
-    crypto_chacha_ctx e_ctx;
-    u8           auth_key[32];
-    crypto_chacha20_Xinit (&e_ctx, key, nonce);
-    crypto_chacha20_random(&e_ctx, auth_key, 32);
-
-    crypto_chacha20_encrypt(&e_ctx, plaintext, ciphertext, text_size);
-    crypto_poly1305_auth(mac, ciphertext, text_size, auth_key);
-}
-
-int crypto_ae_unlock_detached(u8       *plaintext,
-                              const u8  key[32],
-                              const u8  nonce[24],
-                              const u8  mac[16],
-                              const u8 *ciphertext,
-                              size_t         text_size)
-{
-    crypto_chacha_ctx e_ctx;
-    u8           auth_key[32];
-    crypto_chacha20_Xinit (&e_ctx, key, nonce);
-    crypto_chacha20_random(&e_ctx, auth_key, 32);
-
-    u8 real_mac[16];
-    crypto_poly1305_auth(real_mac, ciphertext, text_size, auth_key);
-
-    if (crypto_memcmp(real_mac, mac, 16))
-        return -1;
-
-    crypto_chacha20_encrypt(&e_ctx, ciphertext, plaintext, text_size);
-    return 0;
-}
-
-void crypto_ae_lock(u8       *box,
-                    const u8  key[32],
-                    const u8  nonce[24],
-                    const u8 *plaintext,
-                    size_t         text_size)
-{
-    crypto_ae_lock_detached(box, box + 16, key, nonce, plaintext, text_size);
-}
-
-int crypto_ae_unlock(u8       *plaintext,
-                     const u8  key[32],
-                     const u8  nonce[24],
-                     const u8 *box,
-                     size_t         text_size)
-{
-    return crypto_ae_unlock_detached(plaintext, key, nonce,
-                                     box, box + 16, text_size);
-}
-
-/////////////////////////////////////////////
-/// Public key (authenticated) encryption ///
-/////////////////////////////////////////////
+////////////////////
+/// Key exchange ///
+////////////////////
 void crypto_lock_key(u8       shared_key[32],
                      const u8 your_secret_key [32],
                      const u8 their_public_key[32])
@@ -1352,80 +1294,66 @@ void crypto_lock_key(u8       shared_key[32],
     crypto_chacha20_H(shared_key, shared_secret, _0);
 }
 
-void crypto_lock_detached(u8        mac[16],
-                          u8       *ciphertext,
-                          const u8  your_secret_key [32],
-                          const u8  their_public_key[32],
-                          const u8  nonce[24],
-                          const u8 *plaintext,
-                          size_t    text_size)
+////////////////////////////////
+/// Authenticated encryption ///
+////////////////////////////////
+sv authenticate2(u8 mac[16]  , const u8 auth_key[32],
+                 const u8 *t1, size_t   size1,
+                 const u8 *t2, size_t   size2)
 {
-    u8 shared_key[32];
-    crypto_lock_key(shared_key, your_secret_key, their_public_key);
-    crypto_ae_lock_detached(mac, ciphertext,
-                            shared_key, nonce,
-                            plaintext, text_size);
+    crypto_poly1305_ctx a_ctx;
+    crypto_poly1305_init  (&a_ctx, auth_key);
+    crypto_poly1305_update(&a_ctx, t1, size1);
+    crypto_poly1305_update(&a_ctx, t2, size2);
+    crypto_poly1305_final (&a_ctx, mac);
 }
 
-int crypto_unlock_detached(u8       *plaintext,
-                           const u8  your_secret_key [32],
-                           const u8  their_public_key[32],
-                           const u8  nonce[24],
-                           const u8  mac[16],
-                           const u8 *ciphertext,
-                           size_t    text_size)
+void crypto_aead_lock(u8        mac[16],
+                      u8       *ciphertext,
+                      const u8  key[32],
+                      const u8  nonce[24],
+                      const u8 *ad       , size_t ad_size,
+                      const u8 *plaintext, size_t text_size)
+{   // encrypt then mac
+    u8 auth_key[32];
+    crypto_chacha_ctx e_ctx;
+    crypto_chacha20_Xinit  (&e_ctx, key, nonce);
+    crypto_chacha20_stream (&e_ctx, auth_key, 32);
+    crypto_chacha20_encrypt(&e_ctx, plaintext, ciphertext, text_size);
+    authenticate2(mac, auth_key, ad, ad_size, ciphertext, text_size);
+}
+
+int crypto_aead_unlock(u8       *plaintext,
+                       const u8  key[32],
+                       const u8  nonce[24],
+                       const u8  mac[16],
+                       const u8 *ad        , size_t ad_size,
+                       const u8 *ciphertext, size_t text_size)
 {
-    u8 shared_key[32];
-    crypto_lock_key(shared_key, your_secret_key, their_public_key);
-    return crypto_ae_unlock_detached(plaintext,
-                                     shared_key, nonce,
-                                     mac, ciphertext, text_size);
+    u8 auth_key[32], real_mac[16];
+    crypto_chacha_ctx e_ctx;
+    crypto_chacha20_Xinit (&e_ctx, key, nonce);
+    crypto_chacha20_stream(&e_ctx, auth_key, 32);
+    authenticate2(real_mac, auth_key, ad, ad_size, ciphertext, text_size);
+    if (crypto_memcmp(real_mac, mac, 16)) return -1;  // reject forgeries
+    crypto_chacha20_encrypt(&e_ctx, ciphertext, plaintext, text_size);
+    return 0;
 }
 
 void crypto_lock(u8       *box,
-                 const u8  your_secret_key [32],
-                 const u8  their_public_key[32],
+                 const u8  key[32],
                  const u8  nonce[24],
                  const u8 *plaintext,
                  size_t    text_size)
 {
-    crypto_lock_detached(box, box + 16,
-                         your_secret_key, their_public_key, nonce,
-                         plaintext, text_size);
+    crypto_aead_lock(box, box + 16, key, nonce, 0, 0, plaintext, text_size);
 }
 
 int crypto_unlock(u8       *plaintext,
-                  const u8  your_secret_key [32],
-                  const u8  their_public_key[32],
+                  const u8  key[32],
                   const u8  nonce[24],
-                  const u8 *box,
-                  size_t    text_size)
+                  const u8 *box, size_t box_size)
 {
-    return crypto_unlock_detached(plaintext,
-                                  your_secret_key, their_public_key, nonce,
-                                  box, box + 16, text_size);
-}
-
-static const u8 null_nonce[24] = {0};
-
-void crypto_anonymous_lock(u8       *box,
-                           const u8  random_secret_key[32],
-                           const u8  their_public_key[32],
-                           const u8 *plaintext,
-                           size_t    text_size)
-{
-    crypto_x25519_public_key(box, random_secret_key); // put public key in box
-    crypto_lock(box + 32,
-                random_secret_key, their_public_key, null_nonce,
-                plaintext, text_size);
-}
-
-int crypto_anonymous_unlock(u8       *plaintext,
-                            const u8  your_secret_key[32],
-                            const u8 *box,
-                            size_t    text_size)
-{
-    return crypto_unlock(plaintext,
-                         your_secret_key, box, null_nonce,
-                         box + 32, text_size);
+    return crypto_aead_unlock(plaintext, key, nonce, box, 0, 0,
+                              box + 16, box_size -16);
 }
