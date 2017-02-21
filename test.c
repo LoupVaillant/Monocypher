@@ -244,6 +244,14 @@ sv hchacha20(const vector in[], vector *out)
     crypto_chacha20_H(out->buf, key->buf, input->buf);
 }
 
+sv xchacha20(const vector in[], vector *out)
+{
+    const vector *key   = in;
+    const vector *nonce = in + 1;
+    crypto_chacha_ctx ctx;
+    crypto_chacha20_Xinit (&ctx, key->buf, nonce->buf);
+    crypto_chacha20_stream(&ctx, out->buf, out->size);
+}
 
 sv blake2b(const vector in[], vector *out)
 {
@@ -342,21 +350,21 @@ sv ed25519_key(const vector in[], vector *out)
 
 sv ed25519_sign(const vector in[], vector *out)
 {
-    const vector *secret = in;
-    const vector *public = in + 1;
+    const vector *secret_k = in;
+    const vector *public_k = in + 1;
     const vector *msg    = in + 2;
 
     // Test that signature matches the test vector (out->buf).
     // Both signature modes must yield the same signature.
     u8 signature[64];
-    crypto_sign(out->buf , secret->buf, 0          , msg->buf, msg->size);
-    crypto_sign(signature, secret->buf, public->buf, msg->buf, msg->size);
+    crypto_sign(out->buf , secret_k->buf, 0          , msg->buf, msg->size);
+    crypto_sign(signature, secret_k->buf, public_k->buf, msg->buf, msg->size);
     if (crypto_memcmp(signature, out->buf, 64)) {
         printf("FAILURE: signature modes yield different signatures!\n");
     }
 
     // test successful signature verification
-    if (crypto_check(out->buf, public->buf, msg->buf, msg->size)) {
+    if (crypto_check(out->buf, public_k->buf, msg->buf, msg->size)) {
         printf("FAILURE: signature check failed to recognise signature\n");
     }
     // test forgery rejections
@@ -366,8 +374,8 @@ sv ed25519_sign(const vector in[], vector *out)
         fake_signature1[i] = out->buf[i] + 1;
         fake_signature2[i] = out->buf[i] + 1;
     }
-    if (!crypto_check(fake_signature1, public->buf, msg->buf, msg->size) ||
-        !crypto_check(fake_signature2, public->buf, msg->buf, msg->size)) {
+    if (!crypto_check(fake_signature1, public_k->buf, msg->buf, msg->size) ||
+        !crypto_check(fake_signature2, public_k->buf, msg->buf, msg->size)) {
         printf("FAILURE: signature check failed to reject forgery\n");
     }
 }
@@ -407,6 +415,7 @@ int main(void)
     status |= generic_test(diff , "vectors_test_diff"   , 2);
     status |= test(chacha20     , "vectors_chacha20"    , 2);
     status |= test(hchacha20    , "vectors_h_chacha20"  , 2);
+    status |= test(xchacha20    , "vectors_x_chacha20"  , 2);
     status |= test(blake2b      , "vectors_blake2b"     , 2);
     status |= test(poly1305     , "vectors_poly1305"    , 2);
     status |= test(argon2i      , "vectors_argon2i"     , 6);
