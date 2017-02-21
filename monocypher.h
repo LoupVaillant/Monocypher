@@ -128,9 +128,9 @@ int crypto_check(const uint8_t  signature[64],
 ////////////////////
 /// Key exchange ///
 ////////////////////
-void crypto_lock_key(uint8_t       shared_key      [32],
-                     const uint8_t your_secret_key [32],
-                     const uint8_t their_public_key[32]);
+void crypto_key_exchange(uint8_t       shared_key      [32],
+                         const uint8_t your_secret_key [32],
+                         const uint8_t their_public_key[32]);
 
 ////////////////////////////////
 /// Authenticated encryption ///

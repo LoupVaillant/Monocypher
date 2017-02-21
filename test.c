@@ -262,6 +262,11 @@ sv blake2b(const vector in[], vector *out)
                            msg->buf, msg->size);
 }
 
+sv blake2b_easy(const vector in[], vector *out)
+{
+    crypto_blake2b(out->buf, in->buf, in->size);
+}
+
 sv poly1305(const vector in[], vector *out)
 {
     const vector *key = in;
@@ -313,7 +318,7 @@ static int test_x25519()
     uint8_t k[32] = {9};
     uint8_t u[32] = {9};
 
-    iterate_x25519(k, u);
+    crypto_x25519_public_key(k, u);
     int status = crypto_memcmp(k, _1, 32);
     printf("%s: x25519 1\n", status != 0 ? "FAILED" : "OK");
 
@@ -346,20 +351,21 @@ sv ed25519_key(const vector in[], vector *out)
     crypto_sign_public_key(out->buf, in->buf);
 }
 
-sv ed25519_sign(const vector in[], vector *out)
+sv ed25519_sign1(const vector in[], vector *out)
+{
+    const vector *secret_k = in;
+    const vector *msg      = in + 2;
+    // reconsruct public key before signing
+    crypto_sign(out->buf, secret_k->buf, 0, msg->buf, msg->size);
+}
+
+sv ed25519_sign2(const vector in[], vector *out)
 {
     const vector *secret_k = in;
     const vector *public_k = in + 1;
     const vector *msg    = in + 2;
-
-    // Test that signature matches the test vector (out->buf).
-    // Both signature modes must yield the same signature.
-    u8 signature[64];
-    crypto_sign(out->buf , secret_k->buf, 0          , msg->buf, msg->size);
-    crypto_sign(signature, secret_k->buf, public_k->buf, msg->buf, msg->size);
-    if (crypto_memcmp(signature, out->buf, 64)) {
-        printf("FAILURE: signature modes yield different signatures!\n");
-    }
+    // Use cached public key to sign
+    crypto_sign(out->buf, secret_k->buf, public_k->buf, msg->buf, msg->size);
 
     // test successful signature verification
     if (crypto_check(out->buf, public_k->buf, msg->buf, msg->size)) {
@@ -376,6 +382,14 @@ sv ed25519_sign(const vector in[], vector *out)
         !crypto_check(fake_signature2, public_k->buf, msg->buf, msg->size)) {
         printf("FAILURE: signature check failed to reject forgery\n");
     }
+}
+
+sv key_exchange(const vector in[], vector *out)
+{
+    const vector *secret_key = in;
+    const vector *public_key = in + 1;
+    crypto_key_exchange(out->buf, secret_key->buf, public_key->buf);
+
 }
 
 static int test_aead()
@@ -415,12 +429,15 @@ int main(void)
     status |= test(hchacha20    , "vectors_h_chacha20"  , 2);
     status |= test(xchacha20    , "vectors_x_chacha20"  , 2);
     status |= test(blake2b      , "vectors_blake2b"     , 2);
+    status |= test(blake2b_easy , "vectors_blake2b_easy", 1);
     status |= test(poly1305     , "vectors_poly1305"    , 2);
     status |= test(argon2i      , "vectors_argon2i"     , 6);
     status |= test(x25519       , "vectors_x25519"      , 2);
+    status |= test(key_exchange , "vectors_key_exchange", 2);
     status |= test(sha512       , "vectors_sha512"      , 1);
     status |= test(ed25519_key  , "vectors_ed25519_key" , 1);
-    status |= test(ed25519_sign , "vectors_ed25519_sign", 3);
+    status |= test(ed25519_sign1, "vectors_ed25519_sign", 3);
+    status |= test(ed25519_sign2, "vectors_ed25519_sign", 3);
     status |= test_x25519();
     status |= test_aead();
     printf(status ? "TESTS FAILED\n" : "ALL TESTS OK\n");

@@ -1220,18 +1220,14 @@ void crypto_sign(u8        signature[64],
                  const u8  public_key[32],
                  const u8 *message, size_t message_size)
 {
-    u8 h[64];
-    u8 *a      = h;       // secret scalar
-    u8 *prefix = h + 32;  // prefix for nonce generation
-    HASH(h, secret_key, 32);
+    u8 a[64], *prefix = a + 32;
+    HASH(a, secret_key, 32);
     trim_scalar(a);
 
-    ge A;
     u8 pk_buf[32];
     const u8 *pk = public_key;
     if (public_key == 0) {
-        ge_scalarmult_base(&A, a);
-        ge_tobytes(pk_buf, &A);
+        crypto_sign_public_key(pk_buf, secret_key);
         pk = pk_buf;
     }
 
@@ -1284,14 +1280,14 @@ int crypto_check(const u8  signature[64],
 ////////////////////
 /// Key exchange ///
 ////////////////////
-void crypto_lock_key(u8       shared_key[32],
-                     const u8 your_secret_key [32],
-                     const u8 their_public_key[32])
+void crypto_key_exchange(u8       shared_key[32],
+                         const u8 your_secret_key [32],
+                         const u8 their_public_key[32])
 {
-    static const u8 _0[16] = {0};
+    static const u8 zero[16] = {0};
     u8 shared_secret[32];
     crypto_x25519(shared_secret, your_secret_key, their_public_key);
-    crypto_chacha20_H(shared_key, shared_secret, _0);
+    crypto_chacha20_H(shared_key, shared_secret, zero);
 }
 
 ////////////////////////////////
