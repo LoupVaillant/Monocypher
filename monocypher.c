@@ -938,7 +938,7 @@ static int fe_isnegative(const fe f)
 
 static int fe_isnonzero(const fe f)
 {
-    static const u8 zero[32];
+    static const u8 zero[32] = {0};
     u8 s[32];
     fe_tobytes(s, f);
     return crypto_memcmp(s, zero, 32);
