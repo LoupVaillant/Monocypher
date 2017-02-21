@@ -296,8 +296,6 @@ sv x25519(const vector in[], vector *out)
     crypto_x25519(out->buf, scalar->buf, point->buf);
 }
 
-// Disabling the following test, because it takes too damn long
-// I suggest you run it once, though.
 sv iterate_x25519(uint8_t k[32], uint8_t u[32])
 {
     uint8_t tmp[32];
