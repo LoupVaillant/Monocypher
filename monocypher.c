@@ -80,7 +80,14 @@ int crypto_memcmp(const u8 *p1, const u8 *p2, size_t n)
 {
     unsigned diff = 0;
     FOR (i, 0, n) { diff |= (p1[i] ^ p2[i]); }
-    return diff;
+    return (1 & ((diff - 1) >> 8)) - 1;
+}
+
+int crypto_zerocmp(const u8 *p, size_t n)
+{
+    unsigned diff = 0;
+    FOR (i, 0, n) { diff |= p[i]; }
+    return (1 & ((diff - 1) >> 8)) - 1;
 }
 
 /////////////////
@@ -159,8 +166,8 @@ void crypto_chacha20_Xinit(crypto_chacha_ctx *ctx,
 }
 
 void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
-                             const u8          *plain_text,
                              u8                *cipher_text,
+                             const u8          *plain_text,
                              size_t             message_size)
 {
     FOR (i, 0, message_size) {
@@ -190,7 +197,7 @@ void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
                             u8                *cipher_text,
                             size_t             message_size)
 {
-    crypto_chacha20_encrypt(ctx, 0, cipher_text, message_size);
+    crypto_chacha20_encrypt(ctx, cipher_text, 0, message_size);
 }
 
 
@@ -676,14 +683,12 @@ static u32 gidx_next(gidx_ctx *ctx)
 }
 
 // Main algorithm
-void crypto_argon2i(u8       *tag,      u32 tag_size,
-                    const u8 *password, u32 password_size,
-                    const u8 *salt,     u32 salt_size,
-                    const u8 *key,      u32 key_size,
-                    const u8 *ad,       u32 ad_size,
-                    void *work_area,
-                    u32 nb_blocks,
-                    u32 nb_iterations)
+void crypto_argon2i(u8       *tag,       u32 tag_size,
+                    void     *work_area, u32 nb_blocks, u32 nb_iterations,
+                    const u8 *password,  u32 password_size,
+                    const u8 *salt,      u32 salt_size,
+                    const u8 *key,       u32 key_size,
+                    const u8 *ad,        u32 ad_size)
 {
     // work area seen as blocks (must be suitably aligned)
     block *blocks = (block*)work_area;
@@ -938,10 +943,9 @@ static int fe_isnegative(const fe f)
 
 static int fe_isnonzero(const fe f)
 {
-    static const u8 zero[32] = {0};
     u8 s[32];
     fe_tobytes(s, f);
-    return crypto_memcmp(s, zero, 32);
+    return crypto_zerocmp(s, 32);
 }
 
 ///////////////
@@ -955,9 +959,9 @@ sv trim_scalar(u8 s[32])
     s[31] |= 64;
 }
 
-void crypto_x25519(u8       shared_secret   [32],
-                   const u8 your_secret_key [32],
-                   const u8 their_public_key[32])
+int crypto_x25519(u8       shared_secret   [32],
+                  const u8 your_secret_key [32],
+                  const u8 their_public_key[32])
 {
     // computes the scalar product
     fe x1, x2, z2, x3, z3;
@@ -999,6 +1003,10 @@ void crypto_x25519(u8       shared_secret   [32],
     fe_invert(z2, z2);
     fe_mul(x2, x2, z2);
     fe_tobytes(shared_secret, x2);
+
+    // Returns -1 if the input is all zero
+    // (happens with some malicious public keys)
+    return -1 - crypto_zerocmp(shared_secret, 32);
 }
 
 void crypto_x25519_public_key(u8       public_key[32],
@@ -1280,14 +1288,15 @@ int crypto_check(const u8  signature[64],
 ////////////////////
 /// Key exchange ///
 ////////////////////
-void crypto_key_exchange(u8       shared_key[32],
-                         const u8 your_secret_key [32],
-                         const u8 their_public_key[32])
+int crypto_key_exchange(u8       shared_key[32],
+                        const u8 your_secret_key [32],
+                        const u8 their_public_key[32])
 {
     static const u8 zero[16] = {0};
     u8 shared_secret[32];
-    crypto_x25519(shared_secret, your_secret_key, their_public_key);
+    int status = crypto_x25519(shared_secret, your_secret_key, their_public_key);
     crypto_chacha20_H(shared_key, shared_secret, zero);
+    return status;
 }
 
 ////////////////////////////////
@@ -1315,7 +1324,7 @@ void crypto_aead_lock(u8        mac[16],
     crypto_chacha_ctx e_ctx;
     crypto_chacha20_Xinit  (&e_ctx, key, nonce);
     crypto_chacha20_stream (&e_ctx, auth_key, 32);
-    crypto_chacha20_encrypt(&e_ctx, plaintext, ciphertext, text_size);
+    crypto_chacha20_encrypt(&e_ctx, ciphertext, plaintext, text_size);
     authenticate2(mac, auth_key, ad, ad_size, ciphertext, text_size);
 }
 
@@ -1332,7 +1341,7 @@ int crypto_aead_unlock(u8       *plaintext,
     crypto_chacha20_stream(&e_ctx, auth_key, 32);
     authenticate2(real_mac, auth_key, ad, ad_size, ciphertext, text_size);
     if (crypto_memcmp(real_mac, mac, 16)) return -1;  // reject forgeries
-    crypto_chacha20_encrypt(&e_ctx, ciphertext, plaintext, text_size);
+    crypto_chacha20_encrypt(&e_ctx, plaintext, ciphertext, text_size);
     return 0;
 }
 

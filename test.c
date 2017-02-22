@@ -86,7 +86,7 @@ sv stream_drop(stream *s)
 /// Vector of octets ///
 ////////////////////////
 typedef struct {
-    uint8_t *buf;
+    u8 *buf;
     size_t   buf_size;
     size_t   size;
 } vector;
@@ -94,7 +94,7 @@ typedef struct {
 static vector vec_new(size_t buf_size)
 {
     vector v;
-    v.buf      = (uint8_t*)alloc(buf_size);
+    v.buf      = (u8*)alloc(buf_size);
     v.buf_size = buf_size;
     v.size     = 0;
     return v;
@@ -112,12 +112,12 @@ sv vec_del(vector *v)
     free(v->buf);
 }
 
-sv vec_push_back(vector *v, uint8_t e)
+sv vec_push_back(vector *v, u8 e)
 {
     if (v->buf_size == v->size) {
         // double initial buffer size (and then some)
         size_t   new_buf_size = v->buf_size * 2 + 1;
-        uint8_t *new_buf   = (uint8_t*)alloc(new_buf_size);
+        u8 *new_buf   = (u8*)alloc(new_buf_size);
         memcpy(new_buf, v->buf, v->buf_size);
         free(v->buf);
         v->buf   = new_buf;
@@ -151,8 +151,8 @@ static vector read_hex_line(stream *s)
     vector v = vec_new(64);
     next_number(s);
     while (stream_peek(s) != ':') {
-        uint8_t msb = uint_of_char(stream_get(s));
-        uint8_t lsb = uint_of_char(stream_get(s));
+        u8 msb = uint_of_char(stream_get(s));
+        u8 lsb = uint_of_char(stream_get(s));
         vec_push_back(&v, lsb | (msb << 4));
     }
     stream_drop(s);
@@ -283,14 +283,12 @@ sv argon2i(const vector in[], vector *out)
         const vector *key           = in + 4;
         const vector *ad            = in + 5;
         void         *work_area     = alloc(nb_blocks->buf[0] * 1024);
-        crypto_argon2i(out     ->buf, out     ->size,
-                       password->buf, password->size,
-                       salt    ->buf, salt    ->size,
-                       key     ->buf, key     ->size,
-                       ad      ->buf, ad      ->size,
-                       work_area,
-                       nb_blocks    ->buf[0],
-                       nb_iterations->buf[0]);
+        crypto_argon2i(out     ->buf, out      ->size,
+                       work_area    , nb_blocks->buf[0], nb_iterations->buf[0],
+                       password->buf, password ->size,
+                       salt    ->buf, salt     ->size,
+                       key     ->buf, key      ->size,
+                       ad      ->buf, ad       ->size);
         free(work_area);
 }
 
@@ -298,12 +296,15 @@ sv x25519(const vector in[], vector *out)
 {
     const vector *scalar = in;
     const vector *point  = in + 1;
-    crypto_x25519(out->buf, scalar->buf, point->buf);
+    int report   = crypto_x25519(out->buf, scalar->buf, point->buf);
+    int not_zero = crypto_zerocmp(out->buf, out->size);
+    if ( not_zero &&  report)  printf("FAILURE: x25519 false all_zero report\n");
+    if (!not_zero && !report)  printf("FAILURE: x25519 failed to report zero\n");
 }
 
-sv iterate_x25519(uint8_t k[32], uint8_t u[32])
+sv iterate_x25519(u8 k[32], u8 u[32])
 {
-    uint8_t tmp[32];
+    u8 tmp[32];
     crypto_x25519(tmp , k, u);
     memcpy(u, k  , 32);
     memcpy(k, tmp, 32);
@@ -311,31 +312,31 @@ sv iterate_x25519(uint8_t k[32], uint8_t u[32])
 
 static int test_x25519()
 {
-    uint8_t _1   [32] = {0x42, 0x2c, 0x8e, 0x7a, 0x62, 0x27, 0xd7, 0xbc,
-                         0xa1, 0x35, 0x0b, 0x3e, 0x2b, 0xb7, 0x27, 0x9f,
-                         0x78, 0x97, 0xb8, 0x7b, 0xb6, 0x85, 0x4b, 0x78,
-                         0x3c, 0x60, 0xe8, 0x03, 0x11, 0xae, 0x30, 0x79};
-    uint8_t k[32] = {9};
-    uint8_t u[32] = {9};
+    u8 _1   [32] = {0x42, 0x2c, 0x8e, 0x7a, 0x62, 0x27, 0xd7, 0xbc,
+                    0xa1, 0x35, 0x0b, 0x3e, 0x2b, 0xb7, 0x27, 0x9f,
+                    0x78, 0x97, 0xb8, 0x7b, 0xb6, 0x85, 0x4b, 0x78,
+                    0x3c, 0x60, 0xe8, 0x03, 0x11, 0xae, 0x30, 0x79};
+    u8 k[32] = {9};
+    u8 u[32] = {9};
 
     crypto_x25519_public_key(k, u);
     int status = crypto_memcmp(k, _1, 32);
     printf("%s: x25519 1\n", status != 0 ? "FAILED" : "OK");
 
-    uint8_t _1k  [32] = {0x68, 0x4c, 0xf5, 0x9b, 0xa8, 0x33, 0x09, 0x55,
-                         0x28, 0x00, 0xef, 0x56, 0x6f, 0x2f, 0x4d, 0x3c,
-                         0x1c, 0x38, 0x87, 0xc4, 0x93, 0x60, 0xe3, 0x87,
-                         0x5f, 0x2e, 0xb9, 0x4d, 0x99, 0x53, 0x2c, 0x51};
+    u8 _1k  [32] = {0x68, 0x4c, 0xf5, 0x9b, 0xa8, 0x33, 0x09, 0x55,
+                    0x28, 0x00, 0xef, 0x56, 0x6f, 0x2f, 0x4d, 0x3c,
+                    0x1c, 0x38, 0x87, 0xc4, 0x93, 0x60, 0xe3, 0x87,
+                    0x5f, 0x2e, 0xb9, 0x4d, 0x99, 0x53, 0x2c, 0x51};
     FOR (i, 1, 1000) { iterate_x25519(k, u); }
     status |= crypto_memcmp(k, _1k, 32);
     printf("%s: x25519 1K\n", status != 0 ? "FAILED" : "OK");
 
     // too long; didn't run
-    //uint8_t _100k[32] = {0x7c, 0x39, 0x11, 0xe0, 0xab, 0x25, 0x86, 0xfd,
-    //                     0x86, 0x44, 0x97, 0x29, 0x7e, 0x57, 0x5e, 0x6f,
-    //                     0x3b, 0xc6, 0x01, 0xc0, 0x88, 0x3c, 0x30, 0xdf,
-    //                     0x5f, 0x4d, 0xd2, 0xd2, 0x4f, 0x66, 0x54, 0x24};
-    // FOR (i, 1000, 1000000) { iterate_x25519(k, u); }
+    //u8 _100k[32] = {0x7c, 0x39, 0x11, 0xe0, 0xab, 0x25, 0x86, 0xfd,
+    //                0x86, 0x44, 0x97, 0x29, 0x7e, 0x57, 0x5e, 0x6f,
+    //                0x3b, 0xc6, 0x01, 0xc0, 0x88, 0x3c, 0x30, 0xdf,
+    //                0x5f, 0x4d, 0xd2, 0xd2, 0x4f, 0x66, 0x54, 0x24};
+    //FOR (i, 1000, 1000000) { iterate_x25519(k, u); }
     //status |= crypto_memcmp(k, _100k, 32);
     //printf("%s: x25519 1M\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -372,8 +373,8 @@ sv ed25519_sign2(const vector in[], vector *out)
         printf("FAILURE: signature check failed to recognise signature\n");
     }
     // test forgery rejections
-    uint8_t fake_signature1[64];
-    uint8_t fake_signature2[64];
+    u8 fake_signature1[64];
+    u8 fake_signature2[64];
     FOR (i, 0, 64) {
         fake_signature1[i] = out->buf[i] + 1;
         fake_signature2[i] = out->buf[i] + 1;
@@ -389,33 +390,40 @@ sv key_exchange(const vector in[], vector *out)
     const vector *secret_key = in;
     const vector *public_key = in + 1;
     crypto_key_exchange(out->buf, secret_key->buf, public_key->buf);
-
 }
 
 static int test_aead()
 {
-    uint8_t key[32]      = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7,
-                             0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 };
-    uint8_t nonce[24]    = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                             1, 1, 1, 1, 1, 1, 1, 1 };
-    uint8_t ad       [4] = { 3, 2, 1, 0 };
-    uint8_t plaintext[8] = { 7, 6, 5, 4, 3, 2, 1, 0 };
-    uint8_t box[24];
-    uint8_t out[8];
+    u8 key[32]      = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7,
+                        0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 };
+    u8 nonce[24]    = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                        1, 1, 1, 1, 1, 1, 1, 1 };
+    u8 ad       [4] = { 3, 2, 1, 0 };
+    u8 plaintext[8] = { 7, 6, 5, 4, 3, 2, 1, 0 };
+    u8 box[24], box2[24];
+    u8 out[8];
     int status = 0;
-    crypto_lock(box, key, nonce, plaintext, 8);           // make true message
-    status |= crypto_unlock(out, key, nonce, box, 8+16);  // accept true message
-    status |= crypto_memcmp(plaintext, out, 8);           // roundtrip
-    box[0]++;                                             // make forgery
-    status |= !crypto_unlock(out, key, nonce, box, 8+16); // reject forgery
-    printf("%s: aead\n", status != 0 ? "FAILED" : "OK");
-
+    // AEAD roundtrip
     crypto_aead_lock(box, box+16, key, nonce, ad, 4, plaintext, 8);
     status |= crypto_aead_unlock(out, key, nonce, box, ad, 4, box+16, 8);
     status |= crypto_memcmp(plaintext, out, 8);
     box[0]++;
     status |= !crypto_aead_unlock(out, key, nonce, box, ad, 4, box+16, 8);
+    printf("%s: aead (detached)\n", status != 0 ? "FAILED" : "OK");
+
+    // Authenticated roundtrip (easy interface)
+    crypto_lock(box, key, nonce, plaintext, 8);           // make true message
+    status |= crypto_unlock(out, key, nonce, box, 8+16);  // accept true message
+    status |= crypto_memcmp(plaintext, out, 8);           // roundtrip
+    box[0]++;                                             // make forgery
+    status |= !crypto_unlock(out, key, nonce, box, 8+16); // reject forgery
     printf("%s: aead (simplified)\n", status != 0 ? "FAILED" : "OK");
+    box[0]--; // undo forgery
+
+    // Same result for both interfaces
+    crypto_aead_lock(box2, box2 + 16, key, nonce, 0, 0, plaintext, 8);
+    status |= crypto_memcmp(box, box2, 24);
+    printf("%s: aead (compared)\n", status != 0 ? "FAILED" : "OK");
 
     return status;
 }
