@@ -220,31 +220,46 @@ sv poly_add(u32 out[5], const u32 a[5], const u32 b[5])
 }
 
 // h = (h + c) * r
+// preconditions:
+//   max(ctx->h) = 3_ffffffff_ffffffff_ffffffff_ffffffff
+//   max(ctx->c) = 1_ffffffff_ffffffff_ffffffff_ffffffff
+//   max(ctx->r) =   0ffffffc_0ffffffc_0ffffffc_0fffffff
+// Postcondition:
+//   max(ctx->h) = 3_57ffffea_57ffffea_57ffffea_57fffff8
+// Conclusion:
+//   ctx->h definitly stays under 2^130,
+//   It most probably stays under 2^130 - 5.
+//   If so, we don't need the final reduction.
 sv poly_block(crypto_poly1305_ctx *ctx)
 {
-    // h + c, without carry propagation
-    const u64 h0 = ctx->h[0] + (u64)ctx->c[0];
-    const u64 h1 = ctx->h[1] + (u64)ctx->c[1];
-    const u64 h2 = ctx->h[2] + (u64)ctx->c[2];
-    const u64 h3 = ctx->h[3] + (u64)ctx->c[3];
-    const u64 h4 = ctx->h[4] + (u64)ctx->c[4];
+    // s = h + c, without carry propagation
+    const u64 s0 = ctx->h[0] + (u64)ctx->c[0]; // max(s0) = 1_fffffffe
+    const u64 s1 = ctx->h[1] + (u64)ctx->c[1]; // max(s1) = 1_fffffffe
+    const u64 s2 = ctx->h[2] + (u64)ctx->c[2]; // max(s2) = 1_fffffffe
+    const u64 s3 = ctx->h[3] + (u64)ctx->c[3]; // max(s3) = 1_fffffffe
+    const u64 s4 = ctx->h[4] + (u64)ctx->c[4]; // max(s4) =   00000004
 
     // Local all the things!
-    const u64 r0 = ctx->r[0];
-    const u64 r1 = ctx->r[1];
-    const u64 r2 = ctx->r[2];
-    const u64 r3 = ctx->r[3];
-    const u64 rr0 = (ctx->r[0] >> 2) * 5; // lose 2 bottom bits...
-    const u64 rr1 = (ctx->r[1] >> 2) * 5; // 2 bottom bits already cleared
-    const u64 rr2 = (ctx->r[2] >> 2) * 5; // 2 bottom bits already cleared
-    const u64 rr3 = (ctx->r[3] >> 2) * 5; // 2 bottom bits already cleared
+    const u32 r0 = ctx->r[0];             // max(r0)  = 0fffffff
+    const u32 r1 = ctx->r[1];             // max(r1)  = 0ffffffc
+    const u32 r2 = ctx->r[2];             // max(r2)  = 0ffffffc
+    const u32 r3 = ctx->r[3];             // max(r3)  = 0ffffffc
+    const u32 rr0 = (ctx->r[0] >> 2) * 5; // max(rr0) = 13fffffb
+    const u32 rr1 = (ctx->r[1] >> 2) * 5; // max(rr1) = 13fffffb
+    const u32 rr2 = (ctx->r[2] >> 2) * 5; // max(rr2) = 13fffffb
+    const u32 rr3 = (ctx->r[3] >> 2) * 5; // max(rr3) = 13fffffb
 
     // (h + c) * r, without carry propagation
-    const u64 x0 = h0*r0 + h1*rr3 + h2*rr2 + h3*rr1 + h4*rr0;
-    const u64 x1 = h0*r1 + h1*r0  + h2*rr3 + h3*rr2 + h4*rr1;
-    const u64 x2 = h0*r2 + h1*r1  + h2*r0  + h3*rr3 + h4*rr2;
-    const u64 x3 = h0*r3 + h1*r2  + h2*r1  + h3*r0  + h4*rr3;
-    const u64 x4 = h4 * (r0 & 3); // ...recover those 2 bits
+    // max(x0) = 97ffffdf_b800000c
+    // max(x1) = 8fffffe1_c000000a
+    // max(x2) = 87ffffe3_c8000008
+    // max(x3) = 7fffffe5_d0000006
+    // max(x4) = 00000000_0000000c
+    const u64 x0 = s0*r0 + s1*rr3 + s2*rr2 + s3*rr1 + s4*rr0;
+    const u64 x1 = s0*r1 + s1*r0  + s2*rr3 + s3*rr2 + s4*rr1;
+    const u64 x2 = s0*r2 + s1*r1  + s2*r0  + s3*rr3 + s4*rr2;
+    const u64 x3 = s0*r3 + s1*r2  + s2*r1  + s3*r0  + s4*rr3;
+    const u64 x4 = s4 * (r0 & 3); // 2 bits lots on rr0
 
     // carry propagation, put ctx->h under 2^130
     const u64 msb = x4 + (x3 >> 32);
@@ -254,6 +269,7 @@ sv poly_block(crypto_poly1305_ctx *ctx)
     u += (x2 & 0xffffffff) + (x1 >> 32);  ctx->h[2] = u & 0xffffffff;  u >>= 32;
     u += (x3 & 0xffffffff) + (x2 >> 32);  ctx->h[3] = u & 0xffffffff;  u >>= 32;
     u += msb & 3 /* ...recover them */ ;  ctx->h[4] = u;
+    //   max(msb & 3) = 3                 max(ctx->h[4]) = 3
 }
 
 // (re-)initializes the input counter and input buffer
