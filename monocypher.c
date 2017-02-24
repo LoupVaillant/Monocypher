@@ -204,72 +204,63 @@ void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
 /////////////////
 /// Poly 1305 ///
 /////////////////
-sv poly_load(u32 out[4], const u8 in[16])
-{
-    FOR (i, 0, 4) { out[i] = load32_le(in + i*4); }
-}
-
 sv poly_add(u32 out[5], const u32 a[5], const u32 b[5])
 {
-    u64 carry = 0;
-    FOR (i, 0, 5) {
-        carry  += (i64)(a[i]) + b[i];
-        out[i]  = carry & 0xffffffff; // lower 32 bits right there.
-        carry >>= 32;                 // retain the carry
-    }
+    u64 u = 0;
+    u  += (i64)(a[0]) + b[0];  out[0] = u & 0xffffffff;  u >>= 32;
+    u  += (i64)(a[1]) + b[1];  out[1] = u & 0xffffffff;  u >>= 32;
+    u  += (i64)(a[2]) + b[2];  out[2] = u & 0xffffffff;  u >>= 32;
+    u  += (i64)(a[3]) + b[3];  out[3] = u & 0xffffffff;  u >>= 32;
+    u  += (i64)(a[4]) + b[4];  out[4] = u & 0xffffffff;  u >>= 32;
 }
 
 // h = (h + c) * r
 // preconditions:
-//   max(ctx->h) = 3_ffffffff_ffffffff_ffffffff_ffffffff
-//   max(ctx->c) = 1_ffffffff_ffffffff_ffffffff_ffffffff
-//   max(ctx->r) =   0ffffffc_0ffffffc_0ffffffc_0fffffff
+//   ctx->h <= 7_ffffffff_ffffffff_ffffffff_ffffffff
+//   ctx->c <= 1_ffffffff_ffffffff_ffffffff_ffffffff
+//   ctx->r <=   0ffffffc_0ffffffc_0ffffffc_0fffffff
 // Postcondition:
-//   max(ctx->h) = 3_57ffffea_57ffffea_57ffffea_57fffff8
-// Conclusion:
-//   ctx->h definitly stays under 2^130,
-//   It most probably stays under 2^130 - 5.
-//   If so, we don't need the final reduction.
+//   ctx->h <= 4_87ffffe4_8fffffe2_97ffffe0_9ffffffa
 sv poly_block(crypto_poly1305_ctx *ctx)
 {
     // s = h + c, without carry propagation
-    const u64 s0 = ctx->h[0] + (u64)ctx->c[0]; // max(s0) = 1_fffffffe
-    const u64 s1 = ctx->h[1] + (u64)ctx->c[1]; // max(s1) = 1_fffffffe
-    const u64 s2 = ctx->h[2] + (u64)ctx->c[2]; // max(s2) = 1_fffffffe
-    const u64 s3 = ctx->h[3] + (u64)ctx->c[3]; // max(s3) = 1_fffffffe
-    const u64 s4 = ctx->h[4] + (u64)ctx->c[4]; // max(s4) =   00000004
+    const u64 s0 = ctx->h[0] + (u64)ctx->c[0]; // s0 <= 1_fffffffe
+    const u64 s1 = ctx->h[1] + (u64)ctx->c[1]; // s1 <= 1_fffffffe
+    const u64 s2 = ctx->h[2] + (u64)ctx->c[2]; // s2 <= 1_fffffffe
+    const u64 s3 = ctx->h[3] + (u64)ctx->c[3]; // s3 <= 1_fffffffe
+    const u64 s4 = ctx->h[4] + (u64)ctx->c[4]; // s4 <=   00000004
 
     // Local all the things!
-    const u32 r0 = ctx->r[0];             // max(r0)  = 0fffffff
-    const u32 r1 = ctx->r[1];             // max(r1)  = 0ffffffc
-    const u32 r2 = ctx->r[2];             // max(r2)  = 0ffffffc
-    const u32 r3 = ctx->r[3];             // max(r3)  = 0ffffffc
-    const u32 rr0 = (ctx->r[0] >> 2) * 5; // max(rr0) = 13fffffb
-    const u32 rr1 = (ctx->r[1] >> 2) * 5; // max(rr1) = 13fffffb
-    const u32 rr2 = (ctx->r[2] >> 2) * 5; // max(rr2) = 13fffffb
-    const u32 rr3 = (ctx->r[3] >> 2) * 5; // max(rr3) = 13fffffb
+    const u32 r0 = ctx->r[0];       // r0  <= 0fffffff
+    const u32 r1 = ctx->r[1];       // r1  <= 0ffffffc
+    const u32 r2 = ctx->r[2];       // r2  <= 0ffffffc
+    const u32 r3 = ctx->r[3];       // r3  <= 0ffffffc
+    const u32 rr0 = (r0 >> 2) * 5;  // rr0 <= 13fffffb // lose 2 bits...
+    const u32 rr1 = (r1 >> 2) + r1; // rr1 <= 13fffffb // * 5 trick
+    const u32 rr2 = (r2 >> 2) + r2; // rr2 <= 13fffffb // * 5 trick
+    const u32 rr3 = (r3 >> 2) + r3; // rr3 <= 13fffffb // * 5 trick
 
     // (h + c) * r, without carry propagation
-    // max(x0) = 97ffffdf_b800000c
-    // max(x1) = 8fffffe1_c000000a
-    // max(x2) = 87ffffe3_c8000008
-    // max(x3) = 7fffffe5_d0000006
-    // max(x4) = 00000000_0000000c
-    const u64 x0 = s0*r0 + s1*rr3 + s2*rr2 + s3*rr1 + s4*rr0;
-    const u64 x1 = s0*r1 + s1*r0  + s2*rr3 + s3*rr2 + s4*rr1;
-    const u64 x2 = s0*r2 + s1*r1  + s2*r0  + s3*rr3 + s4*rr2;
-    const u64 x3 = s0*r3 + s1*r2  + s2*r1  + s3*r0  + s4*rr3;
-    const u64 x4 = s4 * (r0 & 3); // 2 bits lots on rr0
+    const u64 x0 = s0*r0 + s1*rr3 + s2*rr2 + s3*rr1 + s4*rr0;//<=97ffffe007fffff8
+    const u64 x1 = s0*r1 + s1*r0  + s2*rr3 + s3*rr2 + s4*rr1;//<=8fffffe20ffffff6
+    const u64 x2 = s0*r2 + s1*r1  + s2*r0  + s3*rr3 + s4*rr2;//<=87ffffe417fffff4
+    const u64 x3 = s0*r3 + s1*r2  + s2*r1  + s3*r0  + s4*rr3;//<=7fffffe61ffffff2
+    const u32 x4 = s4 * (r0 & 3); // ...recover 2 bits       //<=0000000000000018
 
-    // carry propagation, put ctx->h under 2^130
-    const u64 msb = x4 + (x3 >> 32);
-    u64       u   = (msb >> 2) * 5; // lose 2 bottom bits...
-    u += (x0 & 0xffffffff)             ;  ctx->h[0] = u & 0xffffffff;  u >>= 32;
-    u += (x1 & 0xffffffff) + (x0 >> 32);  ctx->h[1] = u & 0xffffffff;  u >>= 32;
-    u += (x2 & 0xffffffff) + (x1 >> 32);  ctx->h[2] = u & 0xffffffff;  u >>= 32;
-    u += (x3 & 0xffffffff) + (x2 >> 32);  ctx->h[3] = u & 0xffffffff;  u >>= 32;
-    u += msb & 3 /* ...recover them */ ;  ctx->h[4] = u;
-    //   max(msb & 3) = 3                 max(ctx->h[4]) = 3
+    // partial reduction modulo 2^130 - 5
+    const u32 u5 = x4 + (x3 >> 32); // u5 <= 7ffffffe
+    const u64 u0 = (u5 >>  2) * 5 + (x0 & 0xffffffff);
+    const u64 u1 = (u0 >> 32)     + (x1 & 0xffffffff) + (x0 >> 32);
+    const u64 u2 = (u1 >> 32)     + (x2 & 0xffffffff) + (x1 >> 32);
+    const u64 u3 = (u2 >> 32)     + (x3 & 0xffffffff) + (x2 >> 32);
+    const u64 u4 = (u3 >> 32)     + (u5 & 3);
+
+    // Update the hash
+    ctx->h[0] = u0 & 0xffffffff; // u0 <= 1_9ffffffa
+    ctx->h[1] = u1 & 0xffffffff; // u1 <= 1_97ffffe0
+    ctx->h[2] = u2 & 0xffffffff; // u2 <= 1_8fffffe2
+    ctx->h[3] = u3 & 0xffffffff; // u3 <= 1_87ffffe4
+    ctx->h[4] = u4;              // u4 <=          4
 }
 
 // (re-)initializes the input counter and input buffer
@@ -281,20 +272,15 @@ sv poly_clear_c(crypto_poly1305_ctx *ctx)
 
 void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 {
-    // initial h: zero
-    FOR (i, 0, 5) { ctx->h [i] = 0; }
-    // initial r: first half of the key, minus a few bits
-    poly_load(ctx->r, key);
-    ctx->r[0] &= 0x0fffffff; // clear top 4 bits
-    ctx->r[1] &= 0x0ffffffc; // clear top 4 & bottom 2 bits
-    ctx->r[2] &= 0x0ffffffc; // clear top 4 & bottom 2 bits
-    ctx->r[3] &= 0x0ffffffc; // clear top 4 & bottom 2 bits
-    ctx->c[4]  = 1;
-    // second half of the key, saved for later
-    poly_load(ctx->pad, key + 16);
-    ctx->pad[4] = 0;
-    // buffer and counter
+    // constant init
+    FOR (i, 0, 5) { ctx->h [i] = 0; } // initial hash: zero
+    ctx->c  [4] = 1;                  // add 2^130 to every input block
+    ctx->pad[4] = 0;                  // poly_add() compatibility
     poly_clear_c(ctx);
+    // load r and pad (r has some of its bits cleared)
+    /**/            ctx->r  [0] = load32_le(key      ) & 0x0fffffff;
+    FOR (i, 1, 4) { ctx->r  [i] = load32_le(key + i*4) & 0x0ffffffc; }
+    FOR (i, 0, 4) { ctx->pad[i] = load32_le(key + i*4 + 16);         }
 }
 
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
@@ -316,24 +302,26 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
 void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
 {
     // move the final 1 according to remaining input length
+    // (We may add less than 2^130 to the last input block)
     ctx->c[4] = 0;
     ctx->c[ctx->c_index / 4] |= 1 << ((ctx->c_index % 4) * 8);
-    // one last hash update...
+    // one last hash update, this time with full modular reduction
     poly_block(ctx);
-    // ... this time with full modular reduction
-    // We only need to conditionally subtract 2^130-5,
-    // using bit twidling to prevent timing attacks.
+    // Conditional subtraction by 2^130-5, with bit
+    // twidling to prevent timing attacks. it is
+    // enough to complete the reduction, because h < 2 * (2^130 - 5)
     static const u32 minus_p[5] = { 5, 0, 0, 0, 0xfffffffc };
     u32 h_minus_p[5];
     poly_add(h_minus_p, ctx->h, minus_p);
     u32 negative = ~(-(h_minus_p[4] >> 31)); // 0 or -1 (2's complement)
-    for (int i = 0; i < 5; i++) {
+    FOR (i, 0, 4) {
         ctx->h[i] ^= negative & (ctx->h[i] ^ h_minus_p[i]);
     }
     // Add the secret pad to the final hash before output
     poly_add(ctx->h, ctx->h, ctx->pad);
-    for (int i = 0; i < 4; i++)
+    FOR (i, 0, 4) {
         store32_le(mac + i*4, ctx->h[i]);
+    }
 }
 
 void crypto_poly1305_auth(u8 mac[16], const u8 *m,
@@ -466,7 +454,7 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *out)
 
     // copy the hash in the output (little endian of course)
     FOR (i, 0, ctx->output_size) {
-        out[i] = (ctx->hash[i / 8] >> (8 * (i & 7))) & 0xFF;
+        out[i] = (ctx->hash[i / 8] >> (8 * (i & 7))) & 0xff;
     }
 }
 
