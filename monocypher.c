@@ -4,12 +4,10 @@
 /// Utilities ///
 /////////////////
 
-// By default, ed25519 uses blake2b.
-// sha512 is provided as an option for compatibility
-// and testability against official test vectors.
-// Compile with option -DED25519_SHA512 to use with sha512
-// If you do so, you must provide the "sha512" header with
-// suitable functions.
+// By default, signatures use blake2b. SHA-512 is provided as an
+// option for full ed25519 compatibility (a must for test vectors).
+// Compile with option -DED25519_SHA512 to use with sha512 If you do
+// so, you must provide the "sha512" header with suitable functions.
 #ifdef ED25519_SHA512
     #include "sha512.h"
     #define HASH crypto_sha512
@@ -42,15 +40,14 @@ static u32 load32_le(const u8 s[4])
 
 static u64 load64_le(const u8 s[8])
 {
-    return
-        ((u64)s[0]      ) ^
-        ((u64)s[1] <<  8) ^
-        ((u64)s[2] << 16) ^
-        ((u64)s[3] << 24) ^
-        ((u64)s[4] << 32) ^
-        ((u64)s[5] << 40) ^
-        ((u64)s[6] << 48) ^
-        ((u64)s[7] << 56);
+    return (u64)s[0]
+        | ((u64)s[1] <<  8)
+        | ((u64)s[2] << 16)
+        | ((u64)s[3] << 24)
+        | ((u64)s[4] << 32)
+        | ((u64)s[5] << 40)
+        | ((u64)s[6] << 48)
+        | ((u64)s[7] << 56);
 }
 
 sv store32_le(u8 output[4], u32 input)
@@ -324,12 +321,12 @@ void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
     }
 }
 
-void crypto_poly1305_auth(u8 mac[16], const u8 *m,
-                          size_t  m_size , const u8  key[32])
+void crypto_poly1305_auth(u8      mac[16],  const u8 *msg,
+                          size_t  msg_size, const u8  key[32])
 {
     crypto_poly1305_ctx ctx;
     crypto_poly1305_init  (&ctx, key);
-    crypto_poly1305_update(&ctx, m, m_size);
+    crypto_poly1305_update(&ctx, msg, msg_size);
     crypto_poly1305_final(&ctx, mac);
 }
 
@@ -404,22 +401,22 @@ sv blake2b_compress(crypto_blake2b_ctx *ctx, int last_block)
     FOR (i, 0, 8) { ctx->hash[i] ^= v[i] ^ v[i+8]; }
 }
 
-void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t outlen,
-                                 const u8      *key, size_t keylen)
+void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t out_size,
+                                 const u8           *key, size_t key_size)
 {
     // Initial hash == initialization vector...
     FOR (i, 0, 8) { ctx->hash[i] = blake2b_iv[i]; }
-    ctx->hash[0] ^= 0x01010000 ^ (keylen << 8) ^ outlen;  // ...mostly
+    ctx->hash[0] ^= 0x01010000 ^ (key_size << 8) ^ out_size;  // ...mostly
 
     ctx->input_size[0] = 0;       // input count low word
     ctx->input_size[1] = 0;       // input count high word
     ctx->c             = 0;       // pointer within buffer
-    ctx->output_size   = outlen;  // size of the final hash
+    ctx->output_size   = out_size;  // size of the final hash
 
     // If there's a key, put it in the first block, then pad with zeroes
-    if (keylen > 0) {
-        FOR (i, 0     , keylen) { ctx->buf[i] = key[i]; }
-        FOR (i, keylen, 128   ) { ctx->buf[i] = 0;      }
+    if (key_size > 0) {
+        FOR (i, 0     , key_size) { ctx->buf[i] = key[i]; }
+        FOR (i, key_size, 128   ) { ctx->buf[i] = 0;      }
         ctx->c = 128; // mark the block as used
     }
 }
@@ -429,9 +426,9 @@ void crypto_blake2b_init(crypto_blake2b_ctx *ctx)
     crypto_blake2b_general_init(ctx, 64, 0, 0);
 }
 
-void crypto_blake2b_update(crypto_blake2b_ctx *ctx, const u8 *in, size_t inlen)
+void crypto_blake2b_update(crypto_blake2b_ctx *ctx, const u8 *in, size_t in_size)
 {
-    FOR (i, 0, inlen) {
+    FOR (i, 0, in_size) {
         // If the buffer is full, increment the counters and
         // add (compress) the current buffer to the hash
         if (ctx->c == 128) {
@@ -458,19 +455,19 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *out)
     }
 }
 
-void crypto_blake2b_general(u8       *out, size_t outlen,
-                            const u8 *key, size_t keylen,
-                            const u8 *in,  size_t inlen)
+void crypto_blake2b_general(u8       *out, size_t out_size,
+                            const u8 *key, size_t key_size,
+                            const u8 *in,  size_t in_size)
 {
     crypto_blake2b_ctx ctx;
-    crypto_blake2b_general_init(&ctx, outlen, key, keylen);
-    crypto_blake2b_update(&ctx, in, inlen);
+    crypto_blake2b_general_init(&ctx, out_size, key, key_size);
+    crypto_blake2b_update(&ctx, in, in_size);
     crypto_blake2b_final(&ctx, out);
 }
 
-void crypto_blake2b(u8 out[64], const u8 *in, size_t inlen)
+void crypto_blake2b(u8 out[64], const u8 *in, size_t in_size)
 {
-    crypto_blake2b_general(out, 64, 0, 0, in, inlen);
+    crypto_blake2b_general(out, 64, 0, 0, in, in_size);
 }
 
 
@@ -604,12 +601,9 @@ sv unary_g(block *work_block)
 
 typedef struct {
     block b;
-    u32   pass_number;
-    u32   slice_number;
-    u32   nb_blocks;
-    u32   nb_iterations;
-    u32   ctr;
-    u32   index;
+    u32 pass_number; u32 slice_number;
+    u32 nb_blocks; u32 nb_iterations;
+    u32 ctr; u32 index;
 } gidx_ctx;
 
 sv gidx_refresh(gidx_ctx *ctx)
@@ -622,10 +616,10 @@ sv gidx_refresh(gidx_ctx *ctx)
     ctx->b.a[4] = ctx->nb_iterations;
     ctx->b.a[5] = 1;  // type: Argon2i
     ctx->b.a[6] = ctx->ctr;
-    FOR (i, 7, 128) { ctx->b.a[i] = 0; } // then zero the rest out
+    FOR (i, 7, 128) { ctx->b.a[i] = 0; } // ...then zero the rest out
 
     // Shuffle the block thus: ctx->b = G((G(ctx->b, zero)), zero)
-    // Applies the G "square" function to get cheap pseudo-random numbers.
+    // (G "square" function), to get cheap pseudo-random numbers.
     unary_g(&(ctx->b));
     unary_g(&(ctx->b));
 }
@@ -643,7 +637,7 @@ sv gidx_init(gidx_ctx *ctx,
     // Quirk from the reference implementation: for the first pass,
     // ctx->index is set at 2, because the first pseudo-random index
     // we need is used for the *third* block of the segment.
-    // Setting it at zero every time wouldn't affect security.
+    // This quirk has no effect on security.
     gidx_refresh(ctx);
 }
 
@@ -655,9 +649,8 @@ static u32 gidx_next(gidx_ctx *ctx)
         ctx->ctr++;
         gidx_refresh(ctx);
     }
-    // saves and increment the index
-    u32 index = ctx->index;
-    ctx->index++; // updates index for the next call
+    u32 index = ctx->index; // save index for current call
+    ctx->index++;           // update index for next call
 
     // Computes the area size.
     // Pass 0 : all already finished segments plus already constructed
