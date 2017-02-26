@@ -61,7 +61,7 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
 void crypto_poly1305_final(crypto_poly1305_ctx *ctx, uint8_t mac[16]);
 
 void crypto_poly1305_auth(uint8_t        mac[16],
-                          const uint8_t *msg, size_t msg_length,
+                          const uint8_t *msg, size_t msg_size,
                           const uint8_t  key[32]);
 
 ////////////////
@@ -75,21 +75,21 @@ typedef struct {
     uint8_t  output_size;   // digest size
 } crypto_blake2b_ctx;
 
-void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t outlen,
-                                 const uint8_t      *key, size_t keylen);
+void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t out_size,
+                                 const uint8_t      *key, size_t key_size);
 
 void crypto_blake2b_init(crypto_blake2b_ctx *ctx);
 
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
-                           const uint8_t *in, size_t inlen);
+                           const uint8_t *in, size_t in_size);
 
 void crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *out);
 
-void crypto_blake2b_general(uint8_t       *out, size_t outlen, // digest
-                            const uint8_t *key, size_t keylen, // optional secret
-                            const uint8_t *in , size_t inlen);
+void crypto_blake2b_general(uint8_t       *out, size_t out_size, // digest
+                            const uint8_t *key, size_t key_size, // optional
+                            const uint8_t *in , size_t in_size);
 
-void crypto_blake2b(uint8_t out[64], const uint8_t *in, size_t inlen);
+void crypto_blake2b(uint8_t out[64], const uint8_t *in, size_t in_size);
 
 ////////////////
 /// Argon2 i ///
