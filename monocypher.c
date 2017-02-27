@@ -201,15 +201,6 @@ void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
 /////////////////
 /// Poly 1305 ///
 /////////////////
-sv poly_add(u32 out[5], const u32 a[5], const u32 b[5])
-{
-    u64 u = 0;
-    u  += (i64)(a[0]) + b[0];  out[0] = u & 0xffffffff;  u >>= 32;
-    u  += (i64)(a[1]) + b[1];  out[1] = u & 0xffffffff;  u >>= 32;
-    u  += (i64)(a[2]) + b[2];  out[2] = u & 0xffffffff;  u >>= 32;
-    u  += (i64)(a[3]) + b[3];  out[3] = u & 0xffffffff;  u >>= 32;
-    u  += (i64)(a[4]) + b[4];  out[4] = u & 0xffffffff;  u >>= 32;
-}
 
 // h = (h + c) * r
 // preconditions:
@@ -304,21 +295,23 @@ void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
     ctx->c[ctx->c_index / 4] |= 1 << ((ctx->c_index % 4) * 8);
     // one last hash update, this time with full modular reduction
     poly_block(ctx);
-    // Conditional subtraction by 2^130-5, with bit
-    // twidling to prevent timing attacks. it is
-    // enough to complete the reduction, because h < 2 * (2^130 - 5)
-    static const u32 minus_p[5] = { 5, 0, 0, 0, 0xfffffffc };
-    u32 h_minus_p[5];
-    poly_add(h_minus_p, ctx->h, minus_p);
-    u32 negative = ~(-(h_minus_p[4] >> 31)); // 0 or -1 (2's complement)
-    FOR (i, 0, 4) {
-        ctx->h[i] ^= negative & (ctx->h[i] ^ h_minus_p[i]);
-    }
-    // Add the secret pad to the final hash before output
-    poly_add(ctx->h, ctx->h, ctx->pad);
-    FOR (i, 0, 4) {
-        store32_le(mac + i*4, ctx->h[i]);
-    }
+
+    // check if we should subtract 2^130-5 by performing the
+    // corresponding carry propagation.
+    u64 u = 5;
+    u += ctx->h[0];  u >>= 32;
+    u += ctx->h[1];  u >>= 32;
+    u += ctx->h[2];  u >>= 32;
+    u += ctx->h[3];  u >>= 32;
+    u += ctx->h[4];  u >>=  2;
+    // now u indicates how many times we should subtract 2^130-5 (0 or 1)
+
+    // store h + pad, minus 2^130-5 if u tells us to.
+    u *= 5;
+    u += (i64)(ctx->h[0]) + ctx->pad[0];  store32_le(mac     , u);  u >>= 32;
+    u += (i64)(ctx->h[1]) + ctx->pad[1];  store32_le(mac +  4, u);  u >>= 32;
+    u += (i64)(ctx->h[2]) + ctx->pad[2];  store32_le(mac +  8, u);  u >>= 32;
+    u += (i64)(ctx->h[3]) + ctx->pad[3];  store32_le(mac + 12, u);
 }
 
 void crypto_poly1305_auth(u8      mac[16],  const u8 *msg,
