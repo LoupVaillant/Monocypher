@@ -904,7 +904,7 @@ sv fe_pow22523(fe out, const fe z) { fe_power(out, z, 252,  3); }
 
 sv fe_tobytes(u8 s[32], const fe h)
 {
-    i32 t[11];
+    i32 t[10];
     FOR (i, 0, 10) { t[i] = h[i]; }
 
     i32 q = (19 * t[9] + (((i32) 1) << 24)) >> 25;
