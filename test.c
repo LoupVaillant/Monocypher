@@ -4,7 +4,7 @@
 #include "monocypher.h"
 #include "sha512.h"
 
-#define FOR(i, start, end) for (size_t i = start; i < end; i++)
+#define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
 #define sv static void
 typedef  int8_t   i8;
 typedef uint8_t   u8;
@@ -86,9 +86,9 @@ sv stream_drop(stream *s)
 /// Vector of octets ///
 ////////////////////////
 typedef struct {
-    u8 *buf;
-    size_t   buf_size;
-    size_t   size;
+    u8     *buf;
+    size_t  buf_size;
+    size_t  size;
 } vector;
 
 static vector vec_new(size_t buf_size)
@@ -276,20 +276,22 @@ sv poly1305(const vector in[], vector *out)
 
 sv argon2i(const vector in[], vector *out)
 {
-        const vector *nb_blocks     = in;
-        const vector *nb_iterations = in + 1;
-        const vector *password      = in + 2;
-        const vector *salt          = in + 3;
-        const vector *key           = in + 4;
-        const vector *ad            = in + 5;
-        void         *work_area     = alloc(nb_blocks->buf[0] * 1024);
-        crypto_argon2i(out     ->buf, out      ->size,
-                       work_area    , nb_blocks->buf[0], nb_iterations->buf[0],
-                       password->buf, password ->size,
-                       salt    ->buf, salt     ->size,
-                       key     ->buf, key      ->size,
-                       ad      ->buf, ad       ->size);
-        free(work_area);
+    u32 nb_blocks = 0;
+    u32 nb_iterations = 0;
+    FOR (i, 0, in[0].size) {nb_blocks     <<= 8; nb_blocks     += in[0].buf[i];}
+    FOR (i, 0, in[1].size) {nb_iterations <<= 8; nb_iterations += in[1].buf[i];}
+    const vector *password      = in + 2;
+    const vector *salt          = in + 3;
+    const vector *key           = in + 4;
+    const vector *ad            = in + 5;
+    void         *work_area     = alloc(nb_blocks * 1024);
+    crypto_argon2i(out->buf, out->size,
+                   work_area, nb_blocks, nb_iterations,
+                   password->buf, password->size,
+                   salt    ->buf, salt    ->size,
+                   key     ->buf, key     ->size,
+                   ad      ->buf, ad      ->size);
+    free(work_area);
 }
 
 sv x25519(const vector in[], vector *out)
