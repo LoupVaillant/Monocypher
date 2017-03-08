@@ -596,7 +596,7 @@ typedef struct {
     block b;
     u32 pass_number; u32 slice_number;
     u32 nb_blocks; u32 nb_iterations;
-    u32 ctr; u32 index;
+    u32 ctr; u32 offset;
 } gidx_ctx;
 
 sv gidx_refresh(gidx_ctx *ctx)
@@ -625,25 +625,30 @@ sv gidx_init(gidx_ctx *ctx,
     ctx->slice_number  = slice_number;
     ctx->nb_blocks     = nb_blocks;
     ctx->nb_iterations = nb_iterations;
-    ctx->ctr           = 1;   // not zero, surprisingly
-    ctx->index         = pass_number == 0 && slice_number == 0 ? 2 : 0;
-    // Quirk from the reference implementation: for the first pass,
-    // ctx->index is set at 2, because the first pseudo-random index
-    // we need is used for the *third* block of the segment.
-    // This quirk has no effect on security.
-    gidx_refresh(ctx);
+    ctx->ctr           = 0;
+
+    // Offset from the begining of the segment.  For the first slice
+    // of the firs pass, we start at the *third* block, so the offset
+    // starts at 2, not 0.
+    if (pass_number != 0 || slice_number != 0) {
+        ctx->offset = 0;
+    } else {
+        ctx->offset = 2;
+        ctx->ctr++;         // Compensates for missed lazy creation
+        gidx_refresh(ctx);  // at the start of gidx_next()
+    }
 }
 
 static u32 gidx_next(gidx_ctx *ctx)
 {
-    // lazily creates the index block we need
-    if (ctx->index == 128) {
-        ctx->index = 0;
+    // lazily creates the offset block we need
+    if (ctx->offset % 128 == 0) {
         ctx->ctr++;
         gidx_refresh(ctx);
     }
-    u32 index = ctx->index; // save index for current call
-    ctx->index++;           // update index for next call
+    u32 index  = ctx->offset % 128; // save index  for current call
+    u32 offset = ctx->offset;       // save offset for current call
+    ctx->offset++;                  // update offset for next call
 
     // Computes the area size.
     // Pass 0 : all already finished segments plus already constructed
@@ -654,7 +659,7 @@ static u32 gidx_next(gidx_ctx *ctx)
     int first_pass = ctx->pass_number == 0;
     u32 slice_size = ctx->nb_blocks / 4;
     u32 area_size  = ((first_pass ? ctx->slice_number : 3)
-                      * slice_size + index - 1);
+                      * slice_size + offset - 1);
 
     // Computes the starting position of the reference area.
     // CONTRARY TO WHAT THE SPEC SUGGESTS, IT STARTS AT THE
@@ -664,7 +669,7 @@ static u32 gidx_next(gidx_ctx *ctx)
                       : (ctx->slice_number + 1) * slice_size);
     u32 start_pos  = first_pass ? 0 : next_slice;
 
-    // Generates the actual index from J1 (no need for J2, there's only one lane)
+    // Generate offset from J1 (no need for J2, there's only one lane)
     u64 j1         = ctx->b.a[index] & 0xffffffff; // pseudo-random number
     u64 x          = (j1 * j1)       >> 32;
     u64 y          = (area_size * x) >> 32;
