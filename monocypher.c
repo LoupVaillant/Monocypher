@@ -289,12 +289,15 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
 
 void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
 {
-    // move the final 1 according to remaining input length
-    // (We may add less than 2^130 to the last input block)
-    ctx->c[4] = 0;
-    ctx->c[ctx->c_index / 4] |= 1 << ((ctx->c_index % 4) * 8);
-    // one last hash update, this time with full modular reduction
-    poly_block(ctx);
+    // Process the last block (if any)
+    if (ctx->c_index != 0) {
+        // move the final 1 according to remaining input length
+        // (We may add less than 2^130 to the last input block)
+        ctx->c[4] = 0;
+        ctx->c[ctx->c_index / 4] |= 1 << ((ctx->c_index % 4) * 8);
+        // one last hash update
+        poly_block(ctx);
+    }
 
     // check if we should subtract 2^130-5 by performing the
     // corresponding carry propagation.
@@ -320,7 +323,7 @@ void crypto_poly1305_auth(u8      mac[16],  const u8 *msg,
     crypto_poly1305_ctx ctx;
     crypto_poly1305_init  (&ctx, key);
     crypto_poly1305_update(&ctx, msg, msg_size);
-    crypto_poly1305_final(&ctx, mac);
+    crypto_poly1305_final (&ctx, mac);
 }
 
 ////////////////
