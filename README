@@ -63,7 +63,7 @@ For the Blake2b code:
 Current status
 --------------
 
-0.2  Interfaces should stabilise.  Needs external review.
+0.6.  Interfaces are stable.  Needs some more external review.
 
 
 Test suite
