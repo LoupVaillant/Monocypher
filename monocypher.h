@@ -56,7 +56,7 @@ typedef struct {
 void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const uint8_t key[32]);
 
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
-                            const uint8_t *m, size_t bytes);
+                            const uint8_t *msg, size_t msg_size);
 
 void crypto_poly1305_final(crypto_poly1305_ctx *ctx, uint8_t mac[16]);
 

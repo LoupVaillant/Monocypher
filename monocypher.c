@@ -184,7 +184,7 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
         }
         // use the pool for encryption (or random stream)
         cipher_text[i] =
-            (plain_text == 0 ? 0 : plain_text[i])
+            (plain_text == 0 ? 0 : plain_text[i]) // ignore null plaintext
             ^ ctx->random_pool[ctx->pool_index];
         ctx->pool_index++;
     }
@@ -272,18 +272,16 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 }
 
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
-                            const u8 *m, size_t bytes)
+                            const u8 *msg, size_t msg_size)
 {
-    while (bytes > 0) {
+    FOR (i, 0, msg_size) {
         if (ctx->c_index == 16) {
             poly_block(ctx);
             poly_clear_c(ctx);
         }
         // feed the input buffer
-        ctx->c[ctx->c_index / 4] |= *m << ((ctx->c_index % 4) * 8);
+        ctx->c[ctx->c_index / 4] |= msg[i] << ((ctx->c_index % 4) * 8);
         ctx->c_index++;
-        m++;
-        bytes--;
     }
 }
 
