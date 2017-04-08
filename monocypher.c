@@ -173,8 +173,8 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
             // fill the pool
             u32 buffer[16];
             chacha20_rounds(buffer, ctx->input);
-            FOR (i, 0, 16) {
-                store32_le(ctx->random_pool + i*4, buffer[i] + ctx->input[i]);
+            FOR (j, 0, 16) {
+                store32_le(ctx->random_pool + j*4, buffer[j] + ctx->input[j]);
             }
             // update the counters
             ctx->pool_index = 0;
@@ -315,8 +315,8 @@ void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
     u += (i64)(ctx->h[3]) + ctx->pad[3];  store32_le(mac + 12, u);
 }
 
-void crypto_poly1305_auth(u8      mac[16],  const u8 *msg,
-                          size_t  msg_size, const u8  key[32])
+void crypto_poly1305_auth(u8     mac[16],  const u8 *msg,
+                          size_t msg_size, const u8  key[32])
 {
     crypto_poly1305_ctx ctx;
     crypto_poly1305_init  (&ctx, key);
