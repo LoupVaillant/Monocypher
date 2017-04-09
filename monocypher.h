@@ -39,8 +39,7 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                              size_t             message_size);
 
 void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
-                            uint8_t           *cipher_text,
-                            size_t             message_size);
+                            uint8_t *stream, size_t size);
 
 /////////////////
 /// Poly 1305 ///
