@@ -433,21 +433,21 @@ static int test_aead()
 int main(void)
 {
     int status = 0;
-    status |= generic_test(equal, "vectors_test_equal"  , 2);
-    status |= generic_test(diff , "vectors_test_diff"   , 2);
-    status |= test(chacha20     , "vectors_chacha20"    , 2);
-    status |= test(hchacha20    , "vectors_h_chacha20"  , 2);
-    status |= test(xchacha20    , "vectors_x_chacha20"  , 2);
-    status |= test(blake2b      , "vectors_blake2b"     , 2);
-    status |= test(blake2b_easy , "vectors_blake2b_easy", 1);
-    status |= test(poly1305     , "vectors_poly1305"    , 2);
-    status |= test(argon2i      , "vectors_argon2i"     , 6);
-    status |= test(x25519       , "vectors_x25519"      , 2);
-    status |= test(key_exchange , "vectors_key_exchange", 2);
-    status |= test(sha512       , "vectors_sha512"      , 1);
-    status |= test(ed25519_key  , "vectors_ed25519_key" , 1);
-    status |= test(ed25519_sign1, "vectors_ed25519_sign", 3);
-    status |= test(ed25519_sign2, "vectors_ed25519_sign", 3);
+    status |= generic_test(equal, "tests/vectors/test_equal"  , 2);
+    status |= generic_test(diff , "tests/vectors/test_diff"   , 2);
+    status |= test(chacha20     , "tests/vectors/chacha20"    , 2);
+    status |= test(hchacha20    , "tests/vectors/h_chacha20"  , 2);
+    status |= test(xchacha20    , "tests/vectors/x_chacha20"  , 2);
+    status |= test(blake2b      , "tests/vectors/blake2b"     , 2);
+    status |= test(blake2b_easy , "tests/vectors/blake2b_easy", 1);
+    status |= test(poly1305     , "tests/vectors/poly1305"    , 2);
+    status |= test(argon2i      , "tests/vectors/argon2i"     , 6);
+    status |= test(x25519       , "tests/vectors/x25519"      , 2);
+    status |= test(key_exchange , "tests/vectors/key_exchange", 2);
+    status |= test(sha512       , "tests/vectors/sha512"      , 1);
+    status |= test(ed25519_key  , "tests/vectors/ed25519_key" , 1);
+    status |= test(ed25519_sign1, "tests/vectors/ed25519_sign", 3);
+    status |= test(ed25519_sign2, "tests/vectors/ed25519_sign", 3);
     status |= test_x25519();
     status |= test_aead();
     printf(status ? "TESTS FAILED\n" : "ALL TESTS OK\n");

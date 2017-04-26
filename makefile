@@ -1,37 +1,43 @@
 CC=gcc
-CFLAGS=-O2 -Wall -Wextra -std=c11 -pedantic
+CFLAGS= -I src -O2 -Wall -Wextra -std=c11 -pedantic
 
-.PHONY: all clean
+.PHONY: all clean directories
 # disable implicit rules
 .SUFFIXES:
 
 all: test sodium
 
 clean:
-	rm -f *.o *.gch test rename_*
+	rm -rf bin
+	rm -f src/*.gch src/rename_*
+	rm -f test sodium
 
 # Test suite based on test vectors
-test: test.c monocypher.o sha512.o
+test: tests/test.c bin/monocypher.o bin/sha512.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 # Test suite based on comparison with libsodium
 C_SODIUM_FLAGS=$$(pkg-config --cflags libsodium)
 LD_SODIUM_FLAGS=$$(pkg-config --libs libsodium)
-sodium: sodium.c rename_monocypher.o rename_sha512.o
+sodium: tests/sodium.c bin/rename_monocypher.o bin/rename_sha512.o
 	$(CC) $(CFLAGS) -o $@ $^ $(C_SODIUM_FLAGS) $(LD_SODIUM_FLAGS)
 
 # compile monocypher
 # use -DED25519_SHA512 for ed25519 compatibility
-rename_monocypher.o: rename_monocypher.c rename_monocypher.h rename_sha512.h
-	$(CC) $(CFLAGS) -c $^ -DED25519_SHA512
-monocypher.o: monocypher.c monocypher.h sha512.h
-	$(CC) $(CFLAGS) -c $^ -DED25519_SHA512
+bin/rename_monocypher.o: src/rename_monocypher.c src/rename_monocypher.h src/rename_sha512.h
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -o $@ -c $< -DED25519_SHA512
+bin/monocypher.o: src/monocypher.c src/monocypher.h src/sha512.h
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -o $@ -c $< -DED25519_SHA512
 
 # compile sha512.  Only used for ed15519 compatibility
-sha512.o: sha512.c sha512.h
-	$(CC) $(CFLAGS) -c $^
-rename_sha512.o: rename_sha512.c rename_sha512.h
-	$(CC) $(CFLAGS) -c $^
+bin/sha512.o: src/sha512.c src/sha512.h
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -o $@ -c $<
+bin/rename_sha512.o: src/rename_sha512.c src/rename_sha512.h
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 # change the "crypto_" prefix to the "rename_" prefix, so you can use
 # monocypher with other crypto libraries without conflict.
