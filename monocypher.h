@@ -112,9 +112,9 @@ void crypto_x25519_public_key(uint8_t       public_key[32],
                               const uint8_t secret_key[32]);
 
 
-///////////////
-/// Ed25519 ///
-///////////////
+/////////////
+/// EdDSA ///
+/////////////
 void crypto_sign_public_key(uint8_t        public_key[32],
                             const uint8_t  secret_key[32]);
 

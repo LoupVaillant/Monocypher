@@ -3,4 +3,5 @@
 *.o
 *.gch
 test
-speed_blake2b
+sodium
+rename_*
