@@ -5,12 +5,12 @@ CFLAGS= -I src -O2 -Wall -Wextra -std=c11 -pedantic
 # disable implicit rules
 .SUFFIXES:
 
-all: test sodium
+all: test sodium donna
 
 clean:
 	rm -rf bin
 	rm -f src/*.gch src/rename_*
-	rm -f test sodium
+	rm -f test sodium donna
 
 # Test suite based on test vectors
 test: tests/test.c bin/monocypher.o bin/sha512.o
@@ -21,6 +21,17 @@ C_SODIUM_FLAGS=$$(pkg-config --cflags libsodium)
 LD_SODIUM_FLAGS=$$(pkg-config --libs libsodium)
 sodium: tests/sodium.c bin/rename_monocypher.o bin/rename_sha512.o
 	$(CC) $(CFLAGS) -o $@ $^ $(C_SODIUM_FLAGS) $(LD_SODIUM_FLAGS)
+
+# Test edDSA/blake2b by comparing with the donna implementation
+# Note: we're using Blake2b, the default hash for monocypher edDSA
+donna: tests/donna.c bin/classic_monocypher.o bin/donna.o
+	$(CC) $(CFLAGS) -o $@ $^ -I tests/ed25519-donna
+bin/classic_monocypher.o: src/monocypher.c src/monocypher.h
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -o $@ -c $<
+bin/donna.o: tests/ed25519-donna/ed25519.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -o $@ -c $< -DED25519_CUSTOMHASH -DED25519_TEST -DED25519_NO_INLINE_ASM -DED25519_FORCE_32BIT
 
 # compile monocypher
 # use -DED25519_SHA512 for ed25519 compatibility
