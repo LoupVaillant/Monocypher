@@ -450,6 +450,5 @@ int main(void)
     status |= test(ed25519_sign2, "tests/vectors/ed25519_sign", 3);
     status |= test_x25519();
     status |= test_aead();
-    printf(status ? "TESTS FAILED\n" : "ALL TESTS OK\n");
     return status;
 }

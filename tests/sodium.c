@@ -157,6 +157,5 @@ int main(void)
     status |= argon2i();
     status |= x25519();
     status |= edDSA();
-    printf(status ? "TESTS FAILED\n" : "ALL TESTS OK\n");
     return status;
 }
