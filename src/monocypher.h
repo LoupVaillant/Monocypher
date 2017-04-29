@@ -151,16 +151,16 @@ int crypto_aead_unlock(uint8_t       *plaintext,
                        const uint8_t *ad        , size_t ad_size,
                        const uint8_t *ciphertext, size_t text_size);
 
-void crypto_lock(uint8_t       *box,      // text_size + 16
+void crypto_lock(uint8_t        mac[16],
+                 uint8_t       *ciphertext,
                  const uint8_t  key[32],
                  const uint8_t  nonce[24],
-                 const uint8_t *plaintext,
-                 size_t         text_size);
+                 const uint8_t *plaintext, size_t text_size);
 
-int crypto_unlock(uint8_t       *plaintext, // box_size - 16
+int crypto_unlock(uint8_t       *plaintext,
                   const uint8_t  key[32],
                   const uint8_t  nonce[24],
-                  const uint8_t *box,
-                  size_t         box_size);
+                  const uint8_t  mac[16],
+                  const uint8_t *ciphertext, size_t text_size);
 
 #endif // MONOCYPHER_H

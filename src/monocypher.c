@@ -1346,20 +1346,21 @@ int crypto_aead_unlock(u8       *plaintext,
     return 0;
 }
 
-void crypto_lock(u8       *box,
+void crypto_lock(u8        mac[16],
+                 u8       *ciphertext,
                  const u8  key[32],
                  const u8  nonce[24],
-                 const u8 *plaintext,
-                 size_t    text_size)
+                 const u8 *plaintext, size_t text_size)
 {
-    crypto_aead_lock(box, box + 16, key, nonce, 0, 0, plaintext, text_size);
+    crypto_aead_lock(mac, ciphertext, key, nonce, 0, 0, plaintext, text_size);
 }
 
 int crypto_unlock(u8       *plaintext,
                   const u8  key[32],
                   const u8  nonce[24],
-                  const u8 *box, size_t box_size)
+                  const u8  mac[16],
+                  const u8 *ciphertext, size_t text_size)
 {
-    return crypto_aead_unlock(plaintext, key, nonce, box, 0, 0,
-                              box + 16, box_size -16);
+    return crypto_aead_unlock(plaintext, key, nonce, mac, 0, 0,
+                              ciphertext, text_size);
 }

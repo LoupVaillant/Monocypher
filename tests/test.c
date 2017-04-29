@@ -414,11 +414,11 @@ static int test_aead()
     printf("%s: aead (detached)\n", status != 0 ? "FAILED" : "OK");
 
     // Authenticated roundtrip (easy interface)
-    crypto_lock(box, key, nonce, plaintext, 8);           // make true message
-    status |= crypto_unlock(out, key, nonce, box, 8+16);  // accept true message
-    status |= crypto_memcmp(plaintext, out, 8);           // roundtrip
-    box[0]++;                                             // make forgery
-    status |= !crypto_unlock(out, key, nonce, box, 8+16); // reject forgery
+    crypto_lock(box, box + 16, key, nonce, plaintext, 8);       // make message
+    status |= crypto_unlock(out, key, nonce, box, box + 16, 8); // accept message
+    status |= crypto_memcmp(plaintext, out, 8);                 // roundtrip
+    box[0]++;                                                   // make forgery
+    status |= !crypto_unlock(out, key, nonce, box, box + 16, 8);// reject forgery
     printf("%s: aead (simplified)\n", status != 0 ? "FAILED" : "OK");
     box[0]--; // undo forgery
 
