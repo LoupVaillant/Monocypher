@@ -67,11 +67,11 @@ void crypto_poly1305_auth(uint8_t        mac[16],
 /// Blake2 b ///
 ////////////////
 typedef struct {
-    uint8_t  buf[128];      // input buffer
-    uint64_t hash[8];       // chained state
-    uint64_t input_size[2]; // total number of bytes
-    uint8_t  c;             // pointer for buf[]
-    uint8_t  output_size;   // digest size
+    uint64_t hash[8];
+    uint64_t input_offset[2];
+    uint8_t  buffer[128];
+    size_t   buffer_idx;
+    size_t   hash_size;
 } crypto_blake2b_ctx;
 
 void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t out_size,

@@ -324,93 +324,102 @@ void crypto_poly1305_auth(u8     mac[16],  const u8 *msg,
 }
 
 ////////////////
-/// Blake2 b /// (taken from the reference
-////////////////  implentation in RFC 7693)
+/// Blake2 b ///
+////////////////
 
-// Initialization Vector.
-static const u64 blake2b_iv[8] = {
+static const u64 iv[8] = {
     0x6a09e667f3bcc908, 0xbb67ae8584caa73b,
     0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
     0x510e527fade682d1, 0x9b05688c2b3e6c1f,
-    0x1f83d9abfb41bd6b, 0x5be0cd19137e2179
+    0x1f83d9abfb41bd6b, 0x5be0cd19137e2179,
 };
 
-// increment a 128-bit "word".
-sv incr(u64 x[2], u64 y)
+// increment the input offset
+sv incr(crypto_blake2b_ctx *ctx)
 {
-    x[0] += y;                 // increment the low word
-    if (x[0] < y) { x[1]++; }  // handle overflow
+    u64 *x = ctx->input_offset;
+    u8   y = ctx->buffer_idx;
+    x[0] += y;                 // increment low word
+    if (x[0] < y) { x[1]++; }  // carry overflow to high word
 }
 
-sv blake2b_compress(crypto_blake2b_ctx *ctx, int last_block)
+// pad the buffer with zeroes
+sv pad(crypto_blake2b_ctx *ctx)
+{
+    FOR (i, ctx->buffer_idx, 128) { ctx->buffer[i] = 0; }
+    ctx->buffer_idx = 128; // mark the buffer as filled
+}
+
+sv compress(crypto_blake2b_ctx *ctx, int is_last_block)
 {
     static const u8 sigma[12][16] = {
-        { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-        { 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
-        { 11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
-        { 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
-        { 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
-        { 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 },
-        { 12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11 },
-        { 13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10 },
-        { 6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5 },
-        { 10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0 },
-        { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-        { 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 }
+        {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 },
+        { 14, 10,  4,  8,  9, 15, 13,  6,  1, 12,  0,  2, 11,  7,  5,  3 },
+        { 11,  8, 12,  0,  5,  2, 15, 13, 10, 14,  3,  6,  7,  1,  9,  4 },
+        {  7,  9,  3,  1, 13, 12, 11, 14,  2,  6,  5, 10,  4,  0, 15,  8 },
+        {  9,  0,  5,  7,  2,  4, 10, 15, 14,  1, 11, 12,  6,  8,  3, 13 },
+        {  2, 12,  6, 10,  0, 11,  8,  3,  4, 13,  7,  5, 15, 14,  1,  9 },
+        { 12,  5,  1, 15, 14, 13,  4, 10,  0,  7,  6,  3,  9,  2,  8, 11 },
+        { 13, 11,  7, 14, 12,  1,  3,  9,  5,  0, 15,  4,  8,  6,  2, 10 },
+        {  6, 15, 14,  9, 11,  3,  0,  8, 12,  2, 13,  7,  1,  4, 10,  5 },
+        { 10,  2,  8,  4,  7,  6,  1,  5, 15, 11,  9, 14,  3, 12, 13,  0 },
+        {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 },
+        { 14, 10,  4,  8,  9, 15, 13,  6,  1, 12,  0,  2, 11,  7,  5,  3 },
     };
 
-    // init work variables (before shuffling them)
+    // load input buffer
+    u64 input[16];
+    FOR(i, 0, 16) { input[i] = load64_le(ctx->buffer + i*8); }
+
+    // init work vector
     u64 v[16];
     FOR (i, 0, 8) {
-        v[i    ] = ctx->hash[i];
-        v[i + 8] = blake2b_iv[i];
+        v[i  ] = ctx->hash[i];
+        v[i+8] = iv[i];
     }
-    v[12] ^= ctx->input_size[0]; // low 64 bits of offset
-    v[13] ^= ctx->input_size[1]; // high 64 bits
-    if (last_block) { v[14] = ~v[14]; }
+    v[12] ^= ctx->input_offset[0];
+    v[13] ^= ctx->input_offset[1];
+    if (is_last_block) { v[14] = ~v[14]; }
 
-    // load the input buffer
-    u64 m[16];
-    FOR (i ,0, 16) { m[i] = load64_le(&ctx->buf[i * 8]); }
-
-    // shuffle the work variables with the 12 rounds
+    // mangle work vector
     FOR (i, 0, 12) {
-#define B2B_G(a, b, c, d, x, y)                                    \
-        v[a] += v[b] + x;  v[d] ^= v[a];  v[d] = rotr64(v[d], 32); \
-        v[c] += v[d]    ;  v[b] ^= v[c];  v[b] = rotr64(v[b], 24); \
-        v[a] += v[b] + y;  v[d] ^= v[a];  v[d] = rotr64(v[d], 16); \
-        v[c] += v[d]    ;  v[b] ^= v[c];  v[b] = rotr64(v[b], 63)
+#define BLAKE2_G(v, a, b, c, d, x, y)                       \
+        v[a] += v[b] + x;  v[d] = rotr64(v[d] ^ v[a], 32);  \
+        v[c] += v[d];      v[b] = rotr64(v[b] ^ v[c], 24);  \
+        v[a] += v[b] + y;  v[d] = rotr64(v[d] ^ v[a], 16);  \
+        v[c] += v[d];      v[b] = rotr64(v[b] ^ v[c], 63);  \
 
-        B2B_G( 0, 4,  8, 12, m[sigma[i][ 0]], m[sigma[i][ 1]]);
-        B2B_G( 1, 5,  9, 13, m[sigma[i][ 2]], m[sigma[i][ 3]]);
-        B2B_G( 2, 6, 10, 14, m[sigma[i][ 4]], m[sigma[i][ 5]]);
-        B2B_G( 3, 7, 11, 15, m[sigma[i][ 6]], m[sigma[i][ 7]]);
-        B2B_G( 0, 5, 10, 15, m[sigma[i][ 8]], m[sigma[i][ 9]]);
-        B2B_G( 1, 6, 11, 12, m[sigma[i][10]], m[sigma[i][11]]);
-        B2B_G( 2, 7,  8, 13, m[sigma[i][12]], m[sigma[i][13]]);
-        B2B_G( 3, 4,  9, 14, m[sigma[i][14]], m[sigma[i][15]]);
+        BLAKE2_G(v, 0, 4,  8, 12, input[sigma[i][ 0]], input[sigma[i][ 1]]);
+        BLAKE2_G(v, 1, 5,  9, 13, input[sigma[i][ 2]], input[sigma[i][ 3]]);
+        BLAKE2_G(v, 2, 6, 10, 14, input[sigma[i][ 4]], input[sigma[i][ 5]]);
+        BLAKE2_G(v, 3, 7, 11, 15, input[sigma[i][ 6]], input[sigma[i][ 7]]);
+        BLAKE2_G(v, 0, 5, 10, 15, input[sigma[i][ 8]], input[sigma[i][ 9]]);
+        BLAKE2_G(v, 1, 6, 11, 12, input[sigma[i][10]], input[sigma[i][11]]);
+        BLAKE2_G(v, 2, 7,  8, 13, input[sigma[i][12]], input[sigma[i][13]]);
+        BLAKE2_G(v, 3, 4,  9, 14, input[sigma[i][14]], input[sigma[i][15]]);
     }
-    // accumulate the work variables into the hash
+    // update hash
     FOR (i, 0, 8) { ctx->hash[i] ^= v[i] ^ v[i+8]; }
+    // mark buffer as empty
+    ctx->buffer_idx = 0;
 }
 
 void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t out_size,
                                  const u8           *key, size_t key_size)
 {
-    // Initial hash == initialization vector...
-    FOR (i, 0, 8) { ctx->hash[i] = blake2b_iv[i]; }
-    ctx->hash[0] ^= 0x01010000 ^ (key_size << 8) ^ out_size;  // ...mostly
+    // initial hash
+    FOR (i, 0, 8) { ctx->hash[i] = iv[i]; }
+    ctx->hash[0] ^= 0x01010000 ^ (key_size << 8) ^ out_size;
 
-    ctx->input_size[0] = 0;       // input count low word
-    ctx->input_size[1] = 0;       // input count high word
-    ctx->c             = 0;       // pointer within buffer
-    ctx->output_size   = out_size;  // size of the final hash
+    ctx->input_offset[0] = 0;         // begining of the input, no offset
+    ctx->input_offset[1] = 0;         // begining of the input, no offset
+    ctx->buffer_idx      = 0;         // buffer is empty
+    ctx->hash_size       = out_size;  // remember the hash size we want
 
-    // If there's a key, put it in the first block, then pad with zeroes
+    // if there is a key, the first block is that key
     if (key_size > 0) {
-        FOR (i, 0     , key_size) { ctx->buf[i] = key[i]; }
-        FOR (i, key_size, 128   ) { ctx->buf[i] = 0;      }
-        ctx->c = 128; // mark the block as used
+        crypto_blake2b_update(ctx, key, key_size);
+        pad(ctx);
     }
 }
 
@@ -422,28 +431,21 @@ void crypto_blake2b_init(crypto_blake2b_ctx *ctx)
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx, const u8 *in, size_t in_size)
 {
     FOR (i, 0, in_size) {
-        // If the buffer is full, increment the counters and
-        // add (compress) the current buffer to the hash
-        if (ctx->c == 128) {
-            ctx->c = 0;
-            incr(ctx->input_size, 128);
-            blake2b_compress(ctx, 0); // not last time -> 0
+        if (ctx->buffer_idx == 128) { // If buffer is full,
+            incr(ctx);                // update the input offset
+            compress(ctx, 0);         // compress the (not last) block
         }
-        // By now the buffer is not full.  We add one input byte.
-        ctx->buf[ctx->c] = in[i];
-        ctx->c++;
+        ctx->buffer[ctx->buffer_idx] = in[i];
+        ctx->buffer_idx++;
     }
 }
 
 void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *out)
 {
-    // update input size, pad then compress the buffer
-    incr(ctx->input_size, ctx->c);
-    FOR (i, ctx->c, 128) { ctx->buf[i] = 0; }
-    blake2b_compress(ctx, 1); // last time -> 1
-
-    // copy the hash in the output (little endian of course)
-    FOR (i, 0, ctx->output_size) {
+    incr    (ctx);    // update the input offset (the last block may not be full)
+    pad     (ctx);    // pad the last block with zeroes
+    compress(ctx, 1); // compress the last block
+    FOR (i, 0, ctx->hash_size) {
         out[i] = (ctx->hash[i / 8] >> (8 * (i & 7))) & 0xff;
     }
 }
