@@ -1,5 +1,5 @@
-CC=clang
-CFLAGS= -I src -O2 -Wall -Wextra -std=c11 -pedantic -g
+CC=gcc
+CFLAGS= -I src -O2 -Wall -Wextra -std=c11 -pedantic
 
 #-fno-stack-protector
 
