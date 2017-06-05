@@ -24,8 +24,6 @@ Always authenticate your messages.
                      const uint8_t  nonce[24],
                      const uint8_t *plaintext, size_t text_size);
 
-Authenticated encryption with additional data.
-
 The inputs are:
 
 - `key`: a 32-byte session key, shared between you and the recipient.
