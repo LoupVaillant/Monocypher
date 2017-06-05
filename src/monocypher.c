@@ -326,7 +326,6 @@ void crypto_poly1305_auth(u8     mac[16],  const u8 *msg,
 ////////////////
 /// Blake2 b ///
 ////////////////
-
 static const u64 iv[8] = {
     0x6a09e667f3bcc908, 0xbb67ae8584caa73b,
     0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
@@ -442,8 +441,8 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx, const u8 *in, size_t in_size
 
 void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *out)
 {
-    incr    (ctx);    // update the input offset (the last block may not be full)
-    pad     (ctx);    // pad the last block with zeroes
+    incr(ctx);        // update the input offset (the last block may not be full)
+    pad(ctx);         // pad the last block with zeroes
     compress(ctx, 1); // compress the last block
     FOR (i, 0, ctx->hash_size) {
         out[i] = (ctx->hash[i / 8] >> (8 * (i & 7))) & 0xff;
