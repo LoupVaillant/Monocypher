@@ -2,6 +2,7 @@
 *~
 *.o
 *.gch
+bin/*
 test
 sodium
 donna
