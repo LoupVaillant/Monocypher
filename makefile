@@ -1,5 +1,7 @@
-CC=gcc
-CFLAGS= -I src -O2 -Wall -Wextra -std=c11 -pedantic
+CC=clang
+CFLAGS= -I src -O2 -Wall -Wextra -std=c11 -pedantic -g
+
+#-fno-stack-protector
 
 .PHONY: all clean directories
 # disable implicit rules
@@ -13,8 +15,27 @@ clean:
 	rm -f test sodium donna
 
 # Test suite based on test vectors
-test: tests/test.c bin/monocypher.o bin/sha512.o
+TEST_DEPS=tests/test.c bin/monocypher.o bin/sha512.o
+test: $(TEST_DEPS)       \
+      bin/argon2i.h      \
+      bin/blake2b.h      \
+      bin/blake2b_easy.h \
+      bin/chacha20.h     \
+      bin/ed25519_key.h  \
+      bin/ed25519_sign.h \
+      bin/h_chacha20.h   \
+      bin/key_exchange.h \
+      bin/poly1305.h     \
+      bin/v_sha512.h     \
+      bin/x25519.h       \
+      bin/x_chacha20.h
+	$(CC) $(CFLAGS) -I bin -o $@ $(TEST_DEPS)
+
+bin/vector: tests/vector_to_header.c
 	$(CC) $(CFLAGS) -o $@ $^
+
+bin/%.h: tests/vectors/% bin/vector
+	bin/vector $$(basename $<) <$< >$@
 
 # Test suite based on comparison with libsodium
 C_SODIUM_FLAGS=$$(pkg-config --cflags libsodium)

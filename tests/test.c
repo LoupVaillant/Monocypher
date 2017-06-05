@@ -4,6 +4,19 @@
 #include "monocypher.h"
 #include "sha512.h"
 
+#include "chacha20.h"
+#include "argon2i.h"
+#include "blake2b.h"
+#include "blake2b_easy.h"
+#include "ed25519_key.h"
+#include "ed25519_sign.h"
+#include "h_chacha20.h"
+#include "key_exchange.h"
+#include "poly1305.h"
+#include "v_sha512.h"
+#include "x25519.h"
+#include "x_chacha20.h"
+
 #define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
 #define sv static void
 typedef  int8_t   i8;
@@ -13,9 +26,9 @@ typedef  int32_t i32;
 typedef  int64_t i64;
 typedef uint64_t u64;
 
-/////////////////////////
-/// General utilities ///
-/////////////////////////
+/////////////////
+/// Utilities ///
+/////////////////
 
 static void* alloc(size_t size)
 {
@@ -27,203 +40,47 @@ static void* alloc(size_t size)
     return buf;
 }
 
-static int is_digit(int c)
-{
-    return (c >= '0' && c <= '9')
-        || (c >= 'a' && c <= 'f')
-        || (c >= 'A' && c <= 'F');
-}
-
-static unsigned uint_of_char(unsigned char c)
-{
-    if (c >= '0' && c <= '9') { return c - '0';      }
-    if (c >= 'a' && c <= 'f') { return c - 'a' + 10; }
-    if (c >= 'A' && c <= 'F') { return c - 'A' + 10; }
-    fprintf(stderr,
-            "'%c' (%d): Not a hexadecimal char"
-            " (note: they go in pairs)\n", c, c);
-    exit(1);
-}
-
-////////////////////////////////
-/// File streams with lookup ///
-////////////////////////////////
-typedef struct { FILE *file; int head; int valid; } stream;
-
-sv stream_open(stream *s, const char *filename)
-{
-    s->file  = fopen(filename, "r");
-    s->valid = 0;
-    if (s->file == NULL) {
-        fprintf(stderr, "Could not open file %s", filename);
-        exit(1);
-    }
-}
-sv stream_close(stream *s) { fclose(s->file); }
-
-static int stream_peek(stream *s)
-{
-    if (!s->valid) {
-        s-> valid = 1;
-        s-> head  = getc(s->file);
-    }
-    return s->head;
-}
-
-static int stream_get(stream *s)
-{
-    char c = stream_peek(s);
-    s->valid = 0;
-    return c;
-}
-
-sv stream_drop(stream *s)
-{
-    stream_get(s);
-}
-
-////////////////////////
-/// Vector of octets ///
-////////////////////////
 typedef struct {
     u8     *buf;
-    size_t  buf_size;
     size_t  size;
 } vector;
 
-static vector vec_new(size_t buf_size)
-{
-    vector v;
-    v.buf      = (u8*)alloc(buf_size);
-    v.buf_size = buf_size;
-    v.size     = 0;
-    return v;
-}
-
-static vector vec_uninitialized(size_t size)
-{
-    vector v = vec_new(size);
-    v.size = size;
-    return v;
-}
-
-sv vec_del(vector *v)
-{
-    free(v->buf);
-}
-
-sv vec_push_back(vector *v, u8 e)
-{
-    if (v->buf_size == v->size) {
-        // double initial buffer size (and then some)
-        size_t   new_buf_size = v->buf_size * 2 + 1;
-        u8 *new_buf   = (u8*)alloc(new_buf_size);
-        memcpy(new_buf, v->buf, v->buf_size);
-        free(v->buf);
-        v->buf   = new_buf;
-        v->buf_size = new_buf_size;
-    }
-    v->buf[v->size] = e;
-    v->size++;
-}
-
-static int vec_cmp(const vector *u, const vector *v)
-{
-    if (u->size != v-> size)
-        return -1;
-    return crypto_memcmp(u->buf, v->buf, u->size);
-}
-
-sv next_number(stream *s)
-{
-    while (stream_peek(s) != EOF &&
-           stream_peek(s) != ':' &&
-           !is_digit(stream_peek(s)))
-        stream_drop(s);
-}
-
-// Read a line into a vector.
-// A vector file is a list of colon terminated hex numbers.
-// Ignores any character between a column and the following digit.
-// The user must free the vector's memory with vec_del()
-static vector read_hex_line(stream *s)
-{
-    vector v = vec_new(64);
-    next_number(s);
-    while (stream_peek(s) != ':') {
-        u8 msb = uint_of_char(stream_get(s));
-        u8 lsb = uint_of_char(stream_get(s));
-        vec_push_back(&v, lsb | (msb << 4));
-    }
-    stream_drop(s);
-    next_number(s);
-    return v;
-}
-
-/////////////////////////////
-/// Test helper functions ///
-/////////////////////////////
-
-// Pulls some test vectors, feed it to f, get a status back
-// The test fails if the status is not zero
-static int generic_test(int (*f)(const vector[]),
-                        const char * filename, size_t nb_vectors)
-{
-    int     status   = 0;
-    vector *inputs   = (vector*)alloc(nb_vectors * sizeof(vector));
-    int     nb_tests = 0;
-    stream  stream;
-    stream_open(&stream, filename);
-
-    while (stream_peek(&stream) != EOF) {
-        FOR (i, 0, nb_vectors) { inputs[i] = read_hex_line(&stream); }
-        status |= f(inputs);
-        FOR (i, 0, nb_vectors) { vec_del(inputs + i); }
-        nb_tests++;
-    }
-    printf("%s %3d tests: %s\n",
-           status != 0 ? "FAILED" : "OK", nb_tests, filename);
-    free(inputs);
-    stream_close(&stream);
-    return status;
-}
-
-// Same, except f writes to a buffer.  If it's different than
-// some expected result, the test fails.
 static int test(void (*f)(const vector[], vector*),
-                const char *filename, size_t nb_vectors)
+                const char *name, size_t nb_inputs,
+                size_t nb_vectors, u8 **vectors, size_t *sizes)
 {
-    int     status   = 0;
-    vector *inputs   = (vector*)alloc(nb_vectors * sizeof(vector));
-    int     nb_tests = 0;
-    stream  stream;
-    stream_open(&stream, filename);
-
-    while (stream_peek(&stream) != EOF) {
-        FOR (i, 0, nb_vectors) { inputs[i] = read_hex_line(&stream); }
-
-        vector expected = read_hex_line(&stream);
-        vector output   = vec_uninitialized(expected.size);
-        f(inputs, &output);
-        status |= vec_cmp(&output, &expected);
-
-        vec_del(&output);
-        vec_del(&expected);
-        FOR (i, 0, nb_vectors) { vec_del(inputs + i); }
+    int    status   = 0;
+    int    nb_tests = 0;
+    size_t idx      = 0;
+    vector in[nb_vectors];
+    while (idx < nb_vectors) {
+        size_t out_size = sizes[idx + nb_inputs];
+        vector out;
+        out.buf  = (u8*)alloc(out_size);
+        out.size = out_size;
+        FOR (i, 0, nb_inputs) {
+            in[i].buf  = vectors[idx+i];
+            in[i].size = sizes  [idx+i];
+        }
+        f(in, &out);
+        vector expected;
+        expected.buf  = vectors[idx+nb_inputs];
+        expected.size = sizes  [idx+nb_inputs];
+        status |= out.size - expected.size;
+        status |= crypto_memcmp(out.buf, expected.buf, out.size);
+        free(out.buf);
+        idx += nb_inputs + 1;
         nb_tests++;
     }
     printf("%s %3d tests: %s\n",
-           status != 0 ? "FAILED" : "OK", nb_tests, filename);
-    free(inputs);
-    stream_close(&stream);
+           status != 0 ? "FAILED" : "OK", nb_tests, name);
     return status;
 }
 
-///////////////////////////
-/// Test the test suite ///
-///////////////////////////
-static int equal(const vector v[]) { return  vec_cmp(v, v + 1); }
-static int diff (const vector v[]) { return !vec_cmp(v, v + 1); }
+#define TEST(name, nb_inputs) test(name, #name, nb_inputs, \
+                                   nb_##name##_vectors,    \
+                                   name##_vectors,         \
+                                   name##_sizes)
 
 ////////////////////////
 /// The tests proper ///
@@ -237,14 +94,14 @@ sv chacha20(const vector in[], vector *out)
     crypto_chacha20_stream(&ctx, out->buf, out->size);
 }
 
-sv hchacha20(const vector in[], vector *out)
+sv h_chacha20(const vector in[], vector *out)
 {
     const vector *key   = in;
     const vector *input = in + 1;
     crypto_chacha20_H(out->buf, key->buf, input->buf);
 }
 
-sv xchacha20(const vector in[], vector *out)
+sv x_chacha20(const vector in[], vector *out)
 {
     const vector *key   = in;
     const vector *nonce = in + 1;
@@ -344,7 +201,7 @@ static int test_x25519()
     return status;
 }
 
-sv sha512(const vector in[], vector *out)
+sv v_sha512(const vector in[], vector *out)
 {
     crypto_sha512(out->buf, in->buf, in->size);
 }
@@ -354,21 +211,21 @@ sv ed25519_key(const vector in[], vector *out)
     crypto_sign_public_key(out->buf, in->buf);
 }
 
-sv ed25519_sign1(const vector in[], vector *out)
-{
-    const vector *secret_k = in;
-    const vector *msg      = in + 2;
-    // reconsruct public key before signing
-    crypto_sign(out->buf, secret_k->buf, 0, msg->buf, msg->size);
-}
-
-sv ed25519_sign2(const vector in[], vector *out)
+sv ed25519_sign(const vector in[], vector *out)
 {
     const vector *secret_k = in;
     const vector *public_k = in + 1;
-    const vector *msg    = in + 2;
-    // Use cached public key to sign
+    const vector *msg      = in + 2;
+    u8            out2[64];
+
+    // Sign with cached public key, then by reconstructing the key
     crypto_sign(out->buf, secret_k->buf, public_k->buf, msg->buf, msg->size);
+    crypto_sign(out2    , secret_k->buf, 0            , msg->buf, msg->size);
+    // Compare signatures (must be the same)
+    if (crypto_memcmp(out->buf, out2, out->size)) {
+        printf("FAILURE: reconstructing public key"
+               " yields different signature\n");
+    }
 
     // test successful signature verification
     if (crypto_check(out->buf, public_k->buf, msg->buf, msg->size)) {
@@ -433,21 +290,20 @@ static int test_aead()
 int main(void)
 {
     int status = 0;
-    status |= generic_test(equal, "tests/vectors/test_equal"  , 2);
-    status |= generic_test(diff , "tests/vectors/test_diff"   , 2);
-    status |= test(chacha20     , "tests/vectors/chacha20"    , 2);
-    status |= test(hchacha20    , "tests/vectors/h_chacha20"  , 2);
-    status |= test(xchacha20    , "tests/vectors/x_chacha20"  , 2);
-    status |= test(blake2b      , "tests/vectors/blake2b"     , 2);
-    status |= test(blake2b_easy , "tests/vectors/blake2b_easy", 1);
-    status |= test(poly1305     , "tests/vectors/poly1305"    , 2);
-    status |= test(argon2i      , "tests/vectors/argon2i"     , 6);
-    status |= test(x25519       , "tests/vectors/x25519"      , 2);
-    status |= test(key_exchange , "tests/vectors/key_exchange", 2);
-    status |= test(sha512       , "tests/vectors/sha512"      , 1);
-    status |= test(ed25519_key  , "tests/vectors/ed25519_key" , 1);
-    status |= test(ed25519_sign1, "tests/vectors/ed25519_sign", 3);
-    status |= test(ed25519_sign2, "tests/vectors/ed25519_sign", 3);
+    /* status |= generic_test(equal, "tests/vectors/test_equal"  , 2); */
+    /* status |= generic_test(diff , "tests/vectors/test_diff"   , 2); */
+    status |= TEST(chacha20    , 2);
+    status |= TEST(h_chacha20  , 2);
+    status |= TEST(x_chacha20  , 2);
+    status |= TEST(blake2b     , 2);
+    status |= TEST(blake2b_easy, 1);
+    status |= TEST(poly1305    , 2);
+    status |= TEST(argon2i     , 6);
+    status |= TEST(x25519      , 2);
+    status |= TEST(key_exchange, 2);
+    status |= TEST(v_sha512    , 1);
+    status |= TEST(ed25519_key , 1);
+    status |= TEST(ed25519_sign, 3);
     status |= test_x25519();
     status |= test_aead();
     return status;
