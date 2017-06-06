@@ -49,10 +49,11 @@ static int test(void (*f)(const vector[], vector*),
                 const char *name, size_t nb_inputs,
                 size_t nb_vectors, u8 **vectors, size_t *sizes)
 {
-    int    status   = 0;
-    int    nb_tests = 0;
-    size_t idx      = 0;
-    vector in[nb_vectors];
+    int     status   = 0;
+    int     nb_tests = 0;
+    size_t  idx      = 0;
+    vector *in;
+    in = (vector*)alloc(nb_vectors * sizeof(vector));
     while (idx < nb_vectors) {
         size_t out_size = sizes[idx + nb_inputs];
         vector out;
@@ -72,6 +73,7 @@ static int test(void (*f)(const vector[], vector*),
         idx += nb_inputs + 1;
         nb_tests++;
     }
+    free(in);
     printf("%s %3d tests: %s\n",
            status != 0 ? "FAILED" : "OK", nb_tests, name);
     return status;
