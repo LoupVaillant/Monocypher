@@ -10,32 +10,35 @@ CFLAGS= -I src -O2 -Wall -Wextra -std=c11 -pedantic
 all: test sodium donna
 
 clean:
-	rm -rf bin
+	rm -rf bin frama-c
 	rm -f src/*.gch src/rename_*
 	rm -f test sodium donna
 
-# Test suite based on test vectors
 TEST_DEPS=tests/test.c bin/monocypher.o bin/sha512.o
-test: $(TEST_DEPS)       \
-      bin/argon2i.h      \
-      bin/blake2b.h      \
-      bin/blake2b_easy.h \
-      bin/chacha20.h     \
-      bin/ed25519_key.h  \
-      bin/ed25519_sign.h \
-      bin/h_chacha20.h   \
-      bin/key_exchange.h \
-      bin/poly1305.h     \
-      bin/v_sha512.h     \
-      bin/x25519.h       \
-      bin/x_chacha20.h
+GEN_HEADERS=bin/argon2i.h      \
+            bin/blake2b.h      \
+            bin/blake2b_easy.h \
+            bin/chacha20.h     \
+            bin/ed25519_key.h  \
+            bin/ed25519_sign.h \
+            bin/h_chacha20.h   \
+            bin/key_exchange.h \
+            bin/poly1305.h     \
+            bin/v_sha512.h     \
+            bin/x25519.h       \
+            bin/x_chacha20.h
+
+# Test suite based on test vectors
+test: $(TEST_DEPS) $(GEN_HEADERS)
 	$(CC) $(CFLAGS) -I bin -o $@ $(TEST_DEPS)
 
 bin/vector: tests/vector_to_header.c
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -o $@ $^
 
 bin/%.h: tests/vectors/% bin/vector
-	bin/vector $$(basename $<) <$< >$@
+	@echo generate $@
+	@bin/vector $$(basename $<) <$< >$@
 
 # Test suite based on comparison with libsodium
 C_SODIUM_FLAGS=$$(pkg-config --cflags libsodium)
@@ -81,3 +84,11 @@ rename_%.h: %.h
 	sed 's/crypto_/rename_/g' <$^ >$@
 	sed 's/monocypher.h/rename_monocypher.h/' -i $@
 	sed 's/sha512.h/rename_sha512.h/'         -i $@
+
+frama-c: $(GEN_HEADERS)                    \
+         src/monocypher.c src/monocypher.h \
+         src/sha512.c src/sha512.h         \
+         tests/test.c
+	@echo copy sources to frama-c directory for analysis
+	@mkdir -p frama-c
+	@cp $^ frama-c

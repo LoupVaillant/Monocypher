@@ -2,7 +2,9 @@
 *~
 *.o
 *.gch
+*.sav
 bin/*
+frama-c/*
 test
 sodium
 donna

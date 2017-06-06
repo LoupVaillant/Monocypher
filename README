@@ -7,20 +7,36 @@ Current status
 Test suite
 ----------
 
+    $ make all
     $ ./test.sh
 
 It should display a nice printout of all the tests, all starting with
 "OK".  If you see "FAILURE" anywhere, something has gone very wrong
-somewhere.
+somewhere.  Note: the fuzz tests depend on libsodium.  Install it
+before you run them.
 
 To run only the self contained tests, run
 
     $ make test
     $ ./test
 
+To run only the edDSA fuzz tests (compares Monocypher with
+ed25519-donna), run
+
+    $ make donna
+    $ ./donna
+
 *Do not* use Monocypher without having run the self contained tests at
 least once.
 
+To analyse the code with frama-c, run
+
+    $ make frama-c
+    $ ./frama-c.sh
+
+This will have frama-c parse, and analyse the code, then launch a GUI.
+You must have frama-c installed.  See frama-c.sh for the recommended
+settings.
 
 Integration to your project
 ---------------------------
