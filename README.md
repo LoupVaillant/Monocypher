@@ -1,7 +1,10 @@
 Current status
 --------------
 
-0.6.  Interfaces are stable.  Needs some more external review.
+0.7.  Interfaces are stable.  Needs a few more consistency tests.
+
+Note: the authenticated encryption API changed slightly since 0.6, to
+improve consistency.
 
 
 Test suite
