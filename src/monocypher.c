@@ -21,9 +21,8 @@
 #define HASH_UPDATE COMBINE2(HASH, _update)
 #define HASH_FINAL  COMBINE2(HASH, _final)
 
-#define FOR(i, start, end) for (size_t i = start; i < end; i++)
+#define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
 #define sv static void
-typedef  int8_t   i8;
 typedef uint8_t   u8;
 typedef uint32_t u32;
 typedef  int32_t i32;
@@ -179,8 +178,7 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
             // update the counters
             ctx->pool_index = 0;
             ctx->input[12]++;
-            if (!ctx->input[12])
-                ctx->input[13]++;
+            if (ctx->input[12] == 0) { ctx->input[13]++; }
         }
         // use the pool for encryption (or random stream)
         cipher_text[i] =
@@ -336,8 +334,8 @@ static const u64 iv[8] = {
 // increment the input offset
 sv incr(crypto_blake2b_ctx *ctx)
 {
-    u64 *x = ctx->input_offset;
-    u8   y = ctx->buffer_idx;
+    u64   *x = ctx->input_offset;
+    size_t y = ctx->buffer_idx;
     x[0] += y;                 // increment low word
     if (x[0] < y) { x[1]++; }  // carry overflow to high word
 }
@@ -492,6 +490,8 @@ sv store_block(u8 bytes[1024], const block *b)
     FOR (i, 0, 128) { store64_le(bytes + i*8, b->a[i]); }
 }
 
+// type of copy_block() and xor_block()
+typedef void (*copy_fun) (block*, const block*);
 sv copy_block(block *o, const block *in) { FOR (i, 0, 128) o->a[i]  = in->a[i]; }
 sv  xor_block(block *o, const block *in) { FOR (i, 0, 128) o->a[i] ^= in->a[i]; }
 
@@ -570,8 +570,7 @@ sv g_rounds(block *work_block)
 // The compression function G
 // may overwrite result completely  (xcopy == copy_block),
 // or XOR result with the old block (xcopy ==  xor_block)
-sv binary_g(block *result, const block *x, const block *y,
-            void (*xcopy) (block*, const block*))
+sv binary_g(block *result, const block *x, const block *y, copy_fun xcopy)
 {
     block tmp;
     copy_block(&tmp, x);     // tmp    = X
@@ -657,24 +656,22 @@ static u32 gidx_next(gidx_ctx *ctx)
     // Pass 1+: 3 last segments plus already constructed
     //          blocks in this segment.  THE SPEC SUGGESTS OTHERWISE.
     //          I CONFORM TO THE REFERENCE IMPLEMENTATION.
-    int first_pass = ctx->pass_number == 0;
-    u32 slice_size = ctx->nb_blocks / 4;
-    u32 area_size  = ((first_pass ? ctx->slice_number : 3)
-                      * slice_size + offset - 1);
+    int first_pass  = ctx->pass_number == 0;
+    u32 slice_size  = ctx->nb_blocks / 4;
+    u32 nb_segments = first_pass ? ctx->slice_number : 3;
+    u32 area_size   = nb_segments * slice_size + offset - 1;
 
     // Computes the starting position of the reference area.
     // CONTRARY TO WHAT THE SPEC SUGGESTS, IT STARTS AT THE
     // NEXT SEGMENT, NOT THE NEXT BLOCK.
-    u32 next_slice = (ctx->slice_number == 3
-                      ? 0
-                      : (ctx->slice_number + 1) * slice_size);
+    u32 next_slice = ((ctx->slice_number + 1) % 4) * slice_size;
     u32 start_pos  = first_pass ? 0 : next_slice;
 
     // Generate offset from J1 (no need for J2, there's only one lane)
     u64 j1         = ctx->b.a[index] & 0xffffffff; // pseudo-random number
     u64 x          = (j1 * j1)       >> 32;
     u64 y          = (area_size * x) >> 32;
-    u64 z          = area_size - 1 - y;
+    u64 z          = (area_size - 1) - y;
     return (start_pos + z) % ctx->nb_blocks;
 }
 
@@ -733,7 +730,7 @@ void crypto_argon2i(u8       *tag,       u32 tag_size,
     FOR (pass_number, 0, nb_iterations) {
         int first_pass  = pass_number == 0;
         // Simple copy on pass 0, XOR instead of overwrite on subsequent passes
-        void (*xcopy) (block*, const block*) = first_pass ?copy_block :xor_block;
+        copy_fun xcopy = first_pass ? copy_block : xor_block;
 
         FOR (segment, 0, 4) {
             gidx_ctx ctx;
@@ -742,16 +739,17 @@ void crypto_argon2i(u8       *tag,       u32 tag_size,
             // On the first segment of the first pass,
             // blocks 0 and 1 are already filled.
             // We use the offset to skip them.
-            u32 offset = first_pass && segment == 0 ? 2 : 0;
-            // current, reference, and previous are block indices
-            FOR (current,
-                 segment * segment_size + offset,
-                 (segment + 1) * segment_size) {
-                u32 previous  = current == 0 ? nb_blocks - 1 : current - 1;
-                u32 reference = gidx_next(&ctx);
-                binary_g(blocks + current,
-                         blocks + previous,
-                         blocks + reference,
+            u32 start_offset  = first_pass && segment == 0 ? 2 : 0;
+            u32 segment_start = segment * segment_size + start_offset;
+            u32 segment_end   = (segment + 1) * segment_size;
+            FOR (current_block, segment_start, segment_end) {
+                u32 reference_block = gidx_next(&ctx);
+                u32 previous_block  = current_block == 0
+                                    ? nb_blocks - 1
+                                    : current_block - 1;
+                binary_g(blocks + current_block,
+                         blocks + previous_block,
+                         blocks + reference_block,
                          xcopy);
             }
         }
@@ -778,7 +776,7 @@ sv fe_add (fe h, const fe f, const fe g) { FOR (i, 0, 10) h[i] = f[i] + g[i]; }
 sv fe_sub (fe h, const fe f, const fe g) { FOR (i, 0, 10) h[i] = f[i] - g[i]; }
 sv fe_copy(fe h, const fe f            ) { FOR (i, 0, 10) h[i] = f[i];        }
 
-sv fe_cswap(fe f, fe g, u32 b)
+sv fe_cswap(fe f, fe g, int b)
 {
     FOR (i, 0, 10) {
         i32 x = (f[i] ^ g[i]) & -b;
@@ -895,8 +893,9 @@ sv fe_power(fe out, const fe z, int pow_2, u8 minus)
     fe c; fe_copy(c, z);
     for (int i = pow_2 - 2; i >= 0; i--) {
         fe_sq(c, c);
-        if (i >= 8 || !((minus >> i) & 1))
+        if (i >= 8 || !((minus >> i) & 1)) {
             fe_mul(c, c, z);
+        }
     }
     fe_copy(out, c);
 }
@@ -1038,7 +1037,7 @@ sv ge_from_xy(ge *p, const fe x, const fe y)
     fe_mul(p->T, x, y);
 }
 
-sv ge_cswap(ge *p, ge *q, u32 b)
+sv ge_cswap(ge *p, ge *q, int b)
 {
     fe_cswap(p->X, q->X, b);
     fe_cswap(p->Y, q->Y, b);
@@ -1094,9 +1093,9 @@ static int ge_frombytes_neg(ge *h, const u8 s[32])
         fe_mul(h->X, h->X, sqrtm1);
     }
 
-    if (fe_isnegative(h->X) == (s[31] >> 7))
+    if (fe_isnegative(h->X) == (s[31] >> 7)) {
         fe_neg(h->X, h->X);
-
+    }
     fe_mul(h->T, h->X, h->Y);
     return 0;
 }
@@ -1278,11 +1277,11 @@ int crypto_check(const u8  signature[64],
 {
     ge A, p, sB, diff;
     u8 h_ram[64], R_check[32];
-    if (ge_frombytes_neg(&A, public_key)) return -1;  // -A
+    if (ge_frombytes_neg(&A, public_key)) { return -1; } // -A
     hash_ram(h_ram, signature, public_key, message, message_size);
-    ge_scalarmult(&p, &A, h_ram);                     // p    = -A*h_ram
+    ge_scalarmult(&p, &A, h_ram);                        // p    = -A*h_ram
     ge_scalarmult_base(&sB, signature + 32);
-    ge_add(&diff, &p, &sB);                           // diff = s - A*h_ram
+    ge_add(&diff, &p, &sB);                              // diff = s - A*h_ram
     ge_tobytes(R_check, &diff);
     return crypto_memcmp(signature, R_check, 32); // R == s - A*h_ram ? OK : fail
 }
@@ -1342,7 +1341,7 @@ int crypto_aead_unlock(u8       *plaintext,
     crypto_chacha20_Xinit (&e_ctx, key, nonce);
     crypto_chacha20_stream(&e_ctx, auth_key, 32);
     authenticate2(real_mac, auth_key, ad, ad_size, ciphertext, text_size);
-    if (crypto_memcmp(real_mac, mac, 16)) return -1;  // reject forgeries
+    if (crypto_memcmp(real_mac, mac, 16)) { return -1; } // reject forgeries
     crypto_chacha20_encrypt(&e_ctx, plaintext, ciphertext, text_size);
     return 0;
 }
