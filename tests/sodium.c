@@ -122,7 +122,7 @@ static int x25519()
     return status;
 }
 
-static int edDSA()
+static int ed25519()
 {
     u8 sk[32], sk_sodium[64], pk_mono[32], pk_sodium[32];
     u8 msg[255], sig_mono[64], sig_sodium[64];
@@ -139,7 +139,7 @@ static int edDSA()
         crypto_sign_detached(sig_sodium, 0, msg, size, sk_sodium);
         status |= rename_memcmp(sig_mono, sig_sodium, 64);
     }
-    printf("%s: EdDSA\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: Ed25519\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -156,6 +156,6 @@ int main(void)
     status |= blake2b();
     status |= argon2i();
     status |= x25519();
-    status |= edDSA();
+    status |= ed25519();
     return status;
 }
