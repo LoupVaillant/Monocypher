@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS= -I src -O2 -Wall -Wextra -std=c11 -pedantic
+CFLAGS= -I src -O2 -Wall -Wextra -std=c11 -pedantic -g
 
 #-fno-stack-protector
 
@@ -7,14 +7,15 @@ CFLAGS= -I src -O2 -Wall -Wextra -std=c11 -pedantic
 # disable implicit rules
 .SUFFIXES:
 
-all: test sodium donna
+all: vectors properties sodium donna
 
 clean:
 	rm -rf bin frama-c
 	rm -f src/*.gch src/rename_*
-	rm -f test sodium donna
+	rm -f vectors properties sodium donna
 
-TEST_DEPS=tests/test.c bin/monocypher.o bin/sha512.o
+TEST_DEPS=tests/vectors.c bin/monocypher.o bin/sha512.o
+PROP_DEPS=tests/properties.c bin/classic_monocypher.o
 GEN_HEADERS=bin/argon2i.h      \
             bin/blake2b.h      \
             bin/blake2b_easy.h \
@@ -29,7 +30,7 @@ GEN_HEADERS=bin/argon2i.h      \
             bin/x_chacha20.h
 
 # Test suite based on test vectors
-test: $(TEST_DEPS) $(GEN_HEADERS)
+vectors: $(TEST_DEPS) $(GEN_HEADERS)
 	$(CC) $(CFLAGS) -I bin -o $@ $(TEST_DEPS)
 
 bin/vector: tests/vector_to_header.c
@@ -39,6 +40,10 @@ bin/vector: tests/vector_to_header.c
 bin/%.h: tests/vectors/% bin/vector
 	@echo generate $@
 	@bin/vector $$(basename $<) <$< >$@
+
+# Property based tests (consistency)
+properties: $(PROP_DEPS) $(GEN_HEADERS)
+	$(CC) $(CFLAGS) -I bin -o $@ $(PROP_DEPS)
 
 # Test suite based on comparison with libsodium
 C_SODIUM_FLAGS=$$(pkg-config --cflags libsodium)
@@ -88,7 +93,7 @@ rename_%.h: %.h
 frama-c: $(GEN_HEADERS)                    \
          src/monocypher.c src/monocypher.h \
          src/sha512.c src/sha512.h         \
-         tests/test.c
+         tests/vectors.c
 	@echo copy sources to frama-c directory for analysis
 	@mkdir -p frama-c
 	@cp $^ frama-c

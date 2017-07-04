@@ -6,13 +6,7 @@
 #include <sodium.h>
 
 #define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
-#define sv static void
-typedef  int8_t   i8;
-typedef uint8_t   u8;
-typedef uint32_t u32;
-typedef  int32_t i32;
-typedef  int64_t i64;
-typedef uint64_t u64;
+typedef uint8_t u8;
 
 // Deterministic "random" number generator, so we can make "random", yet
 // reproducible tests.  To change the random stream, change the seed.
@@ -20,7 +14,7 @@ void random(u8 *stream, u8 size)
 {
     static rename_chacha_ctx ctx;
     static int is_init = 0;
-    if (!is_init){
+    if (!is_init) {
         static const u8 seed[32] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
                                     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
         rename_chacha20_init(&ctx, seed, seed);

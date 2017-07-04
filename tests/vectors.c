@@ -253,47 +253,9 @@ sv key_exchange(const vector in[], vector *out)
     crypto_key_exchange(out->buf, secret_key->buf, public_key->buf);
 }
 
-static int test_aead()
-{
-    u8 key[32]      = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7,
-                        0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 };
-    u8 nonce[24]    = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                        1, 1, 1, 1, 1, 1, 1, 1 };
-    u8 ad       [4] = { 3, 2, 1, 0 };
-    u8 plaintext[8] = { 7, 6, 5, 4, 3, 2, 1, 0 };
-    u8 box[24], box2[24];
-    u8 out[8];
-    int status = 0;
-    // AEAD roundtrip
-    crypto_aead_lock(box, box+16, key, nonce, ad, 4, plaintext, 8);
-    status |= crypto_aead_unlock(out, key, nonce, box, ad, 4, box+16, 8);
-    status |= crypto_memcmp(plaintext, out, 8);
-    box[0]++;
-    status |= !crypto_aead_unlock(out, key, nonce, box, ad, 4, box+16, 8);
-    printf("%s: aead (detached)\n", status != 0 ? "FAILED" : "OK");
-
-    // Authenticated roundtrip (easy interface)
-    crypto_lock(box, box + 16, key, nonce, plaintext, 8);       // make message
-    status |= crypto_unlock(out, key, nonce, box, box + 16, 8); // accept message
-    status |= crypto_memcmp(plaintext, out, 8);                 // roundtrip
-    box[0]++;                                                   // make forgery
-    status |= !crypto_unlock(out, key, nonce, box, box + 16, 8);// reject forgery
-    printf("%s: aead (simplified)\n", status != 0 ? "FAILED" : "OK");
-    box[0]--; // undo forgery
-
-    // Same result for both interfaces
-    crypto_aead_lock(box2, box2 + 16, key, nonce, 0, 0, plaintext, 8);
-    status |= crypto_memcmp(box, box2, 24);
-    printf("%s: aead (compared)\n", status != 0 ? "FAILED" : "OK");
-
-    return status;
-}
-
 int main(void)
 {
     int status = 0;
-    /* status |= generic_test(equal, "tests/vectors/test_equal"  , 2); */
-    /* status |= generic_test(diff , "tests/vectors/test_diff"   , 2); */
     status |= TEST(chacha20    , 2);
     status |= TEST(h_chacha20  , 2);
     status |= TEST(x_chacha20  , 2);
@@ -307,6 +269,5 @@ int main(void)
     status |= TEST(ed25519_key , 1);
     status |= TEST(ed25519_sign, 3);
     status |= test_x25519();
-    status |= test_aead();
     return status;
 }
