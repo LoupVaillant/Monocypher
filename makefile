@@ -1,4 +1,15 @@
-CC=gcc -std=c11
+# compile with any of the following
+CC=gcc -std=c99
+#CC=gcc -std=c11
+#CC=g++ -std=c++98
+#CC=g++ -std=c++11
+#CC=g++ -std=c++14
+#CC=g++ -std=c++17
+#CC=clang -std=c99
+#CC=clang -std=c11
+#CC=clang++ -std=c++98
+#CC=clang++ -std=c++11
+#CC=clang++ -std=c++14
 CFLAGS= -I src -pedantic -Wall -Wextra -O2
 
 .PHONY: all clean directories
