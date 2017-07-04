@@ -4,9 +4,9 @@
 /// Utilities ///
 /////////////////
 
-// By default, signatures use blake2b. SHA-512 is provided as an
-// option for full ed25519 compatibility (a must for test vectors).
-// Compile with option -DED25519_SHA512 to use with sha512 If you do
+// By default, EdDSA signatures use blake2b.  SHA-512 is provided as
+// an option for full ed25519 compatibility (a must for test vectors).
+// Compile with option -DED25519_SHA512 to use with sha512.  If you do
 // so, you must provide the "sha512" header with suitable functions.
 #ifdef ED25519_SHA512
     #include "sha512.h"
@@ -103,10 +103,10 @@ sv chacha20_rounds(u32 out[16], const u32 in[16])
         QUARTERROUND(out[1], out[5], out[ 9], out[13]); // column 1
         QUARTERROUND(out[2], out[6], out[10], out[14]); // column 2
         QUARTERROUND(out[3], out[7], out[11], out[15]); // column 3
-        QUARTERROUND(out[0], out[5], out[10], out[15]); // diagonal 1
-        QUARTERROUND(out[1], out[6], out[11], out[12]); // diagonal 2
-        QUARTERROUND(out[2], out[7], out[ 8], out[13]); // diagonal 3
-        QUARTERROUND(out[3], out[4], out[ 9], out[14]); // diagonal 4
+        QUARTERROUND(out[0], out[5], out[10], out[15]); // diagonal 0
+        QUARTERROUND(out[1], out[6], out[11], out[12]); // diagonal 1
+        QUARTERROUND(out[2], out[7], out[ 8], out[13]); // diagonal 2
+        QUARTERROUND(out[3], out[4], out[ 9], out[14]); // diagonal 3
     }
 }
 
