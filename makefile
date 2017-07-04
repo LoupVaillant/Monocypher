@@ -1,7 +1,5 @@
-CC=gcc
-CFLAGS= -I src -O2 -Wall -Wextra -std=c11 -pedantic -g
-
-#-fno-stack-protector
+CC=gcc -std=c11
+CFLAGS= -I src -pedantic -Wall -Wextra -O2
 
 .PHONY: all clean directories
 # disable implicit rules
@@ -82,13 +80,13 @@ bin/rename_sha512.o: src/rename_sha512.c src/rename_sha512.h
 # change the "crypto_" prefix to the "rename_" prefix, so you can use
 # monocypher with other crypto libraries without conflict.
 rename_%.c: %.c
-	sed 's/crypto_/rename_/g' <$^ >$@
-	sed 's/monocypher.h/rename_monocypher.h/' -i $@
-	sed 's/sha512.h/rename_sha512.h/'         -i $@
+	sed 's/crypto_/rename_/g'                 <$^  >$@1
+	sed 's/monocypher.h/rename_monocypher.h/' <$@1 >$@2
+	sed 's/sha512.h/rename_sha512.h/'         <$@2 >$@
 rename_%.h: %.h
-	sed 's/crypto_/rename_/g' <$^ >$@
-	sed 's/monocypher.h/rename_monocypher.h/' -i $@
-	sed 's/sha512.h/rename_sha512.h/'         -i $@
+	sed 's/crypto_/rename_/g'                 <$^  >$@1
+	sed 's/monocypher.h/rename_monocypher.h/' <$@1 >$@2
+	sed 's/sha512.h/rename_sha512.h/'         <$@2 >$@
 
 frama-c: $(GEN_HEADERS)                    \
          src/monocypher.c src/monocypher.h \
