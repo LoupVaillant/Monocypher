@@ -15,7 +15,7 @@ typedef uint64_t u64;
 
 // Deterministic "random" number generator, so we can make "random", yet
 // reproducible tests.  To change the random stream, change the seed.
-void random(u8 *stream, u8 size)
+void p_random(u8 *stream, u8 size)
 {
     static crypto_chacha_ctx ctx;
     static int is_init = 0;
@@ -35,12 +35,12 @@ int main(void)
     int status = 0;
     FOR (size, 0, 255) {
         // public keys
-        random(sk, 32);
+        p_random(sk, 32);
         crypto_sign_public_key(pk_mono, sk);
         ed25519_publickey(sk, pk_donna);
         status |= crypto_memcmp(pk_mono, pk_donna, 32);
         // signatures
-        random(msg, size);
+        p_random(msg, size);
         crypto_sign(sig_mono, sk, pk_mono, msg, size);
         ed25519_sign(msg, size, sk, pk_donna, sig_donna);
         status |= crypto_memcmp(sig_mono, sig_donna, 64);

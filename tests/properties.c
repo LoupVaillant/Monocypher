@@ -13,7 +13,7 @@ typedef uint64_t u64;
 
 // Deterministic "random" number generator, so we can make "random", yet
 // reproducible tests.  To change the random stream, change the seed.
-void random(u8 *stream, size_t size)
+void p_random(u8 *stream, size_t size)
 {
     static crypto_chacha_ctx ctx;
     static int is_init = 0;
@@ -39,7 +39,7 @@ static u32 load32_le(const u8 s[4])
 u32 rand_mod(u32 max)
 {
     u8 n[4];
-    random(n, 4);
+    p_random(n, 4);
     return load32_le(n) % max;
 }
 
@@ -57,9 +57,9 @@ static int chacha20()
         u8 output_chunk[input_size];
         u8 output_whole[input_size];
         // inputs
-        u8 input       [input_size];  random(input, input_size);
-        u8 key         [32];          random(key  , 32);
-        u8 nonce       [8];           random(nonce, 8);
+        u8 input       [input_size];  p_random(input, input_size);
+        u8 key         [32];          p_random(key  , 32);
+        u8 nonce       [8];           p_random(nonce, 8);
 
         // Encrypt in chunks
         crypto_chacha_ctx ctx;
@@ -97,8 +97,8 @@ static int poly1305()
         u8 mac_chunk[16];
         u8 mac_whole[16];
         // inputs
-        u8 input[input_size];  random(input, input_size);
-        u8 key  [32];          random(key  , 32);
+        u8 input[input_size];  p_random(input, input_size);
+        u8 key  [32];          p_random(key  , 32);
 
         // Authenticate bit by bit
         crypto_poly1305_ctx ctx;
@@ -137,7 +137,7 @@ static int blake2b()
         u8 hash_chunk[64];
         u8 hash_whole[64];
         // inputs
-        u8 input[input_size];  random(input, input_size);
+        u8 input[input_size];  p_random(input, input_size);
 
         // Authenticate bit by bit
         crypto_blake2b_ctx ctx;
@@ -164,10 +164,10 @@ static int aead()
 {
     int status = 0;
     FOR (i, 0, 1000) {
-        u8 key      [32];  random(key      , 32);
-        u8 nonce    [24];  random(nonce    , 24);
-        u8 ad       [ 4];  random(ad       ,  4);
-        u8 plaintext[ 8];  random(plaintext,  8);
+        u8 key      [32];  p_random(key      , 32);
+        u8 nonce    [24];  p_random(nonce    , 24);
+        u8 ad       [ 4];  p_random(ad       ,  4);
+        u8 plaintext[ 8];  p_random(plaintext,  8);
         u8 box[24], box2[24];
         u8 out[8];
         // AEAD roundtrip

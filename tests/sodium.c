@@ -10,7 +10,7 @@ typedef uint8_t u8;
 
 // Deterministic "random" number generator, so we can make "random", yet
 // reproducible tests.  To change the random stream, change the seed.
-void random(u8 *stream, u8 size)
+void p_random(u8 *stream, u8 size)
 {
     static rename_chacha_ctx ctx;
     static int is_init = 0;
@@ -28,9 +28,9 @@ static int chacha20(void)
     u8  key[32], nonce[8], in[256], mono[256], sodium[256];
     int status = 0;
     FOR (size, 0, 256) FOR(i, 0, 10) {
-        random(key, 32);
-        random(nonce, 8);
-        random(in, size);
+        p_random(key, 32);
+        p_random(nonce, 8);
+        p_random(in, size);
         rename_chacha_ctx ctx;
         rename_chacha20_init(&ctx, key, nonce);
         rename_chacha20_encrypt(&ctx, mono, in, size);
@@ -46,8 +46,8 @@ static int poly1305(void)
     u8 key[32], in[256], mono[16], sodium[16];
     int status = 0;
     FOR (size, 0, 256)  FOR(i, 0, 10) {
-        random(key, 32);
-        random(in, size);
+        p_random(key, 32);
+        p_random(in, size);
         rename_poly1305_auth(mono, in, size, key);
         crypto_onetimeauth(sodium, in, size, key);
         status |= rename_memcmp(mono, sodium, 16);
@@ -61,8 +61,8 @@ static int blake2b(void)
     u8 key[32], in[256], mono[64], sodium[64];
     int status = 0;
     FOR (size, 0, 256)  FOR(key_size, 0, 32) FOR(hash_size, 1, 64) {
-        random(key ,  key_size);
-        random(in  ,      size);
+        p_random(key ,  key_size);
+        p_random(in  ,      size);
         rename_blake2b_general(mono, hash_size, key, key_size, in, size);
         crypto_generichash(sodium,   hash_size, in, size, key, key_size);
         status |= rename_memcmp(mono, sodium, hash_size);
@@ -77,10 +77,10 @@ static int argon2i(void)
         mono[32], sodium[32];
     int status = 0;
     FOR (nb_blocks, 8, 1024) {
-        random(password, 16);
-        random(salt    , 16);
+        p_random(password, 16);
+        p_random(salt    , crypto_pwhash_SALTBYTES);
         rename_argon2i(mono, 32, work_area, nb_blocks, 3,
-                       password, crypto_pwhash_SALTBYTES, salt, 16, 0, 0, 0, 0);
+                       password, 16, salt, crypto_pwhash_SALTBYTES, 0, 0, 0, 0);
         if (crypto_pwhash(sodium, 32, (char*)password, 16, salt,
                           3, nb_blocks * 1024, crypto_pwhash_ALG_DEFAULT)) {
             printf("Libsodium Argon2i failed to execute\n");
@@ -98,13 +98,13 @@ static int x25519()
     u8 shared_mono[32], shared_sodium[32];
     int status = 0;
     FOR (i, 0, 255) {
-        random(sk1, 32);
-        random(sk2, 32);
+        p_random(sk1, 32);
+        p_random(sk2, 32);
         rename_x25519_public_key(pk1_mono, sk1);
         rename_x25519_public_key(pk2_mono, sk2);
         crypto_scalarmult_base(pk1_sodium, sk1);
         crypto_scalarmult_base(pk2_sodium, sk2);
-        rename_x25519    (shared_mono  , sk1, pk2_mono);
+        rename_x25519(shared_mono  , sk1, pk2_mono);
         if (crypto_scalarmult(shared_sodium, sk1, pk2_sodium)) {
             printf("Libsodium scalarmult rejected the public key\n");
         }
@@ -123,12 +123,12 @@ static int ed25519()
     int status = 0;
     FOR (size, 0, 255) {
         // public keys
-        random(sk, 32);
+        p_random(sk, 32);
         rename_sign_public_key(pk_mono, sk);
         crypto_sign_seed_keypair(pk_sodium, sk_sodium, sk);
         status |= rename_memcmp(pk_mono, pk_sodium, 32);
         // signatures
-        random(msg, size);
+        p_random(msg, size);
         rename_sign(sig_mono, sk, pk_mono, msg, size);
         crypto_sign_detached(sig_sodium, 0, msg, size, sk_sodium);
         status |= rename_memcmp(sig_mono, sig_sodium, 64);
