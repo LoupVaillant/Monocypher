@@ -1,5 +1,6 @@
 # compile with any of the following
-CC=gcc -std=c99
+CC=gcc -std=gnu99
+#CC=gcc -std=c99
 #CC=gcc -std=c11
 #CC=g++ -std=c++98
 #CC=g++ -std=c++11
@@ -58,6 +59,10 @@ properties: $(PROP_DEPS) $(GEN_HEADERS)
 C_SODIUM_FLAGS=$$(pkg-config --cflags libsodium)
 LD_SODIUM_FLAGS=$$(pkg-config --libs libsodium)
 sodium: tests/sodium.c bin/rename_monocypher.o bin/rename_sha512.o
+	$(CC) $(CFLAGS) -o $@ $^ $(C_SODIUM_FLAGS) $(LD_SODIUM_FLAGS)
+
+# Speed benchmark
+speed: tests/speed.c bin/rename_monocypher.o bin/rename_sha512.o
 	$(CC) $(CFLAGS) -o $@ $^ $(C_SODIUM_FLAGS) $(LD_SODIUM_FLAGS)
 
 # Test edDSA/blake2b by comparing with the donna implementation
