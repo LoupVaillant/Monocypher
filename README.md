@@ -21,7 +21,8 @@ before you run them.
 To run only the self contained tests, run
 
     $ make test
-    $ ./test
+    $ ./vectors
+    $ ./properties
 
 To run only the edDSA fuzz tests (compares Monocypher with
 ed25519-donna), run
@@ -40,6 +41,18 @@ To analyse the code with frama-c, run
 This will have frama-c parse, and analyse the code, then launch a GUI.
 You must have frama-c installed.  See frama-c.sh for the recommended
 settings.
+
+Speed benchmark
+---------------
+
+    $ make speed
+    $ ./speed
+
+It should tell you how well Monocypher fares against libsodium.
+Results may vary between platforms and libsodium implementations.
+Requires the POSIX `clock_gettime()` function, which is generally
+disabled when using -std=C99 for strict C compliance. (See the
+makefile to modify it.)
 
 Integration to your project
 ---------------------------
