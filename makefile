@@ -62,8 +62,11 @@ sodium: tests/sodium.c bin/rename_monocypher.o bin/rename_sha512.o
 	$(CC) $(CFLAGS) -o $@ $^ $(C_SODIUM_FLAGS) $(LD_SODIUM_FLAGS)
 
 # Speed benchmark
-speed: tests/speed.c bin/rename_monocypher.o bin/rename_sha512.o
+speed: tests/speed.c bin/rename_monocypher.o bin/rename_sha512.o tweetnacl.o
 	$(CC) $(CFLAGS) -o $@ $^ $(C_SODIUM_FLAGS) $(LD_SODIUM_FLAGS)
+
+tweetnacl.o: tests/tweetnacl/tweetnacl.c tests/tweetnacl/tweetnacl.h
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 # Test edDSA/blake2b by comparing with the donna implementation
 # Note: we're using Blake2b, the default hash for monocypher edDSA
