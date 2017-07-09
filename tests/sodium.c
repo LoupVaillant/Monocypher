@@ -41,6 +41,24 @@ static int chacha20(void)
     return status;
 }
 
+static int xchacha20(void)
+{
+    u8  key[32], nonce[24], in[256], mono[256], sodium[256];
+    int status = 0;
+    FOR (size, 0, 256) FOR(i, 0, 10) {
+        p_random(key, 32);
+        p_random(nonce, 24);
+        p_random(in, size);
+        rename_chacha_ctx ctx;
+        rename_chacha20_Xinit(&ctx, key, nonce);
+        rename_chacha20_encrypt(&ctx, mono, in, size);
+        crypto_stream_xchacha20_xor(sodium, in, size, nonce, key);
+        status |= rename_memcmp(mono, sodium, size);
+    }
+    printf("%s: XChacha20\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 static int poly1305(void)
 {
     u8 key[32], in[256], mono[16], sodium[16];
@@ -146,6 +164,7 @@ int main(void)
     }
     int status = 0;
     status |= chacha20();
+    status |= xchacha20();
     status |= poly1305();
     status |= blake2b();
     status |= argon2i();
