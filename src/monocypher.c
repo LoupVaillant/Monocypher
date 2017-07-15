@@ -833,12 +833,14 @@ sv fe_frombytes(fe h, const u8 s[32])
     fe_carry(h, t);
 }
 
-sv fe_mul121666(fe h, const fe f)
+sv fe_mul_small(fe h, const fe f, i32 g)
 {
     i64 t[10];
-    FOR(i, 0, 10) { t[i] = f[i] * (i64) 121666; }
+    FOR(i, 0, 10) { t[i] = f[i] * (i64) g; }
     fe_carry(h, t);
 }
+sv fe_mul121666(fe h, const fe f) { fe_mul_small(h, f, 121666); }
+sv fe_mul973324(fe h, const fe f) { fe_mul_small(h, f, 973324); }
 
 sv fe_mul(fe h, const fe f, const fe g)
 {
@@ -874,22 +876,24 @@ sv fe_mul(fe h, const fe f, const fe g)
     i64 h9 = f0*(i64)g9 + f1*(i64)g8 + f2*(i64)g7 + f3*(i64)g6 + f4*(i64)g5
         +    f5*(i64)g4 + f6*(i64)g3 + f7*(i64)g2 + f8*(i64)g1 + f9*(i64)g0;
 
-    i64 c0, c1, c2, c3, c4, c5, c6, c7, c8, c9;
-    c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 * (1 << 26);
-    c4 = (h4 + (i64) (1<<25)) >> 26; h5 += c4;      h4 -= c4 * (1 << 26);
-    c1 = (h1 + (i64) (1<<24)) >> 25; h2 += c1;      h1 -= c1 * (1 << 25);
-    c5 = (h5 + (i64) (1<<24)) >> 25; h6 += c5;      h5 -= c5 * (1 << 25);
-    c2 = (h2 + (i64) (1<<25)) >> 26; h3 += c2;      h2 -= c2 * (1 << 26);
-    c6 = (h6 + (i64) (1<<25)) >> 26; h7 += c6;      h6 -= c6 * (1 << 26);
-    c3 = (h3 + (i64) (1<<24)) >> 25; h4 += c3;      h3 -= c3 * (1 << 25);
-    c7 = (h7 + (i64) (1<<24)) >> 25; h8 += c7;      h7 -= c7 * (1 << 25);
-    c4 = (h4 + (i64) (1<<25)) >> 26; h5 += c4;      h4 -= c4 * (1 << 26);
-    c8 = (h8 + (i64) (1<<25)) >> 26; h9 += c8;      h8 -= c8 * (1 << 26);
-    c9 = (h9 + (i64) (1<<24)) >> 25; h0 += c9 * 19; h9 -= c9 * (1 << 25);
-    c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 * (1 << 26);
+#define CARRY                                                             \
+    i64 c0, c1, c2, c3, c4, c5, c6, c7, c8, c9;                           \
+    c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 * (1 << 26); \
+    c4 = (h4 + (i64) (1<<25)) >> 26; h5 += c4;      h4 -= c4 * (1 << 26); \
+    c1 = (h1 + (i64) (1<<24)) >> 25; h2 += c1;      h1 -= c1 * (1 << 25); \
+    c5 = (h5 + (i64) (1<<24)) >> 25; h6 += c5;      h5 -= c5 * (1 << 25); \
+    c2 = (h2 + (i64) (1<<25)) >> 26; h3 += c2;      h2 -= c2 * (1 << 26); \
+    c6 = (h6 + (i64) (1<<25)) >> 26; h7 += c6;      h6 -= c6 * (1 << 26); \
+    c3 = (h3 + (i64) (1<<24)) >> 25; h4 += c3;      h3 -= c3 * (1 << 25); \
+    c7 = (h7 + (i64) (1<<24)) >> 25; h8 += c7;      h7 -= c7 * (1 << 25); \
+    c4 = (h4 + (i64) (1<<25)) >> 26; h5 += c4;      h4 -= c4 * (1 << 26); \
+    c8 = (h8 + (i64) (1<<25)) >> 26; h9 += c8;      h8 -= c8 * (1 << 26); \
+    c9 = (h9 + (i64) (1<<24)) >> 25; h0 += c9 * 19; h9 -= c9 * (1 << 25); \
+    c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 * (1 << 26); \
+    h[0] = h0;  h[1] = h1;  h[2] = h2;  h[3] = h3;  h[4] = h4;            \
+    h[5] = h5;  h[6] = h6;  h[7] = h7;  h[8] = h8;  h[9] = h9;            \
 
-    h[0] = h0;  h[1] = h1;  h[2] = h2;  h[3] = h3;  h[4] = h4;
-    h[5] = h5;  h[6] = h6;  h[7] = h7;  h[8] = h8;  h[9] = h9;
+    CARRY;
 }
 
 // we could use fe_mul() for this, but this is significantly faster
@@ -923,22 +927,7 @@ sv fe_sq(fe h, const fe f)
     i64 h9 = f0_2*(i64)f9    + f1_2*(i64)f8    + f2_2*(i64)f7
         +    f3_2*(i64)f6    + f4  *(i64)f5_2;
 
-    i64 c0, c1, c2, c3, c4, c5, c6, c7, c8, c9;
-    c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 << 26;
-    c4 = (h4 + (i64) (1<<25)) >> 26; h5 += c4;      h4 -= c4 << 26;
-    c1 = (h1 + (i64) (1<<24)) >> 25; h2 += c1;      h1 -= c1 << 25;
-    c5 = (h5 + (i64) (1<<24)) >> 25; h6 += c5;      h5 -= c5 << 25;
-    c2 = (h2 + (i64) (1<<25)) >> 26; h3 += c2;      h2 -= c2 << 26;
-    c6 = (h6 + (i64) (1<<25)) >> 26; h7 += c6;      h6 -= c6 << 26;
-    c3 = (h3 + (i64) (1<<24)) >> 25; h4 += c3;      h3 -= c3 << 25;
-    c7 = (h7 + (i64) (1<<24)) >> 25; h8 += c7;      h7 -= c7 << 25;
-    c4 = (h4 + (i64) (1<<25)) >> 26; h5 += c4;      h4 -= c4 << 26;
-    c8 = (h8 + (i64) (1<<25)) >> 26; h9 += c8;      h8 -= c8 << 26;
-    c9 = (h9 + (i64) (1<<24)) >> 25; h0 += c9 * 19; h9 -= c9 << 25;
-    c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 << 26;
-
-    h[0] = h0;  h[1] = h1;  h[2] = h2;  h[3] = h3;  h[4] = h4;
-    h[5] = h5;  h[6] = h6;  h[7] = h7;  h[8] = h8;  h[9] = h9;
+    CARRY;
 }
 
 // This could be simplified, but it would be slower
@@ -1038,18 +1027,8 @@ sv trim_scalar(u8 s[32])
     s[31] |= 64;
 }
 
-int crypto_x25519(u8       shared_secret   [32],
-                  const u8 your_secret_key [32],
-                  const u8 their_public_key[32])
+sv x25519_ladder(const fe x1, fe x2, fe z2, fe x3, fe z3, const u8 scalar[32])
 {
-    // computes the scalar product
-    fe x1, x2, z2, x3, z3;
-    fe_frombytes(x1, their_public_key);
-
-    // restrict the possible scalar values
-    u8 e[32]; FOR (i, 0, 32) { e[i] = your_secret_key[i]; }
-    trim_scalar(e);
-
     // Montgomery ladder
     // In projective coordinates, to avoid divisons: x = X / Z
     // We don't care about the y coordinate, it's only 1 bit of information
@@ -1058,7 +1037,7 @@ int crypto_x25519(u8       shared_secret   [32],
     int swap = 0;
     for (int pos = 254; pos >= 0; --pos) {
         // constant time conditional swap before ladder step
-        int b = (e[pos / 8] >> (pos & 7)) & 1;
+        int b = (scalar[pos / 8] >> (pos & 7)) & 1;
         swap ^= b; // xor trick avoids swapping at the end of the loop
         fe_cswap(x2, x3, swap);
         fe_cswap(z2, z3, swap);
@@ -1077,6 +1056,22 @@ int crypto_x25519(u8       shared_secret   [32],
     // last swap is necessary to compensate for the xor trick
     fe_cswap(x2, x3, swap);
     fe_cswap(z2, z3, swap);
+}
+
+int crypto_x25519(u8       shared_secret   [32],
+                  const u8 your_secret_key [32],
+                  const u8 their_public_key[32])
+{
+    // computes the scalar product
+    fe x1, x2, z2, x3, z3;
+    fe_frombytes(x1, their_public_key);
+
+    // restrict the possible scalar values
+    u8 e[32]; FOR (i, 0, 32) { e[i] = your_secret_key[i]; }
+    trim_scalar(e);
+
+    // computes the actual scalar product (the result is in x2 and z2)
+    x25519_ladder(x1, x2, z2, x3, z3, e);
 
     // normalises the coordinates: x == X / Z
     fe_invert(z2, z2);
@@ -1112,14 +1107,6 @@ sv ge_from_xy(ge *p, const fe x, const fe y)
     }
     fe_1  (p->Z);
     fe_mul(p->T, x, y);
-}
-
-sv ge_cswap(ge *p, ge *q, int b)
-{
-    fe_cswap(p->X, q->X, b);
-    fe_cswap(p->Y, q->Y, b);
-    fe_cswap(p->Z, q->Z, b);
-    fe_cswap(p->T, q->T, b);
 }
 
 sv ge_tobytes(u8 s[32], const ge *h)
@@ -1202,43 +1189,52 @@ sv ge_add(ge *s, const ge *p, const ge *q)
     fe_mul(s->T, e, h);  //  T3 = E * H
 }
 
-// could use ge_add() for this, but this is slightly faster
-sv ge_double(ge *s, const ge *p)
-{
-    fe a, b, c, d, e, f, g, h;
-    fe_sub(a, p->Y, p->X);  fe_sq(a, a);      //  A = (Y1-X1)^2
-    fe_add(b, p->X, p->Y);  fe_sq(b, b);      //  B = (Y1+X1)^2
-    fe_sq (c, p->T);        fe_mul(c, c, D2); //  C = T1^2 * k
-    fe_sq (d, p->Z);        fe_add(d, d, d);  //  D = Z1^2 * 2
-    fe_sub(e, b, a);                          //  E  = B - A
-    fe_sub(f, d, c);                          //  F  = D - C
-    fe_add(g, d, c);                          //  G  = D + C
-    fe_add(h, b, a);                          //  H  = B + A
-    fe_mul(s->X, e, f);                       //  X3 = E * F
-    fe_mul(s->Y, g, h);                       //  Y3 = G * H
-    fe_mul(s->Z, f, g);                       //  Z3 = F * G
-    fe_mul(s->T, e, h);                       //  T3 = E * H
-}
-
 sv ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
 {
-    // Simple Montgomery ladder, with straight double and add.
-    ge t;
-    fe_0(p->X);  fe_copy(t.X, q->X);
-    fe_1(p->Y);  fe_copy(t.Y, q->Y);
-    fe_1(p->Z);  fe_copy(t.Z, q->Z);
-    fe_0(p->T);  fe_copy(t.T, q->T);
-    int swap = 0;
-    for (int i = 255; i >= 0; i--) {
-        int b = (scalar[i/8] >> (i & 7)) & 1;
-        swap ^= b;  // xor trick avoids unnecessary swaps
-        ge_cswap(p, &t, swap);
-        swap = b;
-        ge_add(&t, &t, p);
-        ge_double(p, p);
-    }
-    // one last swap makes up for the xor trick
-    ge_cswap(p, &t, swap);
+    // sqrt(-486664)
+    fe K = { 54885894, 25242303, 55597453,  9067496, 51808079,
+             33312638, 25456129, 14121551, 54921728,  3972023 };
+
+    // convert q to montgomery format
+    fe x1, y1, z1, x2, z2, x3, z3, t1, t2, t3, t4;
+    fe_sub(z1, q->Z, q->Y);  fe_mul(z1, z1, q->X);  fe_invert(z1, z1);
+    fe_add(t1, q->Z, q->Y);
+    fe_mul(x1, q->X, t1  );  fe_mul(x1, x1, z1);
+    fe_mul(y1, q->Z, t1  );  fe_mul(y1, y1, z1);  fe_mul(y1, K, y1);
+    fe_1(z1); // implied in the ladder, needed to convert back.
+
+    // montgomery scalarmult
+    x25519_ladder(x1, x2, z2, x3, z3, scalar);
+
+    // recover the y1 coordinate (Katsuyuki Okeya & Kouichi Sakurai, 2001)
+    fe_mul(t1, x1, z2);  // t1 = x1 * z2
+    fe_add(t2, x2, t1);  // t2 = x2 + t1
+    fe_sub(t3, x2, t1);  // t3 = x2 − t1
+    fe_sq (t3, t3);      // t3 = t3^2
+    fe_mul(t3, t3, x3);  // t3 = t3 * x3
+    fe_mul973324(t1, z2);// t1 = 2a * z2
+    fe_add(t2, t2, t1);  // t2 = t2 + t1
+    fe_mul(t4, x1, x2);  // t4 = x1 * x2
+    fe_add(t4, t4, z2);  // t4 = t4 + z2
+    fe_mul(t2, t2, t4);  // t2 = t2 * t4
+    fe_mul(t1, t1, z2);  // t1 = t1 * z2
+    fe_sub(t2, t2, t1);  // t2 = t2 − t1
+    fe_mul(t2, t2, z3);  // t2 = t2 * z3
+    fe_add(t1, y1, y1);  // t1 = y1 + y1
+    fe_mul(t1, t1, z2);  // t1 = t1 * z2
+    fe_mul(t1, t1, z3);  // t1 = t1 * z3
+    fe_mul(x1, t1, x2);  // x1 = t1 * x2
+    fe_sub(y1, t2, t3);  // y1 = t2 − t3
+    fe_mul(z1, t1, z2);  // z1 = t1 * z2
+
+    // convert back to twisted edwards
+    fe_sub(t1  , x1, z1);
+    fe_add(t2  , x1, z1);
+    fe_mul(x1  , K , x1);
+    fe_mul(p->X, x1, t2);
+    fe_mul(p->Y, y1, t1);
+    fe_mul(p->Z, y1, t2);
+    fe_mul(p->T, x1, t1);
 }
 
 sv ge_scalarmult_base(ge *p, const u8 scalar[32])
