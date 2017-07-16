@@ -576,17 +576,26 @@ sv g_rounds(block *work_block)
     }
 }
 
-// The compression function G
-// may overwrite result completely  (xcopy == copy_block),
-// or XOR result with the old block (xcopy ==  xor_block)
-sv binary_g(block *result, const block *x, const block *y, copy_fun xcopy)
+// The compression function G (copy version for the first pass)
+sv g_copy(block *result, const block *x, const block *y)
 {
     block tmp;
     copy_block(&tmp, x);     // tmp    = X
     xor_block (&tmp, y);     // tmp    = X ^ Y = R
-    xcopy(result, &tmp);     // result = R     (or R ^ old)
+    copy_block(result, &tmp);// result = R
     g_rounds(&tmp);          // tmp    = Z
-    xor_block(result, &tmp); // result = R ^ Z (or R ^ old ^ Z)
+    xor_block(result, &tmp); // result = R ^ Z
+}
+
+// The compression function G (xor version for subsequent passes)
+sv g_xor(block *result, const block *x, const block *y)
+{
+    block tmp;
+    copy_block(&tmp, x);     // tmp    = X
+    xor_block (&tmp, y);     // tmp    = X ^ Y = R
+    xor_block(result, &tmp); // result = R ^ old
+    g_rounds(&tmp);          // tmp    = Z
+    xor_block(result, &tmp); // result = R ^ old ^ Z
 }
 
 // unary version of the compression function.
@@ -738,8 +747,6 @@ void crypto_argon2i(u8       *tag,       u32 tag_size,
     // fill (then re-fill) the rest of the blocks
     FOR (pass_number, 0, nb_iterations) {
         int first_pass  = pass_number == 0;
-        // Simple copy on pass 0, XOR instead of overwrite on subsequent passes
-        copy_fun xcopy = first_pass ? copy_block : xor_block;
 
         FOR (segment, 0, 4) {
             gidx_ctx ctx;
@@ -756,10 +763,11 @@ void crypto_argon2i(u8       *tag,       u32 tag_size,
                 u32 previous_block  = current_block == 0
                                     ? nb_blocks - 1
                                     : current_block - 1;
-                binary_g(blocks + current_block,
-                         blocks + previous_block,
-                         blocks + reference_block,
-                         xcopy);
+                block *c = blocks + current_block;
+                block *p = blocks + previous_block;
+                block *r = blocks + reference_block;
+                if (first_pass) { g_copy(c, p, r); }
+                else            { g_xor (c, p, r); }
             }
         }
     }
