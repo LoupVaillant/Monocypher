@@ -130,8 +130,6 @@ sv chacha20_init_key(crypto_chacha_ctx *ctx, const u8 key[32])
     FOR (i, 0, 8) {
         ctx->input[i+4] = load32_le(key + i*4);
     }
-    // pool index (the random pool starts empty)
-    ctx->pool_index = 64;
 }
 
 void crypto_chacha20_H(u8 out[32], const u8 key[32], const u8 in[16])
@@ -155,19 +153,25 @@ void crypto_chacha20_init(crypto_chacha_ctx *ctx,
                           const u8           nonce[8])
 {
     chacha20_init_key(ctx, key  );         // key
-    ctx->input[12] = 0;                    // counter
-    ctx->input[13] = 0;                    // counter
+    crypto_chacha20_set_ctr(ctx, 0);       // counter
     ctx->input[14] = load32_le(nonce + 0); // nonce
     ctx->input[15] = load32_le(nonce + 4); // nonce
 }
 
 void crypto_chacha20_x_init(crypto_chacha_ctx *ctx,
                             const u8           key[32],
-                             const u8           nonce[24])
+                            const u8           nonce[24])
 {
     u8 derived_key[32];
     crypto_chacha20_H(derived_key, key, nonce);
     crypto_chacha20_init(ctx, derived_key, nonce + 16);
+}
+
+void crypto_chacha20_set_ctr(crypto_chacha_ctx *ctx, u64 ctr)
+{
+    ctx->input[12]  = ctr & 0xffffffff;
+    ctx->input[13]  = ctr >> 32;
+    ctx->pool_index = 64;  // The random pool (re)starts empty
 }
 
 void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,

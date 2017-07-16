@@ -83,6 +83,36 @@ static int chacha20()
     return status;
 }
 
+static int chacha20_set_ctr()
+{
+    static const size_t nb_blocks   = 10;
+    static const size_t block_size  = 64;
+    static const size_t stream_size = block_size * nb_blocks;
+    int status = 0;
+    FOR (i, 0, 1000) {
+        u8 output_part[stream_size];
+        u8 output_all [stream_size];
+        u8 key        [32];          p_random(key  , 32);
+        u8 nonce      [8];           p_random(nonce, 8 );
+        size_t ctr   = rand_mod(nb_blocks);
+        size_t limit = ctr * block_size;
+        // Encrypt all at once
+        crypto_chacha_ctx ctx;
+        crypto_chacha20_init(&ctx, key, nonce);
+        crypto_chacha20_stream(&ctx, output_all, stream_size);
+        // Encrypt second part
+        crypto_chacha20_set_ctr(&ctx, ctr);
+        crypto_chacha20_stream(&ctx, output_part + limit, stream_size - limit);
+        // Encrypt first part
+        crypto_chacha20_set_ctr(&ctx, 0);
+        crypto_chacha20_stream(&ctx, output_part, limit);
+        // Compare the results (must be the same)
+        status |= crypto_memcmp(output_part, output_all, stream_size);
+    }
+    printf("%s: Chacha20 (set counter)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 // Tests that authenticating bit by bit yields the same mac than
 // authenticating all at once
 static int poly1305()
@@ -200,6 +230,7 @@ int main(void)
 {
     int status = 0;
     status |= chacha20();
+    status |= chacha20_set_ctr();
     status |= poly1305();
     status |= blake2b();
     status |= aead();
