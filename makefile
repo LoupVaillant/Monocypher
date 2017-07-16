@@ -22,7 +22,7 @@ all: vectors properties sodium donna
 clean:
 	rm -rf bin frama-c
 	rm -f src/*.gch src/rename_*
-	rm -f vectors properties sodium donna
+	rm -f vectors properties sodium donna speed
 
 TEST_DEPS=tests/vectors.c bin/monocypher.o bin/sha512.o
 PROP_DEPS=tests/properties.c bin/classic_monocypher.o
