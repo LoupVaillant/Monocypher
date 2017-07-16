@@ -11,7 +11,7 @@ CC=gcc -std=gnu99
 #CC=clang++ -std=c++98
 #CC=clang++ -std=c++11
 #CC=clang++ -std=c++14
-CFLAGS= -I src -pedantic -Wall -Wextra -O2
+CFLAGS= -I src -pedantic -Wall -Wextra -O3 -march=native
 
 .PHONY: all clean directories
 # disable implicit rules
