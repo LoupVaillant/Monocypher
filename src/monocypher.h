@@ -29,9 +29,9 @@ void crypto_chacha20_init(crypto_chacha_ctx *ctx,
                           const uint8_t      key[32],
                           const uint8_t      nonce[8]);
 
-void crypto_chacha20_Xinit(crypto_chacha_ctx *ctx,
-                           const uint8_t      key[32],
-                           const uint8_t      nonce[24]);
+void crypto_chacha20_x_init(crypto_chacha_ctx *ctx,
+                            const uint8_t      key[32],
+                            const uint8_t      nonce[24]);
 
 void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                              uint8_t           *cipher_text,

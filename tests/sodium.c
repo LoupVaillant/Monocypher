@@ -50,7 +50,7 @@ static int xchacha20(void)
         p_random(nonce, 24);
         p_random(in, size);
         rename_chacha_ctx ctx;
-        rename_chacha20_Xinit(&ctx, key, nonce);
+        rename_chacha20_x_init(&ctx, key, nonce);
         rename_chacha20_encrypt(&ctx, mono, in, size);
         crypto_stream_xchacha20_xor(sodium, in, size, nonce, key);
         status |= rename_memcmp(mono, sodium, size);

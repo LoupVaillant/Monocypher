@@ -575,11 +575,11 @@ all an initial nonce of 0, 1 .. n-1 respectively, and have them
 increment their nonce by n.  (Also make sure the counters never wrap
 around.)
 
-### void crypto\_chacha20\_Xinit()
+### void crypto\_chacha20\_x_init()
 
-    void crypto_chacha20_Xinit(crypto_chacha_ctx *ctx,
-                               const uint8_t      key[32],
-                               const uint8_t      nonce[24]);
+    void crypto_chacha20_x_init(crypto_chacha_ctx *ctx,
+                                const uint8_t      key[32],
+                                const uint8_t      nonce[24]);
 
 Initialises a chacha context with a big nonce (192 bits).  This nonce
 is big enough to be selected at random (use the OS; avoid user space

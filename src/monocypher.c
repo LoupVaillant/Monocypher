@@ -161,9 +161,9 @@ void crypto_chacha20_init(crypto_chacha_ctx *ctx,
     ctx->input[15] = load32_le(nonce + 4); // nonce
 }
 
-void crypto_chacha20_Xinit(crypto_chacha_ctx *ctx,
-                           const u8           key[32],
-                           const u8           nonce[24])
+void crypto_chacha20_x_init(crypto_chacha_ctx *ctx,
+                            const u8           key[32],
+                             const u8           nonce[24])
 {
     u8 derived_key[32];
     crypto_chacha20_H(derived_key, key, nonce);
@@ -1420,7 +1420,7 @@ void crypto_aead_lock(u8        mac[16],
 {   // encrypt then mac
     u8 auth_key[32];
     crypto_chacha_ctx e_ctx;
-    crypto_chacha20_Xinit  (&e_ctx, key, nonce);
+    crypto_chacha20_x_init (&e_ctx, key, nonce);
     crypto_chacha20_stream (&e_ctx, auth_key, 32);
     crypto_chacha20_encrypt(&e_ctx, ciphertext, plaintext, text_size);
     authenticate2(mac, auth_key, ad, ad_size, ciphertext, text_size);
@@ -1435,7 +1435,7 @@ int crypto_aead_unlock(u8       *plaintext,
 {
     u8 auth_key[32], real_mac[16];
     crypto_chacha_ctx e_ctx;
-    crypto_chacha20_Xinit (&e_ctx, key, nonce);
+    crypto_chacha20_x_init(&e_ctx, key, nonce);
     crypto_chacha20_stream(&e_ctx, auth_key, 32);
     authenticate2(real_mac, auth_key, ad, ad_size, ciphertext, text_size);
     if (crypto_memcmp(real_mac, mac, 16)) { return -1; } // reject forgeries

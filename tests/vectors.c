@@ -108,7 +108,7 @@ sv x_chacha20(const vector in[], vector *out)
     const vector *key   = in;
     const vector *nonce = in + 1;
     crypto_chacha_ctx ctx;
-    crypto_chacha20_Xinit (&ctx, key->buf, nonce->buf);
+    crypto_chacha20_x_init(&ctx, key->buf, nonce->buf);
     crypto_chacha20_stream(&ctx, out->buf, out->size);
 }
 
