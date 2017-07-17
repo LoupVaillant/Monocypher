@@ -631,6 +631,34 @@ your OS random number generator.
 Still, this function can be used outside of a security context:
 deterministic procedural generation comes to mind.
 
+### crypto\_chacha20\_set\_ctr()
+
+    void crypto_chacha20_set_ctr(crypto_chacha_ctx *ctx, uint64_t ctr);
+
+Resets the internal counter of the Chacha context to the value
+specified in `ctr`. Resuming the encryption will use the stream at the
+block `ctr` (or the byte `ctr×64`).
+
+For instance, the following code has the same effect:
+
+    // Discard part of the stream the hard way
+    crypto_chacha20_init  (ctx, key, nonce);
+    uint8_t tmp[512];
+    crypto_chacha20_stream(ctx, tmp, 512);
+    crypto_chacha20_stream(ctx, out, size);
+
+    // Note: 512 bytes mean 8 blocks (64 bytes per block)
+
+    // Skip part of the stream entirely
+    crypto_chacha20_init   (ctx, key, nonce);
+    crypto_chacha20_set_ctr(ctx, 8);
+    crypto_chacha20_stream (ctx, out, size);
+
+This can be used to encrypt (or decrypt) part of a long message, or to
+implement some AEAD constructions such as the one described in rfc7539
+(not implemented in Monocypher because of its complexity and
+limitations).
+
 
 One-time authentication (Poly1305)
 ----------------------------------
