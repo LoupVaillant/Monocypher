@@ -26,21 +26,17 @@ void p_random(u8 *stream, size_t size)
     crypto_chacha20_stream(&ctx, stream, size);
 }
 
-static u32 load32_le(const u8 s[4])
+// Random 64 bit number
+u64 rand64()
 {
-    return (u32)s[0]
-        | ((u32)s[1] <<  8)
-        | ((u32)s[2] << 16)
-        | ((u32)s[3] << 24);
-}
-
-// Random number between 0 and max.
-// Unbalanced if max is not a power of 2.
-u32 rand_mod(u32 max)
-{
-    u8 n[4];
-    p_random(n, 4);
-    return load32_le(n) % max;
+    u8  tmp;
+    u64 result = 0;
+    FOR (i, 0, 8) {
+        p_random(&tmp, 1);
+        result <<= 8;
+        result  += tmp;
+    }
+    return result;
 }
 
 // Tests that encrypting in chunks yields the same result than
@@ -65,7 +61,7 @@ static int chacha20()
         crypto_chacha_ctx ctx;
         crypto_chacha20_init(&ctx, key, nonce);
         while (1) {
-            size_t chunk_size = rand_mod(c_max_size);
+            size_t chunk_size = rand64() % c_max_size;
             if (offset + chunk_size > input_size) { break; }
             u8 *out = output_chunk + offset;
             u8 *in  = input        + offset;
@@ -90,11 +86,12 @@ static int chacha20_set_ctr()
     static const size_t stream_size = block_size * nb_blocks;
     int status = 0;
     FOR (i, 0, 1000) {
-        u8 output_part[stream_size];
-        u8 output_all [stream_size];
+        u8 output_part[stream_size    ];
+        u8 output_all [stream_size    ];
+        u8 output_more[stream_size * 2];
         u8 key        [32];          p_random(key  , 32);
         u8 nonce      [8];           p_random(nonce, 8 );
-        size_t ctr   = rand_mod(nb_blocks);
+        size_t ctr   = rand64() % nb_blocks;
         size_t limit = ctr * block_size;
         // Encrypt all at once
         crypto_chacha_ctx ctx;
@@ -108,6 +105,16 @@ static int chacha20_set_ctr()
         crypto_chacha20_stream(&ctx, output_part, limit);
         // Compare the results (must be the same)
         status |= crypto_memcmp(output_part, output_all, stream_size);
+
+        // Encrypt before the begining
+        crypto_chacha20_set_ctr(&ctx, -ctr);
+        crypto_chacha20_stream(&ctx,
+                               output_more + stream_size - limit,
+                               stream_size + limit);
+        // Compare the results (must be the same)
+        status |= crypto_memcmp(output_more + stream_size,
+                                output_all,
+                                stream_size);
     }
     printf("%s: Chacha20 (set counter)\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -134,7 +141,7 @@ static int poly1305()
         crypto_poly1305_ctx ctx;
         crypto_poly1305_init(&ctx, key);
         while (1) {
-            size_t chunk_size = rand_mod(c_max_size);
+            size_t chunk_size = rand64() % c_max_size;
             if (offset + chunk_size > input_size) { break; }
             crypto_poly1305_update(&ctx, input + offset, chunk_size);
             offset += chunk_size;
@@ -173,7 +180,7 @@ static int blake2b()
         crypto_blake2b_ctx ctx;
         crypto_blake2b_init(&ctx);
         while (1) {
-            size_t chunk_size = rand_mod(c_max_size);
+            size_t chunk_size = rand64() % c_max_size;
             if (offset + chunk_size > input_size) { break; }
             crypto_blake2b_update(&ctx, input + offset, chunk_size);
             offset += chunk_size;

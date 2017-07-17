@@ -6,7 +6,8 @@
 #include <sodium.h>
 
 #define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
-typedef uint8_t u8;
+typedef uint8_t  u8;
+typedef uint64_t u64;
 
 // Deterministic "random" number generator, so we can make "random", yet
 // reproducible tests.  To change the random stream, change the seed.
@@ -23,6 +24,19 @@ void p_random(u8 *stream, u8 size)
     rename_chacha20_stream(&ctx, stream, size);
 }
 
+// Random 64 bit number
+u64 rand64()
+{
+    u8  tmp;
+    u64 result = 0;
+    FOR (i, 0, 8) {
+        p_random(&tmp, 1);
+        result <<= 8;
+        result  += tmp;
+    }
+    return result;
+}
+
 static int chacha20(void)
 {
     u8  key[32], nonce[8], in[256], mono[256], sodium[256];
@@ -31,10 +45,12 @@ static int chacha20(void)
         p_random(key, 32);
         p_random(nonce, 8);
         p_random(in, size);
+        u64 ctr = rand64();
         rename_chacha_ctx ctx;
-        rename_chacha20_init(&ctx, key, nonce);
+        rename_chacha20_init   (&ctx, key, nonce);
+        rename_chacha20_set_ctr(&ctx, ctr);
         rename_chacha20_encrypt(&ctx, mono, in, size);
-        crypto_stream_chacha20_xor(sodium, in, size, nonce, key);
+        crypto_stream_chacha20_xor_ic(sodium, in, size, nonce, ctr, key);
         status |= rename_memcmp(mono, sodium, size);
     }
     printf("%s: Chacha20\n", status != 0 ? "FAILED" : "OK");
@@ -49,10 +65,12 @@ static int xchacha20(void)
         p_random(key, 32);
         p_random(nonce, 24);
         p_random(in, size);
+        u64 ctr = rand64();
         rename_chacha_ctx ctx;
-        rename_chacha20_x_init(&ctx, key, nonce);
+        rename_chacha20_x_init (&ctx, key, nonce);
+        rename_chacha20_set_ctr(&ctx, ctr);
         rename_chacha20_encrypt(&ctx, mono, in, size);
-        crypto_stream_xchacha20_xor(sodium, in, size, nonce, key);
+        crypto_stream_xchacha20_xor_ic(sodium, in, size, nonce, ctr, key);
         status |= rename_memcmp(mono, sodium, size);
     }
     printf("%s: XChacha20\n", status != 0 ? "FAILED" : "OK");
