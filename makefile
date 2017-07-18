@@ -1,5 +1,5 @@
 # compile with any of the following
-CC=gcc -std=gnu99
+CC=gcc -std=gnu99 # speed tests don't work with -std=cxx, they need the POSIX extensions
 #CC=gcc -std=c99
 #CC=gcc -std=c11
 #CC=g++ -std=c++98
@@ -11,7 +11,14 @@ CC=gcc -std=gnu99
 #CC=clang++ -std=c++98
 #CC=clang++ -std=c++11
 #CC=clang++ -std=c++14
-CFLAGS= -I src -pedantic -Wall -Wextra -O3 -march=native
+
+# These may be used for tests (except speed)
+#CC = clang -std=c99 -fsanitize=address
+#CC = clang -std=c99 -fsanitize=memory
+#CC = clang -std=c99 -fsanitize=undefined
+#CC = clang -std=c99 -fprofile-instr-generate -fcoverage-mapping
+
+CFLAGS= -I src -pedantic -Wall -Wextra -O1 -march=native
 
 .PHONY: all clean directories
 # disable implicit rules
@@ -62,10 +69,10 @@ sodium: tests/sodium.c bin/rename_monocypher.o bin/rename_sha512.o
 	$(CC) $(CFLAGS) -o $@ $^ $(C_SODIUM_FLAGS) $(LD_SODIUM_FLAGS)
 
 # Speed benchmark
-speed: tests/speed.c bin/rename_monocypher.o bin/rename_sha512.o tweetnacl.o
+speed: tests/speed.c bin/rename_monocypher.o bin/rename_sha512.o bin/tweetnacl.o
 	$(CC) $(CFLAGS) -o $@ $^ $(C_SODIUM_FLAGS) $(LD_SODIUM_FLAGS)
 
-tweetnacl.o: tests/tweetnacl/tweetnacl.c tests/tweetnacl/tweetnacl.h
+bin/tweetnacl.o: tests/tweetnacl/tweetnacl.c tests/tweetnacl/tweetnacl.h
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 # Test edDSA/blake2b by comparing with the donna implementation

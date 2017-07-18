@@ -3,6 +3,8 @@
 *.o
 *.gch
 *.sav
+*.profraw
+*.profdata
 bin/*
 frama-c/*
 properties
