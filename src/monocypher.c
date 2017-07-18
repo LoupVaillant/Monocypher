@@ -1204,8 +1204,8 @@ sv ge_add(ge *s, const ge *p, const ge *q)
 sv ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
 {
     // sqrt(-486664)
-    fe K = { 54885894, 25242303, 55597453,  9067496, 51808079,
-             33312638, 25456129, 14121551, 54921728,  3972023 };
+    static const fe K = { 54885894, 25242303, 55597453,  9067496, 51808079,
+                          33312638, 25456129, 14121551, 54921728,  3972023 };
 
     // convert q to montgomery format
     fe x1, y1, z1, x2, z2, x3, z3, t1, t2, t3, t4;
