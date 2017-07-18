@@ -290,7 +290,7 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
             poly_clear_c(ctx);
         }
         // feed the input buffer
-        ctx->c[ctx->c_index / 4] |= msg[i] << ((ctx->c_index % 4) * 8);
+        ctx->c[ctx->c_index / 4] |= (u32)msg[i] << ((ctx->c_index % 4) * 8);
         ctx->c_index++;
     }
 }
@@ -302,7 +302,7 @@ void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
         // move the final 1 according to remaining input length
         // (We may add less than 2^130 to the last input block)
         ctx->c[4] = 0;
-        ctx->c[ctx->c_index / 4] |= 1 << ((ctx->c_index % 4) * 8);
+        ctx->c[ctx->c_index / 4] |= (u32)1 << ((ctx->c_index % 4) * 8);
         // one last hash update
         poly_block(ctx);
     }
