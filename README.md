@@ -37,13 +37,16 @@ To run only the self contained tests, run
     $ ./properties
 
 To run only the edDSA fuzz tests (compares Monocypher with
-ed25519-donna), run
+[ed25519-donna][donna]), run
 
     $ make donna
     $ ./donna
 
 *Do not* use Monocypher without running the self contained tests at
  least once.
+
+[donna]: https://github.com/floodyberry/ed25519-donna
+
 
 ### More serious testing
 
@@ -110,7 +113,5 @@ the default Blake2b, do as the test suite does:
 
 Note that even though the default hash (Blake2b) is not "standard",
 you can still upgrade to faster implementations if you really need to.
-The [Donna implementations of ed25519][donna] for instance can use a
-custom hash —one test does just that.
-
-[donna]: https://github.com/floodyberry/ed25519-donna
+The Donna implementations of ed25519 for instance can use a custom
+hash —one test does just that.
