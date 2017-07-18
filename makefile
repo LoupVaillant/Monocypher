@@ -18,7 +18,7 @@ CC=gcc -std=gnu99 # speed tests don't work with -std=cxx, they need the POSIX ex
 #CC = clang -std=c99 -fsanitize=undefined
 #CC = clang -std=c99 -fprofile-instr-generate -fcoverage-mapping
 
-CFLAGS= -I src -pedantic -Wall -Wextra -O1 -march=native
+CFLAGS= -I src -pedantic -Wall -Wextra -O3 -march=native
 
 .PHONY: all clean directories
 # disable implicit rules
