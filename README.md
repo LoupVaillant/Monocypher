@@ -1,11 +1,20 @@
-Current status
---------------
+Monocypher is an easy to use, easy to deploy, auditable crypto library
+inspired by [libsodium][] and [TweetNaCl][], written in portable C.
 
-0.7.  Interfaces are stable.  Needs a few more consistency tests.
+It means to eat libsodium's lunch.
 
-Note: the authenticated encryption API changed slightly since 0.6, to
-improve consistency.
+[Official site.](http://loup-vaillant.fr/projects/monocypher/)
 
+[libsodium]: http://libsodium.org
+[TweetNaCl]: http://tweetnacl.cr.yp.to/
+
+Installation
+------------
+
+just copy `src/monocypher.h` and `src/monocypher.c` into your project.
+
+They compile as C99, C11, C++98, C++11, C++14, and C++17. (Tested with
+gcc 5.4.0 and clang 2.8.0 on GNU/Linux.)
 
 Test suite
 ----------
@@ -20,7 +29,7 @@ before you run them.
 
 To run only the self contained tests, run
 
-    $ make test
+    $ make vectors properties
     $ ./vectors
     $ ./properties
 
@@ -30,17 +39,43 @@ ed25519-donna), run
     $ make donna
     $ ./donna
 
-*Do not* use Monocypher without having run the self contained tests at
-least once.
+*Do not* use Monocypher without running the self contained tests at
+ least once.
 
-To analyse the code with frama-c, run
+### More serious testing
 
-    $ make frama-c
+The makefile may be modified to activate sanitising.  Just run the
+previous tests under the various sanitisers.
+
+You can also use Valgrind:
+
+    $ valgrind ./vectors
+    $ valgrind ./properties
+    $ valgrind ./donna
+    $ valgrind ./sodium
+
+### Serious auditing
+
+The code may be analysed more formally with [Frama-c][] and the
+[TIS interpreter][TIS].  To analyse the code with Frama-c, run:
+
+    $ make formal-analysis
     $ ./frama-c.sh
 
-This will have frama-c parse, and analyse the code, then launch a GUI.
-You must have frama-c installed.  See frama-c.sh for the recommended
-settings.
+This will have Frama-c parse, and analyse the code, then launch a GUI.
+You must have Frama-c installed.  See `frama-c.sh` for the recommended
+settings.  To run the code under the TIS interpreter, run
+
+    $ make formal-analysis
+    $ cd formal-analysis
+    $ tis-interpreter.sh *.c
+
+(Note: `tis-interpreter.sh` is part of TIS.  If it is not in your
+path, adjust the command accordingly.)
+
+[Frama-c]:http://frama-c.com/
+[TIS]: http://trust-in-soft.com/tis-interpreter/
+
 
 Speed benchmark
 ---------------
@@ -49,18 +84,13 @@ Speed benchmark
     $ ./speed
 
 It should tell you how well Monocypher fares against libsodium.
-Results may vary between platforms and libsodium implementations.
-Requires the POSIX `clock_gettime()` function, which is generally
-disabled when using -std=C99 for strict C compliance. (See the
-makefile to modify it.)
+Results may vary between platforms.  Requires the POSIX
+`clock_gettime()` function, which is generally disabled when using
+-std=C99 for strict C compliance. (See the makefile to modify it.)
 
-Integration to your project
----------------------------
-
-Just include src/monocypher.c and src/monocypher.h in your project.
-
-They compile as C99, C11, C++98, C++11, C++14, and C++17. (Tested with
-gcc 5.4.0 and clang 2.8.0 on GNU/Linux.)
+To make sure the benchmark is fair, compile libsodium with suitable
+optimisation levels.  (My first benchmarks made libsodium look really
+bad with Argon2i).
 
 
 Customisation
@@ -77,5 +107,7 @@ the default Blake2b, do as the test suite does:
 
 Note that even though the default hash (Blake2b) is not "standard",
 you can still upgrade to faster implementations if you really need to.
-The Donna implementations of ed25519 for instance can use a custom
-hash —one of the tests does just that.
+The [Donna implementations of ed25519][donna] for instance can use a
+custom hash —one test does just that.
+
+[donna]: https://github.com/floodyberry/ed25519-donna
