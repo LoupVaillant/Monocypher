@@ -27,7 +27,7 @@ CFLAGS= -I src -pedantic -Wall -Wextra -O3 -march=native
 all: vectors properties sodium donna
 
 clean:
-	rm -rf bin frama-c
+	rm -rf bin formal-analysis
 	rm -f src/*.gch src/rename_*
 	rm -f vectors properties sodium donna speed
 
@@ -114,10 +114,13 @@ rename_%.h: %.h
 	sed 's/monocypher.h/rename_monocypher.h/' <$@1 >$@2
 	sed 's/sha512.h/rename_sha512.h/'         <$@2 >$@
 
-frama-c: $(GEN_HEADERS)                    \
+formal-analysis: $(GEN_HEADERS)                    \
          src/monocypher.c src/monocypher.h \
          src/sha512.c src/sha512.h         \
          tests/vectors.c
-	@echo copy sources to frama-c directory for analysis
-	@mkdir -p frama-c
-	@cp $^ frama-c
+	@echo "copy sources to formal-analysis directory for analysis (frama-c or TIS)"
+	@mkdir -p formal-analysis
+	@cp $^ formal-analysis
+	@echo "add #define ED25519_SHA512 on top of monocypher.c (for ed25519)"
+	@echo "#define ED25519_SHA512" > formal-analysis/tmp
+	@cat formal-analysis/tmp src/monocypher.c > formal-analysis/monocypher.c

@@ -6,7 +6,7 @@
 *.profraw
 *.profdata
 bin/*
-frama-c/*
+formal-analysis/*
 properties
 vectors
 sodium
