@@ -1,3 +1,6 @@
+Monocypher
+----------
+
 Monocypher is an easy to use, easy to deploy, auditable crypto library
 inspired by [libsodium][] and [TweetNaCl][], written in portable C.
 
