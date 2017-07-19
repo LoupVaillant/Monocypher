@@ -1,7 +1,6 @@
 #include "sha512.h"
 
 #define FOR(i, min, max) for (size_t i = min; i < max; i++)
-#define sv static void
 typedef uint8_t u8;
 typedef uint64_t u64;
 
@@ -36,7 +35,7 @@ static const u64 K[80] = {
     0x4cc5d4becb3e42b6,0x597f299cfc657e2a,0x5fcb6fab3ad6faec,0x6c44198c4a475817
 };
 
-sv sha512_compress(crypto_sha512_ctx *ctx)
+static void sha512_compress(crypto_sha512_ctx *ctx)
 {
     u64 w[80];
     FOR(i,  0, 16) { w[i] = ctx->m[i]; }
@@ -59,19 +58,19 @@ sv sha512_compress(crypto_sha512_ctx *ctx)
     ctx->h[6] += g;    ctx->h[7] += h;
 }
 
-sv set_input(crypto_sha512_ctx *ctx, u8 input)
+static void set_input(crypto_sha512_ctx *ctx, u8 input)
 {
     ctx->m[ctx->m_index / 8] |= (u64)input << (8 * (7 - (ctx->m_index % 8)));
 }
 
-sv reset_input(crypto_sha512_ctx *ctx)
+static void reset_input(crypto_sha512_ctx *ctx)
 {
     FOR(i, 0, 16) { ctx->m[i] = 0; }
     ctx->m_index = 0;
 }
 
 // increment a 128-bit "word".
-sv incr(u64 x[2], u64 y)
+static void incr(u64 x[2], u64 y)
 {
     x[1] += y;                 // increment the low word
     if (x[1] < y) { x[0]++; }  // handle overflow

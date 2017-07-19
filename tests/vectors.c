@@ -18,7 +18,6 @@
 #include "x_chacha20.h"
 
 #define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
-#define sv static void
 typedef  int8_t   i8;
 typedef uint8_t   u8;
 typedef uint32_t u32;
@@ -87,7 +86,7 @@ static int test(void (*f)(const vector[], vector*),
 ////////////////////////
 /// The tests proper ///
 ////////////////////////
-sv chacha20(const vector in[], vector *out)
+static void chacha20(const vector in[], vector *out)
 {
     const vector *key   = in;
     const vector *nonce = in + 1;
@@ -96,14 +95,14 @@ sv chacha20(const vector in[], vector *out)
     crypto_chacha20_stream(&ctx, out->buf, out->size);
 }
 
-sv h_chacha20(const vector in[], vector *out)
+static void h_chacha20(const vector in[], vector *out)
 {
     const vector *key   = in;
     const vector *input = in + 1;
     crypto_chacha20_H(out->buf, key->buf, input->buf);
 }
 
-sv x_chacha20(const vector in[], vector *out)
+static void x_chacha20(const vector in[], vector *out)
 {
     const vector *key   = in;
     const vector *nonce = in + 1;
@@ -112,7 +111,7 @@ sv x_chacha20(const vector in[], vector *out)
     crypto_chacha20_stream(&ctx, out->buf, out->size);
 }
 
-sv blake2b(const vector in[], vector *out)
+static void blake2b(const vector in[], vector *out)
 {
     const vector *msg = in;
     const vector *key = in + 1;
@@ -121,19 +120,19 @@ sv blake2b(const vector in[], vector *out)
                            msg->buf, msg->size);
 }
 
-sv blake2b_easy(const vector in[], vector *out)
+static void blake2b_easy(const vector in[], vector *out)
 {
     crypto_blake2b(out->buf, in->buf, in->size);
 }
 
-sv poly1305(const vector in[], vector *out)
+static void poly1305(const vector in[], vector *out)
 {
     const vector *key = in;
     const vector *msg = in + 1;
     crypto_poly1305_auth(out->buf, msg->buf, msg->size, key->buf);
 }
 
-sv argon2i(const vector in[], vector *out)
+static void argon2i(const vector in[], vector *out)
 {
     u32 nb_blocks = 0;
     u32 nb_iterations = 0;
@@ -153,7 +152,7 @@ sv argon2i(const vector in[], vector *out)
     free(work_area);
 }
 
-sv x25519(const vector in[], vector *out)
+static void x25519(const vector in[], vector *out)
 {
     const vector *scalar = in;
     const vector *point  = in + 1;
@@ -163,7 +162,7 @@ sv x25519(const vector in[], vector *out)
     if (!not_zero && !report)  printf("FAILURE: x25519 failed to report zero\n");
 }
 
-sv iterate_x25519(u8 k[32], u8 u[32])
+static void iterate_x25519(u8 k[32], u8 u[32])
 {
     u8 tmp[32];
     crypto_x25519(tmp , k, u);
@@ -203,17 +202,17 @@ static int test_x25519()
     return status;
 }
 
-sv v_sha512(const vector in[], vector *out)
+static void v_sha512(const vector in[], vector *out)
 {
     crypto_sha512(out->buf, in->buf, in->size);
 }
 
-sv ed25519_key(const vector in[], vector *out)
+static void ed25519_key(const vector in[], vector *out)
 {
     crypto_sign_public_key(out->buf, in->buf);
 }
 
-sv ed25519_sign(const vector in[], vector *out)
+static void ed25519_sign(const vector in[], vector *out)
 {
     const vector *secret_k = in;
     const vector *public_k = in + 1;
@@ -246,7 +245,7 @@ sv ed25519_sign(const vector in[], vector *out)
     }
 }
 
-sv key_exchange(const vector in[], vector *out)
+static void key_exchange(const vector in[], vector *out)
 {
     const vector *secret_key = in;
     const vector *public_key = in + 1;

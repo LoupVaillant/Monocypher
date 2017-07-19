@@ -22,7 +22,6 @@
 #define HASH_FINAL  COMBINE2(HASH, _final)
 
 #define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
-#define sv static void
 typedef uint8_t   u8;
 typedef uint32_t u32;
 typedef  int32_t i32;
@@ -49,7 +48,7 @@ static u64 load64_le(const u8 s[8])
         | ((u64)s[7] << 56);
 }
 
-sv store32_le(u8 output[4], u32 input)
+static void store32_le(u8 output[4], u32 input)
 {
     output[0] =  input        & 0xff;
     output[1] = (input >>  8) & 0xff;
@@ -57,7 +56,7 @@ sv store32_le(u8 output[4], u32 input)
     output[3] = (input >> 24) & 0xff;
 }
 
-sv store64_le(u8 output[8], u64 input)
+static void store64_le(u8 output[8], u64 input)
 {
     output[0] =  input        & 0xff;
     output[1] = (input >>  8) & 0xff;
@@ -95,7 +94,7 @@ int crypto_zerocmp(const u8 *p, size_t n)
     a += b;  d ^= a;  d = rotl32(d,  8);  \
     c += d;  b ^= c;  b = rotl32(b,  7)
 
-sv chacha20_rounds(u32 out[16], const u32 in[16])
+static void chacha20_rounds(u32 out[16], const u32 in[16])
 {
     // The temporary variables make Chacha20 10% faster.
     u32 t0  = in[ 0];  u32 t1  = in[ 1];  u32 t2  = in[ 2];  u32 t3  = in[ 3];
@@ -119,7 +118,7 @@ sv chacha20_rounds(u32 out[16], const u32 in[16])
     out[12] = t12;  out[13] = t13;  out[14] = t14;  out[15] = t15;
 }
 
-sv chacha20_init_key(crypto_chacha_ctx *ctx, const u8 key[32])
+static void chacha20_init_key(crypto_chacha_ctx *ctx, const u8 key[32])
 {
     // constant
     ctx->input[0] = load32_le((u8*)"expa");
@@ -219,7 +218,7 @@ void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
 //   ctx->r <=   0ffffffc_0ffffffc_0ffffffc_0fffffff
 // Postcondition:
 //   ctx->h <= 4_87ffffe4_8fffffe2_97ffffe0_9ffffffa
-sv poly_block(crypto_poly1305_ctx *ctx)
+static void poly_block(crypto_poly1305_ctx *ctx)
 {
     // s = h + c, without carry propagation
     const u64 s0 = ctx->h[0] + (u64)ctx->c[0]; // s0 <= 1_fffffffe
@@ -262,7 +261,7 @@ sv poly_block(crypto_poly1305_ctx *ctx)
 }
 
 // (re-)initializes the input counter and input buffer
-sv poly_clear_c(crypto_poly1305_ctx *ctx)
+static void poly_clear_c(crypto_poly1305_ctx *ctx)
 {
     FOR (i, 0, 4) { ctx->c[i] = 0; }
     ctx->c_index = 0;
@@ -345,7 +344,7 @@ static const u64 iv[8] = {
 };
 
 // increment the input offset
-sv incr(crypto_blake2b_ctx *ctx)
+static void incr(crypto_blake2b_ctx *ctx)
 {
     u64   *x = ctx->input_offset;
     size_t y = ctx->buffer_idx;
@@ -354,13 +353,13 @@ sv incr(crypto_blake2b_ctx *ctx)
 }
 
 // pad the buffer with zeroes
-sv pad(crypto_blake2b_ctx *ctx)
+static void pad(crypto_blake2b_ctx *ctx)
 {
     FOR (i, ctx->buffer_idx, 128) { ctx->buffer[i] = 0; }
     ctx->buffer_idx = 128; // mark the buffer as filled
 }
 
-sv compress(crypto_blake2b_ctx *ctx, int is_last_block)
+static void compress(crypto_blake2b_ctx *ctx, int is_last_block)
 {
     static const u8 sigma[12][16] = {
         {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 },
@@ -486,32 +485,32 @@ typedef struct { u64 a[128]; } block; // 1024 octets
 static u32 min(u32 a, u32 b) { return a <= b ? a : b; }
 
 // updates a blake2 hash with a 32 bit word, little endian.
-sv blake_update_32(crypto_blake2b_ctx *ctx, u32 input)
+static void blake_update_32(crypto_blake2b_ctx *ctx, u32 input)
 {
     u8 buf[4];
     store32_le(buf, input);
     crypto_blake2b_update(ctx, buf, 4);
 }
 
-sv load_block(block *b, const u8 bytes[1024])
+static void load_block(block *b, const u8 bytes[1024])
 {
     FOR (i, 0, 128) { b->a[i] = load64_le(bytes + i*8); }
 }
 
-sv store_block(u8 bytes[1024], const block *b)
+static void store_block(u8 bytes[1024], const block *b)
 {
     FOR (i, 0, 128) { store64_le(bytes + i*8, b->a[i]); }
 }
 
 // type of copy_block() and xor_block()
 typedef void (*copy_fun) (block*, const block*);
-sv copy_block(block *o, const block *in) { FOR (i, 0, 128) o->a[i]  = in->a[i]; }
-sv  xor_block(block *o, const block *in) { FOR (i, 0, 128) o->a[i] ^= in->a[i]; }
+static void copy_block(block *o,const block*in){FOR(i,0,128) o->a[i] = in->a[i];}
+static void  xor_block(block *o,const block*in){FOR(i,0,128) o->a[i]^= in->a[i];}
 
 // Hash with a virtually unlimited digest size.
 // Doesn't extract more entropy than the base hash function.
 // Mainly used for filling a whole kilobyte block with pseudo-random bytes.
-sv extended_hash(u8       *digest, u32 digest_size,
+static void extended_hash(u8       *digest, u32 digest_size,
                  const u8 *input , u32 input_size)
 {
     crypto_blake2b_ctx ctx;
@@ -554,7 +553,7 @@ sv extended_hash(u8       *digest, u32 digest_size,
     G(v2, v7,  v8, v13);  G(v3, v4,  v9, v14)
 
 // Core of the compression function G.  Computes Z from R in place.
-sv g_rounds(block *work_block)
+static void g_rounds(block *work_block)
 {
     // column rounds (work_block = Q)
     for (int i = 0; i < 128; i += 16) {
@@ -581,7 +580,7 @@ sv g_rounds(block *work_block)
 }
 
 // The compression function G (copy version for the first pass)
-sv g_copy(block *result, const block *x, const block *y)
+static void g_copy(block *result, const block *x, const block *y)
 {
     block tmp;
     copy_block(&tmp, x);     // tmp    = X
@@ -592,7 +591,7 @@ sv g_copy(block *result, const block *x, const block *y)
 }
 
 // The compression function G (xor version for subsequent passes)
-sv g_xor(block *result, const block *x, const block *y)
+static void g_xor(block *result, const block *x, const block *y)
 {
     block tmp;
     copy_block(&tmp, x);     // tmp    = X
@@ -605,7 +604,7 @@ sv g_xor(block *result, const block *x, const block *y)
 // unary version of the compression function.
 // The missing argument is implied zero.
 // Does the transformation in place.
-sv unary_g(block *work_block)
+static void unary_g(block *work_block)
 {
     // work_block == R
     block tmp;
@@ -621,7 +620,7 @@ typedef struct {
     u32 ctr; u32 offset;
 } gidx_ctx;
 
-sv gidx_refresh(gidx_ctx *ctx)
+static void gidx_refresh(gidx_ctx *ctx)
 {
     // seed the begining of the block...
     ctx->b.a[0] = ctx->pass_number;
@@ -639,9 +638,9 @@ sv gidx_refresh(gidx_ctx *ctx)
     unary_g(&(ctx->b));
 }
 
-sv gidx_init(gidx_ctx *ctx,
-             u32 pass_number, u32 slice_number,
-             u32 nb_blocks,   u32 nb_iterations)
+static void gidx_init(gidx_ctx *ctx,
+                      u32 pass_number, u32 slice_number,
+                      u32 nb_blocks,   u32 nb_iterations)
 {
     ctx->pass_number   = pass_number;
     ctx->slice_number  = slice_number;
@@ -790,14 +789,14 @@ void crypto_argon2i(u8       *tag,       u32 tag_size,
 // field element
 typedef i32 fe[10];
 
-sv fe_0   (fe h) {                         FOR (i, 0, 10) h[i] = 0;           }
-sv fe_1   (fe h) {              h[0] = 1;  FOR (i, 1, 10) h[i] = 0;           }
-sv fe_neg (fe h, const fe f)             { FOR (i, 0, 10) h[i] = -f[i];       }
-sv fe_add (fe h, const fe f, const fe g) { FOR (i, 0, 10) h[i] = f[i] + g[i]; }
-sv fe_sub (fe h, const fe f, const fe g) { FOR (i, 0, 10) h[i] = f[i] - g[i]; }
-sv fe_copy(fe h, const fe f            ) { FOR (i, 0, 10) h[i] = f[i];        }
+static void fe_0   (fe h) {                     FOR(i,0,10) h[i] = 0;          }
+static void fe_1   (fe h) {           h[0] = 1; FOR(i,1,10) h[i] = 0;          }
+static void fe_neg (fe h,const fe f)           {FOR(i,0,10) h[i] = -f[i];      }
+static void fe_add (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] + g[i];}
+static void fe_sub (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] - g[i];}
+static void fe_copy(fe h,const fe f           ){FOR(i,0,10) h[i] = f[i];       }
 
-sv fe_cswap(fe f, fe g, int b)
+static void fe_cswap(fe f, fe g, int b)
 {
     FOR (i, 0, 10) {
         i32 x = (f[i] ^ g[i]) & -b;
@@ -813,7 +812,7 @@ static u32 load24_le(const u8 s[3])
         | ((u32)s[2] << 16);
 }
 
-sv fe_carry(fe h, i64 t[10])
+static void fe_carry(fe h, i64 t[10])
 {
     i64 c0, c1, c2, c3, c4, c5, c6, c7, c8, c9;
     c9 = (t[9] + (i64) (1<<24)) >> 25; t[0] += c9 * 19; t[9] -= c9 * (1 << 25);
@@ -829,7 +828,7 @@ sv fe_carry(fe h, i64 t[10])
     FOR (i, 0, 10) { h[i] = t[i]; }
 }
 
-sv fe_frombytes(fe h, const u8 s[32])
+static void fe_frombytes(fe h, const u8 s[32])
 {
     i64 t[10]; // intermediate result (may overflow 32 bits)
     t[0] =  load32_le(s);
@@ -845,16 +844,16 @@ sv fe_frombytes(fe h, const u8 s[32])
     fe_carry(h, t);
 }
 
-sv fe_mul_small(fe h, const fe f, i32 g)
+static void fe_mul_small(fe h, const fe f, i32 g)
 {
     i64 t[10];
     FOR(i, 0, 10) { t[i] = f[i] * (i64) g; }
     fe_carry(h, t);
 }
-sv fe_mul121666(fe h, const fe f) { fe_mul_small(h, f, 121666); }
-sv fe_mul973324(fe h, const fe f) { fe_mul_small(h, f, 973324); }
+static void fe_mul121666(fe h, const fe f) { fe_mul_small(h, f, 121666); }
+static void fe_mul973324(fe h, const fe f) { fe_mul_small(h, f, 973324); }
 
-sv fe_mul(fe h, const fe f, const fe g)
+static void fe_mul(fe h, const fe f, const fe g)
 {
     // Everything is unrolled and put in temporary variables.
     // We could roll the loop, but that would make curve25519 twice as slow.
@@ -909,7 +908,7 @@ sv fe_mul(fe h, const fe f, const fe g)
 }
 
 // we could use fe_mul() for this, but this is significantly faster
-sv fe_sq(fe h, const fe f)
+static void fe_sq(fe h, const fe f)
 {
     i32 f0 = f[0]; i32 f1 = f[1]; i32 f2 = f[2]; i32 f3 = f[3]; i32 f4 = f[4];
     i32 f5 = f[5]; i32 f6 = f[6]; i32 f7 = f[7]; i32 f8 = f[8]; i32 f9 = f[9];
@@ -943,7 +942,7 @@ sv fe_sq(fe h, const fe f)
 }
 
 // This could be simplified, but it would be slower
-sv fe_invert(fe out, const fe z)
+static void fe_invert(fe out, const fe z)
 {
     fe t0, t1, t2, t3;
     fe_sq(t0, z );
@@ -980,7 +979,7 @@ void fe_pow22523(fe out, const fe z)
     fe_sq(t0, t0);  FOR (i, 1,   2) fe_sq(t0, t0);  fe_mul(out, t0, z);
 }
 
-sv fe_tobytes(u8 s[32], const fe h)
+static void fe_tobytes(u8 s[32], const fe h)
 {
     i32 t[10];
     FOR (i, 0, 10) { t[i] = h[i]; }
@@ -1032,14 +1031,14 @@ static int fe_isnonzero(const fe f)
 /// X-25519 /// Taken from Supercop's ref10 implementation.
 ///////////////
 
-sv trim_scalar(u8 s[32])
+static void trim_scalar(u8 s[32])
 {
     s[ 0] &= 248;
     s[31] &= 127;
     s[31] |= 64;
 }
 
-sv x25519_ladder(const fe x1, fe x2, fe z2, fe x3, fe z3, const u8 scalar[32])
+static void x25519_ladder(const fe x1, fe x2, fe z2, fe x3, fe z3, const u8 scalar[32])
 {
     // Montgomery ladder
     // In projective coordinates, to avoid divisons: x = X / Z
@@ -1111,7 +1110,7 @@ void crypto_x25519_public_key(u8       public_key[32],
 // x = X/Z, y = Y/Z, T = XY/Z
 typedef struct { fe X; fe Y; fe Z; fe T; } ge;
 
-sv ge_from_xy(ge *p, const fe x, const fe y)
+static void ge_from_xy(ge *p, const fe x, const fe y)
 {
     FOR (i, 0, 10) {
         p->X[i] = x[i];
@@ -1121,7 +1120,7 @@ sv ge_from_xy(ge *p, const fe x, const fe y)
     fe_mul(p->T, x, y);
 }
 
-sv ge_tobytes(u8 s[32], const ge *h)
+static void ge_tobytes(u8 s[32], const ge *h)
 {
     fe recip, x, y;
     fe_invert(recip, h->Z);
@@ -1182,7 +1181,7 @@ static const fe D2 = { // - 2 * 121665 / 121666
     0x0f3d130, 0x3407977, 0x19ce331, 0x1c56dff, 0x0901b67
 };
 
-sv ge_add(ge *s, const ge *p, const ge *q)
+static void ge_add(ge *s, const ge *p, const ge *q)
 {
     fe a, b, c, d, e, f, g, h;
     //  A = (Y1-X1) * (Y2-X2)
@@ -1201,7 +1200,7 @@ sv ge_add(ge *s, const ge *p, const ge *q)
     fe_mul(s->T, e, h);  //  T3 = E * H
 }
 
-sv ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
+static void ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
 {
     // sqrt(-486664)
     static const fe K = { 54885894, 25242303, 55597453,  9067496, 51808079,
@@ -1249,7 +1248,7 @@ sv ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
     fe_mul(p->T, x1, t1);
 }
 
-sv ge_scalarmult_base(ge *p, const u8 scalar[32])
+static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
     // Calls the general ge_scalarmult() with the base point.
     // Other implementations use a precomputed table, but it
@@ -1265,7 +1264,7 @@ sv ge_scalarmult_base(ge *p, const u8 scalar[32])
     ge_scalarmult(p, &base_point, scalar);
 }
 
-sv modL(u8 *r, i64 x[64])
+static void modL(u8 *r, i64 x[64])
 {
     static const  u64 L[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
                                 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
@@ -1294,7 +1293,7 @@ sv modL(u8 *r, i64 x[64])
     }
 }
 
-sv reduce(u8 r[64])
+static void reduce(u8 r[64])
 {
     i64 x[64];
     FOR(i, 0, 64) x[i] = (u64) r[i];
@@ -1303,7 +1302,7 @@ sv reduce(u8 r[64])
 }
 
 // hashes R || A || M, reduces it modulo L
-sv hash_ram(u8 k[64], const u8 R[32], const u8 A[32], const u8 *M, size_t M_size)
+static void hash_ram(u8 k[64], const u8 R[32], const u8 A[32], const u8 *M, size_t M_size)
 {
     HASH_CTX ctx;
     HASH_INIT  (&ctx);
@@ -1404,7 +1403,7 @@ int crypto_key_exchange(u8       shared_key[32],
 ////////////////////////////////
 /// Authenticated encryption ///
 ////////////////////////////////
-sv authenticate2(u8 mac[16]  , const u8 auth_key[32],
+static void authenticate2(u8 mac[16]  , const u8 auth_key[32],
                  const u8 *t1, size_t   size1,
                  const u8 *t2, size_t   size2)
 {

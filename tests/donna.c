@@ -5,7 +5,6 @@
 #include <ed25519.h>
 
 #define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
-#define sv static void
 typedef  int8_t   i8;
 typedef uint8_t   u8;
 typedef uint32_t u32;
