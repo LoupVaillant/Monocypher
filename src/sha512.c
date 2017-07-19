@@ -4,6 +4,30 @@
 typedef uint8_t u8;
 typedef uint64_t u64;
 
+static u64 load64_be(const u8 s[8])
+{
+    return((u64)s[0] << 56)
+        | ((u64)s[1] << 48)
+        | ((u64)s[2] << 40)
+        | ((u64)s[3] << 32)
+        | ((u64)s[4] << 24)
+        | ((u64)s[5] << 16)
+        | ((u64)s[6] <<  8)
+        |  (u64)s[7];
+}
+
+static void store64_be(u8 output[8], u64 input)
+{
+    output[0] = (input >> 56) & 0xff;
+    output[1] = (input >> 48) & 0xff;
+    output[2] = (input >> 40) & 0xff;
+    output[3] = (input >> 32) & 0xff;
+    output[4] = (input >> 24) & 0xff;
+    output[5] = (input >> 16) & 0xff;
+    output[6] = (input >>  8) & 0xff;
+    output[7] =  input        & 0xff;
+}
+
 static u64 rot(u64 x, int c       ) { return (x >> c) | (x << (64 - c));   }
 static u64 ch (u64 x, u64 y, u64 z) { return (x & y) ^ (~x & z);           }
 static u64 maj(u64 x, u64 y, u64 z) { return (x & y) ^ ( x & z) ^ (y & z); }
@@ -76,6 +100,15 @@ static void incr(u64 x[2], u64 y)
     if (x[1] < y) { x[0]++; }  // handle overflow
 }
 
+static void end_block(crypto_sha512_ctx *ctx)
+{
+    if (ctx->m_index == 128) {
+        incr(ctx->m_size, 1024); // size is in bits
+        sha512_compress(ctx);
+        reset_input(ctx);
+    }
+}
+
 void crypto_sha512_init(crypto_sha512_ctx *ctx)
 {
     ctx->h[0] = 0x6a09e667f3bcc908;
@@ -93,17 +126,30 @@ void crypto_sha512_init(crypto_sha512_ctx *ctx)
 
 void crypto_sha512_update(crypto_sha512_ctx *ctx, const u8 *in, size_t inlen)
 {
-    FOR (i, 0, inlen) {
-        // The buffer is assumed not full.  We add one input byte.
-        set_input(ctx, in[i]);
+    // Align ourselves with 8 byte words
+    while (ctx->m_index % 8 != 0 && inlen > 0) {
+        set_input(ctx, *in);
         ctx->m_index++;
+        in++;
+        inlen--;
+    }
+    end_block(ctx);
 
-        // If we just filled the buffer, we compress it.
-        if (ctx->m_index == 128) {
-            incr(ctx->m_size, 1024); // size is in bits
-            sha512_compress(ctx);
-            reset_input(ctx);
-        }
+    // Main processing by 8 byte chunks (much faster)
+    size_t nb_words = inlen / 8;
+    size_t reminder = inlen % 8;
+    FOR (i, 0, nb_words) {
+        ctx->m[ctx->m_index / 8] = load64_be(in);
+        in           += 8;
+        ctx->m_index += 8;
+        end_block(ctx);
+    }
+
+    // Remaining processing byte by byte
+    FOR (i, 0, reminder) {
+        set_input(ctx, *in);
+        in++;
+        ctx->m_index++;
     }
 }
 
@@ -124,9 +170,7 @@ void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 out[64])
 
     // copy hash to output (big endian)
     FOR (i, 0, 8) {
-        FOR (j, 0, 8) {
-            out[8*i + 7 - j] = (ctx->h[i] >> (8*j)) & 255;
-        }
+        store64_be(out + i*8, ctx->h[i]);
     }
 }
 
