@@ -197,6 +197,43 @@ static int blake2b()
     return status;
 }
 
+// Tests that hashing bit by bit yields the same hash than hashing all
+// at once. (for sha512)
+static int sha512()
+{
+    static const size_t block_size = 128;            // Blake2b block size
+    static const size_t input_size = block_size * 4; // total input size
+    static const size_t c_max_size = block_size * 2; // maximum chunk size
+    int status = 0;
+    FOR (i, 0, 1000) {
+        size_t offset = 0;
+        // outputs
+        u8 hash_chunk[64];
+        u8 hash_whole[64];
+        // inputs
+        u8 input[input_size];  p_random(input, input_size);
+
+        // Authenticate bit by bit
+        crypto_sha512_ctx ctx;
+        crypto_sha512_init(&ctx);
+        while (1) {
+            size_t chunk_size = rand64() % c_max_size;
+            if (offset + chunk_size > input_size) { break; }
+            crypto_sha512_update(&ctx, input + offset, chunk_size);
+            offset += chunk_size;
+        }
+        crypto_sha512_final(&ctx, hash_chunk);
+
+        // Authenticate all at once
+        crypto_sha512(hash_whole, input, offset);
+
+        // Compare the results (must be the same)
+        status |= crypto_memcmp(hash_chunk, hash_whole, 64);
+    }
+    printf("%s: Sha512\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 static int aead()
 {
     int status = 0;
@@ -240,6 +277,7 @@ int main(void)
     status |= chacha20_set_ctr();
     status |= poly1305();
     status |= blake2b();
+    status |= sha512();
     status |= aead();
     return status;
 }

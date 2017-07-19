@@ -32,7 +32,7 @@ clean:
 	rm -f vectors properties sodium donna speed
 
 TEST_DEPS=tests/vectors.c bin/monocypher.o bin/sha512.o
-PROP_DEPS=tests/properties.c bin/classic_monocypher.o
+PROP_DEPS=tests/properties.c bin/classic_monocypher.o bin/sha512.o
 GEN_HEADERS=bin/argon2i.h      \
             bin/blake2b.h      \
             bin/blake2b_easy.h \
