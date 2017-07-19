@@ -50,23 +50,31 @@ timespec min(timespec a, timespec b)
     return b;
 }
 
-int speed(timespec ref, timespec t)
+typedef struct {
+    int time;
+    int ratio;
+} speed_t;
+
+speed_t speed(timespec ref, timespec t)
 {
     u64 ref_u = ref.tv_sec * 1000000000 + ref.tv_nsec;
     u64 t_u   = t  .tv_sec * 1000000000 + t  .tv_nsec;
-    return (100 * ref_u) / t_u; // assuming t_u is never zero
+    speed_t s;
+    s.ratio = (100 * ref_u) / t_u; // assuming t_u is never zero
+    s.time  = t_u / 1000;
+    return s;
 }
 
-static void print(const char *name, int result, const char *lib_name)
+static void print(const char *name, speed_t result, const char *lib_name)
 {
-    printf("%s: ", name);
-    if (result == 100) {
+    printf("%s: %4d micro-secs, ", name, result.time);
+    if (result.ratio == 100) {
         printf("As fast as %s\n", lib_name);
-    } else if (result <  100) {
-        printf("%3d%% slower than %s\n", 100 - result, lib_name);
+    } else if (result.ratio <  100) {
+        printf("%3d%% slower than %s\n", 100 - result.ratio, lib_name);
     }
     else {
-        printf("%3d%% faster than %s\n", result - 100, lib_name);
+        printf("%3d%% faster than %s\n", result.ratio - 100, lib_name);
     }
 }
 
@@ -93,7 +101,7 @@ static void print(const char *name, int result, const char *lib_name)
     return speed(libsodium, monocypher)
 
 
-static int chacha20(void)
+static speed_t chacha20(void)
 {
     static u8  in    [SIZE];  p_random(in   , SIZE);
     static u8  key   [  32];  p_random(key  ,   32);
@@ -113,7 +121,7 @@ static int chacha20(void)
     TIMING_RESULT("Chacha20", SIZE);
 }
 
-static int poly1305(void)
+static speed_t poly1305(void)
 {
     static u8  in    [SIZE];  p_random(in   , SIZE);
     static u8  key   [  32];  p_random(key  ,   32);
@@ -132,7 +140,7 @@ static int poly1305(void)
     TIMING_RESULT("Poly1305", 16);
 }
 
-static int blake2b(void)
+static speed_t blake2b(void)
 {
     static u8 in    [SIZE];  p_random(in , SIZE);
     static u8 key   [  32];  p_random(key,   32);
@@ -151,7 +159,7 @@ static int blake2b(void)
     TIMING_RESULT("Blake2b", 64);
 }
 
-static int argon2i(void)
+static speed_t argon2i(void)
 {
     size_t    nb_blocks = SIZE / 1024;
     static u8 work_area[SIZE];
@@ -177,7 +185,7 @@ static int argon2i(void)
     TIMING_RESULT("Argon2i", 32);
 }
 
-static int x25519(void)
+static speed_t x25519(void)
 {
     u8 mono_in  [32] = {9};
     u8 mono     [32] = {9};
@@ -248,7 +256,7 @@ static void ed25519(void)
     printf(rename_memcmp(mono, sodium, result_size) != 0 ? "! " : "  "); \
     return speed(libsodium, monocypher)
 
-static int t_chacha20(void)
+static speed_t t_chacha20(void)
 {
     static u8  in    [SIZE];  p_random(in   , SIZE);
     static u8  key   [  32];  p_random(key  ,   32);
@@ -270,7 +278,7 @@ static int t_chacha20(void)
     T_TIMING_RESULT("Chacha20", SIZE);
 }
 
-static int t_poly1305(void)
+static speed_t t_poly1305(void)
 {
     static u8  in    [SIZE];  p_random(in   , SIZE);
     static u8  key   [  32];  p_random(key  ,   32);
@@ -289,7 +297,7 @@ static int t_poly1305(void)
     T_TIMING_RESULT("Poly1305", 16);
 }
 
-static int t_blake2b(void)
+static speed_t t_blake2b(void)
 {
     static u8 in    [SIZE];  p_random(in , SIZE);
     static u8 key   [  32];  p_random(key,   32);
@@ -309,7 +317,7 @@ static int t_blake2b(void)
     T_TIMING_RESULT("Blake2b", 64);
 }
 
-static int t_sha512(void)
+static speed_t t_sha512(void)
 {
     static u8 in    [SIZE];  p_random(in , SIZE);
     static u8 key   [  32];  p_random(key,   32);
@@ -330,7 +338,7 @@ static int t_sha512(void)
 }
 
 
-static int t_x25519(void)
+static speed_t t_x25519(void)
 {
     u8 mono_in  [32] = {9};
     u8 mono     [32] = {9};
