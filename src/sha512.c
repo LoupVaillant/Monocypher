@@ -136,8 +136,8 @@ void crypto_sha512_update(crypto_sha512_ctx *ctx, const u8 *in, size_t inlen)
     end_block(ctx);
 
     // Main processing by 8 byte chunks (much faster)
-    size_t nb_words = inlen / 8;
-    size_t reminder = inlen % 8;
+    size_t nb_words  = inlen / 8;
+    size_t remainder = inlen % 8;
     FOR (i, 0, nb_words) {
         ctx->m[ctx->m_index / 8] = load64_be(in);
         in           += 8;
@@ -146,7 +146,7 @@ void crypto_sha512_update(crypto_sha512_ctx *ctx, const u8 *in, size_t inlen)
     }
 
     // Remaining processing byte by byte
-    FOR (i, 0, reminder) {
+    FOR (i, 0, remainder) {
         set_input(ctx, *in);
         in++;
         ctx->m_index++;
