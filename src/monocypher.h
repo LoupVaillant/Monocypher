@@ -71,8 +71,8 @@ void crypto_poly1305_auth(uint8_t        mac[16],
 typedef struct {
     uint64_t hash[8];
     uint64_t input_offset[2];
-    uint8_t  buffer[128];
-    size_t   buffer_idx;
+    uint64_t buf[16];
+    size_t   buf_idx;
     size_t   hash_size;
 } crypto_blake2b_ctx;
 
