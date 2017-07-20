@@ -71,10 +71,10 @@ static void print(const char *name, speed_t result, const char *lib_name)
     if (result.ratio == 100) {
         printf("As fast as %s\n", lib_name);
     } else if (result.ratio <  100) {
-        printf("%3d%% slower than %s\n", 100 - result.ratio, lib_name);
+        printf("%4d%% slower than %s\n", 100 - result.ratio, lib_name);
     }
     else {
-        printf("%3d%% faster than %s\n", result.ratio - 100, lib_name);
+        printf("%4d%% faster than %s\n", result.ratio - 100, lib_name);
     }
 }
 
