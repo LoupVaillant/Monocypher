@@ -218,8 +218,7 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
             plain_text += 4;
         }
         store32_le(cipher_text, ctx->pool[ctx->pool_idx / 4] ^ txt);
-        cipher_text     += 4;
-        message_size    -= 4;
+        cipher_text   += 4;
         ctx->pool_idx += 4;
     }
     // Remaining input, byte by byte
@@ -295,7 +294,20 @@ static void poly_block(crypto_poly1305_ctx *ctx)
 static void poly_clear_c(crypto_poly1305_ctx *ctx)
 {
     FOR (i, 0, 4) { ctx->c[i] = 0; }
-    ctx->c_index = 0;
+    ctx->c_idx = 0;
+}
+
+static void poly_end_block(crypto_poly1305_ctx *ctx)
+{
+    if (ctx->c_idx == 16) {
+        poly_block(ctx);
+        poly_clear_c(ctx);
+    }
+}
+
+static void poly_set_input(crypto_poly1305_ctx *ctx, u8 input)
+{
+    ctx->c[ctx->c_idx / 4] |= (u32)input << ((ctx->c_idx % 4) * 8);
 }
 
 void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
@@ -314,25 +326,42 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const u8 *msg, size_t msg_size)
 {
-    FOR (i, 0, msg_size) {
-        if (ctx->c_index == 16) {
-            poly_block(ctx);
-            poly_clear_c(ctx);
-        }
-        // feed the input buffer
-        ctx->c[ctx->c_index / 4] |= (u32)msg[i] << ((ctx->c_index % 4) * 8);
-        ctx->c_index++;
+    // Align ourselves with 4 byte words
+    while (ctx->c_idx % 4 != 0 && msg_size > 0) {
+        poly_set_input(ctx, *msg);
+        ctx->c_idx++;
+        msg++;
+        msg_size--;
+    }
+
+    // Process the input 4 bytes at a time
+    size_t nb_words  = msg_size / 4;
+    size_t remainder = msg_size % 4;
+    FOR (i, 0, nb_words) {
+        poly_end_block(ctx);
+        ctx->c[ctx->c_idx / 4] = load32_le(msg);
+        msg        += 4;
+        ctx->c_idx += 4;
+    }
+
+    // Input the remaining bytes
+    if (remainder != 0) {
+        poly_end_block(ctx);
+    }
+    FOR (i, 0, remainder) {
+        poly_set_input(ctx, msg[i]);
+        ctx->c_idx++;
     }
 }
 
 void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
 {
     // Process the last block (if any)
-    if (ctx->c_index != 0) {
+    if (ctx->c_idx != 0) {
         // move the final 1 according to remaining input length
         // (We may add less than 2^130 to the last input block)
         ctx->c[4] = 0;
-        ctx->c[ctx->c_index / 4] |= (u32)1 << ((ctx->c_index % 4) * 8);
+        poly_set_input(ctx, 1);
         // one last hash update
         poly_block(ctx);
     }

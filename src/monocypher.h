@@ -51,7 +51,7 @@ typedef struct {
     uint32_t h[5];
     uint32_t c[5];
     uint32_t pad[5];
-    size_t   c_index;
+    size_t   c_idx;
 } crypto_poly1305_ctx;
 
 void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const uint8_t key[32]);
