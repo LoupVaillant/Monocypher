@@ -131,6 +131,28 @@ static void chacha20_init_key(crypto_chacha_ctx *ctx, const u8 key[32])
     }
 }
 
+static u8 chacha20_pool_byte(crypto_chacha_ctx *ctx)
+{
+    u32 pool_word = ctx->pool[ctx->pool_idx / 4];
+    u8  pool_byte = pool_word >> (8*(ctx->pool_idx % 4));
+    ctx->pool_idx++;
+    return pool_byte;
+}
+
+// Fill the pool if needed, update the counters
+static void chacha20_refill_pool(crypto_chacha_ctx *ctx)
+{
+    if (ctx->pool_idx == 64) {
+        chacha20_rounds(ctx->pool, ctx->input);
+        FOR (j, 0, 16) {
+            ctx->pool[j] += ctx->input[j];
+        }
+        ctx->pool_idx = 0;
+        ctx->input[12]++;
+        if (ctx->input[12] == 0) { ctx->input[13]++; }
+    }
+}
+
 void crypto_chacha20_H(u8 out[32], const u8 key[32], const u8 in[16])
 {
     crypto_chacha_ctx ctx;
@@ -168,9 +190,9 @@ void crypto_chacha20_x_init(crypto_chacha_ctx *ctx,
 
 void crypto_chacha20_set_ctr(crypto_chacha_ctx *ctx, u64 ctr)
 {
-    ctx->input[12]  = ctr & 0xffffffff;
-    ctx->input[13]  = ctr >> 32;
-    ctx->pool_index = 64;  // The random pool (re)starts empty
+    ctx->input[12] = ctr & 0xffffffff;
+    ctx->input[13] = ctr >> 32;
+    ctx->pool_idx  = 64;  // The random pool (re)starts empty
 }
 
 void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
@@ -178,25 +200,34 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                              const u8          *plain_text,
                              size_t             message_size)
 {
-    FOR (i, 0, message_size) {
-        // refill the pool if empty
-        if (ctx->pool_index == 64) {
-            // fill the pool
-            u32 buffer[16];
-            chacha20_rounds(buffer, ctx->input);
-            FOR (j, 0, 16) {
-                store32_le(ctx->random_pool + j*4, buffer[j] + ctx->input[j]);
-            }
-            // update the counters
-            ctx->pool_index = 0;
-            ctx->input[12]++;
-            if (ctx->input[12] == 0) { ctx->input[13]++; }
+    // Align ourselves with 4 byte words
+    while (ctx->pool_idx % 4 != 0 && message_size > 0) {
+        u8 stream = chacha20_pool_byte(ctx);
+        u8 plain  = plain_text ? *(plain_text++) : 0;
+        *(cipher_text++) = stream ^ plain;
+        message_size--;
+    }
+    // Main processing by 4 byte chunks
+    size_t nb_words  = message_size / 4;
+    size_t remainder = message_size % 4;
+    FOR (i, 0, nb_words) {
+        chacha20_refill_pool(ctx);
+        u32 txt = 0;
+        if (plain_text) {
+            txt = load32_le(plain_text);
+            plain_text += 4;
         }
-        // use the pool for encryption (or random stream)
-        cipher_text[i] =
-            (plain_text == 0 ? 0 : plain_text[i]) // ignore null plaintext
-            ^ ctx->random_pool[ctx->pool_index];
-        ctx->pool_index++;
+        store32_le(cipher_text, ctx->pool[ctx->pool_idx / 4] ^ txt);
+        cipher_text     += 4;
+        message_size    -= 4;
+        ctx->pool_idx += 4;
+    }
+    // Remaining input, byte by byte
+    FOR (i, 0, remainder) {
+        chacha20_refill_pool(ctx);
+        u8 stream = chacha20_pool_byte(ctx);
+        u8 plain  = plain_text ? *(plain_text++) : 0;
+        *(cipher_text++) = stream ^ plain;
     }
 }
 
@@ -794,7 +825,7 @@ static void fe_1   (fe h) {           h[0] = 1; FOR(i,1,10) h[i] = 0;          }
 static void fe_neg (fe h,const fe f)           {FOR(i,0,10) h[i] = -f[i];      }
 static void fe_add (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] + g[i];}
 static void fe_sub (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] - g[i];}
-static void fe_copy(fe h,const fe f           ){FOR(i,0,10) h[i] = f[i];       }
+static void fe_copy(fe h,const fe f)           {FOR(i,0,10) h[i] = f[i];       }
 
 static void fe_cswap(fe f, fe g, int b)
 {

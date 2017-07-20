@@ -16,9 +16,9 @@ int crypto_zerocmp(const uint8_t *p, size_t n);
 /// Chacha20 ///
 ////////////////
 typedef struct {
-    uint32_t input[16];       // current input, unencrypted
-    uint8_t  random_pool[64]; // last input, encrypted
-    uint8_t  pool_index;      // pointer to random_pool
+    uint32_t input[16]; // current input, unencrypted
+    uint32_t pool [16]; // last input, encrypted
+    size_t   pool_idx;  // pointer to random_pool
 } crypto_chacha_ctx;
 
 void crypto_chacha20_H(uint8_t       out[32],
