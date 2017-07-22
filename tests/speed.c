@@ -86,7 +86,7 @@ static void print(const char *name, speed_t result, const char *lib_name)
     timespec duration;                          \
     duration.tv_sec  = 3600 * 24;               \
     duration.tv_nsec = 0;                       \
-    FOR (i, 0, 10) {                            \
+    FOR (i, 0, 30) {                            \
         TIMESTAMP(start);
 
 #define TIMING_END(duration)                    \
