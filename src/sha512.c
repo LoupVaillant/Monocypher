@@ -16,16 +16,16 @@ static u64 load64_be(const u8 s[8])
         |  (u64)s[7];
 }
 
-static void store64_be(u8 output[8], u64 input)
+static void store64_be(u8 out[8], u64 in)
 {
-    output[0] = (input >> 56) & 0xff;
-    output[1] = (input >> 48) & 0xff;
-    output[2] = (input >> 40) & 0xff;
-    output[3] = (input >> 32) & 0xff;
-    output[4] = (input >> 24) & 0xff;
-    output[5] = (input >> 16) & 0xff;
-    output[6] = (input >>  8) & 0xff;
-    output[7] =  input        & 0xff;
+    out[0] = (in >> 56) & 0xff;
+    out[1] = (in >> 48) & 0xff;
+    out[2] = (in >> 40) & 0xff;
+    out[3] = (in >> 32) & 0xff;
+    out[4] = (in >> 24) & 0xff;
+    out[5] = (in >> 16) & 0xff;
+    out[6] = (in >>  8) & 0xff;
+    out[7] =  in        & 0xff;
 }
 
 static u64 rot(u64 x, int c       ) { return (x >> c) | (x << (64 - c));   }
@@ -62,122 +62,129 @@ static const u64 K[80] = {
 static void sha512_compress(crypto_sha512_ctx *ctx)
 {
     u64 w[80];
-    FOR(i,  0, 16) { w[i] = ctx->m[i]; }
+    FOR(i,  0, 16) { w[i] = ctx->input[i]; }
     FOR(i, 16, 80) { w[i] = (lit_sigma1(w[i- 2]) + w[i- 7] +
                              lit_sigma0(w[i-15]) + w[i-16]); }
 
-    u64 a = ctx->h[0];    u64 b = ctx->h[1];
-    u64 c = ctx->h[2];    u64 d = ctx->h[3];
-    u64 e = ctx->h[4];    u64 f = ctx->h[5];
-    u64 g = ctx->h[6];    u64 h = ctx->h[7];
+    u64 a = ctx->hash[0];    u64 b = ctx->hash[1];
+    u64 c = ctx->hash[2];    u64 d = ctx->hash[3];
+    u64 e = ctx->hash[4];    u64 f = ctx->hash[5];
+    u64 g = ctx->hash[6];    u64 h = ctx->hash[7];
     FOR(i, 0, 80) {
         u64 t1 = big_sigma1(e) + ch (e, f, g) + h + K[i] + w[i];
         u64 t2 = big_sigma0(a) + maj(a, b, c);
         h = g;  g = f;  f = e;  e = d  + t1;
         d = c;  c = b;  b = a;  a = t1 + t2;
     }
-    ctx->h[0] += a;    ctx->h[1] += b;
-    ctx->h[2] += c;    ctx->h[3] += d;
-    ctx->h[4] += e;    ctx->h[5] += f;
-    ctx->h[6] += g;    ctx->h[7] += h;
+    ctx->hash[0] += a;    ctx->hash[1] += b;
+    ctx->hash[2] += c;    ctx->hash[3] += d;
+    ctx->hash[4] += e;    ctx->hash[5] += f;
+    ctx->hash[6] += g;    ctx->hash[7] += h;
 }
 
-static void set_input(crypto_sha512_ctx *ctx, u8 input)
+static void sha512_set_input(crypto_sha512_ctx *ctx, u8 input)
 {
-    ctx->m[ctx->m_index / 8] |= (u64)input << (8 * (7 - (ctx->m_index % 8)));
+    size_t word = ctx->input_idx / 8;
+    size_t byte = ctx->input_idx % 8;
+    ctx->input[word] |= (u64)input << (8 * (7 - byte));
 }
 
-static void reset_input(crypto_sha512_ctx *ctx)
+static void sha512_reset_input(crypto_sha512_ctx *ctx)
 {
-    FOR(i, 0, 16) { ctx->m[i] = 0; }
-    ctx->m_index = 0;
+    FOR(i, 0, 16) {
+        ctx->input[i] = 0;
+    }
+    ctx->input_idx = 0;
 }
 
 // increment a 128-bit "word".
-static void incr(u64 x[2], u64 y)
+static void sha512_incr(u64 x[2], u64 y)
 {
-    x[1] += y;                 // increment the low word
-    if (x[1] < y) { x[0]++; }  // handle overflow
+    x[1] += y;
+    if (x[1] < y) {
+        x[0]++;
+    }
 }
 
-static void end_block(crypto_sha512_ctx *ctx)
+static void sha512_end_block(crypto_sha512_ctx *ctx)
 {
-    if (ctx->m_index == 128) {
-        incr(ctx->m_size, 1024); // size is in bits
+    if (ctx->input_idx == 128) {
+        sha512_incr(ctx->input_size, 1024); // size is in bits
         sha512_compress(ctx);
-        reset_input(ctx);
+        sha512_reset_input(ctx);
     }
 }
 
 void crypto_sha512_init(crypto_sha512_ctx *ctx)
 {
-    ctx->h[0] = 0x6a09e667f3bcc908;
-    ctx->h[1] = 0xbb67ae8584caa73b;
-    ctx->h[2] = 0x3c6ef372fe94f82b;
-    ctx->h[3] = 0xa54ff53a5f1d36f1;
-    ctx->h[4] = 0x510e527fade682d1;
-    ctx->h[5] = 0x9b05688c2b3e6c1f;
-    ctx->h[6] = 0x1f83d9abfb41bd6b;
-    ctx->h[7] = 0x5be0cd19137e2179;
-    ctx->m_size[0] = 0;
-    ctx->m_size[1] = 0;
-    reset_input(ctx);
+    ctx->hash[0] = 0x6a09e667f3bcc908;
+    ctx->hash[1] = 0xbb67ae8584caa73b;
+    ctx->hash[2] = 0x3c6ef372fe94f82b;
+    ctx->hash[3] = 0xa54ff53a5f1d36f1;
+    ctx->hash[4] = 0x510e527fade682d1;
+    ctx->hash[5] = 0x9b05688c2b3e6c1f;
+    ctx->hash[6] = 0x1f83d9abfb41bd6b;
+    ctx->hash[7] = 0x5be0cd19137e2179;
+    ctx->input_size[0] = 0;
+    ctx->input_size[1] = 0;
+    sha512_reset_input(ctx);
 }
 
-void crypto_sha512_update(crypto_sha512_ctx *ctx, const u8 *in, size_t inlen)
+void crypto_sha512_update(crypto_sha512_ctx *ctx,
+                          const u8 *message, size_t message_size)
 {
     // Align ourselves with 8 byte words
-    while (ctx->m_index % 8 != 0 && inlen > 0) {
-        set_input(ctx, *in);
-        ctx->m_index++;
-        in++;
-        inlen--;
+    while (ctx->input_idx % 8 != 0 && message_size > 0) {
+        sha512_set_input(ctx, *message);
+        ctx->input_idx++;
+        message++;
+        message_size--;
     }
-    end_block(ctx);
+    sha512_end_block(ctx);
 
     // Main processing by 8 byte chunks (much faster)
-    size_t nb_words  = inlen / 8;
-    size_t remainder = inlen % 8;
+    size_t nb_words  = message_size / 8;
+    size_t remainder = message_size % 8;
     FOR (i, 0, nb_words) {
-        ctx->m[ctx->m_index / 8] = load64_be(in);
-        in           += 8;
-        ctx->m_index += 8;
-        end_block(ctx);
+        ctx->input[ctx->input_idx / 8] = load64_be(message);
+        message        += 8;
+        ctx->input_idx += 8;
+        sha512_end_block(ctx);
     }
 
     // Remaining processing byte by byte
     FOR (i, 0, remainder) {
-        set_input(ctx, *in);
-        in++;
-        ctx->m_index++;
+        sha512_set_input(ctx, *message);
+        message++;
+        ctx->input_idx++;
     }
 }
 
-void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 out[64])
+void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 hash[64])
 {
-    incr(ctx->m_size, ctx->m_index * 8); // size is in bits
-    set_input(ctx, 128);                 // padding
+    sha512_incr(ctx->input_size, ctx->input_idx * 8); // size is in bits
+    sha512_set_input(ctx, 128);                       // padding
 
     // compress penultimate block (if any)
-    if (ctx->m_index > 111) {
+    if (ctx->input_idx > 111) {
         sha512_compress(ctx);
-        reset_input(ctx);
+        sha512_reset_input(ctx);
     }
     // compress last block
-    ctx->m[14] = ctx->m_size[0];
-    ctx->m[15] = ctx->m_size[1];
+    ctx->input[14] = ctx->input_size[0];
+    ctx->input[15] = ctx->input_size[1];
     sha512_compress(ctx);
 
     // copy hash to output (big endian)
     FOR (i, 0, 8) {
-        store64_be(out + i*8, ctx->h[i]);
+        store64_be(hash + i*8, ctx->hash[i]);
     }
 }
 
-void crypto_sha512(u8 *out, const u8 *m, size_t n)
+void crypto_sha512(u8 *hash, const u8 *message, size_t message_size)
 {
     crypto_sha512_ctx ctx;
     crypto_sha512_init  (&ctx);
-    crypto_sha512_update(&ctx, m, n);
-    crypto_sha512_final (&ctx, out);
+    crypto_sha512_update(&ctx, message, message_size);
+    crypto_sha512_final (&ctx, hash);
 }
