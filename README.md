@@ -32,15 +32,8 @@ before you run them.
 
 To run only the self contained tests, run
 
-    $ make vectors properties
-    $ ./vectors
-    $ ./properties
-
-To run only the edDSA fuzz tests (compares Monocypher with
-[ed25519-donna][donna]), run
-
-    $ make donna
-    $ ./donna
+    $ make self
+    $ ./self
 
 *Do not* use Monocypher without running the self contained tests at
  least once.
@@ -51,12 +44,17 @@ To run only the edDSA fuzz tests (compares Monocypher with
 ### More serious testing
 
 The makefile may be modified to activate sanitising.  Just run the
-previous tests under the various sanitisers.
+previous tests under the various sanitisers.  If you compile for
+coverage mapping, the `coverage.sh` mapping can generate a report.
+Just run one of those (make sure the makefile is set up accordingly):
 
-You can also use Valgrind:
+    $ ./coverage.sh self
+    $ ./coverage.sh donna
+    $ ./coverage.sh sodium
 
-    $ valgrind ./vectors
-    $ valgrind ./properties
+You can also run the tests under Valgrind:
+
+    $ valgrind ./self
     $ valgrind ./donna
     $ valgrind ./sodium
 
