@@ -24,15 +24,14 @@ CFLAGS= -I src -pedantic -Wall -Wextra -O3 -march=native
 # disable implicit rules
 .SUFFIXES:
 
-all: vectors properties sodium donna
+all: self sodium donna
 
 clean:
 	rm -rf bin formal-analysis
 	rm -f src/*.gch src/rename_*
-	rm -f vectors properties sodium donna speed
+	rm -f self sodium donna speed
 
-TEST_DEPS=tests/vectors.c bin/monocypher.o bin/sha512.o
-PROP_DEPS=tests/properties.c bin/classic_monocypher.o bin/sha512.o
+TEST_DEPS=tests/self.c bin/monocypher.o bin/sha512.o
 GEN_HEADERS=bin/argon2i.h      \
             bin/blake2b.h      \
             bin/blake2b_easy.h \
@@ -46,8 +45,8 @@ GEN_HEADERS=bin/argon2i.h      \
             bin/x25519.h       \
             bin/x_chacha20.h
 
-# Test suite based on test vectors
-vectors: $(TEST_DEPS) $(GEN_HEADERS)
+# self containted test suite (vectors and properties)
+self: $(TEST_DEPS) $(GEN_HEADERS)
 	$(CC) $(CFLAGS) -I bin -o $@ $(TEST_DEPS)
 
 bin/vector: tests/vector_to_header.c
@@ -57,10 +56,6 @@ bin/vector: tests/vector_to_header.c
 bin/%.h: tests/vectors/% bin/vector
 	@echo generate $@
 	@bin/vector $$(basename $<) <$< >$@
-
-# Property based tests (consistency)
-properties: $(PROP_DEPS) $(GEN_HEADERS)
-	$(CC) $(CFLAGS) -I bin -o $@ $(PROP_DEPS)
 
 # Test suite based on comparison with libsodium
 C_SODIUM_FLAGS=$$(pkg-config --cflags libsodium)
@@ -117,7 +112,7 @@ rename_%.h: %.h
 formal-analysis: $(GEN_HEADERS)                    \
          src/monocypher.c src/monocypher.h \
          src/sha512.c src/sha512.h         \
-         tests/vectors.c
+         tests/self.c
 	@echo "copy sources to formal-analysis directory for analysis (frama-c or TIS)"
 	@mkdir -p formal-analysis
 	@cp $^ formal-analysis

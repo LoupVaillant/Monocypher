@@ -7,8 +7,7 @@
 *.profdata
 bin/*
 formal-analysis/*
-properties
-vectors
+self
 sodium
 donna
 speed

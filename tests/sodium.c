@@ -110,7 +110,7 @@ static int blake2b(void)
 static int argon2i(void)
 {
     u8 work_area[1024*1024], password[16], salt[crypto_pwhash_SALTBYTES],
-        mono[32], sodium[32];
+        mono[32], sodium[32]; // check output sizes > 64
     int status = 0;
     FOR (nb_blocks, 8, 1024) {
         p_random(password, 16);
