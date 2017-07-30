@@ -190,9 +190,9 @@ of trust…), each with its advantages and drawbacks.
 
 ### crypto\_lock\_key()
 
-    int crypto_lock_key(uint8_t       shared_key      [32],
-                        const uint8_t your_secret_key [32],
-                        const uint8_t their_public_key[32]);
+    int crypto_key_exchange(uint8_t       shared_key      [32],
+                            const uint8_t your_secret_key [32],
+                            const uint8_t their_public_key[32]);
 
 Computes a shared key with your secret key and their public key,
 suitable for the `crypto_*lock()` functions above.  It performs a
@@ -214,7 +214,7 @@ public keys out there, that force the shared key to a known constant
 keys, but if the ones you process aren't exactly trustworthy, watch
 out.
 
-So, `crypto_lock_key()` returns -1 whenever it detects such an evil
+So, `crypto_key_exchange()` returns -1 whenever it detects such an evil
 public key.  If all goes well, it returns zero.
 
 
@@ -235,18 +235,18 @@ number generator.
                        const uint8_t their_public_key[32]);
 
 Tip: this is a low level function.  Unless you _really_ know what
-you're doing, you should use `crypto_lock_key()` instead.
+you're doing, you should use `crypto_key_exchange()` instead.
 
 Computes a shared secret with your secret key and the other party's
 public key.  __Warning: the shared secret is not cryptographically
 random.__ Don't use it directly as a session key.  You need to hash it
 first.  Any cryptographically secure hash will do.
-`crypto_lock_key()` uses HChacha20 (it's not a general purpose hash,
-but here it works just fine).
+`crypto_key_exchange()` uses HChacha20 (it's not a general purpose
+hash, but here it works just fine).
 
-Just like `crypto_lock_key()`, the return code asserts contributory
-behaviour: if zero, all went well.  If -1, the shared secret has been
-forced to a string of zeros.
+Just like `crypto_key_exchange()`, the return code asserts
+contributory behaviour: if zero, all went well.  If -1, the shared
+secret has been forced to a string of zeros.
 
 Implementation detail: note that the most significant bit of the
 public key is systematically ignored.  It is not needed, because every
