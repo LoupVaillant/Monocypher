@@ -188,7 +188,7 @@ of trust…), each with its advantages and drawbacks.
 [MITM]: https://en.wikipedia.org/wiki/Man-in-the-middle_attack
         (Man-in-the-middle attack)
 
-### crypto\_lock\_key()
+### crypto\_key\_exchange()
 
     int crypto_key_exchange(uint8_t       shared_key      [32],
                             const uint8_t your_secret_key [32],
