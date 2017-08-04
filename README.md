@@ -27,8 +27,8 @@ Test suite
 
 It should display a nice printout of all the tests, all starting with
 "OK".  If you see "FAILURE" anywhere, something has gone very wrong
-somewhere.  Note: the fuzz tests depend on libsodium.  Install it
-before you run them.
+somewhere.  Note: the fuzz tests depend on libsodium 1.0.12 or above.
+Install it before you run them.
 
 To run only the self contained tests, run
 
