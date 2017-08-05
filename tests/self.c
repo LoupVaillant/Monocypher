@@ -22,6 +22,7 @@
 #define CHACHA_NB_BLOCKS     10
 #define POLY1305_BLOCK_SIZE  16
 #define BLAKE2B_BLOCK_SIZE  128
+#define SHA_512_BLOCK_SIZE  128
 typedef  int8_t   i8;
 typedef uint8_t   u8;
 typedef uint32_t u32;
@@ -455,9 +456,9 @@ static int p_blake2b()
 static int p_sha512()
 {
     // total input size
-    static const size_t input_size = BLAKE2B_BLOCK_SIZE * 4;
+    static const size_t input_size = SHA_512_BLOCK_SIZE * 4;
     // maximum chunk size
-    static const size_t c_max_size = BLAKE2B_BLOCK_SIZE * 2;
+    static const size_t c_max_size = SHA_512_BLOCK_SIZE * 2;
     int status = 0;
     FOR (i, 0, 1000) {
         size_t offset = 0;
