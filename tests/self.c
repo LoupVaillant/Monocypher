@@ -18,6 +18,10 @@
 #include "x_chacha20.h"
 
 #define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
+#define CHACHA_BLOCK_SIZE    64
+#define CHACHA_NB_BLOCKS     10
+#define POLY1305_BLOCK_SIZE  16
+#define BLAKE2B_BLOCK_SIZE  128
 typedef  int8_t   i8;
 typedef uint8_t   u8;
 typedef uint32_t u32;
@@ -291,9 +295,10 @@ static u64 rand64()
 // encrypting all at once.
 static int p_chacha20()
 {
-    static const size_t block_size = 64;             // Chacha Block size
-    static const size_t input_size = block_size * 4; // total input size
-    static const size_t c_max_size = block_size * 2; // maximum chunk size
+    // total input size
+    static const size_t input_size = CHACHA_BLOCK_SIZE * 4;
+    // maximum chunk size
+    static const size_t c_max_size = CHACHA_BLOCK_SIZE * 2;
     int status = 0;
     FOR (i, 0, 1000) {
         size_t offset = 0;
@@ -329,9 +334,7 @@ static int p_chacha20()
 
 static int p_chacha20_set_ctr()
 {
-    static const size_t nb_blocks   = 10;
-    static const size_t block_size  = 64;
-    static const size_t stream_size = block_size * nb_blocks;
+    static const size_t stream_size = CHACHA_BLOCK_SIZE * CHACHA_NB_BLOCKS;
     int status = 0;
     FOR (i, 0, 1000) {
         u8 output_part[stream_size    ];
@@ -339,8 +342,8 @@ static int p_chacha20_set_ctr()
         u8 output_more[stream_size * 2];
         u8 key        [32];          p_random(key  , 32);
         u8 nonce      [8];           p_random(nonce, 8 );
-        size_t ctr   = rand64() % nb_blocks;
-        size_t limit = ctr * block_size;
+        size_t ctr   = rand64() % CHACHA_NB_BLOCKS;
+        size_t limit = ctr * CHACHA_BLOCK_SIZE;
         // Encrypt all at once
         crypto_chacha_ctx ctx;
         crypto_chacha20_init(&ctx, key, nonce);
@@ -372,9 +375,10 @@ static int p_chacha20_set_ctr()
 // authenticating all at once
 static int p_poly1305()
 {
-    static const size_t block_size = 16;             // poly1305 block size
-    static const size_t input_size = block_size * 4; // total input size
-    static const size_t c_max_size = block_size * 2; // maximum chunk size
+    // total input size
+    static const size_t input_size = POLY1305_BLOCK_SIZE * 4;
+    // maximum chunk size
+    static const size_t c_max_size = POLY1305_BLOCK_SIZE * 2;
     int status = 0;
     FOR (i, 0, 1000) {
         size_t offset = 0;
@@ -412,9 +416,10 @@ static int p_poly1305()
 // interface.
 static int p_blake2b()
 {
-    static const size_t block_size = 128;            // Blake2b block size
-    static const size_t input_size = block_size * 4; // total input size
-    static const size_t c_max_size = block_size * 2; // maximum chunk size
+    // total input size
+    static const size_t input_size = BLAKE2B_BLOCK_SIZE * 4;
+    // maximum chunk size
+    static const size_t c_max_size = BLAKE2B_BLOCK_SIZE * 2;
     int status = 0;
     FOR (i, 0, 1000) {
         size_t offset = 0;
@@ -449,9 +454,10 @@ static int p_blake2b()
 // at once. (for sha512)
 static int p_sha512()
 {
-    static const size_t block_size = 128;            // Blake2b block size
-    static const size_t input_size = block_size * 4; // total input size
-    static const size_t c_max_size = block_size * 2; // maximum chunk size
+    // total input size
+    static const size_t input_size = BLAKE2B_BLOCK_SIZE * 4;
+    // maximum chunk size
+    static const size_t c_max_size = BLAKE2B_BLOCK_SIZE * 2;
     int status = 0;
     FOR (i, 0, 1000) {
         size_t offset = 0;
