@@ -589,7 +589,6 @@ int main(void)
     status |= TEST(ed25519_key , 1);
     status |= TEST(ed25519_sign, 3);
     status |= test_x25519();
-    status |= test_cmp();
 
     printf("\nProperty based tests tests");
     printf("\n--------------------------\n");
@@ -599,6 +598,10 @@ int main(void)
     status |= p_blake2b();
     status |= p_sha512();
     status |= p_aead();
+
+    printf("\nConstant time tests");
+    printf("\n-------------------\n");
+    status |= test_cmp();
 
     return status;
 }
