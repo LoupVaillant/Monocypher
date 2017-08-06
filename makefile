@@ -73,13 +73,13 @@ bin/tweetnacl.o: tests/tweetnacl/tweetnacl.c tests/tweetnacl/tweetnacl.h
 # Test edDSA/blake2b by comparing with the donna implementation
 # Note: we're using Blake2b, the default hash for monocypher edDSA
 donna: tests/donna.c bin/classic_monocypher.o bin/donna.o
-	$(CC) $(CFLAGS) -o $@ $^ -I tests/ed25519-donna
+	$(CC) $(CFLAGS) -Wimplicit-fallthrough=3 -o $@ $^ -I tests/ed25519-donna
 bin/classic_monocypher.o: src/monocypher.c src/monocypher.h
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -o $@ -c $<
+	$(CC) $(CFLAGS) -Wimplicit-fallthrough=3 -o $@ -c $<
 bin/donna.o: tests/ed25519-donna/ed25519.c
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -o $@ -c $< -DED25519_CUSTOMHASH -DED25519_TEST -DED25519_NO_INLINE_ASM -DED25519_FORCE_32BIT
+	$(CC) $(CFLAGS) -Wimplicit-fallthrough=3 -o $@ -c $< -DED25519_CUSTOMHASH -DED25519_TEST -DED25519_NO_INLINE_ASM -DED25519_FORCE_32BIT
 
 # compile monocypher
 # use -DED25519_SHA512 for ed25519 compatibility
