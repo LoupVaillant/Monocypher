@@ -296,8 +296,8 @@ static u64 rand64()
 // Tests that constant-time comparison is actually constant-time.
 static int test_cmp()
 {
-    u8 va[32] = {0};
-    u8 vb[32] = {0};
+    u8 va[1024 * 64] = {0};
+    u8 vb[1024 * 64] = {0};
     clock_t t1, t2, d;
     int status = 0;
 
