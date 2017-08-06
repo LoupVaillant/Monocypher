@@ -6,6 +6,7 @@
 #include "rename_monocypher.h"
 #include "rename_sha512.h"
 #include "tweetnacl/tweetnacl.h"
+#include "poly1305-donna/poly1305-donna.h"
 
 #define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
 typedef uint8_t u8;
@@ -163,8 +164,8 @@ static speed_t argon2i(void)
 {
     size_t    nb_blocks = SIZE / 1024;
     static u8 work_area[SIZE];
-    static u8 password [  16];  p_random(password, 32);
-    static u8 salt     [  16];  p_random(salt    , 32);
+    static u8 password [  16];  p_random(password, 16);
+    static u8 salt     [  16];  p_random(salt    , 16);
     static u8 mono     [  32];
     static u8 sodium   [  32];
 
@@ -416,6 +417,26 @@ static void t_ed25519(void)
     }
 }
 
+static speed_t d_poly1305(void)
+{
+    static u8  in    [SIZE];  p_random(in   , SIZE);
+    static u8  key   [  32];  p_random(key  ,   32);
+    static u8  mono  [  16];
+    static u8  sodium[  16];
+
+    TIMING_START(monocypher) {
+        rename_poly1305_auth(mono, in, SIZE, key);
+    }
+    TIMING_END(monocypher);
+    TIMING_START(libsodium) {
+        poly1305_auth(sodium, in, SIZE, key);
+    }
+    TIMING_END(libsodium);
+
+    TIMING_RESULT("Poly1305", 16);
+}
+
+
 int main()
 {
     printf("\nComparing with Libsodium\n");
@@ -436,6 +457,10 @@ int main()
     print("Sha512      ", t_sha512  (), "TweetNaCl");
     print("x25519      ", t_x25519  (), "TweetNaCl");
     t_ed25519 ();
+
+    printf("\nComparing with Donna\n");
+    printf("----------------------\n");
+    print("Poly1305    ", d_poly1305(), "32 bit Poly1305 Donna");
 
     printf("\n");
     return 0;
