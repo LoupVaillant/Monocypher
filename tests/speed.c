@@ -7,7 +7,7 @@
 #include "rename_sha512.h"
 #include "tweetnacl/tweetnacl.h"
 #include "poly1305-donna/poly1305-donna.h"
-//#include "ed25519-donna/ed25519.h"
+#include "ed25519-donna/ed25519.h"
 
 #define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
 typedef uint8_t u8;
@@ -434,6 +434,49 @@ static speed_t d_poly1305(void)
     TIMING_RESULT("Poly1305", 16);
 }
 
+static void d_ed25519(void)
+{
+    u8 sk       [32];   p_random(sk, 32);
+    u8 pk       [32];
+    ed25519_publickey(sk, pk);
+
+    u8 message   [64];  p_random(message, 64);
+    u8 mono_sig  [64];
+    u8 sodium_sig[64];
+
+    // Testing signature speed
+    TIMING_START(monocypher_sig) {
+        rename_sign(mono_sig, sk, pk, message, 64);
+    }
+    TIMING_END(monocypher_sig);
+    TIMING_START(libsodium_sig) {
+        ed25519_sign(message, 64, sk, pk, sodium_sig);
+    }
+    TIMING_END(libsodium_sig);
+
+    // testing verification speed (for correct signatures)
+    TIMING_START(monocypher_chk) {
+        if (rename_check(mono_sig, pk, message, 64)) {
+            printf("Monocypher verification failed\n");
+        }
+    }
+    TIMING_END(monocypher_chk);
+    TIMING_START(libsodium_chk) {
+        if (ed25519_sign_open(message, 64, pk, sodium_sig)) {
+            printf("ed25519-donna verification failed\n");
+        }
+    }
+    TIMING_END(libsodium_chk);
+
+
+    if (rename_memcmp(mono_sig, sodium_sig, 64) != 0) {
+        printf("ed25519 benchmark failed (different results)\n");
+    }
+    print("ed25519(sig)", speed(libsodium_sig, monocypher_sig),
+          "32 bits ed25519-donna");
+    print("ed25519(chk)", speed(libsodium_chk, monocypher_chk),
+          "32 bits ed25519-donna");
+}
 
 int main()
 {
@@ -459,6 +502,7 @@ int main()
     printf("\nComparing with Donna\n");
     printf("----------------------\n");
     print("Poly1305    ", d_poly1305(), "32 bit Poly1305 Donna");
+    d_ed25519();
 
     printf("\n");
     return 0;
