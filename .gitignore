@@ -12,3 +12,10 @@ sodium
 donna
 speed
 rename_*
+
+# Buck
+/buck-out/
+/.buckd/
+/buckaroo/
+.buckconfig.local
+BUCKAROO_DEPS

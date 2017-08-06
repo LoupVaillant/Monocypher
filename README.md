@@ -19,6 +19,10 @@ just copy `src/monocypher.h` and `src/monocypher.c` into your project.
 They compile as C99, C11, C++98, C++11, C++14, and C++17. (Tested with
 gcc 5.4.0 and clang 2.8.0 on GNU/Linux.)
 
+Or, using [Buckaroo](https://buckaroo.pm):
+
+    $ buckaroo install github+loupvaillant/monocypher
+
 Test suite
 ----------
 
