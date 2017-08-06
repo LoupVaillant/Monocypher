@@ -316,18 +316,11 @@ static void poly_block(crypto_poly1305_ctx *ctx)
 // (re-)initializes the input counter and input buffer
 static void poly_clear_c(crypto_poly1305_ctx *ctx)
 {
-    FOR (i, 0, 4) {
-        ctx->c[i] = 0;
-    }
+    ctx->c[0]  = 0;
+    ctx->c[1]  = 0;
+    ctx->c[2]  = 0;
+    ctx->c[3]  = 0;
     ctx->c_idx = 0;
-}
-
-static void poly_end_block(crypto_poly1305_ctx *ctx)
-{
-    if (ctx->c_idx == 16) {
-        poly_block(ctx);
-        poly_clear_c(ctx);
-    }
 }
 
 static void poly_take_input(crypto_poly1305_ctx *ctx, u8 input)
@@ -356,27 +349,32 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const u8 *message, size_t message_size)
 {
-    // Align ourselves with 4 byte words
-    while (ctx->c_idx % 4 != 0 && message_size > 0) {
+    // Align ourselves with a block
+    while (ctx->c_idx % 16 != 0 && message_size > 0) {
         poly_take_input(ctx, *message);
         message++;
         message_size--;
     }
-
-    // Process the input 4 bytes at a time
-    size_t nb_words  = message_size / 4;
-    size_t remainder = message_size % 4;
-    FOR (i, 0, nb_words) {
-        poly_end_block(ctx);
-        ctx->c[ctx->c_idx / 4] = load32_le(message);
-        message    += 4;
-        ctx->c_idx += 4;
+    if (ctx->c_idx == 16) {
+        poly_block(ctx);
+        poly_clear_c(ctx);
+    }
+    // Process the input blok by block
+    size_t nb_blocks = message_size / 16;
+    size_t remainder = message_size % 16;
+    FOR (i, 0, nb_blocks) {
+        ctx->c[0] = load32_le(message +  0);
+        ctx->c[1] = load32_le(message +  4);
+        ctx->c[2] = load32_le(message +  8);
+        ctx->c[3] = load32_le(message + 12);
+        poly_block(ctx);
+        message += 16;
+    }
+    if (nb_blocks > 0) {
+        poly_clear_c(ctx);
     }
 
     // Input the remaining bytes
-    if (remainder != 0) {
-        poly_end_block(ctx);
-    }
     FOR (i, 0, remainder) {
         poly_take_input(ctx, message[i]);
     }
