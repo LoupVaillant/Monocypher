@@ -526,6 +526,13 @@ static void blake2b_end_block(crypto_blake2b_ctx *ctx)
     }
 }
 
+static void blake2b_fill_block(crypto_blake2b_ctx *ctx, const u8 message[128])
+{
+    FOR (j, 0, 16) {
+        ctx->input[j] = load64_le(message + j*8);
+    }
+}
+
 void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
                                  const u8           *key, size_t key_size)
 {
@@ -556,21 +563,29 @@ void crypto_blake2b_init(crypto_blake2b_ctx *ctx)
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const u8 *message, size_t message_size)
 {
-    // Align ourselves with 8 byte words
-    while (ctx->input_idx % 8 != 0 && message_size > 0) {
+    // Align ourselves with blocks
+    while (ctx->input_idx % 128 != 0 && message_size > 0) {
         blake2b_set_input(ctx, *message);
         message++;
         message_size--;
     }
 
-    // Process the input 8 bytes at a time
-    size_t nb_words  = message_size / 8;
-    size_t remainder = message_size % 8;
-    FOR (i, 0, nb_words) {
+    // Process the input one block at a time
+    size_t nb_blocks = message_size / 128;
+    size_t remainder = message_size % 128;
+    if (nb_blocks > 0) {
+        // first block
         blake2b_end_block(ctx);
-        ctx->input[ctx->input_idx / 8] = load64_le(message);
-        message        += 8;
-        ctx->input_idx += 8;
+        blake2b_fill_block(ctx, message);
+        message += 128;
+        ctx->input_idx = 128;
+        // subsequent blocks
+        FOR (i, 0, nb_blocks - 1) {
+            blake2b_incr(ctx);
+            blake2b_compress(ctx, 0);
+            blake2b_fill_block(ctx, message);
+            message += 128;
+        }
     }
 
     // Load the remainder
