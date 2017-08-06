@@ -7,6 +7,7 @@
 #include "rename_sha512.h"
 #include "tweetnacl/tweetnacl.h"
 #include "poly1305-donna/poly1305-donna.h"
+//#include "ed25519-donna/ed25519.h"
 
 #define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
 typedef uint8_t u8;
@@ -401,20 +402,17 @@ static void t_ed25519(void)
     }
     TIMING_END(monocypher_chk);
 
-    int tweet_fail = 0;
     TIMING_START(libsodium_chk) {
-        u8 m[64];
+        u8 m[128]; // 64 bytes for the message, plus 64 bytes of work space
         long long unsigned m_len;
-        tweet_fail |= tweet_sign_open(m, &m_len, sodium_sig, 128, pk);
+        if (tweet_sign_open(m, &m_len, sodium_sig, 128, pk)) {
+            printf("TweetNaCl verification failed\n");
+        }
     }
     TIMING_END(libsodium_chk);
 
     print("  ed25519(sig)", speed(libsodium_sig, monocypher_sig), "TweetNaCl");
     print("  ed25519(chk)", speed(libsodium_chk, monocypher_chk), "TweetNaCl");
-
-    if (tweet_fail) {
-        printf("Note: TweetNaCl rejected its own signature, I don't know why\n");
-    }
 }
 
 static speed_t d_poly1305(void)
