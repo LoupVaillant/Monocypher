@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "monocypher.h"
 #include "sha512.h"
 
@@ -23,6 +24,7 @@
 #define POLY1305_BLOCK_SIZE  16
 #define BLAKE2B_BLOCK_SIZE  128
 #define SHA_512_BLOCK_SIZE  128
+#define COMPARISON_DIFF_THRESHOLD  4
 typedef  int8_t   i8;
 typedef uint8_t   u8;
 typedef uint32_t u32;
@@ -291,6 +293,50 @@ static u64 rand64()
 }
 
 
+// Tests that constant-time comparison is actually constant-time.
+static int test_cmp()
+{
+    u8 va[32] = {0};
+    u8 vb[32] = {0};
+    clock_t t1, t2, d;
+    int status = 0;
+
+    t1 = clock();
+    status |= (crypto_memcmp(va, vb, sizeof(va)) != 0);
+    t2 = clock();
+    d = t2 - t1;
+
+    p_random(vb, sizeof(vb));
+
+    t1 = clock();
+    status |= (crypto_memcmp(va, vb, sizeof(va)) == 0);
+    t2 = clock();
+    d = d - (t2 - t1);
+
+    d = (d < 0 ? -d : d);
+    status |= (d > COMPARISON_DIFF_THRESHOLD);
+
+    printf("%s: memcmp\n", status != 0 ? "FAILED" : "OK");
+
+    t1 = clock();
+    status |= (crypto_zerocmp(va, sizeof(va)) != 0);
+    t2 = clock();
+    d = t2 - t1;
+
+    p_random(vb, sizeof(vb));
+
+    t1 = clock();
+    status |= (crypto_zerocmp(vb, sizeof(vb)) == 0);
+    t2 = clock();
+    d = d - (t2 - t1);
+
+    d = (d < 0 ? -d : d);
+    status |= (d > COMPARISON_DIFF_THRESHOLD);
+
+    printf("%s: zerocmp\n", status != 0 ? "FAILED" : "OK");
+
+    return status;
+}
 
 // Tests that encrypting in chunks yields the same result than
 // encrypting all at once.
@@ -543,6 +589,7 @@ int main(void)
     status |= TEST(ed25519_key , 1);
     status |= TEST(ed25519_sign, 3);
     status |= test_x25519();
+    status |= test_cmp();
 
     printf("\nProperty based tests tests");
     printf("\n--------------------------\n");
