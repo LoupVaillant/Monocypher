@@ -1,6 +1,64 @@
 Monocypher Manual
 =================
 
+Random number generation
+------------------------
+
+Monocypher doesn't provide a random number generator.  You are
+supposed to use the facilities of your OS. Avoid user space RNGs.
+They are easy to misuse, which has lead to countless vulnerabilities
+in the past (typically by repeating parts of the random stream).
+Besides, they need an external random seed anyway.
+
+(it's easy to accidentally
+repeat numbers, and break the crypto),
+
+On Linux, you can use the `getrandom(2)` system call from
+`linux/random.h` (don't set any flag).
+
+On BSD, you can use `arc4random_buf(3)` (on `stdlib.h` or
+`bsd/stdlib.h`).  This is arguably even easier to use than
+`getrandom()`.
+
+Windows provides the `CryptGenRandom()` function.
+
+If no easy to use system call is available on your system, you may
+have to use `/dev/urandom`.  It is less easy to use however because it
+involves reading a file.  Make sure you indeed get all the random
+bytes you requested.
+
+
+Constant time comparison
+------------------------
+
+Used properly, Monocypher is immune to timing attacks.  But if you
+start leaking timings by comparing secrets with standard comparison
+functions, it will all be for naught.
+
+In crypto, we often need to compare secrets together.  A message
+authentication code for instance: while the MAC sent over the network
+along with a message is public, the true MAC is secret.  If the
+attacker attempts a forgery, you don't want to tell him "your MAC is
+wrong, _and it took me 384 microseconds to figure it out_".  If in the
+next attempt it takes you 462 microseconds instead, it gives away the
+fact that the attacker just got a few bytes right.  Next thing you
+know, you've destroyed integrity.
+
+To avoid such catastrophe, Monocypher provides 2 comparison functions,
+whose timing are independent from the contents of their input.
+
+    int crypto_memcmp (const uint8_t *p1, const uint8_t *p2, size_t n);
+    int crypto_zerocmp(const uint8_t *p , size_t n);
+
+`crypto_memcmp()` returns 0 if it the two memory chunks are the same,
+-1 otherwise. `crypto_zerocmp()` returns 0 if all bytes of the memory
+chunk are zero, -1 otherwise.
+
+You shouldn't need them if you stick to the high-level interface —just
+look at the return codes.  But if you do have to compare secrets, make
+sure you use `crypto_memcmp()` or `crypto_zerocmp()`.
+
+
 Authenticated encryption (XChacha20 + Poly1305)
 -----------------------------------------------
 
@@ -39,14 +97,8 @@ The inputs are:
   have access to the XOR of 2 different messages, *and* the ability to
   forge messages in your stead.
 
-  The easiest (and recommended) way to generate this nonce is to use
-  your OS's random number generator (`/dev/urandom` on UNIX systems).
-  Don't worry about accidental collisions, the nonce is big enough to
-  make them virtually impossible.
-
-  Don't use user space random number generators, they're error prone.
-  You could accidentally reuse the generator's internal state,
-  duplicate the random stream, and trigger a nonce reuse.  Oops.
+  The easiest (and recommended) way to generate this nonce is to
+  select it at random.  Use your OS's random number generator.
 
 - `plaintext`: the secret you want to send.  Of course, it must be
   unknown to the attacker.  Keep in mind however that the _length_ of
@@ -493,40 +545,6 @@ The hardness of the computation can be chosen thus:
 
 - If the computation is too short even with all the memory you can
   spare, increase the number of iterations.
-
-
-Constant time comparison
-------------------------
-
-Packaging an easy to use, state of the art, timing immune crypto
-library took me over 2 months, full time.  It will all be for naught
-if you start leaking information by using standard comparison
-functions.
-
-In crypto, we often need to compare secrets together.  A message
-authentication code for instance: while the MAC sent over the network
-along with a message is public, the true MAC is _secret_.  If the
-attacker attempts a forgery, you don't want to tell him "your MAC is
-wrong, _and it took me 384 microseconds to figure it out_".  If in the
-next attempt it takes you 462 microseconds instead, it gives away the
-fact that the attacker just got a few bytes right.  Next thing you
-know, you've destroyed integrity.
-
-You need special comparison functions, whose timing do not depend on
-the content of the buffers.  They generally work with bit-wise or and
-xor.
-
-Monocypher provides 2 functions: `crypto_memcmp()` and
-`crypto_zerocmp()`.
-
-    int crypto_memcmp (const uint8_t *p1, const uint8_t *p2, size_t n);
-    int crypto_zerocmp(const uint8_t *p , size_t n);
-
-`crypto_memcmp()` returns 0 if it the two memory chunks are the same,
--1 otherwise. `crypto_zerocmp()` returns 0 if all bytes of the memory
-chunk are zero, -1 otherwise.  They both run in constant time.  (More
-precisely, their timing depends solely on the _length_ of their
-inputs.)
 
 
 Encryption (Chacha20)
