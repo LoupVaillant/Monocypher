@@ -24,6 +24,7 @@ gcc 5.4.0 and clang 2.8.0 on GNU/Linux.)
 So far, I am aware of bindings for the following languages:
 
 * [Crystal](https://github.com/konovod/monocypher.cr)
+* [Lua](https://github.com/philanc/luanacha)
 
 
 Test suite
