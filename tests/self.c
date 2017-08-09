@@ -535,6 +535,23 @@ static int p_sha512()
     return status;
 }
 
+// Verifies that random signatures are all invalid.  Uses random
+// public keys to see what happens outside of the curve (it should
+// yield an invalid signature).
+static int p_eddsa()
+{
+    int status = 0;
+    static const size_t message_size = 32;
+    u8 message[message_size];  p_random(message, 32);
+    FOR (i, 0, 1000) {
+        u8 public_key[32];  p_random(public_key, 32);
+        u8 signature [64];  p_random(signature , 64);
+        status |= ~crypto_check(signature, public_key, message, message_size);
+    }
+    printf("%s: EdDSA\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 static int p_aead()
 {
     int status = 0;
@@ -597,6 +614,7 @@ int main(void)
     status |= p_poly1305();
     status |= p_blake2b();
     status |= p_sha512();
+    status |= p_eddsa();
     status |= p_aead();
 
     printf("\nConstant time tests");
