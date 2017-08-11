@@ -956,12 +956,13 @@ void crypto_argon2i(u8       *hash,      u32 hash_size,
 // field element
 typedef i32 fe[10];
 
-static void fe_0   (fe h) {                     FOR(i,0,10) h[i] = 0;          }
-static void fe_1   (fe h) {          h[0] = 1;  FOR(i,1,10) h[i] = 0;          }
-static void fe_neg (fe h,const fe f)           {FOR(i,0,10) h[i] = -f[i];      }
+static void fe_0(fe h) {            FOR(i, 0, 10) h[i] = 0; }
+static void fe_1(fe h) { h[0] = 1;  FOR(i, 1, 10) h[i] = 0; }
+
+static void fe_copy(fe h,const fe f           ){FOR(i,0,10) h[i] =  f[i];      }
+static void fe_neg (fe h,const fe f           ){FOR(i,0,10) h[i] = -f[i];      }
 static void fe_add (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] + g[i];}
 static void fe_sub (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] - g[i];}
-static void fe_copy(fe h,const fe f)           {FOR(i,0,10) h[i] = f[i];       }
 
 static void fe_cswap(fe f, fe g, int b)
 {
