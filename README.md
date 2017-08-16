@@ -26,6 +26,13 @@ So far, I am aware of bindings for the following languages:
 * [Crystal](https://github.com/konovod/monocypher.cr)
 * [Lua](https://github.com/philanc/luanacha)
 
+### Alternate distributions
+
+So far, I am aware of the following alternate packages:
+
+* [AUR package](https://aur.archlinux.org/packages/monocypher/) for
+  Arch Linux.
+
 
 Test suite
 ----------
