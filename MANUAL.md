@@ -77,10 +77,10 @@ Always authenticate your messages.
 ### crypto\_lock()
 
     void crypto_lock(uint8_t        mac[16],
-                     uint8_t       *ciphertext,
+                     uint8_t       *cipher_text,
                      const uint8_t  key[32],
                      const uint8_t  nonce[24],
-                     const uint8_t *plaintext, size_t text_size);
+                     const uint8_t *plain_text, size_t text_size);
 
 The inputs are:
 
@@ -100,7 +100,7 @@ The inputs are:
   The easiest (and recommended) way to generate this nonce is to
   select it at random.  Use your OS's random number generator.
 
-- `plaintext`: the secret you want to send.  Of course, it must be
+- `plain_text`: the secret you want to send.  Of course, it must be
   unknown to the attacker.  Keep in mind however that the _length_ of
   the plaintext, unlike its content, is not secret.  Make sure your
   protocol doesn't leak secret information with the length of
@@ -118,21 +118,21 @@ The outputs are:
   Transmit this MAC over the network so the recipient can authenticate
   your message.
 
-- `ciphertext`: the encrypted message (same length as the plaintext
+- `cipher_text`: the encrypted message (same length as the plaintext
   message).  Transmit it over the network so the recipient can decrypt
   and read it.
 
-  Note: `ciphertext` is allowed to have the same value as `plaintext`.
-  I so, encryption will happen in place.
+  Note: `cipher_text` is allowed to have the same value as `plain_text`.
+  If so, encryption will happen in place.
 
 
 ### crypto\_unlock()
 
-    int crypto_unlock(uint8_t       *plaintext,
+    int crypto_unlock(uint8_t       *plain_text,
                       const uint8_t  key[32],
                       const uint8_t  nonce[24],
                       const uint8_t  mac[16],
-                      const uint8_t *ciphertext, size_t text_size);
+                      const uint8_t *cipher_text, size_t text_size);
 
 The flip side of the coin.  The inputs are:
 
@@ -145,13 +145,13 @@ The flip side of the coin.  The inputs are:
 - `mac`: the message authentication code produced by the sender.
   Integrity cannot be ensured without it.
 
-- `ciphertext`: the encrypted text produced by the sender.
+- `cipher_text`: the encrypted text produced by the sender.
 
 There are 2 outputs:
 
-- `plaintext`: The decrypted message (same length as the ciphertext).
+- `plain_text`: The decrypted message (same length as the ciphertext).
 
-  Note: `plaintext` is allowed to be the same as `ciphertext`.  If so,
+  Note: `plain_text` is allowed to be the same as `cipher_text`.  If so,
   decryption will happen in place.
 
 - A return code: 0 if all went well, -1 if the message was corrupted
@@ -172,18 +172,18 @@ detecting forgeries becomes impossible.  Don't reuse the nonce.)_
 ### AEAD (Authenticated Encryption with Additional Data)
 
     void crypto_aead_lock(uint8_t        mac[16],
-                          uint8_t       *ciphertext,
+                          uint8_t       *cipher_text,
                           const uint8_t  key[32],
                           const uint8_t  nonce[24],
                           const uint8_t *ad       , size_t ad_size,
-                          const uint8_t *plaintext, size_t text_size);
+                          const uint8_t *plain_text, size_t text_size);
 
-    int crypto_aead_unlock(uint8_t       *plaintext,
+    int crypto_aead_unlock(uint8_t       *plain_text,
                            const uint8_t  key[32],
                            const uint8_t  nonce[24],
                            const uint8_t  mac[16],
                            const uint8_t *ad        , size_t ad_size,
-                           const uint8_t *ciphertext, size_t text_size);
+                           const uint8_t *cipher_text, size_t text_size);
 
 Those functions have two additional parameters: `ad` and `ad_size`.
 They represent _additional data_, that is authenticated, but _not_
@@ -396,16 +396,17 @@ Chacha20.  It is faster than md5, yet just as secure as SHA-3.
 
 The direct interface sports 2 functions:
 
-    void crypto_blake2b_general(uint8_t       *digest, size_t digest_size,
-                                const uint8_t *key   , size_t key_size,
-                                const uint8_t *in    , size_t in_size);
+    void crypto_blake2b_general(uint8_t       *hash    , size_t hash_size,
+                                const uint8_t *key     , size_t key_size,
+                                const uint8_t *message , size_t message_size);
 
-    void crypto_blake2b(uint8_t digest[64], const uint8_t *in, size_t in_size);
+    void crypto_blake2b(uint8_t hash[64],
+                        const uint8_t *message, size_t message_size);
 
 The second one is a convenience function, which uses a 64 bytes hash
 and no key (this is a good default).
 
-If you use the first function, you can specify the size of the digest
+If you use the first function, you can specify the size of the hash
 (I'd advise against anything below 32-bytes), and use a secret key to
 make the hash unpredictable —useful for message authentication codes.
 
@@ -417,10 +418,10 @@ are _not_ immune to such attacks, and _do_ require those precautions.)
 [LEA]:  https://en.wikipedia.org/wiki/Length_extension_attack (Wikipedia)
 [HMAC]: https://en.wikipedia.org/wiki/Hash-based_message_authentication_code (HMAC)
 
-- `digest     `: The output digest.  Must have at least `digest_size` free bytes.
-- `digest_size`: the length of the hash.  Must be between 1 and 64.
-- `key_size   `: length of the key.       Must be between 0 and 64.
-- `key        `: some secret key.         May be null if key_size is 0.
+- `hash     `: The output hash.  Must have at least `hash_size` free bytes.
+- `hash_size`: the length of the hash.  Must be between 1 and 64.
+- `key_size `: length of the key.       Must be between 0 and 64.
+- `key      `: some secret key.         May be null if key_size is 0.
 
 Any deviation from these invariants results in __undefined
 behaviour.__ Make sure your inputs are correct.
@@ -434,23 +435,23 @@ files without using too much memory.  This interface uses 3 steps:
   parameters;
 - update, where we hash the message chunk by chunk, and keep the
   intermediary result in the context;
-- and finalisation, where we produce the final digest.
+- and finalisation, where we produce the final hash.
 
 There are 2 init functions, one update function, and one final function:
 
-    void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t digest_size,
+    void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
                                      const uint8_t      *key, size_t key_size);
 
     void crypto_blake2b_init(crypto_blake2b_ctx *ctx);
 
     void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
-                               const uint8_t      *in, size_t in_size);
+                               const uint8_t *message, size_t message_size);
 
-    void crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *digest);
+    void crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *hash);
 
 
 The invariants of the parameters are the same as for
-`crypto_blake2b_general()`: `digest_size` must be between 1 and 64,
+`crypto_blake2b_general()`: `hash_size` must be between 1 and 64,
 `key_size` must be between 0 and 64.  Any bigger and you get undefined
 behaviour.
 
@@ -459,18 +460,18 @@ a 64 bytes hash and no key.  This is a good default.
 
 `crypto_blake2b_update()` computes your hash piece by piece.
 
-`crypto_blake2b_final()` outputs the digest.
+`crypto_blake2b_final()` outputs the hash.
 
 Here's how you can hash the concatenation of 3 chunks with the
 incremental interface:
 
-    uint8_t digest[64];
+    uint8_t hash[64];
     crypto_blake2b_ctx ctx;
     crypto_blake2b_init  (&ctx);
     crypto_blake2b_update(&ctx, chunk1, chunk1_size);
     crypto_blake2b_update(&ctx, chunk2, chunk2_size);
     crypto_blake2b_update(&ctx, chunk3, chunk3_size);
-    crypto_blake2b_final (&ctx, digest);
+    crypto_blake2b_final (&ctx, hash);
 
 
 Password key derivation (Argon2i)
@@ -500,7 +501,7 @@ enough for most purposes anyway.
 
 ### crypto\_argon2i()
 
-    void crypto_argon2i(uint8_t       *tag,       uint32_t tag_size,
+    void crypto_argon2i(uint8_t       *hash,      uint32_t hash_size,
                         void          *work_area, uint32_t nb_blocks,
                         uint32_t       nb_iterations,
                         const uint8_t *password,  uint32_t password_size,
@@ -508,7 +509,7 @@ enough for most purposes anyway.
                         const uint8_t *key,       uint32_t key_size,
                         const uint8_t *ad,        uint32_t ad_size);
 
-- The minimum tag size is 4 bytes
+- The minimum hash size is 4 bytes
 - The minimum number of blocks is 8. (blocks are 1024 bytes big.)
 - the work area must be big enough to hold the requested number of
   blocks, and suitably aligned for 64-bit integers.  Tip: just use
@@ -525,7 +526,7 @@ Recommended choice of parameters:
 
 - If you need a key, use a 32 byte one.
 - Do what you will with the additional data `ad`.
-- Use a 32 byte tag to derive a 256-bit key.
+- Use a 32 byte hash to derive a 256-bit key.
 - Put 128 bits of entropy in the salt.  16 random bytes work well.
 - Use at least 3 iterations.  Argon2i is less safe with only one or
   two.  Otherwise, more memory is better than more iterations.
@@ -613,7 +614,7 @@ just a tiny bit slower —it doesn't matter in practice.
     void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                                  uint8_t           *cipher_text,
                                  const uint8_t     *plain_text,
-                                 size_t             message_size);
+                                 size_t             text_size);
 
 Encrypts the plain_text by XORing it with a pseudo-random stream of
 numbers, seeded by the provided chacha20 context.  Decryption is the
@@ -637,8 +638,7 @@ encryption.
 ### crypto\_chacha20\_stream()
 
     void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
-                                uint8_t           *cipher_text,
-                                size_t             message_size);
+                                uint8_t *stream, size_t size);
 
 Convenience function.  Same as `chacha20_encrypt()` with a null
 `plain_text`.  Useful as a user space random number generator.  __Did
@@ -691,8 +691,7 @@ interface for Poly1305.
 ### direct interface
 
     void crypto_poly1305_auth(uint8_t        mac[16],
-                              const uint8_t *m,
-                              size_t         msg_size,
+                              const uint8_t *message, size_t message_size,
                               const uint8_t  key[32]);
 
 Produces a message authentication code for the given message and
@@ -732,7 +731,7 @@ source code of `crypto_aead_lock()` to see how it's done.
     void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const uint8_t key[32]);
 
     void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
-                                const uint8_t *m, size_t bytes);
+                                const uint8_t *message, size_t message_size);
 
     void crypto_poly1305_final(crypto_poly1305_ctx *ctx, uint8_t mac[16]);
 
