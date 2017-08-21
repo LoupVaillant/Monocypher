@@ -10,9 +10,6 @@ They are easy to misuse, which has lead to countless vulnerabilities
 in the past (typically by repeating parts of the random stream).
 Besides, they need an external random seed anyway.
 
-(it's easy to accidentally
-repeat numbers, and break the crypto),
-
 On Linux, you can use the `getrandom(2)` system call from
 `linux/random.h` (don't set any flag).
 
@@ -45,18 +42,44 @@ fact that the attacker just got a few bytes right.  Next thing you
 know, you've destroyed integrity.
 
 To avoid such catastrophe, Monocypher provides 2 comparison functions,
-whose timing are independent from the contents of their input.
+whose timing are independent from the content of their input.
 
     int crypto_memcmp (const uint8_t *p1, const uint8_t *p2, size_t n);
     int crypto_zerocmp(const uint8_t *p , size_t n);
 
-`crypto_memcmp()` returns 0 if it the two memory chunks are the same,
--1 otherwise. `crypto_zerocmp()` returns 0 if all bytes of the memory
+`crypto_memcmp()` returns 0 if the two memory chunks are the same, -1
+otherwise. `crypto_zerocmp()` returns 0 if all bytes of the memory
 chunk are zero, -1 otherwise.
 
 You shouldn't need them if you stick to the high-level interface —just
 look at the return codes.  But if you do have to compare secrets, make
 sure you use `crypto_memcmp()` or `crypto_zerocmp()`.
+
+
+Avoid swapping secrets to disk
+------------------------------
+
+Ideally, you want your computer to reliably forget your secrets once
+it is done with them.  Unfortunately, computers often need to swap
+memory to disk.  This would make your secrets persistent, and may
+allow an attacker to recover them later, if they can read the swap
+partition.
+
+There are several ways to avoid swapping secrets to disk.  The most
+secure is to disable swapping entirely.  Recommended on sensitive
+machines.  Or you could use an encrypted partition for the swap (less
+safe).  In addition, you can disable swap locally —this is often the
+only way.
+
+To disable swap on specific memory regions, UNIX systems provide the
+`mlock(2)` system call.  Windows has `VirtualLock()`.  UNIX systems
+also provide the `mlockall(2)` system call, which locks _all_ memory
+used by a single process.  Though possibly overkill, this is easier to
+use safely.
+
+_Note: core dumps cause similar problems.  Disable them.  Also beware
+of suspend to disk (deep sleep mode), which writes all RAM to disk
+regardless of swap policy, as well as virtual machine snapshots._
 
 
 Authenticated encryption (XChacha20 + Poly1305)
