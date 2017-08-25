@@ -547,8 +547,6 @@ behaviour.__
 
 Recommended choice of parameters:
 
-- If you need a key, use a 32 byte one.
-- Do what you will with the additional data `ad`.
 - Use a 32 byte hash to derive a 256-bit key.
 - Put 128 bits of entropy in the salt.  16 random bytes work well.
 - Use at least 3 iterations.  Argon2i is less safe with only one or
@@ -569,6 +567,24 @@ The hardness of the computation can be chosen thus:
 
 - If the computation is too short even with all the memory you can
   spare, increase the number of iterations.
+
+### key and ad
+
+Most of the time, you won't need a key or additional data.  But they
+do have some uses:
+
+* The key is supposed to be unknown to the attacker.  In the context
+  of password derivation, it would stays unknown *even if the attacker
+  steals your password database*.  Which may be possible if that key
+  is separated from your password database (like on a separate server,
+  and never written on the main server's disks).
+
+  Note: to change the key, you have to re-hash the user's password,
+  which is only possible upon user login.
+
+* The additional data (`ad`) is supposed to be known by the attacker,
+  just like in AEAD constructions.  I don't know of any practical
+  application here, though.
 
 
 Encryption (Chacha20)
