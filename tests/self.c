@@ -389,7 +389,7 @@ static int p_chacha20_set_ctr()
         u8 output_more[stream_size * 2];
         u8 key        [32];          p_random(key  , 32);
         u8 nonce      [8];           p_random(nonce, 8 );
-        size_t ctr   = rand64() % CHACHA_NB_BLOCKS;
+        u64 ctr      = rand64() % CHACHA_NB_BLOCKS;
         size_t limit = ctr * CHACHA_BLOCK_SIZE;
         // Encrypt all at once
         crypto_chacha_ctx ctx;
