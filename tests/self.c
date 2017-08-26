@@ -607,8 +607,8 @@ int main(void)
     status |= TEST(ed25519_sign, 3);
     status |= test_x25519();
 
-    printf("\nProperty based tests tests");
-    printf("\n--------------------------\n");
+    printf("\nProperty based tests");
+    printf("\n--------------------\n");
     status |= p_chacha20();
     status |= p_chacha20_set_ctr();
     status |= p_poly1305();
