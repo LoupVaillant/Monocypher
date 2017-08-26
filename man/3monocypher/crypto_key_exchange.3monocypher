@@ -1,0 +1,143 @@
+.Dd August 26, 2017
+.Dt CRYPTO_KEY_EXCHANGE 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm crypto_key_exchange ,
+.Nm crypto_x25519_public_key ,
+.Nm crypto_x25519
+.Nd Elliptic Curve Diffie-Hellman key exchange
+.Sh SYNOPSIS
+.In monocypher.h
+.Ft int
+.Fo crypto_key_exchange
+.Fa "uint8_t shared_key[32]"
+.Fa "const uint8_t your_secret_key[32]"
+.Fa "const uint8_t their_public_key[32]"
+.Fc
+.Ft void
+.Fo crypto_x25519_public_key
+.Fa "uint8_t public_key[32]"
+.Fa "const uint8_t secret_key[32]"
+.Fc
+.Ft int
+.Fo crypto_x25519
+.Fa "uint8_t shared_secret[32]"
+.Fa "const uint8_t your_secret_key[32]"
+.Fa "const uint8_t their_public_key[32]"
+.Fc
+.Sh DESCRIPTION
+Key exchange works thus: Alice and Bob each have a key pair (a secret
+key and a public key).
+They know each other's public key, but they keep their own secret key
+secret.
+If Eve (an attacker) learns Alice's secret key, she could compute the
+shared secret between Alice and anyone else (including Bob), allowing
+her to read and forge correspondence.
+Protect your secret key.
+.Pp
+Furthermore, Alice and Bob must know each other's public keys
+.Em beforehand .
+If they do not, and try to communicate those keys over an insecure
+channel, Eve might intercept their communications (Man-in-the-middle
+attack) and provide false public keys.
+There are various ways to learn of each other's public keys (crypto
+parties, certificate authorities, web of trust…), each with their own
+advantages and drawbacks.
+.Pp
+The
+.Fn crypto_key_exchange
+function computes a shared key with your secret key and their public
+key, suitable for the
+.Xr crypto_lock 3monocypher ,
+.Xr crypto_unlock 3monocypher ,
+.Xr crypto_aead_lock 3monocypher ,
+and
+.Xr crypto_aead_unlock 3monocypher
+functions.
+It performs an X25519 key exchange, then hashes the shared secret (with
+HChacha20) to get a suitably random-looking shared key.
+.Pp
+Keep in mind that if either of your long term secret keys leaks, it
+may compromise
+.Em all past messages !
+If you want forward secrecy, you will need to exchange temporary public
+keys, then compute your shared secret with
+.Em them .
+.Pp
+The
+.Fn crypto_x25519_public_key
+function eterministically computes the public key from
+.Fa secret_key .
+Make sure the secret key is random.
+See
+.Xr intro 3monocypher
+for advice about generating random bytes (basically, use your operating
+system's random number generator).
+.Pp
+The
+.Fn crypto_x25519
+function allows doing a raw X25519 key exchange.
+This is a low-level function.
+Unless you
+.Em really
+know what you are doing, you should use
+.Fn crypto_key_exchange
+instead.
+This function computes a shared secret with your secret key
+.Fa your_secret_key
+and the other party's public key
+.Fa their_public_key.
+.Sy Warning: the shared secret is not cryptographically random.
+Do not use it directly as a session key.
+You need to hash it first.
+Any cryptographically secure hash will do.
+The
+.Fn crypto_key_exchange
+function uses HChacha20 via
+.Xr crypto_chacha20_H 3monocypher ,
+which is not a general purpose hash, but here it works just fine.
+.Sh RETURN VALUES
+The
+.Fn crypto_key_exchange
+and
+.Fn crypto_x25519
+functions return zero on success.
+The return value serves as a security check: there are a couple evil
+public keys out there, that force the shared key to a known constant
+(the HCHacha20 of zero in the case of
+.Fn crypto_key_exchange
+or all-zero in the case of
+.Fn crypto_x25519 ) .
+This never happens with legitimate public keys, but if the ones you
+process aren't known to be trustworthy, check the return value.
+.Pp
+The
+.Fn crypto_x25519_public_key
+function returns nothing.
+It cannot fail.
+.Sh SEE ALSO
+.Xr crypto_lock 3monocypher ,
+.Xr intro 3monocypher
+.Sh CAVEATS
+No implementation advice can be given for implementing forward secrecy
+using temporary public/private key pairs due to unfamiliarity of the
+author with that matter.
+.Pp
+X25519 generally encodes all numbers in little endian.
+This may require special attention when interoperating with other
+cryptographic libraries that expose an ECDH interface consuming only
+big integers in big endian representation, notably mbedTLS.
+.Sh IMPLEMENTATION DETAILS
+These functions implement X25519.
+The
+.Fn crypto_key_exchange
+function utilizes HChacha20 as well.
+.Pp
+Note that the most significant bit of the public key is systematically
+ignored.
+It is not needed, because every public key should be smaller than
+2^255-19, which fits in 255 bits.
+If another implementation of X25519 gives you a key that's not fully
+reduced and has its high bit set, the computation will fail.
+On the other hand, it also means you may use this bit for other purposes
+(such as parity flipping for Ed25519 compatibility).
