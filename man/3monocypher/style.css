@@ -11,6 +11,8 @@
  * - added to body:
  *   margin: 1em auto; max-width: 40em; padding: 0 .62em; font-size: 1.1em; line-height: 1.62;
  * - Removed .Sh and .Ss from h1 (not present in older mandoc)
+ * - Removed html styling breaking centering in body. It was:
+ *   html {     max-width: 100ex; }
  *
  * Much of the markup that got moved to CSS (e.g. .Ft) was pure HTML in older
  * versions (<i class="ftype">) so that few adjustments are necessary.
