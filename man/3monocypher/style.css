@@ -1,0 +1,254 @@
+/*
+ * This file has been engineered to be compatible with both older mandoc and
+ * newer mandoc.
+ *
+ * mandoc 1.14.1 changed the class named for emph/symb/lit/spacer to
+ * Em/Sy/Li/Pp.
+ * The classes here account for that and are duplicated as necessary.
+ *
+ * The formatting was taken from mandoc.css @ 1.14.3. Changes:
+ * - Liberation Sans was added to the font-family in body.
+ * - added to body:
+ *   margin: 1em auto; max-width: 40em; padding: 0 .62em; font-size: 1.1em; line-height: 1.62;
+ * - Removed .Sh and .Ss from h1 (not present in older mandoc)
+ *
+ * Much of the markup that got moved to CSS (e.g. .Ft) was pure HTML in older
+ * versions (<i class="ftype">) so that few adjustments are necessary.
+ *
+ * Licensing terms of mandoc, which includes mandoc.css, follow:
+ * ----------------------------------------------------------------------------
+ * With the exceptions noted below, all code and documentation
+ * contained in the mandoc toolkit is protected by the Copyright
+ * of the following developers:
+ * 
+ * Copyright (c) 2008-2012, 2014 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2010-2017 Ingo Schwarze <schwarze@openbsd.org>
+ * Copyright (c) 2009, 2010, 2011, 2012 Joerg Sonnenberger <joerg@netbsd.org>
+ * Copyright (c) 2013 Franco Fichtner <franco@lastsummer.de>
+ * Copyright (c) 2014 Baptiste Daroussin <bapt@freebsd.org>
+ * Copyright (c) 2016 Ed Maste <emaste@freebsd.org>
+ * Copyright (c) 2017 Michael Stapelberg <stapelberg@debian.org>
+ * Copyright (c) 1999, 2004 Marc Espie <espie@openbsd.org>
+ * Copyright (c) 1998, 2004, 2010 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 2008, 2017 Otto Moerbeek <otto@drijf.net>
+ * Copyright (c) 2004 Ted Unangst <tedu@openbsd.org>
+ * Copyright (c) 1994 Christos Zoulas <christos@netbsd.org>
+ * Copyright (c) 2003, 2007, 2008, 2014 Jason McIntyre <jmc@openbsd.org>
+ * 
+ * See the individual source files for information about who contributed
+ * to which file during which years.
+ * 
+ * 
+ * The mandoc distribution as a whole is distributed by its developers
+ * under the following license:
+ * 
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ * ----------------------------------------------------------------------------
+ * No contributor information was found at the head of mandoc.css.
+ */
+html {		max-width: 100ex; }
+body { margin: 1em auto; max-width: 40em; padding: 0 .62em; font-size: 1.1em; line-height: 1.62; font-family: "Liberation Sans", Arial, sans-serif; }
+table {		margin-top: 0em;
+		margin-bottom: 0em; }
+td {		vertical-align: top; }
+ul, ol, dl {	margin-top: 0em;
+		margin-bottom: 0em; }
+li, dt {	margin-top: 1em; }
+
+a.selflink {	border-bottom: thin dotted;
+		color: inherit;
+		font: inherit;
+		text-decoration: inherit; }
+* {		clear: both }
+
+/* Search form and search results. */
+
+fieldset {	border: thin solid silver;
+		border-radius: 1em;
+		text-align: center; }
+input[name=expr] {
+		width: 25%; }
+
+table.results {	margin-top: 1em;
+		margin-left: 2em;
+		font-size: smaller; }
+
+/* Header and footer lines. */
+
+table.head {	width: 100%;
+		border-bottom: 1px dotted #808080;
+		margin-bottom: 1em;
+		font-size: smaller; }
+td.head-vol {	text-align: center; }
+td.head-rtitle {
+		text-align: right; }
+span.Nd { }
+
+table.foot {	width: 100%;
+		border-top: 1px dotted #808080;
+		margin-top: 1em;
+		font-size: smaller; }
+td.foot-os {	text-align: right; }
+
+/* Sections and paragraphs. */
+
+div.manual-text {
+		margin-left: 5ex; }
+h1 {		margin-top: 2ex;
+		margin-bottom: 1ex;
+		margin-left: -4ex;
+		font-size: 110%; }
+h2 {		margin-top: 2ex;
+		margin-bottom: 1ex;
+		margin-left: -2ex;
+		font-size: 105%; }
+div.Pp {	margin: 1ex 0ex; }
+a.Sx { }
+a.Xr { }
+
+/* Displays and lists. */
+
+div.Bd { }
+div.D1 {	margin-left: 5ex; }
+
+ul.Bl-bullet {	list-style-type: disc;
+		padding-left: 1em; }
+li.It-bullet { }
+ul.Bl-dash {	list-style-type: none;
+		padding-left: 0em; }
+li.It-dash:before {
+		content: "\2014  "; }
+ul.Bl-item {	list-style-type: none;
+		padding-left: 0em; }
+li.It-item { }
+ul.Bl-compact > li {
+		margin-top: 0ex; }
+
+ol.Bl-enum {	padding-left: 2em; }
+li.It-enum { }
+ol.Bl-compact > li {
+		margin-top: 0ex; }
+
+dl.Bl-diag { }
+dt.It-diag { }
+dd.It-diag {	margin-left: 0ex; }
+b.It-diag {	font-style: normal; }
+dl.Bl-hang { }
+dt.It-hang { }
+dd.It-hang {	margin-left: 10.2ex; }
+dl.Bl-inset { }
+dt.It-inset { }
+dd.It-inset {	margin-left: 0ex; }
+dl.Bl-ohang { }
+dt.It-ohang { }
+dd.It-ohang {	margin-left: 0ex; }
+dl.Bl-tag {	margin-left: 10.2ex; }
+dt.It-tag {	float: left;
+		margin-top: 0ex;
+		margin-left: -10.2ex;
+		padding-right: 2ex;
+		vertical-align: top; }
+dd.It-tag {	clear: right;
+		width: 100%;
+		margin-top: 0ex;
+		margin-left: 0ex;
+		vertical-align: top;
+		overflow: auto; }
+dl.Bl-compact > dt {
+		margin-top: 0ex; }
+
+table.Bl-column { }
+tr.It-column { }
+td.It-column {	margin-top: 1em; }
+table.Bl-compact > tbody > tr > td {
+		margin-top: 0ex; }
+
+cite.Rs {	font-style: normal;
+		font-weight: normal; }
+span.RsA { }
+i.RsB {		font-weight: normal; }
+span.RsC { }
+span.RsD { }
+i.RsI {		font-weight: normal; }
+i.RsJ {		font-weight: normal; }
+span.RsN { }
+span.RsO { }
+span.RsP { }
+span.RsQ { }
+span.RsR { }
+span.RsT {	text-decoration: underline; }
+a.RsU { }
+span.RsV { }
+
+span.eqn { }
+table.tbl { }
+
+/* Semantic markup for command line utilities. */
+
+table.Nm { }
+b.Nm {		font-style: normal; }
+b.Fl {		font-style: normal; }
+b.Cm {		font-style: normal; }
+var.Ar {	font-style: italic;
+		font-weight: normal; }
+span.Op { }
+b.Ic {		font-style: normal; }
+code.Ev {	font-style: normal;
+		font-weight: normal;
+		font-family: monospace; }
+i.Pa {		font-weight: normal; }
+
+/* Semantic markup for function libraries. */
+
+span.Lb { }
+b.In {		font-style: normal; }
+a.In { }
+b.Fd {		font-style: normal; }
+var.Ft {	font-style: italic;
+		font-weight: normal; }
+b.Fn {		font-style: normal; }
+var.Fa {	font-style: italic;
+		font-weight: normal; }
+var.Vt {	font-style: italic;
+		font-weight: normal; }
+var.Va {	font-style: italic;
+		font-weight: normal; }
+code.Dv {	font-style: normal;
+		font-weight: normal;
+		font-family: monospace; }
+code.Er {	font-style: normal;
+		font-weight: normal;
+		font-family: monospace; }
+
+/* Various semantic markup. */
+
+span.An { }
+a.Lk { }
+a.Mt { }
+b.Cd {		font-style: normal; }
+i.Ad {		font-weight: normal; }
+b.Ms {		font-style: normal; }
+span.St { }
+a.Ux { }
+
+/* Physical markup. */
+
+.No {		font-style: normal;
+		font-weight: normal; }
+.Em {		font-style: italic;
+		font-weight: normal; }
+.Sy {		font-style: normal;
+		font-weight: bold; }
+.Li {		font-style: normal;
+		font-weight: normal;
+		font-family: monospace; }
