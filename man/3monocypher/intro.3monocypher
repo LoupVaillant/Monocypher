@@ -19,13 +19,13 @@ in the past, typically by repeating parts of the random stream.
 They typically require an external random seed anyway.
 .Pp
 On Linux, you can use the
-.Xr getrandom 2
+.Fn getrandom
 system call from
 .In linux/random.h .
 Do not set any flag.
 .Pp
 On BSD, you can use
-.Xr arc4random_buf 3
+.Fn arc4random_buf
 from
 .In stdlib.h
 or
@@ -60,12 +60,12 @@ In addition, you can disable swap locally \(en this is often the only
 way.
 .Pp
 To disable swap on specific memory regions, UNIX systems provide the
-.Xr mlock 2
+.Fn mlock
 system call.
 Windows has
 .Fn VirtualLock .
 UNIX systems also provide the
-.Xr mlockall 2
+.Fn mlockall
 system call, which locks
 .Em all
 memory used by a single process.

@@ -44,7 +44,8 @@ Note: using these functions is discouraged:
 if the data you are transmitting is worth authenticating, it is probably
 worth encrypting as well.
 Do so if you can, using
-.Xr crypto_lock 3monocypher and
+.Xr crypto_lock 3monocypher
+and
 .Xr crypto_unlock 3monocypher .
 .Ef
 .Pp

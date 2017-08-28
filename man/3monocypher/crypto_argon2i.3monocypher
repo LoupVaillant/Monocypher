@@ -61,7 +61,7 @@ It must be big enough to hold
 .Fa nb_blocks
 blocks and suitably aligned for 64-bit integers.
 A block is 1024 bytes in length.
-.Xr malloc 3
+.Fn malloc
 should yield a suitable chunk of memory.
 .It Fa nb_blocks
 the number of blocks for the work area.
