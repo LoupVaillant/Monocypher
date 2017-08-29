@@ -1,0 +1,182 @@
+.Dd August 26, 2017
+.Dt CRYPTO_ARGON2I 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm crypto_argon2i
+.Nd password key derivation
+.Sh SYNOPSIS
+.In monocypher.h
+.Ft void
+.Fo crypto_argon2i
+.Fa "uint8_t *hash"
+.Fa "uint32_t hash_size"
+.Fa "void *work_area"
+.Fa "uint32_t nb_blocks"
+.Fa "uint32_t nb_iterations"
+.Fa "const uint8_t *password"
+.Fa "const uint32_t password_size"
+.Fa "const uint8_t *salt"
+.Fa "const uint32_t salt_size"
+.Fa "const uint8_t *key"
+.Fa "const uint32_t key_size"
+.Fa "const uint8_t *ad"
+.Fa "const uint32_t ad_size"
+.Fc
+.Sh DESCRIPTION
+Storing passwords in plaintext is a serious security liability.
+Storing hashed and salted passwords is better, but still very dangerous:
+passwords simply do not have enough entropy to prevent a dedicated
+attacker from guessing them by sheer brute force.
+.Pp
+One way to prevent such attacks is to make sure hashing a password
+takes too much resources for a brute force search to be effective.
+Moreover, we would like the attacker to spend as much resources for each
+attempt as we do, even if they have access to dedicated hardware.
+.Pp
+Argon2i is a resource intensive password key derivation scheme
+optimised for the typical x86-like processor.
+It runs in constant time with respect to the contents of the password.
+.Pp
+Typical applications are password checking (for online services), and
+key derivation (for encryption).
+You can use this, for instance, to protect your private keys:
+Encrypt the private keys using a key derived from a strong passphrase.
+.Pp
+The version currently provided by Monocypher has no threading support,
+so the degree of parallelism is currently limited to 1.
+This is considered good enough for most purposes anyway.
+.Pp
+The arguments are:
+.Bl -tag -width Ds
+.It Fa hash
+the output hash.
+The length of the output hash must be at least 4.
+A length of 32 is recommended.
+.It Fa hash_size
+the length of the output
+.Fa hash .
+.It Fa work_area
+The address of a work area for the algorithm.
+It must be big enough to hold
+.Fa nb_blocks
+blocks and suitably aligned for 64-bit integers.
+A block is 1024 bytes in length.
+.Fn malloc
+should yield a suitable chunk of memory.
+.It Fa nb_blocks
+the number of blocks for the work area.
+It must be at least 8.
+A value of 100000 (one hundred megabytes) is recommended.
+If the computation takes too long, reduce this number.
+If the computation does not take long enough, increase this number.
+If the computation still does not take long enough, increase
+.Fa nb_iterations .
+.It Fa nb_iterations
+the number of iterations.
+It must be at least 1.
+A value of 3 is recommended.
+.It Fa password
+the password to hash.
+.It Fa password_size
+the length of
+.Fa password .
+.It Fa salt
+a password salt.
+This is a random value generated separately for each password to be
+hashed.
+It must be at least 8 bytes long.
+A length of 16 is recommended.
+.It Fa salt_size
+the length of
+.Fa salt .
+.It Fa key
+a key to use in the hash.
+This parameter can be
+.Dv NULL
+if
+.Fa key_size
+is zero.
+You generally do not need this parameter, but it does have some use:
+The key is supposed to be unknown to the attacker.
+In the context of password derivation, it would stay unknown
+.Em even if an attacker steals your password database.
+This may be possible if that key is stored separately from your password
+database (like on a separate server, and never written on the main
+server's disks).
+Note: to change the key, you have to re-hash the user's password,
+which is only possible upon user login.
+.It Fa key_size
+the length of the key.
+This is normally zero, unless you use the
+.Fa key
+parameter.
+.It Fa ad
+additional data.
+This is additional data that goes into the hash, similar to the
+authenticated encryption with authenticated data (AEAD) construction in
+.Xr crypto_aead_lock 3monocypher .
+This most likely has no practical application but is exposed for the
+sake of completeness.
+This parameter may be
+.Dv NULL
+if
+.Fa ad_size
+is zero.
+.It Fa ad_size
+the length of
+.Fa ad .
+.El
+.Pp
+Use
+.Xr crypto_memcmp 3monocypher
+to compare password hashes to prevent timing attacks, which are feasible
+against the weakest passwords.
+.Pp
+The hardness of the computation can be chosen thus:
+.Bl -bullet
+.It
+Decide how long the computation should take.
+For user authentication, this is typically somewhere between half a
+second (convenient) and several seconds (paranoid).
+You may likely have to do some benchmarking which parameters take how
+long.
+.It
+Try to hash a password with 3 iterations and 100000 blocks (one hundred
+megabytes) to establish a baseline.
+See above for adjusting
+.Fa nb_blocks
+and
+.Fa nb_iterations .
+.El
+.Sh RETURN VALUES
+This function returns nothing.
+.Sh EXAMPLES
+This example shows how to hash a password with the recommended baseline
+parameters:
+.Bd -literal -offset indent
+uint8_t hash[32], salt[16];
+const uint32_t nb_blocks = 100000;
+const uint32_t nb_iterations = 3;
+void *work_area = malloc(nb_blocks * 1024);
+const char *password = "TooManySecrets";
+
+if (work_area == NULL) {
+        /* handle malloc() failure */
+}
+
+/* ...randomly generate salt here... */
+
+crypto_argon2i(hash, sizeof(hash), work_area, nb_blocks, nb_iterations,
+    salt, sizeof(salt), NULL, 0, NULL, 0);
+.Ed
+.Sh SEE ALSO
+.Xr crypto_lock 3monocypher ,
+.Xr crypto_memcmp 3monocypher ,
+.Xr intro 3monocypher
+.Sh CAVEATS
+Any deviation from the specified input and output length ranges results
+in
+.Sy undefined behavior .
+Make sure your inputs are correct.
+.Sh IMPLEMENTATION DETAILS
+This function implements Argon2i.

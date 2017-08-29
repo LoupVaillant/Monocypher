@@ -1,0 +1,48 @@
+.Dd August 26, 2017
+.Dt CRYPTO_CHACHA20_H 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm crypto_chacha20_H
+.Nd HChacha20 special-purpose hashing
+.Sh SYNOPSIS
+.In monocypher.h
+.Ft void
+.Fo crypto_chacha20_H
+.Fa "uint8_t out[32]"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t in[16]"
+.Fc
+.Sh DESCRIPTION
+The
+.Fn crypto_chacha20_H
+function provides a not-so-cryptographic hash.
+It may be used for some specific purposes, such as X25519 key
+derivation, or XChacha20 initialisation.
+If in doubt, do not use directly.
+Use
+.Xr crypto_blake2b 3monocypher
+instead.
+.Pp
+The output
+.Fa out
+is a cryptographically secure random number
+.Em if
+there is enough entropy in in the input
+.Fa key .
+X25519 shared secrets have enough entropy.
+The input
+.Fa in
+fills the space reserved for the
+nonce and counter.
+It does not have to be random.
+.Sh RETURN VALUES
+This function returns nothing.
+It cannot fail.
+.Sh SEE ALSO
+.Xr crypto_chacha20_encrypt 3monocypher ,
+.Xr crypto_key_exchange 3monocypher ,
+.Xr intro 3monocypher
+.Sh CAVEATS
+.Sy This is not a general-purpose cryptographic hash function .
+.Sh IMPLEMENTATION DETAILS
+This function implements HChacha20.
