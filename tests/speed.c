@@ -480,6 +480,10 @@ static void d_ed25519(void)
 
 int main()
 {
+    if (sodium_init() == -1) {
+        printf("Libsodium init failed.  Abort.  No test performed\n");
+        return 1;
+    }
     printf("\nComparing with Libsodium\n");
     printf("------------------------\n");
     print("Chacha20    ", chacha20(), "Libsodium");
