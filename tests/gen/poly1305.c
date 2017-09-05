@@ -1,0 +1,23 @@
+#include <sodium.h>
+#include "utils.h"
+
+void test(size_t size)
+{
+    RANDOM_INPUT(key,  32);
+    RANDOM_INPUT(in , 256);
+    u8 tag[ 16];
+
+    crypto_onetimeauth(tag, in, size, key);
+
+    print_vector(key, 32);
+    print_vector(in , 32);
+    print_vector(tag, 16);
+    printf("\n");
+}
+
+int main(void)
+{
+    SODIUM_INIT;
+    FOR (size, 0, 256) { test(size); }
+    return 0;
+}
