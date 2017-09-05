@@ -82,6 +82,7 @@ Once the context is initialised, encryption can safely be chained thus:
     crypto_encrypt_chacha20(ctx, plain_1, cipher_1, length_1);
     crypto_encrypt_chacha20(ctx, plain_2, cipher_2, length_2);
 .Ed
+.Pp
 The input
 .Fa plain_text
 and the output
