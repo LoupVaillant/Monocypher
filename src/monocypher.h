@@ -116,9 +116,9 @@ void crypto_argon2i(uint8_t       *hash,      uint32_t hash_size,     // >= 4
 ///////////////
 /// X-25519 ///
 ///////////////
-int crypto_x25519(uint8_t       shared_secret   [32],
-                  const uint8_t your_secret_key [32],
-                  const uint8_t their_public_key[32]);
+int crypto_x25519(uint8_t       raw_shared_secret[32],
+                  const uint8_t your_secret_key  [32],
+                  const uint8_t their_public_key [32]);
 
 void crypto_x25519_public_key(uint8_t       public_key[32],
                               const uint8_t secret_key[32]);
