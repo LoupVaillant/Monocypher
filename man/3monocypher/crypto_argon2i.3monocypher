@@ -166,8 +166,12 @@ if (work_area == NULL) {
 
 /* ...randomly generate salt here... */
 
-crypto_argon2i(hash, sizeof(hash), work_area, nb_blocks, nb_iterations,
-    salt, sizeof(salt), NULL, 0, NULL, 0);
+crypto_argon2i(hash, sizeof(hash),
+    work_area, nb_blocks, nb_iterations,
+    password, strlen(password),
+    salt, sizeof(salt),
+    NULL, 0,
+    NULL, 0);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,

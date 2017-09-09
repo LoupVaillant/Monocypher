@@ -102,19 +102,42 @@ The
 and
 .Fn crypto_x25519
 functions return zero on success.
-The return value serves as a security check: there are a couple evil
-public keys out there, that force the shared key to a known constant
-(the HCHacha20 of zero in the case of
+The return value serves as a security check: there are public keys that
+force the shared key to a known constant (the HChacha20 of zero in the
+case of
 .Fn crypto_key_exchange
 or all-zero in the case of
 .Fn crypto_x25519 ) .
 This never happens with legitimate public keys, but if the ones you
-process aren't known to be trustworthy, check the return value.
+process are not known to be trustworthy, check the return value.
 .Pp
 The
 .Fn crypto_x25519_public_key
 function returns nothing.
 It cannot fail.
+.Sh EXAMPLES
+This example outlines how to generate a private key and a public key,
+then perform a key exchange.
+.Bd -literal -offset indent
+uint8_t sk[32], pk[32];
+uint8_t theirpk[32];
+uint8_t shared_key[32];
+
+/* ...randomly generate sk here... */
+crypto_x25519_public_key(pk, sk);
+
+/* ...read their public key... */
+
+if (crypto_key_exchange(shared_key, sk, theirpk) != 0) {
+        /* ...handle weak key (see RETURN VALUES)...
+         * You probably want to stop processing now.
+         */
+}
+
+/* shared_key can now be used as key, for example in
+ * crypto_lock/crypto_unlock.
+ */
+.Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,
 .Xr intro 3monocypher
