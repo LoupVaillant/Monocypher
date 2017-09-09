@@ -21,7 +21,7 @@
 .Fc
 .Ft int
 .Fo crypto_x25519
-.Fa "uint8_t shared_secret[32]"
+.Fa "uint8_t raw_shared_secret[32]"
 .Fa "const uint8_t your_secret_key[32]"
 .Fa "const uint8_t their_public_key[32]"
 .Fc
@@ -86,7 +86,7 @@ instead.
 This function computes a shared secret with your secret key
 .Fa your_secret_key
 and the other party's public key
-.Fa their_public_key.
+.Fa their_public_key .
 .Sy Warning: the shared secret is not cryptographically random.
 Do not use it directly as a session key.
 You need to hash it first.

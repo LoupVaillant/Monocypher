@@ -1235,9 +1235,9 @@ static void x25519_ladder(const fe x1, fe x2, fe z2, fe x3, fe z3,
     fe_cswap(z2, z3, swap);
 }
 
-int crypto_x25519(u8       shared_secret   [32],
-                  const u8 your_secret_key [32],
-                  const u8 their_public_key[32])
+int crypto_x25519(u8       raw_shared_secret[32],
+                  const u8 your_secret_key  [32],
+                  const u8 their_public_key [32])
 {
     // computes the scalar product
     fe x1;
@@ -1257,11 +1257,11 @@ int crypto_x25519(u8       shared_secret   [32],
     // normalises the coordinates: x == X / Z
     fe_invert(z2, z2);
     fe_mul(x2, x2, z2);
-    fe_tobytes(shared_secret, x2);
+    fe_tobytes(raw_shared_secret, x2);
 
     // Returns -1 if the input is all zero
     // (happens with some malicious public keys)
-    return -1 - crypto_zerocmp(shared_secret, 32);
+    return -1 - crypto_zerocmp(raw_shared_secret, 32);
 }
 
 void crypto_x25519_public_key(u8       public_key[32],
@@ -1575,9 +1575,9 @@ int crypto_key_exchange(u8       shared_key[32],
                         const u8 their_public_key[32])
 {
     static const u8 zero[16] = {0};
-    u8 shared_secret[32];
-    int status = crypto_x25519(shared_secret, your_secret_key, their_public_key);
-    crypto_chacha20_H(shared_key, shared_secret, zero);
+    u8 raw_shared_secret[32];
+    int status = crypto_x25519(raw_shared_secret, your_secret_key, their_public_key);
+    crypto_chacha20_H(shared_key, raw_shared_secret, zero);
     return status;
 }
 
