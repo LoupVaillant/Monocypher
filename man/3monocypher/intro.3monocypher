@@ -18,7 +18,8 @@ They are easy to misuse, which has lead to countless vulnerabilities
 in the past, typically by repeating parts of the random stream.
 They typically require an external random seed anyway.
 .Pp
-On Linux, you can use the
+On recent versions of Linux (glibc >= 2.25, Linux >= 3.17), you can use
+the
 .Fn getrandom
 system call from
 .In linux/random.h .
