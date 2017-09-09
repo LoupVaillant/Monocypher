@@ -1536,6 +1536,8 @@ void crypto_sign(u8        signature[64],
     ge_scalarmult_base(&R, r);
     ge_tobytes(signature, &R);
 
+    // Hash R, the public key, and the message together.
+    // It cannot be done in paralell with the first hash.
     u8 h_ram[64];
     hash_ram(h_ram, signature, pk, message, message_size);
 
