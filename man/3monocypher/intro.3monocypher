@@ -134,32 +134,39 @@ Monocypher provides functions the following:
 .It Xr crypto_poly1305_update 3monocypher
 .It Xr crypto_poly1305_final 3monocypher
 .El
+.It Utility functions
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_memcmp 3monocypher
+.It Xr crypto_zerocmp 3monocypher
+.El
 .El
 .Sh SEE ALSO
-.Xr crypto_lock 3monocypher ,
-.Xr crypto_unlock 3monocypher ,
 .Xr crypto_aead_lock 3monocypher ,
 .Xr crypto_aead_unlock 3monocypher ,
-.Xr crypto_key_exchange 3monocypher ,
-.Xr crypto_x25519_public_key 3monocypher ,
-.Xr crypto_x25519 3monocypher ,
-.Xr crypto_sign_public_key 3monocypher ,
-.Xr crypto_sign 3monocypher ,
-.Xr crypto_check 3monocypher ,
-.Xr crypto_blake2b_general 3monocypher ,
+.Xr crypto_argon2i 3monocypher ,
 .Xr crypto_blake2b 3monocypher ,
+.Xr crypto_blake2b_final 3monocypher ,
+.Xr crypto_blake2b_general 3monocypher ,
 .Xr crypto_blake2b_general_init 3monocypher ,
 .Xr crypto_blake2b_init 3monocypher ,
 .Xr crypto_blake2b_update 3monocypher ,
-.Xr crypto_blake2b_final 3monocypher ,
 .Xr crypto_chacha20_H 3monocypher ,
-.Xr crypto_argon2i 3monocypher ,
-.Xr crypto_chacha20_init 3monocypher ,
-.Xr crypto_chacha20_x_init 3monocypher ,
 .Xr crypto_chacha20_encrypt 3monocypher ,
-.Xr crypto_chacha20_stream 3monocypher ,
+.Xr crypto_chacha20_init 3monocypher ,
 .Xr crypto_chacha20_set_ctr 3monocypher ,
+.Xr crypto_chacha20_stream 3monocypher ,
+.Xr crypto_chacha20_x_init 3monocypher ,
+.Xr crypto_check 3monocypher ,
+.Xr crypto_key_exchange 3monocypher ,
+.Xr crypto_lock 3monocypher ,
+.Xr crypto_memcmp 3monocypher ,
 .Xr crypto_poly1305_auth 3monocypher ,
+.Xr crypto_poly1305_final 3monocypher
 .Xr crypto_poly1305_init 3monocypher ,
 .Xr crypto_poly1305_update 3monocypher ,
-.Xr crypto_poly1305_final 3monocypher
+.Xr crypto_sign 3monocypher ,
+.Xr crypto_sign_public_key 3monocypher ,
+.Xr crypto_unlock 3monocypher ,
+.Xr crypto_x25519 3monocypher ,
+.Xr crypto_x25519_public_key 3monocypher ,
+.Xr crypto_zerocmp 3monocypher
