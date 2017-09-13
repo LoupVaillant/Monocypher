@@ -8,7 +8,7 @@
 .Nd public key signatures
 .Sh SYNOPSIS
 .In monocypher.h
-.Ft int
+.Ft void
 .Fo crypto_sign
 .Fa "uint8_t signature[64]"
 .Fa "const uint8_t secret_key[32]"
