@@ -9,9 +9,9 @@ void test(size_t size)
 
     crypto_onetimeauth(tag, in, size, key);
 
-    print_vector(key, 32);
-    print_vector(in , 32);
-    print_vector(tag, 16);
+    print_vector(key,   32);
+    print_vector(in , size);
+    print_vector(tag,   16);
     printf("\n");
 }
 

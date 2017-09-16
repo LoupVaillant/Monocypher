@@ -1,15 +1,14 @@
 # backup files
 *~
 *.o
+*.out
+*.vec
 *.gch
 *.sav
 *.profraw
 *.profdata
-bin/*
 formal-analysis/*
-self
-sodium
-donna
-speed
-rename_*
 man/3monocypher/*.html
+dist/README.md
+dist/AUTHORS.md
+dist/LICENCE.md

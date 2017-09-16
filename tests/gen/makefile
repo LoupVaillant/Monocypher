@@ -25,18 +25,18 @@ clean:
 %.vec: %.out
 	./$< > $@
 
-%.out: %.c donna.o ../utils.c monocypher.o
+%.out: %.c donna.o ../../dist/tests/utils.c monocypher.o
 	$(CC) $(CFLAGS) -o $@ $^              \
-            -I ../                            \
+            -I ../../dist/tests               \
             -I ../ed25519-donna               \
-            -I ../../src                      \
+            -I ../../dist/src                  \
             $$(pkg-config --cflags libsodium) \
             $$(pkg-config --libs   libsodium)
 
 # Needed for EdDSA
 donna.o: ../ed25519-donna/ed25519.c
 	$(CC) $(CFLAGS) -o $@ -c $^ \
-            -I ../../src            \
+            -I ../../dist/src       \
             $(HASH)                 \
             -DED25519_CUSTOMHASH    \
             -DED25519_TEST          \
@@ -44,9 +44,11 @@ donna.o: ../ed25519-donna/ed25519.c
             -DED25519_FORCE_32BIT
 
 # Needed for Blake2b in EdDSA
-monocypher.o: ../../src/monocypher.c
+monocypher.o: ../../dist/src/monocypher.c
 	$(CC) $(CFLAGS) -o $@ -c $^ \
-            -I ../../src
+            -I ../../dist/src
 
 # Needed for Ed25519
-sha512.o: ../../src/monocypher.c
+sha512.o: ../../dist/src/sha512.c
+	$(CC) $(CFLAGS) -o $@ -c $^ \
+            -I ../../dist/src

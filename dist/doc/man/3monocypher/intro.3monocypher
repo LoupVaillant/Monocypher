@@ -1,0 +1,173 @@
+.Dd August 26, 2017
+.Dt INTRO 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm intro
+.Nd introduction to Monocypher
+.Sh DESCRIPTION
+Monocypher is a cryptographic library.
+It provides functions for authenticated encryption, cryptographic
+hashing, public key signatures and password key derivation.
+The rest of this section covers various topics that require special
+consideration, followed by an index.
+.Ss Random number generation
+Monocypher does not provide a random number generator.
+You are supposed to use the facilities of your operating system.
+Avoid user space random number generators.
+They are easy to misuse, which has lead to countless vulnerabilities
+in the past, typically by repeating parts of the random stream.
+They typically require an external random seed anyway.
+.Pp
+On recent versions of Linux (glibc >= 2.25, Linux >= 3.17), you can use
+the
+.Fn getrandom
+system call from
+.In linux/random.h .
+Do not set any flag.
+.Pp
+On BSD, you can use
+.Fn arc4random_buf
+from
+.In stdlib.h
+or
+.In bsd/stdlib.h .
+This is arguably even easier to use than
+.Fn getrandom .
+.Pp
+Windows provides the
+.Fn CryptGenRandom
+function.
+.Pp
+If no easy to use system call is available on your system, you may
+have to use
+.Pa /dev/urandom .
+It is more difficult to use, however, because it involves reading a file
+and the read may get aborted.
+Make sure you indeed get all the random bytes you requested.
+Generating random numbers for cryptographic purposes portably is
+currently impossible without using other libraries.
+.Ss Avoid swapping secrets to disk
+Ideally, you want your computer to reliably forget your secrets once
+it is done with them.
+Unfortunately, computers often need to swap memory to disk.
+This would make your secrets persistent, and may allow an attacker to
+recover them later if they can read the swap partition.
+.Pp
+There are several ways to avoid swapping secrets to disk.
+The most secure is to disable swapping entirely.
+Doing so is recommended on sensitive machines.
+Or you could use an encrypted partition for the swap (less safe).
+In addition, you can disable swap locally \(en this is often the only
+way.
+.Pp
+To disable swap on specific memory regions, UNIX systems provide the
+.Fn mlock
+system call.
+Windows has
+.Fn VirtualLock .
+UNIX systems also provide the
+.Fn mlockall
+system call, which locks
+.Em all
+memory used by a single process.
+Though possibly overkill, this is easier to use safely.
+.Pp
+.Bf Em
+Note: core dumps cause similar problems.
+Disable them.
+Also beware of suspend to disk (deep sleep mode), which writes all RAM
+to disk regardless of swap policy, as well as virtual machine snapshots.
+.Ef
+.Ss Index
+Monocypher provides functions the following:
+.Bl -ohang -offset indent
+.It Authenticated encryption
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_lock 3monocypher
+.It Xr crypto_unlock 3monocypher
+.El
+.It Authenticated encryption with additional data (AEAD)
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_aead_lock 3monocypher
+.It Xr crypto_aead_unlock 3monocypher
+.El
+.It (Elliptic Curve) Diffie-Hellman key exchange
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_key_exchange 3monocypher
+.It Xr crypto_x25519_public_key 3monocypher
+.It Xr crypto_x25519 3monocypher
+.El
+.It Public key signatures
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_sign_public_key 3monocypher
+.It Xr crypto_sign 3monocypher
+.It Xr crypto_check 3monocypher
+.El
+.It Cryptographic hashing
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_blake2b_general 3monocypher
+.It Xr crypto_blake2b 3monocypher
+.It Xr crypto_blake2b_general_init 3monocypher
+.It Xr crypto_blake2b_init 3monocypher
+.It Xr crypto_blake2b_update 3monocypher
+.It Xr crypto_blake2b_final 3monocypher
+.El
+.It Special-purpose hashing
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_chacha20_H 3monocypher
+.El
+.It Password key derivation
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_argon2i 3monocypher
+.El
+.It Unauthenticated encryption
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_chacha20_init 3monocypher
+.It Xr crypto_chacha20_x_init 3monocypher
+.It Xr crypto_chacha20_encrypt 3monocypher
+.It Xr crypto_chacha20_stream 3monocypher
+.It Xr crypto_chacha20_set_ctr 3monocypher
+.El
+.It One-time authentication
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_poly1305_auth 3monocypher
+.It Xr crypto_poly1305_init 3monocypher
+.It Xr crypto_poly1305_update 3monocypher
+.It Xr crypto_poly1305_final 3monocypher
+.El
+.It Utility functions
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_memcmp 3monocypher
+.It Xr crypto_zerocmp 3monocypher
+.El
+.El
+.Sh SEE ALSO
+.Xr crypto_aead_lock 3monocypher ,
+.Xr crypto_aead_unlock 3monocypher ,
+.Xr crypto_argon2i 3monocypher ,
+.Xr crypto_blake2b 3monocypher ,
+.Xr crypto_blake2b_final 3monocypher ,
+.Xr crypto_blake2b_general 3monocypher ,
+.Xr crypto_blake2b_general_init 3monocypher ,
+.Xr crypto_blake2b_init 3monocypher ,
+.Xr crypto_blake2b_update 3monocypher ,
+.Xr crypto_chacha20_H 3monocypher ,
+.Xr crypto_chacha20_encrypt 3monocypher ,
+.Xr crypto_chacha20_init 3monocypher ,
+.Xr crypto_chacha20_set_ctr 3monocypher ,
+.Xr crypto_chacha20_stream 3monocypher ,
+.Xr crypto_chacha20_x_init 3monocypher ,
+.Xr crypto_check 3monocypher ,
+.Xr crypto_key_exchange 3monocypher ,
+.Xr crypto_lock 3monocypher ,
+.Xr crypto_memcmp 3monocypher ,
+.Xr crypto_poly1305_auth 3monocypher ,
+.Xr crypto_poly1305_final 3monocypher
+.Xr crypto_poly1305_init 3monocypher ,
+.Xr crypto_poly1305_update 3monocypher ,
+.Xr crypto_sign 3monocypher ,
+.Xr crypto_sign_public_key 3monocypher ,
+.Xr crypto_unlock 3monocypher ,
+.Xr crypto_x25519 3monocypher ,
+.Xr crypto_x25519_public_key 3monocypher ,
+.Xr crypto_zerocmp 3monocypher

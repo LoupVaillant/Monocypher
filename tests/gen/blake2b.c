@@ -9,8 +9,8 @@ void test(size_t size, size_t key_size, size_t hash_size)
 
     crypto_generichash(hash, hash_size, in, size, key, key_size);
 
-    print_vector(in , size);
-    print_vector(key, key_size);
+    print_vector(in  , size);
+    print_vector(key , key_size);
     print_vector(hash, hash_size);
     printf("\n");
 }
