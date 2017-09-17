@@ -9,6 +9,5 @@
 *.profdata
 formal-analysis/*
 man/3monocypher/*.html
-dist/README.md
 dist/AUTHORS.md
 dist/LICENCE.md
