@@ -1,6 +1,8 @@
 # backup files
 *~
 *.o
+*.a
+*.so
 *.out
 *.vec
 *.gch

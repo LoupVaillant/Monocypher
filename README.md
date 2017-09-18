@@ -9,16 +9,21 @@ inspired by [libsodium][] and [TweetNaCl][], written in portable C.
 [libsodium]: http://libsodium.org
 [TweetNaCl]: http://tweetnacl.cr.yp.to/
 
-Generating the test suite
--------------------------
+
+Generating the test vectors
+---------------------------
 
 You are currently using the source repository, meant for developers.
-You need to generate the test suite before you can run it.  This
-requires Libsodium 1.0.12 or later.
+You need to generate the test vectors before you can run the test
+suite.  This requires requires Libsodium 1.0.12 or later:
 
-    $ ./dist.sh
+    $ cd tests/gen/
+    $ make
+    $ cd ../..
 
-Once you have done that, `cd dist` and read the
+This will generate `dist/tests/vectors.h`, which contains all the test
+vectors. You can now go to the `dist/` directory, then compile and
+test Monocypher like end users.  There's also a
 [README.md](dist/README.md) there.
 
 
@@ -38,7 +43,6 @@ installation instructions there.
 * [Lua](https://github.com/philanc/luanacha)
 * [Zig](https://bitbucket.org/mihailp/zig-monocypher/src/default)
   (http://ziglang.org/).
-
 
 ### Known alternate distributions
 
