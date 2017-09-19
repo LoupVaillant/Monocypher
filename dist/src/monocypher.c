@@ -544,7 +544,6 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
 
     ctx->input_offset[0] = 0;         // begining of the input, no offset
     ctx->input_offset[1] = 0;         // begining of the input, no offset
-    ctx->input_idx       = 0;         // buffer is empty
     ctx->hash_size       = hash_size; // remember the hash size we want
     blake2b_reset_input(ctx);         // clear the input buffer
 
