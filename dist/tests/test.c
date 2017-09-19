@@ -22,7 +22,7 @@ static void* alloc(size_t size)
 {
     void *buf = malloc(size);
     if (buf == NULL) {
-        fprintf(stderr, "Allocation failed: 0x%lx bytes\n", size);
+        fprintf(stderr, "Allocation failed: 0x%zx bytes\n", size);
         exit(1);
     }
     return buf;
