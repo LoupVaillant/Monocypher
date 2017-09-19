@@ -21,16 +21,22 @@ CC=gcc -std=gnu99 # speed tests don't work with -std=cxx, they need the POSIX ex
 #TODO maybe just use the environment variable?
 CFLAGS= -pedantic -Wall -Wextra -O3 -march=native -g
 
-.PHONY: all clean install test
+.PHONY: all clean install test speed
 
 all: lib/libmonocypher.a lib/libmonocypher.so
+
+clean:
+	rm -rf lib/
+	rm -f  *.out
+
+# TODO
+# install:
 
 test: test.out
 	./test.out
 
-clean:
-	rm -rf lib/
-	rm -f  test.out
+speed: speed.out
+	./speed.out
 
 # Monocypher libraries
 lib/libmonocypher.a: lib/monocypher.o
@@ -42,17 +48,16 @@ lib/%.o: src/%.c src/%.h
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -I src -fPIC -c -o $@ $<
 
-# Test libraries
+# Test & speed libraries
 lib/utils.o: tests/utils.c tests/utils.h
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I src -fPIC -c -o $@ $<
-lib/test.o: tests/test.c tests/utils.h    \
-                         tests/vectors.h  \
-                         src/monocypher.h \
-                         src/sha512.h
+lib/test.o : tests/test.c  tests/utils.h src/monocypher.h src/sha512.h tests/vectors.h
+lib/speed.o: tests/speed.c tests/utils.h src/monocypher.h src/sha512.h
+lib/utils.o lib/test.o lib/speed.o:
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -I src -fPIC -c -o $@ $<
 
-# test executable
-test.out: lib/test.o lib/monocypher.o lib/sha512.o lib/utils.o
+# test & speed executables
+test.out : lib/test.o  lib/monocypher.o lib/sha512.o lib/utils.o
+speed.out: lib/speed.o lib/monocypher.o lib/sha512.o lib/utils.o
+test.out speed.out:
 	$(CC) $(CFLAGS) -I src -o $@ $^
