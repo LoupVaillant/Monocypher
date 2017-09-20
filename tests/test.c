@@ -263,18 +263,18 @@ static int test_cmp()
 // encrypting all at once.
 static int p_chacha20()
 {
-    // total input size
-    static const size_t input_size = CHACHA_BLOCK_SIZE * 4;
-    // maximum chunk size
-    static const size_t c_max_size = CHACHA_BLOCK_SIZE * 2;
+#undef INPUT_SIZE
+#undef C_MAX_SIZE
+#define INPUT_SIZE (CHACHA_BLOCK_SIZE * 4) // total input size
+#define C_MAX_SIZE (CHACHA_BLOCK_SIZE * 2) // maximum chunk size
     int status = 0;
     FOR (i, 0, 1000) {
         size_t offset = 0;
         // outputs
-        u8 output_chunk[input_size];
-        u8 output_whole[input_size];
+        u8 output_chunk[INPUT_SIZE];
+        u8 output_whole[INPUT_SIZE];
         // inputs
-        u8 input       [input_size];  p_random(input, input_size);
+        u8 input       [INPUT_SIZE];  p_random(input, INPUT_SIZE);
         u8 key         [32];          p_random(key  , 32);
         u8 nonce       [8];           p_random(nonce, 8);
 
@@ -282,8 +282,8 @@ static int p_chacha20()
         crypto_chacha_ctx ctx;
         crypto_chacha20_init(&ctx, key, nonce);
         while (1) {
-            size_t chunk_size = rand64() % c_max_size;
-            if (offset + chunk_size > input_size) { break; }
+            size_t chunk_size = rand64() % C_MAX_SIZE;
+            if (offset + chunk_size > INPUT_SIZE) { break; }
             u8 *out = output_chunk + offset;
             u8 *in  = input        + offset;
             crypto_chacha20_encrypt(&ctx, out, in, chunk_size);
@@ -302,12 +302,12 @@ static int p_chacha20()
 
 static int p_chacha20_set_ctr()
 {
-    static const size_t stream_size = CHACHA_BLOCK_SIZE * CHACHA_NB_BLOCKS;
+#define STREAM_SIZE (CHACHA_BLOCK_SIZE * CHACHA_NB_BLOCKS)
     int status = 0;
     FOR (i, 0, 1000) {
-        u8 output_part[stream_size    ];
-        u8 output_all [stream_size    ];
-        u8 output_more[stream_size * 2];
+        u8 output_part[STREAM_SIZE    ];
+        u8 output_all [STREAM_SIZE    ];
+        u8 output_more[STREAM_SIZE * 2];
         u8 key        [32];          p_random(key  , 32);
         u8 nonce      [8];           p_random(nonce, 8 );
         u64 ctr      = rand64() % CHACHA_NB_BLOCKS;
@@ -315,25 +315,25 @@ static int p_chacha20_set_ctr()
         // Encrypt all at once
         crypto_chacha_ctx ctx;
         crypto_chacha20_init(&ctx, key, nonce);
-        crypto_chacha20_stream(&ctx, output_all, stream_size);
+        crypto_chacha20_stream(&ctx, output_all, STREAM_SIZE);
         // Encrypt second part
         crypto_chacha20_set_ctr(&ctx, ctr);
-        crypto_chacha20_stream(&ctx, output_part + limit, stream_size - limit);
+        crypto_chacha20_stream(&ctx, output_part + limit, STREAM_SIZE - limit);
         // Encrypt first part
         crypto_chacha20_set_ctr(&ctx, 0);
         crypto_chacha20_stream(&ctx, output_part, limit);
         // Compare the results (must be the same)
-        status |= crypto_memcmp(output_part, output_all, stream_size);
+        status |= crypto_memcmp(output_part, output_all, STREAM_SIZE);
 
         // Encrypt before the begining
         crypto_chacha20_set_ctr(&ctx, -ctr);
         crypto_chacha20_stream(&ctx,
-                               output_more + stream_size - limit,
-                               stream_size + limit);
+                               output_more + STREAM_SIZE - limit,
+                               STREAM_SIZE + limit);
         // Compare the results (must be the same)
-        status |= crypto_memcmp(output_more + stream_size,
+        status |= crypto_memcmp(output_more + STREAM_SIZE,
                                 output_all,
-                                stream_size);
+                                STREAM_SIZE);
     }
     printf("%s: Chacha20 (set counter)\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -343,10 +343,10 @@ static int p_chacha20_set_ctr()
 // authenticating all at once
 static int p_poly1305()
 {
-    // total input size
-    static const size_t input_size = POLY1305_BLOCK_SIZE * 4;
-    // maximum chunk size
-    static const size_t c_max_size = POLY1305_BLOCK_SIZE * 2;
+#undef INPUT_SIZE
+#undef C_MAX_SIZE
+#define INPUT_SIZE (POLY1305_BLOCK_SIZE * 4) // total input size
+#define C_MAX_SIZE (POLY1305_BLOCK_SIZE * 2) // maximum chunk size
     int status = 0;
     FOR (i, 0, 1000) {
         size_t offset = 0;
@@ -354,15 +354,15 @@ static int p_poly1305()
         u8 mac_chunk[16];
         u8 mac_whole[16];
         // inputs
-        u8 input[input_size];  p_random(input, input_size);
+        u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
         u8 key  [32];          p_random(key  , 32);
 
         // Authenticate bit by bit
         crypto_poly1305_ctx ctx;
         crypto_poly1305_init(&ctx, key);
         while (1) {
-            size_t chunk_size = rand64() % c_max_size;
-            if (offset + chunk_size > input_size) { break; }
+            size_t chunk_size = rand64() % C_MAX_SIZE;
+            if (offset + chunk_size > INPUT_SIZE) { break; }
             crypto_poly1305_update(&ctx, input + offset, chunk_size);
             offset += chunk_size;
         }
@@ -384,10 +384,10 @@ static int p_poly1305()
 // interface.
 static int p_blake2b()
 {
-    // total input size
-    static const size_t input_size = BLAKE2B_BLOCK_SIZE * 4;
-    // maximum chunk size
-    static const size_t c_max_size = BLAKE2B_BLOCK_SIZE * 2;
+#undef INPUT_SIZE
+#undef C_MAX_SIZE
+#define INPUT_SIZE (BLAKE2B_BLOCK_SIZE * 4) // total input size
+#define C_MAX_SIZE (BLAKE2B_BLOCK_SIZE * 2) // maximum chunk size
     int status = 0;
     FOR (i, 0, 1000) {
         size_t offset = 0;
@@ -395,14 +395,14 @@ static int p_blake2b()
         u8 hash_chunk[64];
         u8 hash_whole[64];
         // inputs
-        u8 input[input_size];  p_random(input, input_size);
+        u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
 
         // Authenticate bit by bit
         crypto_blake2b_ctx ctx;
         crypto_blake2b_init(&ctx);
         while (1) {
-            size_t chunk_size = rand64() % c_max_size;
-            if (offset + chunk_size > input_size) { break; }
+            size_t chunk_size = rand64() % C_MAX_SIZE;
+            if (offset + chunk_size > INPUT_SIZE) { break; }
             crypto_blake2b_update(&ctx, input + offset, chunk_size);
             offset += chunk_size;
         }
@@ -422,10 +422,10 @@ static int p_blake2b()
 // at once. (for sha512)
 static int p_sha512()
 {
-    // total input size
-    static const size_t input_size = SHA_512_BLOCK_SIZE * 4;
-    // maximum chunk size
-    static const size_t c_max_size = SHA_512_BLOCK_SIZE * 2;
+#undef INPUT_SIZE
+#undef C_MAX_SIZE
+#define INPUT_SIZE (SHA_512_BLOCK_SIZE * 4) // total input size
+#define C_MAX_SIZE (SHA_512_BLOCK_SIZE * 2) // maximum chunk size
     int status = 0;
     FOR (i, 0, 1000) {
         size_t offset = 0;
@@ -433,14 +433,14 @@ static int p_sha512()
         u8 hash_chunk[64];
         u8 hash_whole[64];
         // inputs
-        u8 input[input_size];  p_random(input, input_size);
+        u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
 
         // Authenticate bit by bit
         crypto_sha512_ctx ctx;
         crypto_sha512_init(&ctx);
         while (1) {
-            size_t chunk_size = rand64() % c_max_size;
-            if (offset + chunk_size > input_size) { break; }
+            size_t chunk_size = rand64() % C_MAX_SIZE;
+            if (offset + chunk_size > INPUT_SIZE) { break; }
             crypto_sha512_update(&ctx, input + offset, chunk_size);
             offset += chunk_size;
         }
