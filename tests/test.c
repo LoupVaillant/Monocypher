@@ -12,7 +12,7 @@
 #define POLY1305_BLOCK_SIZE  16
 #define BLAKE2B_BLOCK_SIZE  128
 #define SHA_512_BLOCK_SIZE  128
-#define COMPARISON_DIFF_THRESHOLD  4
+#define COMPARISON_DIFF_THRESHOLD 0.04
 
 /////////////////
 /// Utilities ///
@@ -215,47 +215,86 @@ static int test_x25519()
 //////////////////////////////
 
 // Tests that constant-time comparison is actually constant-time.
+static clock_t min(clock_t a, clock_t b)
+{
+    return a < b ? a : b;
+}
+
+static clock_t mem_timing(u8 *va, u8 *vb, size_t size, int expected)
+{
+    clock_t start    = clock();
+    if (crypto_memcmp(va, vb, size) != expected) {
+        fprintf(stderr, "crypto_memcmp() doesn't work!\n");
+    }
+    clock_t end      = clock();
+    clock_t duration = end - start;
+    FOR (i, 0, 20) {
+        start    = clock();
+        if (crypto_memcmp(va, vb, size) != expected) {
+            fprintf(stderr, "crypto_memcmp() doesn't work!\n");
+        }
+        end      = clock();
+        duration = min(end - start, duration);
+    }
+    return duration;
+}
+
+static clock_t zero_timing(u8 *va, size_t size, int expected)
+{
+    clock_t start    = clock();
+    if (crypto_zerocmp(va, size) != expected) {
+        fprintf(stderr, "crypto_zerocmp() doesn't work!\n");
+    }
+    clock_t end      = clock();
+    clock_t duration = end - start;
+    FOR (i, 0, 20) {
+        start    = clock();
+        if (crypto_zerocmp(va, size) != expected) {
+            fprintf(stderr, "crypto_zerocmp() doesn't work!\n");
+        }
+        end      = clock();
+        duration = min(end - start, duration);
+    }
+    return duration;
+}
+
+#define ABS_DIFF(a, b) ((a) > (b) ? (a) - (b) : (b) - (a))
+
 static int test_cmp()
 {
-    u8 va[1024 * 64] = {0};
-    u8 vb[1024 * 64] = {0};
-    clock_t t1, t2, d;
     int status = 0;
-
-    t1 = clock();
-    status |= (crypto_memcmp(va, vb, sizeof(va)) != 0);
-    t2 = clock();
-    d = t2 - t1;
-
-    p_random(vb, sizeof(vb));
-
-    t1 = clock();
-    status |= (crypto_memcmp(va, vb, sizeof(va)) == 0);
-    t2 = clock();
-    d = d - (t2 - t1);
-
-    d = (d < 0 ? -d : d);
-    status |= (d > COMPARISON_DIFF_THRESHOLD);
-
-    printf("%s: memcmp\n", status != 0 ? "FAILED" : "OK");
-
-    t1 = clock();
-    status |= (crypto_zerocmp(va, sizeof(va)) != 0);
-    t2 = clock();
-    d = t2 - t1;
-
-    p_random(vb, sizeof(vb));
-
-    t1 = clock();
-    status |= (crypto_zerocmp(vb, sizeof(vb)) == 0);
-    t2 = clock();
-    d = d - (t2 - t1);
-
-    d = (d < 0 ? -d : d);
-    status |= (d > COMPARISON_DIFF_THRESHOLD);
-
-    printf("%s: zerocmp\n", status != 0 ? "FAILED" : "OK");
-
+    // Because of these static variable, don't call test_cmp() twice.
+    // It's not allocated on the stack to avoid overflow
+    static u8 va[1024 * 1024];
+    static u8 vb[1024 * 1024];
+    p_random(va, sizeof(va));
+    FOR (i, 0, sizeof(va)) {
+        vb[i] = va[i];
+    }
+    {
+        clock_t t1 = mem_timing(va, vb, sizeof(va), 0);
+        p_random(vb, sizeof(vb));
+        clock_t t2 = mem_timing(va, vb, sizeof(va), -1);
+        clock_t d  = ABS_DIFF(t1, t2);
+        double ratio = (double)d / (double)t1;
+        if (ratio > COMPARISON_DIFF_THRESHOLD) {
+            status = -1;
+        }
+    }
+    FOR (i, 0, sizeof(va)) {
+        va[i] = 0;
+    }
+    {
+        clock_t t1 = zero_timing(va, sizeof(va), 0);
+        p_random(va, sizeof(va));
+        clock_t t2 = zero_timing(va, sizeof(va), -1);
+        clock_t d  = ABS_DIFF(t1, t2);
+        double ratio = (double)d / (double)t1;
+        if (ratio > COMPARISON_DIFF_THRESHOLD) {
+            status = -1;
+        }
+    }
+    printf("%s: crypto_memcmp\n", status != 0 ? "SUSPECT TIMINGS" : "OK");
     return status;
 }
 
@@ -539,5 +578,6 @@ int main(void)
     printf("\n-------------------\n");
     status |= test_cmp();
 
+    printf("\n");
     return status;
 }
