@@ -19,7 +19,7 @@ CC=gcc -std=gnu99 # speed tests don't work with -std=cxx, they need the POSIX ex
 #CC = clang -std=c99 -fprofile-instr-generate -fcoverage-mapping
 
 #TODO maybe just use the environment variable?
-CFLAGS= -pedantic -Wall -Wextra -O3 -march=native -g
+CFLAGS= -pedantic -Wall -Wextra -O3 -march=native
 
 .PHONY: all clean install test speed
 
@@ -61,3 +61,20 @@ test.out : lib/test.o  lib/monocypher.o lib/sha512.o lib/utils.o
 speed.out: lib/speed.o lib/monocypher.o lib/sha512.o lib/utils.o
 test.out speed.out:
 	$(CC) $(CFLAGS) -I src -o $@ $^
+
+tests/vectors.h:
+	@echo ""
+	@echo "======================================================"
+	@echo " I cannot perform the tests without the test vectors."
+	@echo " You must generate them.  This requires Libsodium."
+	@echo " The fowlowing will generate the test vectors:"
+	@echo ""
+	@echo "     $ cd tests/gen"
+	@echo "     $ make"
+	@echo ""
+	@echo " Alternatively, you can grab an official release."
+	@echo " It will include the test vectors, so you won't"
+	@echo " need libsodium"
+	@echo "======================================================"
+	@echo ""
+	return 1
