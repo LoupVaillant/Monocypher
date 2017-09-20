@@ -11,6 +11,4 @@
 *.profdata
 formal-analysis/*
 man/3monocypher/*.html
-dist/AUTHORS.md
-dist/LICENCE.md
-dist/tests/vectors.h
+tests/vectors.h

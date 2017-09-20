@@ -10,7 +10,7 @@ VEC     = chacha20.vec xchacha20.vec poly1305.vec blake2b.vec \
           sha512.vec   argon2i.vec   edDSA.vec    x25519.vec
 VEC2    = $(patsubst %.vec, %.all.vec, $(VEC)) key_exchange.all.vec
 HEADERS = $(patsubst %.all.vec, %.h.vec, $(VEC2))
-VECTORS = ../../dist/tests/vectors.h
+VECTORS = ../vectors.h
 
 
 all: $(VECTORS)
@@ -22,33 +22,33 @@ clean:
 %.vec: %.out
 	./$< > $@
 
-%.o: %.c ../../dist/tests/utils.h ../ed25519-donna/ed25519.h
-	$(CC) $(CFLAGS) -c $< \
-            -I ../../dist/tests  \
+%.o: %.c ../utils.h ../ed25519-donna/ed25519.h
+	$(CC) $(CFLAGS) -c $<    \
+            -I ..                \
             -I ../ed25519-donna  \
-            -I ../../dist/src    \
+            -I ../../src         \
             $$(pkg-config --cflags libsodium)
 
 %.out: %.o monocypher.o utils.o ed25519.o
 	$(CC) $(CFLAGS) -o $@ $^ \
             $$(pkg-config --libs libsodium)
 
-utils.o: ../../dist/tests/utils.c ../../dist/tests/utils.h
-	$(CC) $(CFLAGS) -c $< -I ../../dist/tests -I ../../dist/src
+utils.o: ../utils.c ../utils.h
+	$(CC) $(CFLAGS) -c $< -I .. -I ../../src
 
 ed25519.o: ../ed25519-donna/ed25519.c  $(wildcard ../ed25519-donna/*.h)
 	$(CC) $(CFLAGS) -c $<       \
-            -I ../../dist/src       \
+            -I ../../src            \
             $(HASH)                 \
             -DED25519_CUSTOMHASH    \
             -DED25519_TEST          \
             -DED25519_NO_INLINE_ASM \
             -DED25519_FORCE_32BIT
 
-monocypher.o: ../../dist/src/monocypher.c ../../dist/src/monocypher.h
-m_sha512.o  : ../../dist/src/sha512.c     ../../dist/src/sha512.h
+monocypher.o: ../../src/monocypher.c ../../src/monocypher.h
+m_sha512.o  : ../../src/sha512.c     ../../src/sha512.h
 monocypher.o m_sha512.o:
-	$(CC) $(CFLAGS) -c $< -I ../../dist/src
+	$(CC) $(CFLAGS) -c $< -I ../../src
 
 vector_to_header.out: ../vector_to_header.c
 	$(CC) $(CFLAGS) $< -o $@
