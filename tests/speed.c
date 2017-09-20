@@ -53,6 +53,8 @@ static void print(const char *name, u64 speed, const char *unit)
 
 #define TIMING_START                            \
     timespec duration;                          \
+    duration.tv_sec = -1;                       \
+    duration.tv_nsec = -1;                      \
     duration.tv_sec  = 3600 * 24;               \
     duration.tv_nsec = 0;                       \
     FOR (i, 0, 50) {                            \
@@ -60,7 +62,7 @@ static void print(const char *name, u64 speed, const char *unit)
 
 #define TIMING_END                              \
     TIMESTAMP(end);                             \
-    duration = diff(start, end);                \
+    duration = min(duration, diff(start, end)); \
     } /* end FOR*/                              \
     return speed(duration)
 
