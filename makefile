@@ -22,6 +22,7 @@ CFLAGS= -pedantic -Wall -Wextra -O3 -march=native
 DESTDIR=
 PREFIX=usr/local
 PKGCONFIG=$(DESTDIR)usr/local/lib/pkgconfig
+MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3monocypher
 
 .PHONY: all library static-library dynamic-library clean install test speed
 
@@ -30,7 +31,7 @@ install: library src/monocypher.h
 	mkdir -p $(DESTDIR)/$(PREFIX)/lib
 	cp lib/libmonocypher.a lib/libmonocypher.so $(DESTDIR)/$(PREFIX)/lib
 	cp src/monocypher.h $(DESTDIR)/$(PREFIX)/include
-	@echo "Create /$(PKGCONFIG)/monocypher.pc"
+	@echo "Creating /$(PKGCONFIG)/monocypher.pc"
 	@echo "prefix=/$(PREFIX)"                > /$(PKGCONFIG)/monocypher.pc
 	@echo 'exec_prefix=$${prefix}'          >> /$(PKGCONFIG)/monocypher.pc
 	@echo 'libdir=$${exec_prefix}/lib'      >> /$(PKGCONFIG)/monocypher.pc
@@ -43,7 +44,9 @@ install: library src/monocypher.h
 	@echo ''                                >> /$(PKGCONFIG)/monocypher.pc
 	@echo 'Libs: -L$${libdir} -lmonocypher' >> /$(PKGCONFIG)/monocypher.pc
 	@echo 'Cflags: -I$${includedir}'        >> /$(PKGCONFIG)/monocypher.pc
-
+	mkdir -p $(MAN_DIR)
+	cp -r doc/man/3monocypher/* $(MAN_DIR)
+	mandb
 
 library: static-library dynamic-library
 static-library : lib/libmonocypher.a
