@@ -339,6 +339,24 @@ static int p_chacha20()
     return status;
 }
 
+// Tests that output and input can be the same pointer
+static int p_chacha20_same_ptr()
+{
+    int status = 0;
+    u8 input       [INPUT_SIZE];  p_random(input, INPUT_SIZE);
+    u8 key         [32];          p_random(key  , 32);
+    u8 nonce       [8];           p_random(nonce, 8);
+    u8 output      [INPUT_SIZE];
+    crypto_chacha_ctx ctx;
+    crypto_chacha20_init   (&ctx, key, nonce);
+    crypto_chacha20_encrypt(&ctx, output, input, INPUT_SIZE);
+    crypto_chacha20_init   (&ctx, key, nonce);
+    crypto_chacha20_encrypt(&ctx, input, input, INPUT_SIZE);
+    status |= crypto_memcmp(output, input, CHACHA_BLOCK_SIZE);
+    printf("%s: Chacha20 (output == input)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 static int p_chacha20_set_ctr()
 {
 #define STREAM_SIZE (CHACHA_BLOCK_SIZE * CHACHA_NB_BLOCKS)
@@ -417,6 +435,24 @@ static int p_poly1305()
     return status;
 }
 
+// Tests that the input and output buffers of poly1305 can overlap.
+static int p_poly1305_overlap()
+{
+#undef INPUT_SIZE
+#define INPUT_SIZE (POLY1305_BLOCK_SIZE + (2 * 16)) // total input size
+    int status = 0;
+    FOR (i, 0, POLY1305_BLOCK_SIZE + 16) {
+        u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
+        u8 key  [32];          p_random(key  , 32);
+        u8 mac  [16];
+        crypto_poly1305_auth(mac    , input + 16, POLY1305_BLOCK_SIZE, key);
+        crypto_poly1305_auth(input+i, input + 16, POLY1305_BLOCK_SIZE, key);
+        status |= crypto_memcmp(mac, input + i, 16);
+    }
+    printf("%s: Poly1305 (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 // Tests that hashing bit by bit yields the same hash than hashing all
 // at once.  Note: I figured we didn't need to test keyed mode, or
 // different hash sizes, again.  This test sticks to the simplified
@@ -454,6 +490,23 @@ static int p_blake2b()
         status |= crypto_memcmp(hash_chunk, hash_whole, 64);
     }
     printf("%s: Blake2b\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
+// Tests that the input and output buffers of Blake2b can overlap.
+static int p_blake2b_overlap()
+{
+#undef INPUT_SIZE
+#define INPUT_SIZE (BLAKE2B_BLOCK_SIZE + (2 * 64)) // total input size
+    int status = 0;
+    FOR (i, 0, BLAKE2B_BLOCK_SIZE + 64) {
+        u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
+        u8 hash [64];
+        crypto_blake2b(hash   , input + 64, BLAKE2B_BLOCK_SIZE);
+        crypto_blake2b(input+i, input + 64, BLAKE2B_BLOCK_SIZE);
+        status |= crypto_memcmp(hash, input + i, 64);
+    }
+    printf("%s: Blake2b (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -495,6 +548,23 @@ static int p_sha512()
     return status;
 }
 
+// Tests that the input and output buffers of crypto_sha_512 can overlap.
+static int p_sha512_overlap()
+{
+#undef INPUT_SIZE
+#define INPUT_SIZE (SHA_512_BLOCK_SIZE + (2 * 64)) // total input size
+    int status = 0;
+    FOR (i, 0, SHA_512_BLOCK_SIZE + 64) {
+        u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
+        u8 hash [64];
+        crypto_sha512(hash   , input + 64, SHA_512_BLOCK_SIZE);
+        crypto_sha512(input+i, input + 64, SHA_512_BLOCK_SIZE);
+        status |= crypto_memcmp(hash, input + i, 64);
+    }
+    printf("%s: Sha512 (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 // Verifies that random signatures are all invalid.  Uses random
 // public keys to see what happens outside of the curve (it should
 // yield an invalid signature).
@@ -509,6 +579,25 @@ static int p_eddsa()
         status |= ~crypto_check(signature, public_key, message, MESSAGE_SIZE);
     }
     printf("%s: EdDSA\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
+// Tests that the input and output buffers of crypto_check() can overlap.
+static int p_eddsa_overlap()
+{
+    int status = 0;
+    FOR(i, 0, MESSAGE_SIZE + 64) {
+#undef INPUT_SIZE
+#define INPUT_SIZE (MESSAGE_SIZE + (2 * 64)) // total input size
+        u8 sk       [32];          p_random(sk, 32);
+        u8 pk       [32];          crypto_sign_public_key(pk, sk);
+        u8 input    [INPUT_SIZE];  p_random(input, INPUT_SIZE);
+        u8 signature[64];
+        crypto_sign(signature, sk, pk, input + 64, SHA_512_BLOCK_SIZE);
+        crypto_sign(input+i  , sk, pk, input + 64, SHA_512_BLOCK_SIZE);
+        status |= crypto_memcmp(signature, input + i, 64);
+    }
+    printf("%s: EdDSA (overlap)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -567,11 +656,16 @@ int main(void)
     printf("\nProperty based tests");
     printf("\n--------------------\n");
     status |= p_chacha20();
+    status |= p_chacha20_same_ptr();
     status |= p_chacha20_set_ctr();
     status |= p_poly1305();
+    status |= p_poly1305_overlap();
     status |= p_blake2b();
+    status |= p_blake2b_overlap();
     status |= p_sha512();
+    status |= p_sha512_overlap();
     status |= p_eddsa();
+    status |= p_eddsa_overlap();
     status |= p_aead();
 
     printf("\nConstant time tests");
