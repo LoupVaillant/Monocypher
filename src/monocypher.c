@@ -1532,21 +1532,25 @@ void crypto_sign(u8        signature[64],
 
     // first half of the signature = "random" nonce times basepoint
     ge R;
+    u8 half_sig[32];
     ge_scalarmult_base(&R, r);
-    ge_tobytes(signature, &R);
+    ge_tobytes(half_sig, &R);
 
     // Hash R, the public key, and the message together.
     // It cannot be done in paralell with the first hash.
     u8 h_ram[64];
-    hash_ram(h_ram, signature, pk, message, message_size);
+    hash_ram(h_ram, half_sig, pk, message, message_size);
 
     i64 s[64]; // s = r + h_ram * a
-    FOR(i,  0, 32) { s[i] = (u64) r[i]; }
-    FOR(i, 32, 64) { s[i] = 0;          }
-    FOR(i,  0, 32) {
-        FOR(j, 0, 32) {
+    FOR (i,  0, 32) { s[i] = (u64) r[i]; }
+    FOR (i, 32, 64) { s[i] = 0;          }
+    FOR (i,  0, 32) {
+        FOR (j, 0, 32) {
             s[i+j] += h_ram[i] * (u64) a[j];
         }
+    }
+    FOR (i, 0, 32) {
+        signature[i] = half_sig[i];
     }
     modL(signature + 32, s);  // second half of the signature = s
 }
