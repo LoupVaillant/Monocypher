@@ -18,19 +18,41 @@ CC=gcc -std=gnu99 # speed tests don't work with -std=cxx, they need the POSIX ex
 #CC = clang -std=c99 -fsanitize=undefined
 #CC = clang -std=c99 -fprofile-instr-generate -fcoverage-mapping
 
-#TODO maybe just use the environment variable?
 CFLAGS= -pedantic -Wall -Wextra -O3 -march=native
+DESTDIR=
+PREFIX=usr/local
+PKGCONFIG=$(DESTDIR)usr/local/lib/pkgconfig
 
-.PHONY: all clean install test speed
+.PHONY: all library static-library dynamic-library clean install test speed
 
-all: lib/libmonocypher.a lib/libmonocypher.so
+all    : library
+install: library src/monocypher.h
+	mkdir -p $(DESTDIR)/$(PREFIX)/lib
+	cp lib/libmonocypher.a lib/libmonocypher.so $(DESTDIR)/$(PREFIX)/lib
+	cp src/monocypher.h $(DESTDIR)/$(PREFIX)/include
+	@echo "Create /$(PKGCONFIG)/monocypher.pc"
+	@echo "prefix=/$(PREFIX)"                > /$(PKGCONFIG)/monocypher.pc
+	@echo 'exec_prefix=$${prefix}'          >> /$(PKGCONFIG)/monocypher.pc
+	@echo 'libdir=$${exec_prefix}/lib'      >> /$(PKGCONFIG)/monocypher.pc
+	@echo 'includedir=$${prefix}/include'   >> /$(PKGCONFIG)/monocypher.pc
+	@echo ''                                >> /$(PKGCONFIG)/monocypher.pc
+	@echo 'Name: monocypher'                >> /$(PKGCONFIG)/monocypher.pc
+	@echo 'Version: 1.1.0'                  >> /$(PKGCONFIG)/monocypher.pc
+	@echo 'Description: Easy to use, easy to deploy crypto library' \
+                                                >> /$(PKGCONFIG)/monocypher.pc
+	@echo ''                                >> /$(PKGCONFIG)/monocypher.pc
+	@echo 'Libs: -L$${libdir} -lmonocypher' >> /$(PKGCONFIG)/monocypher.pc
+	@echo 'Cflags: -I$${includedir}'        >> /$(PKGCONFIG)/monocypher.pc
+
+
+library: static-library dynamic-library
+static-library : lib/libmonocypher.a
+dynamic-library: lib/libmonocypher.so
+
 
 clean:
 	rm -rf lib/
 	rm -f  *.out
-
-# TODO
-# install:
 
 test: test.out
 	./test.out
