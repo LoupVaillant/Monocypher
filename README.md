@@ -25,7 +25,17 @@ Alternatively, you can run
 
 then grab `lib/libmonocypher.a` or `lib/libmonocypher.so`.
 
-_TODO: make install_
+If you're running a UNIX system, install Monocypher on your system
+(you need to be root):
+
+    $ make install
+
+This will install Monocypher in `/usr/local/` by default. Libraries
+will go to `/usr/local/lib/`, the header in `/usr/local/include/`, and
+the man pages in `/usr/local/share/man/man3`.  If you just want the
+man pages, run this:
+
+    $ make install-doc
 
 
 ### Known language bindings
