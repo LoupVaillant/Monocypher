@@ -24,10 +24,10 @@ PREFIX=usr/local
 PKGCONFIG=$(DESTDIR)/$(PREFIX)/lib/pkgconfig
 MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
 
-.PHONY: all library static-library dynamic-library clean install test speed
+.PHONY: all install-doc library static-library dynamic-library clean install test speed
 
 all    : library
-install: library src/monocypher.h
+install: library src/monocypher.h install-doc
 	mkdir -p $(DESTDIR)/$(PREFIX)/lib
 	cp lib/libmonocypher.a lib/libmonocypher.so $(DESTDIR)/$(PREFIX)/lib
 	cp src/monocypher.h $(DESTDIR)/$(PREFIX)/include
@@ -44,6 +44,8 @@ install: library src/monocypher.h
 	@echo ''                                >> $(PKGCONFIG)/monocypher.pc
 	@echo 'Libs: -L$${libdir} -lmonocypher' >> $(PKGCONFIG)/monocypher.pc
 	@echo 'Cflags: -I$${includedir}'        >> $(PKGCONFIG)/monocypher.pc
+
+install-doc:
 	mkdir -p $(MAN_DIR)
 	cp -r doc/man/man3/* $(MAN_DIR)
 
