@@ -22,7 +22,7 @@ CFLAGS= -pedantic -Wall -Wextra -O3 -march=native
 DESTDIR=
 PREFIX=usr/local
 PKGCONFIG=$(DESTDIR)usr/local/lib/pkgconfig
-MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3monocypher
+MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
 
 .PHONY: all library static-library dynamic-library clean install test speed
 
@@ -45,7 +45,7 @@ install: library src/monocypher.h
 	@echo 'Libs: -L$${libdir} -lmonocypher' >> /$(PKGCONFIG)/monocypher.pc
 	@echo 'Cflags: -I$${includedir}'        >> /$(PKGCONFIG)/monocypher.pc
 	mkdir -p $(MAN_DIR)
-	cp -r doc/man/3monocypher/* $(MAN_DIR)
+	cp -r doc/man/man3/* $(MAN_DIR)
 	mandb
 
 library: static-library dynamic-library
