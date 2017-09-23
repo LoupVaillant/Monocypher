@@ -65,12 +65,6 @@ function signs a message with your secret key
 .Fa secret_key .
 The public key is optional, and will be recomputed if not provided.
 However, this doubles execution time.
-The
-.Fa signature
-and the
-.Fa message
-argument
-.Em must not overlap .
 .Pp
 The
 .Fn crypto_check
