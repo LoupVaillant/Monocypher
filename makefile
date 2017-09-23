@@ -46,7 +46,6 @@ install: library src/monocypher.h
 	@echo 'Cflags: -I$${includedir}'        >> /$(PKGCONFIG)/monocypher.pc
 	mkdir -p $(MAN_DIR)
 	cp -r doc/man/man3/* $(MAN_DIR)
-	mandb
 
 library: static-library dynamic-library
 static-library : lib/libmonocypher.a
