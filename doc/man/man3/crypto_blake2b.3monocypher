@@ -80,6 +80,9 @@ length of the
 Must be between 0 and 64.
 .It Fa message
 the message to hash.
+It may overlap with the
+.Fa hash
+argument where present.
 .It Fa message_size
 the length of the message.
 .El

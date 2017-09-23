@@ -92,6 +92,11 @@ The direct interface consists of the
 .Fn crypto_poly1305_auth
 function produces a message authentication code for the given
 message and authentication key.
+The
+.Fa mac
+and the
+.Fa message
+arguments may overlap.
 .Pp
 The indirect interface consists of the
 .Fn crypto_poly1305_init ,

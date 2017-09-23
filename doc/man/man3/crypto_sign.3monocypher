@@ -82,6 +82,12 @@ to use the
 .Xr crypto_key_exchange 3monocypher
 function instead.
 .Pp
+The
+.Fa signature
+and the
+.Fa message
+arguments may overlap.
+.Pp
 An incremental interface is not available.
 If you require an incremental interface, signing a hash of your data
 is an acceptable substitute; see
