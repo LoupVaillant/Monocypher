@@ -70,18 +70,27 @@ least once.
 
 ### More serious testing
 
-_TODO: This section is obsolete._
+You can run the test suite under clang sanitizers or valgrind:
 
-The makefile may be modified to activate sanitising.  Just run the
-previous tests under the various sanitisers.  If you compile for
-coverage mapping, the `coverage.sh` mapping can generate a report.
-Just run one of those (make sure the makefile is set up accordingly):
+    $ make clean
+    $ make test CC="clang -std=c99" CFLAGS="-fsanitize=address"
 
-    $ ./coverage.sh test.out
+    $ make clean
+    $ make test CC="clang -std=c99" CFLAGS="-fsanitize=memory"
 
-You can also run the tests under Valgrind:
+    $ make clean
+    $ make test CC="clang -std=c99" CFLAGS="-fsanitize=undefined"
 
+    $ make clean
+    $ make test.out
     $ valgrind ./test.out
+
+You can also check code coverage:
+
+    $ make clean
+    $ make test CC="clang -std=c99" CFLAGS="-fprofile-instr-generate"
+    $ tests/coverage.sh
+
 
 ### Serious auditing
 

@@ -1,23 +1,4 @@
-# compile with any of the following
 CC=gcc -std=gnu99 # speed tests don't work with -std=cxx, they need the POSIX extensions
-#CC=gcc -std=c99
-#CC=gcc -std=c11
-#CC=g++ -std=c++98
-#CC=g++ -std=c++11
-#CC=g++ -std=c++14
-#CC=g++ -std=c++17
-#CC=clang -std=c99
-#CC=clang -std=c11
-#CC=clang++ -std=c++98
-#CC=clang++ -std=c++11
-#CC=clang++ -std=c++14
-
-# These may be used for tests (except speed)
-#CC = clang -std=c99 -fsanitize=address
-#CC = clang -std=c99 -fsanitize=memory
-#CC = clang -std=c99 -fsanitize=undefined
-#CC = clang -std=c99 -fprofile-instr-generate -fcoverage-mapping
-
 CFLAGS= -pedantic -Wall -Wextra -O3 -march=native
 DESTDIR=
 PREFIX=usr/local
