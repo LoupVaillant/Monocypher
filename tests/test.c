@@ -619,12 +619,12 @@ static int p_eddsa_overlap()
     FOR(i, 0, MESSAGE_SIZE + 64) {
 #undef INPUT_SIZE
 #define INPUT_SIZE (MESSAGE_SIZE + (2 * 64)) // total input size
-        u8 sk       [32];          p_random(sk, 32);
-        u8 pk       [32];          crypto_sign_public_key(pk, sk);
-        u8 input    [INPUT_SIZE];  p_random(input, INPUT_SIZE);
+        RANDOM_INPUT(input, INPUT_SIZE);
+        RANDOM_INPUT(sk   , 32        );
+        u8 pk       [32];  crypto_sign_public_key(pk, sk);
         u8 signature[64];
-        crypto_sign(signature, sk, pk, input + 64, SHA_512_BLOCK_SIZE);
-        crypto_sign(input+i  , sk, pk, input + 64, SHA_512_BLOCK_SIZE);
+        crypto_sign(signature, sk, pk, input + 64, MESSAGE_SIZE);
+        crypto_sign(input+i  , sk, pk, input + 64, MESSAGE_SIZE);
         status |= crypto_memcmp(signature, input + i, 64);
     }
     printf("%s: EdDSA (overlap)\n", status != 0 ? "FAILED" : "OK");
