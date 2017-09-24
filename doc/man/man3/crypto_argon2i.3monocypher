@@ -127,6 +127,8 @@ the length of
 .Fa ad .
 .El
 .Pp
+All pointer arguments may overlap.
+.Pp
 Use
 .Xr crypto_memcmp 3monocypher
 to compare password hashes to prevent timing attacks, which are feasible
