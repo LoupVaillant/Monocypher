@@ -132,8 +132,6 @@ Note: the speed benchmark currently requires the POSIX
 Customisation
 -------------
 
-_TODO: the test suite doesn't support the customisation yet._
-
 For simplicity, compactness, and performance reasons, Monocypher
 signatures default to EdDSA with curve25519 and Blake2b.  This is
 different from the more mainstream Ed25519, which uses SHA-512
