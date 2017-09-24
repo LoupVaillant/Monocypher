@@ -85,20 +85,18 @@ You can also run the tests under Valgrind:
 
 ### Serious auditing
 
-_TODO: This section is obsolete._
-
 The code may be analysed more formally with [Frama-c][] and the
 [TIS interpreter][TIS].  To analyse the code with Frama-c, run:
 
-    $ make formal-analysis
-    $ ./frama-c.sh
+    $ tests/formal-analysis.sh
+    $ tests/frama-c.sh
 
 This will have Frama-c parse, and analyse the code, then launch a GUI.
 You must have Frama-c installed.  See `frama-c.sh` for the recommended
 settings.  To run the code under the TIS interpreter, run
 
-    $ make formal-analysis
-    $ cd formal-analysis
+    $ tests/formal-analysis.sh
+    $ cd tests/formal-analysis
     $ tis-interpreter.sh *.c
 
 (Note: `tis-interpreter.sh` is part of TIS.  If it is not in your

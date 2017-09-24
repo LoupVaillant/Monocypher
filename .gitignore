@@ -9,6 +9,6 @@
 *.sav
 *.profraw
 *.profdata
-formal-analysis/*
+tests/formal-analysis/*
 man/3monocypher/*.html
 tests/vectors.h
