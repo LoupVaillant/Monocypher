@@ -28,7 +28,9 @@ MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
 
 all    : library
 install: library src/monocypher.h install-doc
-	mkdir -p $(DESTDIR)/$(PREFIX)/lib $(DESTDIR)/$(PREFIX)/include $(PKGCONFIG) $(MAN_DIR)
+	mkdir -p $(DESTDIR)/$(PREFIX)/include
+	mkdir -p $(DESTDIR)/$(PREFIX)/lib
+	mkdir -p $(PKGCONFIG)
 	cp lib/libmonocypher.a lib/libmonocypher.so $(DESTDIR)/$(PREFIX)/lib
 	cp src/monocypher.h $(DESTDIR)/$(PREFIX)/include
 	@echo "Creating $(PKGCONFIG)/monocypher.pc"
