@@ -118,8 +118,6 @@ path, adjust the command accordingly.)
 Speed benchmark
 ---------------
 
-_TODO: The speed benchmark don't run yet._
-
     $ make speed
 
 This will give you an idea how fast Monocypher is on your machine.
