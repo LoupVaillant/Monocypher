@@ -5,7 +5,10 @@ PREFIX=usr/local
 PKGCONFIG=$(DESTDIR)/$(PREFIX)/lib/pkgconfig
 MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
 
-.PHONY: all install-doc library static-library dynamic-library clean install test speed
+.PHONY: all library static-library dynamic-library \
+        install install-doc                        \
+        check test speed                           \
+        clean
 
 all    : library
 install: library src/monocypher.h install-doc
@@ -40,6 +43,7 @@ clean:
 	rm -rf lib/
 	rm -f  *.out
 
+check: test
 test: test.out
 	./test.out
 
