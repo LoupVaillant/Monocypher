@@ -58,7 +58,6 @@
  * ----------------------------------------------------------------------------
  * No contributor information was found at the head of mandoc.css.
  */
-html {		max-width: 100ex; }
 body { margin: 1em auto; max-width: 40em; padding: 0 .62em; font-size: 1.1em; line-height: 1.62; font-family: "Liberation Sans", Arial, sans-serif; }
 table {		margin-top: 0em;
 		margin-bottom: 0em; }
@@ -115,6 +114,7 @@ h2 {		margin-top: 2ex;
 		margin-left: -2ex;
 		font-size: 105%; }
 div.Pp {	margin: 1ex 0ex; }
+div.spacer {	margin: 1ex 0ex; }
 a.Sx { }
 a.Xr { }
 
@@ -247,10 +247,19 @@ a.Ux { }
 
 .No {		font-style: normal;
 		font-weight: normal; }
+.none {		font-style: normal;
+		font-weight: normal; }
 .Em {		font-style: italic;
+		font-weight: normal; }
+.emph {		font-style: italic;
 		font-weight: normal; }
 .Sy {		font-style: normal;
 		font-weight: bold; }
+.symb {		font-style: normal;
+		font-weight: bold; }
 .Li {		font-style: normal;
+		font-weight: normal;
+		font-family: monospace; }
+.lit {		font-style: normal;
 		font-weight: normal;
 		font-family: monospace; }
