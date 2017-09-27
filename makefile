@@ -33,7 +33,7 @@ install: library src/monocypher.h install-doc
 
 install-doc:
 	mkdir -p $(MAN_DIR)
-	cp -r doc/man/man3/* $(MAN_DIR)
+	cp -r doc/man/man3/*.3monocypher $(MAN_DIR)
 
 library: static-library dynamic-library
 static-library : lib/libmonocypher.a
