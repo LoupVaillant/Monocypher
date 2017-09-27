@@ -8,7 +8,7 @@ MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
 .PHONY: all library static-library dynamic-library \
         install install-doc                        \
         check test speed                           \
-        clean
+        clean uninstall
 
 all    : library
 install: library src/monocypher.h install-doc
@@ -42,6 +42,13 @@ dynamic-library: lib/libmonocypher.so
 clean:
 	rm -rf lib/
 	rm -f  *.out
+
+uninstall:
+	rm $(DESTDIR)/$(PREFIX)/lib/libmonocypher.a
+	rm $(DESTDIR)/$(PREFIX)/lib/libmonocypher.so
+	rm $(DESTDIR)/$(PREFIX)/include/monocypher.h
+	rm $(PKGCONFIG)/monocypher.pc
+	rm $(MAN_DIR)/*.3monocypher
 
 check: test
 test: test.out
