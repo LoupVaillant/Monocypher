@@ -1653,3 +1653,42 @@ int crypto_unlock(u8       *plain_text,
     return crypto_aead_unlock(plain_text, key, nonce, mac, 0, 0,
                               cipher_text, text_size);
 }
+
+void crypto_lock_init(crypto_lock_ctx *ctx, const u8 key[32], const u8 nonce[24])
+{
+    u8 auth_key[32];
+    crypto_chacha20_x_init(&(ctx->chacha), key, nonce);
+    crypto_chacha20_stream(&(ctx->chacha), auth_key, 32);
+    crypto_poly1305_init  (&(ctx->poly  ), auth_key);
+}
+
+void crypto_lock_auth(crypto_lock_ctx *ctx, const u8 *ad, size_t ad_size)
+{
+    crypto_poly1305_update(&(ctx->poly), ad, ad_size);
+}
+
+void crypto_lock_update(crypto_lock_ctx *ctx, u8 *cipher_text,
+                        const u8 *plain_text, size_t text_size)
+{
+    crypto_chacha20_encrypt(&(ctx->chacha), cipher_text, plain_text, text_size);
+    crypto_poly1305_update (&(ctx->poly  ), cipher_text, text_size);
+}
+
+void crypto_lock_final(crypto_lock_ctx *ctx, u8 mac[16])
+{
+    crypto_poly1305_final (&(ctx->poly), mac);
+}
+
+void crypto_unlock_update(crypto_lock_ctx *ctx, u8 *plain_text,
+                          const u8 *cipher_text, size_t text_size)
+{
+    crypto_poly1305_update (&(ctx->poly  ), cipher_text, text_size);
+    crypto_chacha20_encrypt(&(ctx->chacha), plain_text, cipher_text, text_size);
+}
+
+int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
+{
+    u8 real_mac[16];
+    crypto_poly1305_final(&(ctx->poly), real_mac);
+    return crypto_memcmp(real_mac, mac, 16);
+}

@@ -25,6 +25,43 @@
 .Fa "const uint8_t *cipher_text"
 .Fa "size_t text_size"
 .Fc
+.Ft void
+.Fo crypto_lock_init
+.Fa "crypto_lock_ctx *ctx"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[24]"
+.Fc
+.Ft void
+.Fo crypto_lock_auth
+.Fa crypto_lock_ctx *ctx
+.Fa const uint8_t *ad
+.Fa size_t ad_size
+.Fc
+.Ft void
+.Fo crypto_lock_update
+.Fa crypto_lock_ctx *ctx
+.Fa uint8_t *cipher_text
+.Fa const uint8_t *plain_text
+.Fa size_t text_size
+.Fc
+.Ft void
+.Fo crypto_lock_final
+.Fa crypto_lock_ctx *ctx
+.Fa uint8_t mac[16]
+.Fc
+.Ft void
+.Fo crypto_unlock_update
+.Fa crypto_lock_ctx *ctx
+.Fa uint8_t *plain_text
+.Fa const uint8_t *cipher_text
+.Fa size_t text_size
+.Fc
+.Ft int
+.Fo crypto_unlock_final
+.Fa crypto_lock_ctx *ctx
+.Fa const uint8_t mac[16]
+.Fc
+.F
 .Sh DESCRIPTION
 Encryption makes your messages unreadable to eavesdroppers.
 Authentication ascertain the origin and integrity of the messages you
@@ -171,6 +208,88 @@ if (ret != 0) {
         /* Message corrupted; possibly an attacker is interfering
          * with the connection.
          */
+}
+.Ed
+.Sh INCREMENTAL INTERFACE
+Useful for decrypting huge inputs.
+This time, decryption is performed regardless of whether the message
+is corrupted or not.
+This may be relevant if you expect a high rate of corrupted messages.
+.Pp
+Encryption:
+.Bd -literal -offset indent
+/* Prepare the key, nonce, and input */
+
+/* First, initialise the context */
+crypto_lock_ctx ctx;
+crypto_lock_init(&ctx, key, nonce);
+
+/* Second, authenticate the additional data, if any. */
+crypto_lock_auth(&ctx, ad1, ad_size1);
+crypto_lock_auth(&ctx, ad2, ad_size2);
+crypto_lock_auth(&ctx, ad3, ad_size3);
+
+/* Third, encrypt the plain text */
+crypto_lock_update(&ctx, cipher1, plain1, text_size1);
+crypto_lock_update(&ctx, cipher2, plain2, text_size2);
+crypto_lock_update(&ctx, cipher3, plain2, text_size3);
+
+/* Finally, compute the authentication code */
+crypto_lock_final (&ctx, mac);
+.Ed
+.Pp
+Make sure you authenticate the additional data before you begin the
+encryption, or the mac won't be compatible with the direct interface.
+.Pp
+To decrypt the above:
+.Bd -literal -offset indent
+/* First, initialise the context.
+ * Use the key and nonce that were used for encryption.
+ */
+crypto_lock_ctx ctx;
+crypto_lock_init(&ctx, key, nonce);
+
+/* Second, authenticate the additional data, if any. */
+crypto_lock_auth(&ctx, ad1, ad_size1);
+crypto_lock_auth(&ctx, ad2, ad_size2);
+crypto_lock_auth(&ctx, ad3, ad_size3);
+
+/* Third, decrypt the cipher text */
+crypto_unlock_update(&ctx, re_plain1, cipher1, text_size1);
+crypto_unlock_update(&ctx, re_plain2, cipher2, text_size2);
+crypto_unlock_update(&ctx, re_plain3, cipher3, text_size3);
+
+/* Finally, check the authentication code */
+if (crypto_unlock_final(&ctx, mac2)) {
+    /* Message corrupted. */
+} else {
+    /* Decryption went well. */
+}
+.Ed
+.Pp
+To authenticate without decrypting at all:
+.Bd -literal -offset indent
+/* First, initialise the context.
+ * Use the key and nonce that were used for encryption.
+ */
+crypto_lock_ctx ctx;
+crypto_lock_init(&ctx, key, nonce);
+
+/* Second, authenticate the additional data, if any. */
+crypto_lock_auth(&ctx, ad1, ad_size1);
+crypto_lock_auth(&ctx, ad2, ad_size2);
+crypto_lock_auth(&ctx, ad3, ad_size3);
+
+/* Third, authenticate the cipher text */
+crypto_lock_auth(&ctx, re_plain1, cipher1, text_size1);
+crypto_lock_auth(&ctx, re_plain2, cipher2, text_size2);
+crypto_lock_auth(&ctx, re_plain3, cipher3, text_size3);
+
+/* Finally, check the authentication code */
+if (crypto_unlock_final(&ctx, mac2)) {
+    /* Message corrupted. */
+} else {
+    /* Message authentic. */
 }
 .Ed
 .Sh SEE ALSO
