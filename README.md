@@ -88,7 +88,7 @@ You can run the test suite under clang sanitizers or valgrind:
 You can also check code coverage:
 
     $ make clean
-    $ make test CC="clang -std=c99" CFLAGS="-fprofile-instr-generate"
+    $ make test CC="clang -std=c99" CFLAGS="-fprofile-instr-generate -fcoverage-mapping"
     $ tests/coverage.sh
 
 
