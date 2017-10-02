@@ -115,6 +115,7 @@ intermediary result in the context;
 .It
 and finalisation, where we produce the final hash.
 .El
+.Pp
 The invariants of the parameters are the same as for
 .Fn crypto_blake2b_general .
 .Fn crypto_blake2b_init

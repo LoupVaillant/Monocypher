@@ -33,35 +33,34 @@
 .Fc
 .Ft void
 .Fo crypto_lock_auth
-.Fa crypto_lock_ctx *ctx
-.Fa const uint8_t *ad
-.Fa size_t ad_size
+.Fa "crypto_lock_ctx *ctx"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
 .Fc
 .Ft void
 .Fo crypto_lock_update
-.Fa crypto_lock_ctx *ctx
-.Fa uint8_t *cipher_text
-.Fa const uint8_t *plain_text
-.Fa size_t text_size
+.Fa "crypto_lock_ctx *ctx"
+.Fa "uint8_t *cipher_text"
+.Fa "const uint8_t *plain_text"
+.Fa "size_t text_size"
 .Fc
 .Ft void
 .Fo crypto_lock_final
-.Fa crypto_lock_ctx *ctx
-.Fa uint8_t mac[16]
+.Fa "crypto_lock_ctx *ctx"
+.Fa "uint8_t mac[16]"
 .Fc
 .Ft void
-.Fo crypto_unlock_update
-.Fa crypto_lock_ctx *ctx
-.Fa uint8_t *plain_text
-.Fa const uint8_t *cipher_text
-.Fa size_t text_size
+.Fo "crypto_unlock_update
+.Fa "crypto_lock_ctx *ctx"
+.Fa "uint8_t *plain_text"
+.Fa "const uint8_t *cipher_text"
+.Fa "size_t text_size"
 .Fc
 .Ft int
 .Fo crypto_unlock_final
-.Fa crypto_lock_ctx *ctx
-.Fa const uint8_t mac[16]
+.Fa "crypto_lock_ctx *ctx"
+.Fa "const uint8_t mac[16]"
 .Fc
-.F
 .Sh DESCRIPTION
 Encryption makes your messages unreadable to eavesdroppers.
 Authentication ascertain the origin and integrity of the messages you
@@ -72,7 +71,7 @@ authentication, you can fall prey to forgeries (messages that look
 legitimate, but actually come from an attacker).
 A clever attacker may even leverage forgeries to steal your secrets.
 Always authenticate your messages.
-.Pp
+.Ss Direct interface
 The
 .Fn crypto_lock
 function encrypts and authenticates a plaintext.
@@ -147,14 +146,75 @@ If the message is genuine, the
 .Fn crypto_aead_unlock
 function decrypts the ciphertext.
 .Em Always check the return value .
+.Ss Incremental interface
+The incremental interface allows to split up decryption and
+authentication of larger messages too large to fit into a single buffer
+or to handle individual pieces of data located in different buffers.
+.Pp
+The arguments are the same as described for the direct interface.
+It instead uses three steps:
+.Bl -bullet
+.It
+initialisation, where we set up a context for encryption/decryption and
+authentication;
+.It
+update, where we encrypt/decrypt and incrementally generate the MAC;
+.It
+final, where we generate/check the MAC.
+.El
+.Pp
+Because the incremental interface interleaves both encryption and
+authentication,
+.Sy a message with a mismatched MAC is three times slower
+to process than when using the direct interface.
+The direct interface checks the MAC first and only then proceeds to
+decrypt.
+If you expect to frequently encounter messages whose MAC mismatches,
+especially large messages, you may want to forgo the incremental
+interface for a different approach.
+.Pp
+.Sy Both encryption and decryption
+are initialized with
+.Fn crypto_lock_init .
+If you need to authenticate data without encrypting like with
+.Xr crypto_aead_lock 3monocypher ,
+plaintext data can be authenticated with
+.Fn crypto_lock_auth .
+Calls to
+.Fn crypto_lock_auth
+.Em can
+be interleaved with calls to
+.Fn crypto_lock_update
+and
+.Fn crypto_unlock_update .
+.Pp
+.Sy For encryption,
+.Fn crypto_lock_update
+authenticates and encrypts the data;
+.Fn crypto_lock_final
+generates the MAC.
+.Sy For decryption ,
+.Fn crypto_unlock_update
+authenticates and decrypts the data;
+.Fn crypto_unlock_final
+checks the MAC.
+.Em Always check the return value .
 .Sh RETURN VALUES
 The
-.Fn crypto_lock
-function returns nothing.
-It cannot fail.
+.Fn crypto_lock ,
+.Fn crypto_lock_init ,
+.Fn crypto_lock_auth ,
+.Fn crypto_lock_update ,
+and
+.Fn crypto_lock_final
+functions return nothing.
+They cannot fail.
+.Pp
 The
 .Fn crypto_unlock
-function returns 0 on success or -1 if the message was corrupted
+and
+.Fn crypto_unlock_final
+functions return 0 on success or -1 if the message was corrupted
 (i.e.
 .Fa mac
 mismatched the combination of
@@ -168,6 +228,7 @@ of the expected
 .Fa cipher_text )
 or an attacker's interference.
 .Sh EXAMPLES
+.Ss Direct interface
 Encryption:
 .Bd -literal -offset indent
 uint8_t key[32], nonce[24];
@@ -210,7 +271,7 @@ if (ret != 0) {
          */
 }
 .Ed
-.Sh INCREMENTAL INTERFACE
+.Ss Incremental interface
 Useful for decrypting huge inputs.
 This time, decryption is performed regardless of whether the message
 is corrupted or not.
