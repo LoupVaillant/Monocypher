@@ -7,7 +7,7 @@ Designers
                 and Zooko Wilcox-O'Hearn
 - **Argon2:**   Alex Biryukov, Daniel Dinu, and Dmitry Khovratovich
 - **X25519:**   Daniel J. Bernstein
-- **edDSA:**    Daniel J. Bernstein, Bo-Yin Yang, Niels Duif, Peter
+- **EdDSA:**    Daniel J. Bernstein, Bo-Yin Yang, Niels Duif, Peter
                 Schwabe, and Tanja Lange
 
 Implementors
@@ -31,7 +31,10 @@ authors), and _ed25519-donna_ (by Andrew Moon —floodyberry).
 Thanks
 ------
 
-Mike Pechkin and André Maroneze for finding bugs in earlier versions,
-and Andrew Moon for clarifying carry propagation in modular
-arithmetic.
+Mike Pechkin and André Maroneze found bugs in earlier versions of
+Monocypher.
 
+Andrew Moon clarified carry propagation in modular arithmetic.
+
+Fabio Scotoni rewrote the manual into proper man pages, and provided
+much needed advice about testing, interface, and above all, packaging.
