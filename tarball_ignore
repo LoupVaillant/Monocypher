@@ -9,5 +9,6 @@
 *.profraw
 *.profdata
 tests/formal-analysis*
-doc/html/*.html
-tests/vectors.h
+lib*
+.git*
+tarball_ignore

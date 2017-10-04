@@ -1,11 +1,10 @@
 #! /bin/sh
 
-mkdir -p html
+DIR=$(dirname "$0")
 
-for name in $(ls -1 "man/man3/" | sed 's/.3monocypher//' | grep -v "style.css")
+for name in $(ls -1 "$DIR/man/man3/" | sed 's/.3monocypher//')
 do
     mandoc                            \
         -Oman=%N.html,style=style.css \
-        -Thtml man/man3/$name.3monocypher > html/$name.html
+        -Thtml "$DIR/man/man3/$name.3monocypher" > "$DIR/html/$name.html"
 done
-
