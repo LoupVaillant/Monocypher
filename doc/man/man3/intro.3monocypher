@@ -85,6 +85,12 @@ Monocypher provides functions the following:
 .Bl -tag -offset indent-two -width Ds
 .It Xr crypto_lock 3monocypher
 .It Xr crypto_unlock 3monocypher
+.It Xr crypto_lock_init 3monocypher
+.It Xr crypto_lock_auth 3monocypher
+.It Xr crypto_lock_update 3monocypher
+.It Xr crypto_lock_final 3monocypher
+.It Xr crypto_unlock_update 3monocypher
+.It Xr crypto_unlock_final 3monocypher
 .El
 .It Authenticated encryption with additional data (AEAD)
 .Bl -tag -offset indent-two -width Ds
