@@ -50,7 +50,7 @@
 .Fa "uint8_t mac[16]"
 .Fc
 .Ft void
-.Fo "crypto_unlock_update
+.Fo crypto_unlock_update
 .Fa "crypto_lock_ctx *ctx"
 .Fa "uint8_t *plain_text"
 .Fa "const uint8_t *cipher_text"
