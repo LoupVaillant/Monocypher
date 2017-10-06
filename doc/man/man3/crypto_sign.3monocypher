@@ -117,6 +117,20 @@ crypto_sign_public_key(pk, sk);
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock 3monocypher ,
 .Xr intro 3monocypher
+.Sh CAVEATS
+Fault injection (also known as glitching) may be used to manipulate the
+resulting signature.
+This requires hardware access.
+If your threat model includes attackers that have the equipment for
+fault injection and access to the hardware, you will want to use the
+.Fn crypto_check
+function to verify the signature that was just generated.
+Including a verification step when signing reduces speed for the whole
+operation by a factor of 3.
+This speed penalty is generally not noticeable unless creating a high
+number of signatures per second.
+If an attacker can inject faults at will, however, this is an incomplete
+protection, albeit better than none.
 .Sh IMPLEMENTATION DETAILS
 These functions provide public key signatures with a variant of Ed25519,
 which uses Blake2b as the hash instead of SHA-512.
