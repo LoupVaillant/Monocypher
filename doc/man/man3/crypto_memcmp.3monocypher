@@ -12,7 +12,8 @@
 .Ft int
 .Fn crypto_zerocmp "const uint8_t *p" "size_t n"
 .Sh DESCRIPTION
-In crypto, we often need to compare secrets together.
+In cryptography, we often need to compare secrets or values derived from
+secrets.
 A message authentication code for instance:
 while the MAC sent over the network along with a message is public, the
 true MAC is secret.

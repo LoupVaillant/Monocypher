@@ -51,7 +51,7 @@
 .Sh DESCRIPTION
 Blake2b is a fast cryptographically secure hash, based on the ideas of
 Chacha20.
-It is faster than md5, yet just as secure as SHA-3.
+It is faster than MD5, yet just as secure as SHA-3.
 .Pp
 Blake2b is immune to length extension attacks, and as such does not
 require any specific precautions, such as using the HMAC algorithm.
@@ -67,6 +67,8 @@ free bytes.
 .It Fa hash_size
 the length of the output hash.
 Must be between 1 and 64.
+A value of 64 is recommended.
+Values below 32 are discouraged.
 .It Fa key
 some secret key.
 May be
@@ -93,14 +95,17 @@ and
 .Fn crypto_blake2b_general .
 The
 .Fn crypto_blake2b
-is provided for convenience.
-It uses a 64 bytes hash and no key (this is a good default).
+function is provided for convenience.
+It uses a 64 byte hash and no key.
+These values are good defaults for
+.Fn crypto_blake2b_general_init ,
+too.
 .Pp
 If you use the
 .Fn crypto_blake2b_general
-function, you can specify the size of the hash (sizes below 32 bytes
-are discouraged), and use a secret key to make the hash unpredictable
-\(en useful for message authentication codes.
+function, you can specify the size of the hash, and use a secret key to
+make the hash unpredictable \(en useful for message authentication
+codes.
 .Ss Incremental interface
 Incremental interfaces are useful to handle streams of data or large
 files without using too much memory.
@@ -121,7 +126,7 @@ The invariants of the parameters are the same as for
 .Fn crypto_blake2b_init
 is a convenience initialisation function that
 specifies a 64-byte hash and no key.
-This is a good default.
+This is considered a good default.
 .Sh RETURN VALUES
 These functions return nothing.
 .Sh EXAMPLES

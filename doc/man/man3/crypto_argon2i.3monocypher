@@ -99,7 +99,7 @@ is zero.
 You generally do not need this parameter, but it does have some use:
 The key is supposed to be unknown to the attacker.
 In the context of password derivation, it would stay unknown
-.Em even if an attacker steals your password database.
+.Em even if an attacker steals your password database .
 This may be possible if that key is stored separately from your password
 database (like on a separate server, and never written on the main
 server's disks).
