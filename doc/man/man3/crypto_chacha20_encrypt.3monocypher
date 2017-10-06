@@ -48,8 +48,8 @@
 .Fa "uint64_t ctr"
 .Fc
 .Sh DESCRIPTION
-These functions provides an incremental interface for Chacha20, with an
-initialisation, and as many encryption steps as you want.
+These functions provide an incremental interface for Chacha20, with an
+initialisation function, and as many encryption steps as desired.
 .Pp
 To use these functions, you must first initialize a
 .Vt crypto_chacha_ctx
@@ -105,7 +105,7 @@ with
 being
 .Dv NULL .
 This is useful as a user space random number generator.
-Do not use this as a cryptographic random number generator.
+.Sy \&Do not use this as a cryptographic random number generator .
 Still, this function can be used outside of a security context:
 deterministic procedural generation comes to mind.
 .Pp

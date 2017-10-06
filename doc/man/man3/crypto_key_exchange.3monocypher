@@ -55,9 +55,9 @@ and
 .Xr crypto_aead_unlock 3monocypher
 functions.
 It performs an X25519 key exchange, then hashes the shared secret (with
-HChacha20) to get a suitably random-looking shared key.
+HChacha20) to get a suitably random shared key.
 .Pp
-Keep in mind that if either of your long term secret keys leaks, it
+Keep in mind that if either of the long term secret keys leaks, it
 may compromise
 .Em all past messages !
 If you want forward secrecy, you will need to exchange temporary public
@@ -87,7 +87,7 @@ This function computes a shared secret with your secret key
 .Fa your_secret_key
 and the other party's public key
 .Fa their_public_key .
-.Sy Warning: the shared secret is not cryptographically random.
+.Sy Warning: the shared secret is not cryptographically random .
 Do not use it directly as a session key.
 You need to hash it first.
 Any cryptographically secure hash will do.
@@ -158,7 +158,7 @@ function utilizes HChacha20 as well.
 .Pp
 Note that the most significant bit of the public key is systematically
 ignored.
-It is not needed, because every public key should be smaller than
+It is not needed because every public key should be smaller than
 2^255-19, which fits in 255 bits.
 If another implementation of X25519 gives you a key that's not fully
 reduced and has its high bit set, the computation will fail.

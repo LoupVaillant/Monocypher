@@ -35,7 +35,7 @@ These functions are variants of
 and
 .Xr crypto_unlock 3monocypher ,
 permitting additional data.
-Addiional data is authenticated, but
+Additional data is authenticated, but
 .Em not
 encrypted.
 .Pp
@@ -50,8 +50,8 @@ and
 .Ef
 .Pp
 If you must send unencrypted data, remember that you cannot trust
-unauthenticated data.
-.Em Including the length of the additional data .
+unauthenticated data,
+.Em including the length of the additional data .
 If you transmit that length over the wire, you must authenticate it.
 (The easiest way to do so is to append that length to the additional
 data before you call
