@@ -595,20 +595,34 @@ static int p_argon2i_overlap()
     return status;
 }
 
-// Verifies that random signatures are all invalid.  Uses random
-// public keys to see what happens outside of the curve (it should
-// yield an invalid signature).
-static int p_eddsa()
+static int p_eddsa_roundtrip()
 {
 #define MESSAGE_SIZE 32
     int status = 0;
+    FOR (i, 0, 1000) {
+        RANDOM_INPUT(message, MESSAGE_SIZE);
+        RANDOM_INPUT(sk, 32);
+        u8 pk       [32];  crypto_sign_public_key(pk, sk);
+        u8 signature[64];  crypto_sign(signature, sk, pk, message, MESSAGE_SIZE);
+        status |= crypto_check(signature, pk, message, MESSAGE_SIZE);
+    }
+    printf("%s: EdDSA roundtrip\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
+// Verifies that random signatures are all invalid.  Uses random
+// public keys to see what happens outside of the curve (it should
+// yield an invalid signature).
+static int p_eddsa_random()
+{
+    int status = 0;
     u8 message[MESSAGE_SIZE];  p_random(message, 32);
     FOR (i, 0, 1000) {
-        u8 public_key[32];  p_random(public_key, 32);
-        u8 signature [64];  p_random(signature , 64);
-        status |= ~crypto_check(signature, public_key, message, MESSAGE_SIZE);
+        RANDOM_INPUT(pk, 32);
+        RANDOM_INPUT(signature , 64);
+        status |= ~crypto_check(signature, pk, message, MESSAGE_SIZE);
     }
-    printf("%s: EdDSA\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: EdDSA random\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -760,7 +774,8 @@ int main(void)
     status |= p_sha512();
     status |= p_sha512_overlap();
     status |= p_argon2i_overlap();
-    status |= p_eddsa();
+    status |= p_eddsa_roundtrip();
+    status |= p_eddsa_random();
     status |= p_eddsa_overlap();
     status |= p_aead();
     status |= p_lock_incremental();
