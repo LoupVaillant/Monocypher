@@ -1277,7 +1277,7 @@ void crypto_x25519_public_key(u8       public_key[32],
 // Point in a twisted Edwards curve,
 // in extended projective coordinates.
 // x = X/Z, y = Y/Z, T = XY/Z
-typedef struct { fe X; fe Y; fe Z; fe T; } ge;
+// typedef struct { fe X; fe Y; fe Z; fe T; } ge;
 
 static void ge_from_xy(ge *p, const fe x, const fe y)
 {
@@ -1555,21 +1555,55 @@ void crypto_sign(u8        signature[64],
     modL(signature + 32, s);  // second half of the signature = s
 }
 
-int crypto_check(const u8  signature[64],
-                 const u8  public_key[32],
-                 const u8 *message,  size_t message_size)
+int crypto_check_init(crypto_check_ctx *ctx,
+                      const u8 signature[64],
+                      const u8 public_key[32])
 {
-    ge A, p, sB, diff;
-    u8 h_ram[64], R_check[32];
-    if (ge_frombytes_neg(&A, public_key)) {       // -A
+    HASH_INIT(&(ctx->hash_ctx));  // some users won't check the return code...
+    ctx->invalid_pk = 0;
+    if (ge_frombytes_neg(&(ctx->A), public_key)) {
+        ctx->invalid_pk = -1;
         return -1;
     }
-    hash_ram(h_ram, signature, public_key, message, message_size);
-    ge_scalarmult(&p, &A, h_ram);                 // p    = -A*h_ram
+    HASH_UPDATE(&(ctx->hash_ctx), signature , 32);
+    HASH_UPDATE(&(ctx->hash_ctx), public_key, 32);
+    return 0;
+}
+
+void crypto_check_update(crypto_check_ctx *ctx, const u8 *msg, size_t msg_size)
+{
+    // ... so we'd better init the context before it blows up in their
+    // face.  Now the worst they can do is lose time.
+    HASH_UPDATE(&(ctx->hash_ctx), msg , msg_size);
+}
+
+int crypto_check_final(crypto_check_ctx *ctx, const u8 signature[64])
+{
+    // protect whoever doesn't check the crypto_check_init() return code
+    if (ctx->invalid_pk != 0) {
+        return -1;
+    }
+    ge p, sB, diff;
+    u8 h_ram[64], R_check[32];
+    HASH_FINAL(&(ctx->hash_ctx), h_ram);
+    reduce(h_ram);
+    ge_scalarmult(&p, &(ctx->A), h_ram);          // p    = -A*h_ram
     ge_scalarmult_base(&sB, signature + 32);
     ge_add(&diff, &p, &sB);                       // diff = s - A*h_ram
     ge_tobytes(R_check, &diff);
     return crypto_memcmp(signature, R_check, 32); // R == s - A*h_ram ? OK : fail
+}
+
+int crypto_check(const u8  signature[64],
+                 const u8  public_key[32],
+                 const u8 *message, size_t message_size)
+{
+    crypto_check_ctx ctx;
+    if (crypto_check_init(&ctx, signature, public_key)) {
+        return -1;
+    }
+    crypto_check_update(&ctx, message, message_size);
+    return crypto_check_final(&ctx, signature);
 }
 
 ////////////////////
