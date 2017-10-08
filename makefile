@@ -69,23 +69,26 @@ lib/libmonocypher.a: lib/monocypher.o
 lib/libmonocypher.so: lib/monocypher.o
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -shared -o $@ $^
-lib/%.o: src/%.c src/%.h
+lib/sha512.o    : src/optional/sha512.c src/optional/sha512.o
+lib/monocypher.o: src/monocypher.c src/monocypher.h
+lib/monocypher.o lib/sha512.o:
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I src -fPIC -c -o $@ $<
+	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ $<
 
 # Test & speed libraries
+$TEST_COMMON=tests/utils.h src/monocypher.h src/optional/sha512.h
 lib/utils.o: tests/utils.c tests/utils.h
-lib/test.o : tests/test.c  tests/utils.h src/monocypher.h src/sha512.h tests/vectors.h
-lib/speed.o: tests/speed.c tests/utils.h src/monocypher.h src/sha512.h
+lib/test.o : tests/test.c  $(TEST_COMMON) tests/vectors.h
+lib/speed.o: tests/speed.c $(TEST_COMMON)
 lib/utils.o lib/test.o lib/speed.o:
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I src -fPIC -c -o $@ $<
+	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ $<
 
 # test & speed executables
 test.out : lib/test.o  lib/monocypher.o lib/sha512.o lib/utils.o
 speed.out: lib/speed.o lib/monocypher.o lib/sha512.o lib/utils.o
 test.out speed.out:
-	$(CC) $(CFLAGS) -I src -o $@ $^
+	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
 
 tests/vectors.h:
 	@echo ""

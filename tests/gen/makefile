@@ -1,6 +1,6 @@
 CC=gcc -std=c99
 
-CFLAGS = -pedantic -Wall -Wextra -O3 -march=native
+CFLAGS = -pedantic -Wall -Wextra
 HASH   =
 #HASH=-DED25519_SHA512
 
@@ -12,7 +12,6 @@ VEC2    = $(patsubst %.vec, %.all.vec, $(VEC)) key_exchange.all.vec
 HEADERS = $(patsubst %.all.vec, %.h.vec, $(VEC2))
 VECTORS = ../vectors.h
 
-
 all: $(VECTORS)
 
 clean:
@@ -23,10 +22,11 @@ clean:
 	./$< > $@
 
 %.o: %.c ../utils.h ../ed25519-donna/ed25519.h
-	$(CC) $(CFLAGS) -c $<    \
-            -I ..                \
-            -I ../ed25519-donna  \
-            -I ../../src         \
+	$(CC) $(CFLAGS) -c $<     \
+            -I ..                 \
+            -I ../ed25519-donna   \
+            -I ../../src          \
+            -I ../../src/optional \
             $$(pkg-config --cflags libsodium)
 
 %.out: %.o monocypher.o utils.o ed25519.o
@@ -39,16 +39,17 @@ utils.o: ../utils.c ../utils.h
 ed25519.o: ../ed25519-donna/ed25519.c  $(wildcard ../ed25519-donna/*.h)
 	$(CC) $(CFLAGS) -c $<       \
             -I ../../src            \
+            -I ../../src/optional   \
             $(HASH)                 \
             -DED25519_CUSTOMHASH    \
             -DED25519_TEST          \
             -DED25519_NO_INLINE_ASM \
             -DED25519_FORCE_32BIT
 
-monocypher.o: ../../src/monocypher.c ../../src/monocypher.h
-m_sha512.o  : ../../src/sha512.c     ../../src/sha512.h
+monocypher.o: ../../src/monocypher.c      ../../src/monocypher.h
+m_sha512.o  : ../../src/optional/sha512.c ../../src/optional/sha512.h
 monocypher.o m_sha512.o:
-	$(CC) $(CFLAGS) -c $< -I ../../src
+	$(CC) $(CFLAGS) -c $< -I ../../src -I ../../src/optional
 
 vector_to_header.out: ../vector_to_header.c
 	$(CC) $(CFLAGS) $< -o $@
