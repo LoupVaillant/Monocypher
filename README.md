@@ -51,7 +51,7 @@ Monocypher, you can compile it thus:
 
 The `cflags` line gives the include path for monocypher.h, and the
 `libs` line provides the link path and option required to find
-libmonocypher.a (or libmonocypher.so).
+`libmonocypher.a` (or `libmonocypher.so`).
 
 
 ### Known language bindings
