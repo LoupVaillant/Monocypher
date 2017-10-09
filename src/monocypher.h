@@ -130,19 +130,41 @@ void crypto_x25519_public_key(uint8_t       public_key[32],
 void crypto_sign_public_key(uint8_t        public_key[32],
                             const uint8_t  secret_key[32]);
 
+#ifdef ED25519_SHA512
+typedef crypto_sha512_ctx crypto_hash_ctx;
+#else
+typedef crypto_blake2b_ctx crypto_hash_ctx;
+#endif
+
+typedef struct {
+    crypto_hash_ctx hash;
+    uint8_t buf[96];
+    uint8_t pk [32];
+} crypto_sign_ctx;
+
+void crypto_sign_init1(crypto_sign_ctx *ctx,
+                       const uint8_t  secret_key[32],
+                       const uint8_t  public_key[32]);
+
+void crypto_sign_update(crypto_sign_ctx *ctx,
+                        const uint8_t *message, size_t message_size);
+
+void crypto_sign_init2(crypto_sign_ctx *ctx);
+
+void crypto_sign_final(crypto_sign_ctx *ctx, uint8_t signature[64]);
+
 void crypto_sign(uint8_t        signature [64],
                  const uint8_t  secret_key[32],
                  const uint8_t  public_key[32], // optional, may be 0
                  const uint8_t *message, size_t message_size);
 
-
-#ifdef ED25519_SHA512
-typedef crypto_sha512_ctx crypto_check_ctx;
-#else
-typedef crypto_blake2b_ctx crypto_check_ctx;
-#endif
-
 int crypto_check_public_key(const uint8_t public_key[32]);
+
+typedef struct {
+    crypto_hash_ctx hash;
+    uint8_t sig[64];
+    uint8_t pk [32];
+} crypto_check_ctx;
 
 void crypto_check_init(crypto_check_ctx *ctx,
                        const uint8_t signature[64],
@@ -151,9 +173,7 @@ void crypto_check_init(crypto_check_ctx *ctx,
 void crypto_check_update(crypto_check_ctx *ctx,
                          const uint8_t *message, size_t message_size);
 
-int crypto_check_final(crypto_check_ctx *ctx,
-                       const uint8_t signature[64],
-                       const uint8_t public_key[32]);
+int crypto_check_final(crypto_check_ctx *ctx);
 
 int crypto_check(const uint8_t  signature [64],
                  const uint8_t  public_key[32],

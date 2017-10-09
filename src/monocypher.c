@@ -1474,48 +1474,62 @@ void crypto_sign_public_key(u8       public_key[32],
     ge_tobytes(public_key, &A);
 }
 
-void crypto_sign(u8        signature[64],
-                 const u8  secret_key[32],
-                 const u8  public_key[32],
-                 const u8 *message, size_t message_size)
+void crypto_sign_init1(crypto_sign_ctx *ctx,
+                       const u8  secret_key[32],
+                       const u8  public_key[32])
 {
-    u8 a[64], *prefix = a + 32;
+    u8 *a      = ctx->buf;
+    u8 *prefix = ctx->buf + 32;
     HASH(a, secret_key, 32);
     trim_scalar(a);
 
-    u8 pk_buf[32];
-    const u8 *pk = public_key;
     if (public_key == 0) {
-        crypto_sign_public_key(pk_buf, secret_key);
-        pk = pk_buf;
+        crypto_sign_public_key(ctx->pk, secret_key);
+    } else {
+        FOR (i, 0, 32) {
+            ctx->pk[i] = public_key[i];
+        }
     }
 
     // Constructs the "random" nonce from the secret key and message.
     // An actual random number would work just fine, and would save us
     // the trouble of hashing the message twice.  If we did that
     // however, the user could fuck it up and reuse the nonce.
-    u8 r[64];
-    HASH_CTX ctx;
-    HASH_INIT  (&ctx);
-    HASH_UPDATE(&ctx, prefix , 32          );
-    HASH_UPDATE(&ctx, message, message_size);
-    HASH_FINAL (&ctx, r);
+    HASH_INIT  (&(ctx->hash));
+    HASH_UPDATE(&(ctx->hash), prefix , 32);
+}
+
+void crypto_sign_update(crypto_sign_ctx *ctx, const u8 *msg, size_t msg_size)
+{
+    HASH_UPDATE(&(ctx->hash), msg, msg_size);
+}
+
+void crypto_sign_init2(crypto_sign_ctx *ctx)
+{
+    u8 *r        = ctx->buf + 32;
+    u8 *half_sig = ctx->buf + 64;
+    HASH_FINAL(&(ctx->hash), r);
     reduce(r);
 
     // first half of the signature = "random" nonce times basepoint
     ge R;
-    u8 half_sig[32];
     ge_scalarmult_base(&R, r);
     ge_tobytes(half_sig, &R);
 
     // Hash R, the public key, and the message together.
     // It cannot be done in paralell with the first hash.
+    HASH_INIT  (&ctx->hash);
+    HASH_UPDATE(&ctx->hash, half_sig, 32);
+    HASH_UPDATE(&ctx->hash, ctx->pk , 32);
+}
+
+void crypto_sign_final(crypto_sign_ctx *ctx, u8 signature[64])
+{
+    u8 *a        = ctx->buf;
+    u8 *r        = ctx->buf + 32;
+    u8 *half_sig = ctx->buf + 64;
     u8 h_ram[64];
-    HASH_INIT  (&ctx);
-    HASH_UPDATE(&ctx, half_sig, 32          );
-    HASH_UPDATE(&ctx, pk      , 32          );
-    HASH_UPDATE(&ctx, message , message_size);
-    HASH_FINAL (&ctx, h_ram);
+    HASH_FINAL(&(ctx->hash), h_ram);
     reduce(h_ram);  // reduce the hash modulo L
 
     i64 s[64]; // s = r + h_ram * a
@@ -1532,6 +1546,19 @@ void crypto_sign(u8        signature[64],
     modL(signature + 32, s);  // second half of the signature = s
 }
 
+void crypto_sign(u8        signature[64],
+                 const u8  secret_key[32],
+                 const u8  public_key[32],
+                 const u8 *message, size_t message_size)
+{
+    crypto_sign_ctx ctx;
+    crypto_sign_init1 (&ctx, secret_key, public_key);
+    crypto_sign_update(&ctx, message, message_size);
+    crypto_sign_init2 (&ctx);
+    crypto_sign_update(&ctx, message, message_size);
+    crypto_sign_final (&ctx, signature);
+}
+
 int crypto_check_public_key(const u8 public_key[32])
 {
     ge A; // wasted result.
@@ -1542,32 +1569,32 @@ void crypto_check_init(crypto_check_ctx *ctx,
                       const u8 signature[64],
                       const u8 public_key[32])
 {
-    HASH_INIT(ctx);
-    HASH_UPDATE(ctx, signature , 32);
-    HASH_UPDATE(ctx, public_key, 32);
+    FOR (i, 0, 64) { ctx->sig[i] = signature [i]; }
+    FOR (i, 0, 32) { ctx->pk [i] = public_key[i]; }
+    HASH_INIT  (&(ctx->hash));
+    HASH_UPDATE(&(ctx->hash), signature , 32);
+    HASH_UPDATE(&(ctx->hash), public_key, 32);
 }
 
 void crypto_check_update(crypto_check_ctx *ctx, const u8 *msg, size_t msg_size)
 {
-    HASH_UPDATE(ctx, msg , msg_size);
+    HASH_UPDATE(&(ctx->hash), msg , msg_size);
 }
 
-int crypto_check_final(crypto_check_ctx *ctx,
-                       const u8 signature[64],
-                       const u8 public_key[32])
+int crypto_check_final(crypto_check_ctx *ctx)
 {
     ge p, sB, diff, A;
     u8 h_ram[64], R_check[32];
-    if (ge_frombytes_neg(&A, public_key)) {       // -A
+    if (ge_frombytes_neg(&A, ctx->pk)) {         // -A
         return -1;
     }
-    HASH_FINAL(ctx, h_ram);
+    HASH_FINAL(&(ctx->hash), h_ram);
     reduce(h_ram);
-    ge_scalarmult(&p, &A, h_ram);                 // p    = -A*h_ram
-    ge_scalarmult_base(&sB, signature + 32);
-    ge_add(&diff, &p, &sB);                       // diff = s - A*h_ram
+    ge_scalarmult(&p, &A, h_ram);                // p    = -A*h_ram
+    ge_scalarmult_base(&sB, ctx->sig + 32);
+    ge_add(&diff, &p, &sB);                      // diff = s - A*h_ram
     ge_tobytes(R_check, &diff);
-    return crypto_memcmp(signature, R_check, 32); // R == s - A*h_ram ? OK : fail
+    return crypto_memcmp(ctx->sig, R_check, 32); // R == s - A*h_ram ? OK : fail
 }
 
 int crypto_check(const u8  signature[64],
@@ -1577,7 +1604,7 @@ int crypto_check(const u8  signature[64],
     crypto_check_ctx ctx;
     crypto_check_init(&ctx, signature, public_key);
     crypto_check_update(&ctx, message, message_size);
-    return crypto_check_final(&ctx, signature, public_key);
+    return crypto_check_final(&ctx);
 }
 
 ////////////////////
