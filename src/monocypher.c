@@ -1392,33 +1392,17 @@ static void ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
     // Recover the y coordinate (Katsuyuki Okeya & Kouichi Sakurai, 2001)
     // Note the shameless reuse of x1: (x1, y1, z1) will correspond to
     // what was originally (x2, z2).
-    fe_mul(t1, x1, z2);  // t1 = x1 * z2
-    fe_add(t2, x2, t1);  // t2 = x2 + t1
-    fe_sub(t3, x2, t1);  // t3 = x2 − t1
-    fe_sq (t3, t3);      // t3 = t3^2
-    fe_mul(t3, t3, x3);  // t3 = t3 * x3
-    fe_mul973324(t1, z2);// t1 = 2a * z2
-    fe_add(t2, t2, t1);  // t2 = t2 + t1
-    fe_mul(t4, x1, x2);  // t4 = x1 * x2
-    fe_add(t4, t4, z2);  // t4 = t4 + z2
-    fe_mul(t2, t2, t4);  // t2 = t2 * t4
-    fe_mul(t1, t1, z2);  // t1 = t1 * z2
-    fe_sub(t2, t2, t1);  // t2 = t2 − t1
-    fe_mul(t2, t2, z3);  // t2 = t2 * z3
-    fe_add(t1, y1, y1);  // t1 = y1 + y1
-    fe_mul(t1, t1, z2);  // t1 = t1 * z2
-    fe_mul(t1, t1, z3);  // t1 = t1 * z3
-    fe_mul(x1, t1, x2);  // x1 = t1 * x2
-    fe_sub(y1, t2, t3);  // y1 = t2 − t3
-    fe_mul(z1, t1, z2);  // z1 = t1 * z2
+    fe_mul(t1, x1, z2);    fe_add(t2, x2, t1);    fe_sub(t3, x2, t1);
+    fe_sq (t3, t3);        fe_mul(t3, t3, x3);    fe_mul973324(t1, z2);
+    fe_add(t2, t2, t1);    fe_mul(t4, x1, x2);    fe_add(t4, t4, z2);
+    fe_mul(t2, t2, t4);    fe_mul(t1, t1, z2);    fe_sub(t2, t2, t1);
+    fe_mul(t2, t2, z3);    fe_add(t1, y1, y1);    fe_mul(t1, t1, z2);
+    fe_mul(t1, t1, z3);    fe_mul(x1, t1, x2);    fe_sub(y1, t2, t3);
+    fe_mul(z1, t1, z2);
 
     // convert back to twisted edwards
-    fe_sub(t1  , x1, z1);
-    fe_add(t2  , x1, z1);
-    fe_mul(x1  , K , x1);
-    fe_mul(p->X, x1, t2);
-    fe_mul(p->Y, y1, t1);
-    fe_mul(p->Z, y1, t2);
+    fe_sub(t1  , x1, z1);    fe_add(t2  , x1, z1);    fe_mul(x1  , K , x1);
+    fe_mul(p->X, x1, t2);    fe_mul(p->Y, y1, t1);    fe_mul(p->Z, y1, t2);
     fe_mul(p->T, x1, t1);
 }
 
