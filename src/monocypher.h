@@ -135,33 +135,25 @@ void crypto_sign(uint8_t        signature [64],
                  const uint8_t  public_key[32], // optional, may be 0
                  const uint8_t *message, size_t message_size);
 
-#define COMBINE1(x, y) x ## y
-#define COMBINE2(x, y) COMBINE1(x, y)
-#define HASH_CTX    COMBINE2(HASH, _ctx)
-#define HASH_INIT   COMBINE2(HASH, _init)
-#define HASH_UPDATE COMBINE2(HASH, _update)
-#define HASH_FINAL  COMBINE2(HASH, _final)
 
-typedef struct { int32_t X[10]; int32_t Y[10]; int32_t Z[10]; int32_t T[10];
-} ge;
-typedef struct {
 #ifdef ED25519_SHA512
-    crypto_sha512_ctx  hash_ctx;
+typedef crypto_sha512_ctx crypto_check_ctx;
 #else
-    crypto_blake2b_ctx hash_ctx;
+typedef crypto_blake2b_ctx crypto_check_ctx;
 #endif
-    ge  A;
-    int invalid_pk;
-} crypto_check_ctx;
 
-int crypto_check_init(crypto_check_ctx *ctx,
-                      const uint8_t signature[64],
-                      const uint8_t public_key[32]);
+int crypto_check_public_key(const uint8_t public_key[32]);
+
+void crypto_check_init(crypto_check_ctx *ctx,
+                       const uint8_t signature[64],
+                       const uint8_t public_key[32]);
 
 void crypto_check_update(crypto_check_ctx *ctx,
                          const uint8_t *message, size_t message_size);
 
-int crypto_check_final(crypto_check_ctx *ctx, const uint8_t signature[64]);
+int crypto_check_final(crypto_check_ctx *ctx,
+                       const uint8_t signature[64],
+                       const uint8_t public_key[32]);
 
 int crypto_check(const uint8_t  signature [64],
                  const uint8_t  public_key[32],

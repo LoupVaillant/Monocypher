@@ -1277,7 +1277,7 @@ void crypto_x25519_public_key(u8       public_key[32],
 // Point in a twisted Edwards curve,
 // in extended projective coordinates.
 // x = X/Z, y = Y/Z, T = XY/Z
-// typedef struct { fe X; fe Y; fe Z; fe T; } ge;
+typedef struct { fe X; fe Y; fe Z; fe T; } ge;
 
 static void ge_from_xy(ge *p, const fe x, const fe y)
 {
@@ -1333,10 +1333,11 @@ static int ge_frombytes_neg(ge *h, const u8 s[32])
     fe_sub(check, vxx, u);     // vx^2-u
     if (fe_isnonzero(check)) {
         fe_add(check, vxx, u); // vx^2+u
-        if (fe_isnonzero(check)) return -1;
+        if (fe_isnonzero(check)) {
+            return -1;
+        }
         fe_mul(h->X, h->X, sqrtm1);
     }
-
     if (fe_isnegative(h->X) == (s[31] >> 7)) {
         fe_neg(h->X, h->X);
     }
@@ -1478,19 +1479,6 @@ static void reduce(u8 r[64])
     modL(r, x);
 }
 
-// hashes R || A || M, reduces it modulo L
-static void hash_ram(u8 k[64], const u8 R[32], const u8 A[32],
-                     const u8 *M, size_t M_size)
-{
-    HASH_CTX ctx;
-    HASH_INIT  (&ctx);
-    HASH_UPDATE(&ctx, R , 32    );
-    HASH_UPDATE(&ctx, A , 32    );
-    HASH_UPDATE(&ctx, M , M_size);
-    HASH_FINAL (&ctx, k);
-    reduce(k);
-}
-
 void crypto_sign_public_key(u8       public_key[32],
                             const u8 secret_key[32])
 {
@@ -1539,7 +1527,12 @@ void crypto_sign(u8        signature[64],
     // Hash R, the public key, and the message together.
     // It cannot be done in paralell with the first hash.
     u8 h_ram[64];
-    hash_ram(h_ram, half_sig, pk, message, message_size);
+    HASH_INIT  (&ctx);
+    HASH_UPDATE(&ctx, half_sig, 32          );
+    HASH_UPDATE(&ctx, pk      , 32          );
+    HASH_UPDATE(&ctx, message , message_size);
+    HASH_FINAL (&ctx, h_ram);
+    reduce(h_ram);  // reduce the hash modulo L
 
     i64 s[64]; // s = r + h_ram * a
     FOR (i,  0, 32) { s[i] = (u64) r[i]; }
@@ -1555,39 +1548,38 @@ void crypto_sign(u8        signature[64],
     modL(signature + 32, s);  // second half of the signature = s
 }
 
-int crypto_check_init(crypto_check_ctx *ctx,
+int crypto_check_public_key(const u8 public_key[32])
+{
+    ge A; // wasted result.
+    return ge_frombytes_neg(&A, public_key);
+}
+
+void crypto_check_init(crypto_check_ctx *ctx,
                       const u8 signature[64],
                       const u8 public_key[32])
 {
-    HASH_INIT(&(ctx->hash_ctx));  // some users won't check the return code...
-    ctx->invalid_pk = 0;
-    if (ge_frombytes_neg(&(ctx->A), public_key)) {
-        ctx->invalid_pk = -1;
-        return -1;
-    }
-    HASH_UPDATE(&(ctx->hash_ctx), signature , 32);
-    HASH_UPDATE(&(ctx->hash_ctx), public_key, 32);
-    return 0;
+    HASH_INIT(ctx);
+    HASH_UPDATE(ctx, signature , 32);
+    HASH_UPDATE(ctx, public_key, 32);
 }
 
 void crypto_check_update(crypto_check_ctx *ctx, const u8 *msg, size_t msg_size)
 {
-    // ... so we'd better init the context before it blows up in their
-    // face.  Now the worst they can do is lose time.
-    HASH_UPDATE(&(ctx->hash_ctx), msg , msg_size);
+    HASH_UPDATE(ctx, msg , msg_size);
 }
 
-int crypto_check_final(crypto_check_ctx *ctx, const u8 signature[64])
+int crypto_check_final(crypto_check_ctx *ctx,
+                       const u8 signature[64],
+                       const u8 public_key[32])
 {
-    // protect whoever doesn't check the crypto_check_init() return code
-    if (ctx->invalid_pk != 0) {
+    ge p, sB, diff, A;
+    u8 h_ram[64], R_check[32];
+    if (ge_frombytes_neg(&A, public_key)) {       // -A
         return -1;
     }
-    ge p, sB, diff;
-    u8 h_ram[64], R_check[32];
-    HASH_FINAL(&(ctx->hash_ctx), h_ram);
+    HASH_FINAL(ctx, h_ram);
     reduce(h_ram);
-    ge_scalarmult(&p, &(ctx->A), h_ram);          // p    = -A*h_ram
+    ge_scalarmult(&p, &A, h_ram);                 // p    = -A*h_ram
     ge_scalarmult_base(&sB, signature + 32);
     ge_add(&diff, &p, &sB);                       // diff = s - A*h_ram
     ge_tobytes(R_check, &diff);
@@ -1599,11 +1591,9 @@ int crypto_check(const u8  signature[64],
                  const u8 *message, size_t message_size)
 {
     crypto_check_ctx ctx;
-    if (crypto_check_init(&ctx, signature, public_key)) {
-        return -1;
-    }
+    crypto_check_init(&ctx, signature, public_key);
     crypto_check_update(&ctx, message, message_size);
-    return crypto_check_final(&ctx, signature);
+    return crypto_check_final(&ctx, signature, public_key);
 }
 
 ////////////////////
