@@ -142,14 +142,14 @@ typedef struct {
     uint8_t pk [32];
 } crypto_sign_ctx;
 
-void crypto_sign_init1(crypto_sign_ctx *ctx,
-                       const uint8_t  secret_key[32],
-                       const uint8_t  public_key[32]);
+void crypto_sign_init_first_pass(crypto_sign_ctx *ctx,
+                                 const uint8_t  secret_key[32],
+                                 const uint8_t  public_key[32]);
 
 void crypto_sign_update(crypto_sign_ctx *ctx,
                         const uint8_t *message, size_t message_size);
 
-void crypto_sign_init2(crypto_sign_ctx *ctx);
+void crypto_sign_init_second_pass(crypto_sign_ctx *ctx);
 
 void crypto_sign_final(crypto_sign_ctx *ctx, uint8_t signature[64]);
 

@@ -1474,9 +1474,9 @@ void crypto_sign_public_key(u8       public_key[32],
     ge_tobytes(public_key, &A);
 }
 
-void crypto_sign_init1(crypto_sign_ctx *ctx,
-                       const u8  secret_key[32],
-                       const u8  public_key[32])
+void crypto_sign_init_first_pass(crypto_sign_ctx *ctx,
+                                 const u8  secret_key[32],
+                                 const u8  public_key[32])
 {
     u8 *a      = ctx->buf;
     u8 *prefix = ctx->buf + 32;
@@ -1504,7 +1504,7 @@ void crypto_sign_update(crypto_sign_ctx *ctx, const u8 *msg, size_t msg_size)
     HASH_UPDATE(&(ctx->hash), msg, msg_size);
 }
 
-void crypto_sign_init2(crypto_sign_ctx *ctx)
+void crypto_sign_init_second_pass(crypto_sign_ctx *ctx)
 {
     u8 *r        = ctx->buf + 32;
     u8 *half_sig = ctx->buf + 64;
@@ -1552,11 +1552,11 @@ void crypto_sign(u8        signature[64],
                  const u8 *message, size_t message_size)
 {
     crypto_sign_ctx ctx;
-    crypto_sign_init1 (&ctx, secret_key, public_key);
-    crypto_sign_update(&ctx, message, message_size);
-    crypto_sign_init2 (&ctx);
-    crypto_sign_update(&ctx, message, message_size);
-    crypto_sign_final (&ctx, signature);
+    crypto_sign_init_first_pass (&ctx, secret_key, public_key);
+    crypto_sign_update          (&ctx, message, message_size);
+    crypto_sign_init_second_pass(&ctx);
+    crypto_sign_update          (&ctx, message, message_size);
+    crypto_sign_final           (&ctx, signature);
 }
 
 int crypto_check_public_key(const u8 public_key[32])
