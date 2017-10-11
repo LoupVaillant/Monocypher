@@ -1681,8 +1681,7 @@ void crypto_aead_lock(u8        mac[16],
     crypto_lock_init   (&ctx, key, nonce);
     // authenticate additional data first, to allow overlapping buffers
     crypto_lock_auth   (&ctx, ad, ad_size);
-    crypto_lock_encrypt(&ctx, cipher_text, plain_text, text_size);
-    crypto_lock_auth   (&ctx, cipher_text, text_size);
+    crypto_lock_update (&ctx, cipher_text, plain_text, text_size);
     crypto_lock_final  (&ctx, mac);
 }
 
