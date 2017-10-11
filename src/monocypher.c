@@ -1625,15 +1625,49 @@ int crypto_key_exchange(u8       shared_key[32],
 ////////////////////////////////
 /// Authenticated encryption ///
 ////////////////////////////////
-static void authenticate2(u8 mac[16]  , const u8 auth_key[32],
-                          const u8 *t1, size_t   size1,
-                          const u8 *t2, size_t   size2)
+void crypto_lock_init(crypto_lock_ctx *ctx, const u8 key[32], const u8 nonce[24])
 {
-    crypto_poly1305_ctx a_ctx;
-    crypto_poly1305_init  (&a_ctx, auth_key);
-    crypto_poly1305_update(&a_ctx, t1, size1);
-    crypto_poly1305_update(&a_ctx, t2, size2);
-    crypto_poly1305_final (&a_ctx, mac);
+    u8 auth_key[32];
+    crypto_chacha20_x_init(&(ctx->chacha), key, nonce);
+    crypto_chacha20_stream(&(ctx->chacha), auth_key, 32);
+    crypto_poly1305_init  (&(ctx->poly  ), auth_key);
+}
+
+void crypto_lock_encrypt(crypto_lock_ctx *ctx, u8 *cipher_text,
+                         const u8 *plain_text, size_t text_size)
+{
+    crypto_chacha20_encrypt(&(ctx->chacha), cipher_text, plain_text, text_size);
+}
+
+void crypto_lock_auth(crypto_lock_ctx *ctx, const u8 *msg, size_t msg_size)
+{
+    crypto_poly1305_update(&(ctx->poly), msg, msg_size);
+}
+
+void crypto_lock_update(crypto_lock_ctx *ctx, u8 *cipher_text,
+                        const u8 *plain_text, size_t text_size)
+{
+    crypto_lock_encrypt(ctx, cipher_text, plain_text, text_size);
+    crypto_lock_auth   (ctx, cipher_text, text_size);
+}
+
+void crypto_lock_final(crypto_lock_ctx *ctx, u8 mac[16])
+{
+    crypto_poly1305_final (&(ctx->poly), mac);
+}
+
+void crypto_unlock_update(crypto_lock_ctx *ctx, u8 *plain_text,
+                          const u8 *cipher_text, size_t text_size)
+{
+    crypto_lock_auth   (ctx, cipher_text, text_size);
+    crypto_lock_encrypt(ctx, plain_text, cipher_text, text_size);
+}
+
+int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
+{
+    u8 real_mac[16];
+    crypto_lock_final(ctx, real_mac);
+    return crypto_memcmp(real_mac, mac, 16);
 }
 
 void crypto_aead_lock(u8        mac[16],
@@ -1642,13 +1676,14 @@ void crypto_aead_lock(u8        mac[16],
                       const u8  nonce[24],
                       const u8 *ad        , size_t ad_size,
                       const u8 *plain_text, size_t text_size)
-{   // encrypt then mac
-    u8 auth_key[32];
-    crypto_chacha_ctx e_ctx;
-    crypto_chacha20_x_init (&e_ctx, key, nonce);
-    crypto_chacha20_stream (&e_ctx, auth_key, 32);
-    crypto_chacha20_encrypt(&e_ctx, cipher_text, plain_text, text_size);
-    authenticate2(mac, auth_key, ad, ad_size, cipher_text, text_size);
+{
+    crypto_lock_ctx ctx;
+    crypto_lock_init   (&ctx, key, nonce);
+    // authenticate additional data first, to allow overlapping buffers
+    crypto_lock_auth   (&ctx, ad, ad_size);
+    crypto_lock_encrypt(&ctx, cipher_text, plain_text, text_size);
+    crypto_lock_auth   (&ctx, cipher_text, text_size);
+    crypto_lock_final  (&ctx, mac);
 }
 
 int crypto_aead_unlock(u8       *plain_text,
@@ -1658,15 +1693,14 @@ int crypto_aead_unlock(u8       *plain_text,
                        const u8 *ad         , size_t ad_size,
                        const u8 *cipher_text, size_t text_size)
 {
-    u8 auth_key[32], real_mac[16];
-    crypto_chacha_ctx e_ctx;
-    crypto_chacha20_x_init(&e_ctx, key, nonce);
-    crypto_chacha20_stream(&e_ctx, auth_key, 32);
-    authenticate2(real_mac, auth_key, ad, ad_size, cipher_text, text_size);
-    if (crypto_memcmp(real_mac, mac, 16)) {
-        return -1; // reject forgeries
+    crypto_lock_ctx ctx;
+    crypto_lock_init   (&ctx, key, nonce);
+    crypto_lock_auth   (&ctx, ad, ad_size);
+    crypto_lock_auth   (&ctx, cipher_text, text_size);
+    if (crypto_unlock_final  (&ctx, mac)) {
+        return -1; // reject forgeries before wasting our time decrypting
     }
-    crypto_chacha20_encrypt(&e_ctx, plain_text, cipher_text, text_size);
+    crypto_lock_encrypt(&ctx, plain_text, cipher_text, text_size);
     return 0;
 }
 
@@ -1687,43 +1721,4 @@ int crypto_unlock(u8       *plain_text,
 {
     return crypto_aead_unlock(plain_text, key, nonce, mac, 0, 0,
                               cipher_text, text_size);
-}
-
-void crypto_lock_init(crypto_lock_ctx *ctx, const u8 key[32], const u8 nonce[24])
-{
-    u8 auth_key[32];
-    crypto_chacha20_x_init(&(ctx->chacha), key, nonce);
-    crypto_chacha20_stream(&(ctx->chacha), auth_key, 32);
-    crypto_poly1305_init  (&(ctx->poly  ), auth_key);
-}
-
-void crypto_lock_auth(crypto_lock_ctx *ctx, const u8 *ad, size_t ad_size)
-{
-    crypto_poly1305_update(&(ctx->poly), ad, ad_size);
-}
-
-void crypto_lock_update(crypto_lock_ctx *ctx, u8 *cipher_text,
-                        const u8 *plain_text, size_t text_size)
-{
-    crypto_chacha20_encrypt(&(ctx->chacha), cipher_text, plain_text, text_size);
-    crypto_poly1305_update (&(ctx->poly  ), cipher_text, text_size);
-}
-
-void crypto_lock_final(crypto_lock_ctx *ctx, u8 mac[16])
-{
-    crypto_poly1305_final (&(ctx->poly), mac);
-}
-
-void crypto_unlock_update(crypto_lock_ctx *ctx, u8 *plain_text,
-                          const u8 *cipher_text, size_t text_size)
-{
-    crypto_poly1305_update (&(ctx->poly  ), cipher_text, text_size);
-    crypto_chacha20_encrypt(&(ctx->chacha), plain_text, cipher_text, text_size);
-}
-
-int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
-{
-    u8 real_mac[16];
-    crypto_poly1305_final(&(ctx->poly), real_mac);
-    return crypto_memcmp(real_mac, mac, 16);
 }

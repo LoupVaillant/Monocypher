@@ -189,6 +189,38 @@ int crypto_key_exchange(uint8_t       shared_key      [32],
 ////////////////////////////////
 /// Authenticated encryption ///
 ////////////////////////////////
+typedef struct {
+    crypto_chacha_ctx   chacha;
+    crypto_poly1305_ctx poly;
+} crypto_lock_ctx;
+
+void crypto_lock_init(crypto_lock_ctx *ctx,
+                      const uint8_t    key[32],
+                      const uint8_t    nonce[24]);
+
+void crypto_lock_auth(crypto_lock_ctx *ctx,
+                      const uint8_t   *message,
+                      size_t           message_size);
+
+void crypto_lock_encrypt(crypto_lock_ctx *ctx,
+                         uint8_t         *cipher_text,
+                         const uint8_t   *plain_text,
+                         size_t           text_size);
+
+void crypto_lock_update(crypto_lock_ctx *ctx,
+                        uint8_t         *cipher_text,
+                        const uint8_t   *plain_text,
+                        size_t           text_size);
+
+void crypto_unlock_update(crypto_lock_ctx *ctx,
+                          uint8_t         *plain_text,
+                          const uint8_t   *cipher_text,
+                          size_t           text_size);
+
+void crypto_lock_final(crypto_lock_ctx *ctx, uint8_t mac[16]);
+
+int crypto_unlock_final(crypto_lock_ctx *ctx, const uint8_t mac[16]);
+
 void crypto_aead_lock(uint8_t        mac[16],
                       uint8_t       *cipher_text,
                       const uint8_t  key[32],
@@ -214,29 +246,5 @@ int crypto_unlock(uint8_t       *plain_text,
                   const uint8_t  nonce[24],
                   const uint8_t  mac[16],
                   const uint8_t *cipher_text, size_t text_size);
-
-typedef struct {
-    crypto_chacha_ctx   chacha;
-    crypto_poly1305_ctx poly;
-} crypto_lock_ctx;
-
-void crypto_lock_init(crypto_lock_ctx *ctx,
-                      const uint8_t key[32],
-                      const uint8_t nonce[24]);
-
-void crypto_lock_auth(crypto_lock_ctx *ctx,
-                      const uint8_t *ad, size_t ad_size);
-
-void crypto_lock_update(crypto_lock_ctx *ctx,
-                        uint8_t *cipher_text,
-                        const uint8_t *plain_text, size_t text_size);
-
-void crypto_lock_final(crypto_lock_ctx *ctx, uint8_t mac[16]);
-
-void crypto_unlock_update(crypto_lock_ctx *ctx,
-                          uint8_t *plain_text,
-                          const uint8_t *cipher_text, size_t text_size);
-
-int crypto_unlock_final(crypto_lock_ctx *ctx, const uint8_t mac[16]);
 
 #endif // MONOCYPHER_H
