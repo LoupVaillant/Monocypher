@@ -65,24 +65,6 @@ static void store64_le(u8 out[8], u64 in)
 static u64 rotr64(u64 x, u64 n) { return (x >> n) ^ (x << (64 - n)); }
 static u32 rotl32(u32 x, u32 n) { return (x << n) ^ (x >> (32 - n)); }
 
-int crypto_memcmp(const u8 *p1, const u8 *p2, size_t n)
-{
-    unsigned diff = 0;
-    FOR (i, 0, n) {
-        diff |= (p1[i] ^ p2[i]);
-    }
-    return (1 & ((diff - 1) >> 8)) - 1;
-}
-
-int crypto_zerocmp(const u8 *p, size_t n)
-{
-    unsigned diff = 0;
-    FOR (i, 0, n) {
-        diff |= p[i];
-    }
-    return (1 & ((diff - 1) >> 8)) - 1;
-}
-
 static int neq0(u64 diff)
 {   // constant time comparison to zero
     // return diff != 0 ? -1 : 0

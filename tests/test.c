@@ -33,6 +33,14 @@ typedef struct {
     size_t  size;
 } vector;
 
+int zerocmp(const u8 *p, size_t n)
+{
+    FOR (i, 0, n) {
+        if (p[i] != 0) { return -1; }
+    }
+    return 0;
+}
+
 static int test(void (*f)(const vector[], vector*),
                 const char *name, size_t nb_inputs,
                 size_t nb_vectors, u8 **vectors, size_t *sizes)
@@ -56,7 +64,7 @@ static int test(void (*f)(const vector[], vector*),
         expected.buf  = vectors[idx+nb_inputs];
         expected.size = sizes  [idx+nb_inputs];
         status |= out.size - expected.size;
-        status |= crypto_memcmp(out.buf, expected.buf, out.size);
+        status |= memcmp(out.buf, expected.buf, out.size);
         free(out.buf);
         idx += nb_inputs + 1;
         nb_tests++;
@@ -141,7 +149,7 @@ static void x25519(const vector in[], vector *out)
     const vector *scalar = in;
     const vector *point  = in + 1;
     int report   = crypto_x25519(out->buf, scalar->buf, point->buf);
-    int not_zero = crypto_zerocmp(out->buf, out->size);
+    int not_zero = zerocmp(out->buf, out->size);
     if ( not_zero &&  report)  printf("FAILURE: x25519 false all_zero report\n");
     if (!not_zero && !report)  printf("FAILURE: x25519 failed to report zero\n");
 }
@@ -164,7 +172,7 @@ static void edDSA(const vector in[], vector *out)
     crypto_sign(out->buf, secret_k->buf, public_k->buf, msg->buf, msg->size);
     crypto_sign(out2    , secret_k->buf, 0            , msg->buf, msg->size);
     // Compare signatures (must be the same)
-    if (crypto_memcmp(out->buf, out2, out->size)) {
+    if (memcmp(out->buf, out2, out->size)) {
         printf("FAILURE: reconstructing public key"
                " yields different signature\n");
     }
@@ -188,7 +196,7 @@ static int test_x25519()
     u8 u[32] = {9};
 
     crypto_x25519_public_key(k, u);
-    int status = crypto_memcmp(k, _1, 32);
+    int status = memcmp(k, _1, 32);
     printf("%s: x25519 1\n", status != 0 ? "FAILED" : "OK");
 
     u8 _1k  [32] = {0x68, 0x4c, 0xf5, 0x9b, 0xa8, 0x33, 0x09, 0x55,
@@ -196,7 +204,7 @@ static int test_x25519()
                     0x1c, 0x38, 0x87, 0xc4, 0x93, 0x60, 0xe3, 0x87,
                     0x5f, 0x2e, 0xb9, 0x4d, 0x99, 0x53, 0x2c, 0x51};
     FOR (i, 1, 1000) { iterate_x25519(k, u); }
-    status |= crypto_memcmp(k, _1k, 32);
+    status |= memcmp(k, _1k, 32);
     printf("%s: x25519 1K\n", status != 0 ? "FAILED" : "OK");
 
     // too long; didn't run
@@ -205,7 +213,7 @@ static int test_x25519()
     //                0x3b, 0xc6, 0x01, 0xc0, 0x88, 0x3c, 0x30, 0xdf,
     //                0x5f, 0x4d, 0xd2, 0xd2, 0x4f, 0x66, 0x54, 0x24};
     //FOR (i, 1000, 1000000) { iterate_x25519(k, u); }
-    //status |= crypto_memcmp(k, _100k, 32);
+    //status |= memcmp(k, _100k, 32);
     //printf("%s: x25519 1M\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
@@ -213,90 +221,6 @@ static int test_x25519()
 //////////////////////////////
 /// Self consistency tests ///
 //////////////////////////////
-
-// Tests that constant-time comparison is actually constant-time.
-static clock_t min(clock_t a, clock_t b)
-{
-    return a < b ? a : b;
-}
-
-static clock_t mem_timing(u8 *va, u8 *vb, size_t size, int expected)
-{
-    clock_t start    = clock();
-    if (crypto_memcmp(va, vb, size) != expected) {
-        fprintf(stderr, "crypto_memcmp() doesn't work!\n");
-    }
-    clock_t end      = clock();
-    clock_t duration = end - start;
-    FOR (i, 0, 20) {
-        start    = clock();
-        if (crypto_memcmp(va, vb, size) != expected) {
-            fprintf(stderr, "crypto_memcmp() doesn't work!\n");
-        }
-        end      = clock();
-        duration = min(end - start, duration);
-    }
-    return duration;
-}
-
-static clock_t zero_timing(u8 *va, size_t size, int expected)
-{
-    clock_t start    = clock();
-    if (crypto_zerocmp(va, size) != expected) {
-        fprintf(stderr, "crypto_zerocmp() doesn't work!\n");
-    }
-    clock_t end      = clock();
-    clock_t duration = end - start;
-    FOR (i, 0, 20) {
-        start    = clock();
-        if (crypto_zerocmp(va, size) != expected) {
-            fprintf(stderr, "crypto_zerocmp() doesn't work!\n");
-        }
-        end      = clock();
-        duration = min(end - start, duration);
-    }
-    return duration;
-}
-
-#define ABS_DIFF(a, b) ((a) > (b) ? (a) - (b) : (b) - (a))
-
-static int test_cmp()
-{
-    int status = 0;
-    // Because of these static variable, don't call test_cmp() twice.
-    // It's not allocated on the stack to avoid overflow
-    static u8 va[1024 * 1024];
-    static u8 vb[1024 * 1024];
-    p_random(va, sizeof(va));
-    FOR (i, 0, sizeof(va)) {
-        vb[i] = va[i];
-    }
-    {
-        clock_t t1 = mem_timing(va, vb, sizeof(va), 0);
-        p_random(vb, sizeof(vb));
-        clock_t t2 = mem_timing(va, vb, sizeof(va), -1);
-        clock_t d  = ABS_DIFF(t1, t2);
-        double ratio = (double)d / (double)t1;
-        if (ratio > COMPARISON_DIFF_THRESHOLD) {
-            status = -1;
-        }
-    }
-    FOR (i, 0, sizeof(va)) {
-        va[i] = 0;
-    }
-    {
-        clock_t t1 = zero_timing(va, sizeof(va), 0);
-        p_random(va, sizeof(va));
-        clock_t t2 = zero_timing(va, sizeof(va), -1);
-        clock_t d  = ABS_DIFF(t1, t2);
-        double ratio = (double)d / (double)t1;
-        if (ratio > COMPARISON_DIFF_THRESHOLD) {
-            status = -1;
-        }
-    }
-    printf("%s: crypto_memcmp\n", status != 0 ? "SUSPECT TIMINGS" : "OK");
-    return status;
-}
 
 // Tests that encrypting in chunks yields the same result than
 // encrypting all at once.
@@ -333,7 +257,7 @@ static int p_chacha20()
         crypto_chacha20_encrypt(&ctx, output_whole, input, offset);
 
         // Compare the results (must be the same)
-        status |= crypto_memcmp(output_chunk, output_whole, offset);
+        status |= memcmp(output_chunk, output_whole, offset);
     }
     printf("%s: Chacha20\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -352,7 +276,7 @@ static int p_chacha20_same_ptr()
     crypto_chacha20_encrypt(&ctx, output, input, INPUT_SIZE);
     crypto_chacha20_init   (&ctx, key, nonce);
     crypto_chacha20_encrypt(&ctx, input, input, INPUT_SIZE);
-    status |= crypto_memcmp(output, input, CHACHA_BLOCK_SIZE);
+    status |= memcmp(output, input, CHACHA_BLOCK_SIZE);
     printf("%s: Chacha20 (output == input)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
@@ -380,7 +304,7 @@ static int p_chacha20_set_ctr()
         crypto_chacha20_set_ctr(&ctx, 0);
         crypto_chacha20_stream(&ctx, output_part, limit);
         // Compare the results (must be the same)
-        status |= crypto_memcmp(output_part, output_all, STREAM_SIZE);
+        status |= memcmp(output_part, output_all, STREAM_SIZE);
 
         // Encrypt before the begining
         crypto_chacha20_set_ctr(&ctx, -ctr);
@@ -388,9 +312,7 @@ static int p_chacha20_set_ctr()
                                output_more + STREAM_SIZE - limit,
                                STREAM_SIZE + limit);
         // Compare the results (must be the same)
-        status |= crypto_memcmp(output_more + STREAM_SIZE,
-                                output_all,
-                                STREAM_SIZE);
+        status |= memcmp(output_more + STREAM_SIZE, output_all, STREAM_SIZE);
     }
     printf("%s: Chacha20 (set counter)\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -429,7 +351,7 @@ static int p_poly1305()
         crypto_poly1305_auth(mac_whole, input, offset, key);
 
         // Compare the results (must be the same)
-        status |= crypto_memcmp(mac_chunk, mac_whole, 16);
+        status |= memcmp(mac_chunk, mac_whole, 16);
     }
     printf("%s: Poly1305\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -447,7 +369,7 @@ static int p_poly1305_overlap()
         u8 mac  [16];
         crypto_poly1305_auth(mac    , input + 16, POLY1305_BLOCK_SIZE, key);
         crypto_poly1305_auth(input+i, input + 16, POLY1305_BLOCK_SIZE, key);
-        status |= crypto_memcmp(mac, input + i, 16);
+        status |= memcmp(mac, input + i, 16);
     }
     printf("%s: Poly1305 (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -487,7 +409,7 @@ static int p_blake2b()
         crypto_blake2b(hash_whole, input, offset);
 
         // Compare the results (must be the same)
-        status |= crypto_memcmp(hash_chunk, hash_whole, 64);
+        status |= memcmp(hash_chunk, hash_whole, 64);
     }
     printf("%s: Blake2b\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -504,7 +426,7 @@ static int p_blake2b_overlap()
         u8 hash [64];
         crypto_blake2b(hash   , input + 64, BLAKE2B_BLOCK_SIZE);
         crypto_blake2b(input+i, input + 64, BLAKE2B_BLOCK_SIZE);
-        status |= crypto_memcmp(hash, input + i, 64);
+        status |= memcmp(hash, input + i, 64);
     }
     printf("%s: Blake2b (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -542,7 +464,7 @@ static int p_sha512()
         crypto_sha512(hash_whole, input, offset);
 
         // Compare the results (must be the same)
-        status |= crypto_memcmp(hash_chunk, hash_whole, 64);
+        status |= memcmp(hash_chunk, hash_whole, 64);
     }
     printf("%s: Sha512\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -559,7 +481,7 @@ static int p_sha512_overlap()
         u8 hash [64];
         crypto_sha512(hash   , input + 64, SHA_512_BLOCK_SIZE);
         crypto_sha512(input+i, input + 64, SHA_512_BLOCK_SIZE);
-        status |= crypto_memcmp(hash, input + i, 64);
+        status |= memcmp(hash, input + i, 64);
     }
     printf("%s: Sha512 (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -589,7 +511,7 @@ static int p_argon2i_overlap()
                        work_area + salt_offset, 16,
                        work_area +  key_offset, 32,
                        work_area +   ad_offset, 32);
-        status |= crypto_memcmp(hash, work_area + hash_offset, 32);
+        status |= memcmp(hash, work_area + hash_offset, 32);
     }
     printf("%s: Argon2i (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -639,7 +561,7 @@ static int p_eddsa_overlap()
         u8 signature[64];
         crypto_sign(signature, sk, pk, input + 64, MESSAGE_SIZE);
         crypto_sign(input+i  , sk, pk, input + 64, MESSAGE_SIZE);
-        status |= crypto_memcmp(signature, input + i, 64);
+        status |= memcmp(signature, input + i, 64);
     }
     printf("%s: EdDSA (overlap)\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -658,7 +580,7 @@ static int p_aead()
         // AEAD roundtrip
         crypto_aead_lock(box, box+16, key, nonce, ad, 4, plaintext, 8);
         status |= crypto_aead_unlock(out, key, nonce, box, ad, 4, box+16, 8);
-        status |= crypto_memcmp(plaintext, out, 8);
+        status |= memcmp(plaintext, out, 8);
         box[0]++;
         status |= !crypto_aead_unlock(out, key, nonce, box, ad, 4, box+16, 8);
 
@@ -667,7 +589,7 @@ static int p_aead()
         crypto_lock(box, box + 16, key, nonce, plaintext, 8);
         status |= crypto_unlock(out, key, nonce, box, box + 16, 8);
         // Make sure decrypted text and original text are the same
-        status |= crypto_memcmp(plaintext, out, 8);
+        status |= memcmp(plaintext, out, 8);
         // Make and reject forgery
         box[0]++;
         status |= !crypto_unlock(out, key, nonce, box, box + 16, 8);
@@ -675,7 +597,7 @@ static int p_aead()
 
         // Same result for both interfaces
         crypto_aead_lock(box2, box2 + 16, key, nonce, 0, 0, plaintext, 8);
-        status |= crypto_memcmp(box, box2, 24);
+        status |= memcmp(box, box2, 24);
     }
     printf("%s: aead\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -712,8 +634,8 @@ static int p_lock_incremental()
         crypto_lock_update(&ctx, cipher2             , plain1, text_size1);
         crypto_lock_update(&ctx, cipher2 + text_size1, plain2, text_size2);
         crypto_lock_final (&ctx, mac2);
-        status |= crypto_memcmp(mac1   , mac2   , 16       );
-        status |= crypto_memcmp(cipher1, cipher2, text_size);
+        status |= memcmp(mac1   , mac2   , 16       );
+        status |= memcmp(cipher1, cipher2, text_size);
 
         // Now test the round trip.
         u8 re_plain1[256];
@@ -724,9 +646,9 @@ static int p_lock_incremental()
         crypto_lock_auth    (&ctx, ad, ad_size);
         crypto_unlock_update(&ctx, re_plain2, cipher2, text_size);
         status |= crypto_unlock_final(&ctx, mac2);
-        status |= crypto_memcmp(mac1 , mac2     , 16       );
-        status |= crypto_memcmp(plain, re_plain1, text_size);
-        status |= crypto_memcmp(plain, re_plain2, text_size);
+        status |= memcmp(mac1 , mac2     , 16       );
+        status |= memcmp(plain, re_plain1, text_size);
+        status |= memcmp(plain, re_plain2, text_size);
 
         // Test authentication without decryption
         crypto_lock_init(&ctx, key, nonce);
@@ -779,9 +701,6 @@ int main(void)
     status |= p_eddsa_overlap();
     status |= p_aead();
     status |= p_lock_incremental();
-    printf("\nConstant time tests");
-    printf("\n-------------------\n");
-    status |= test_cmp();
 
     printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
     return status;
