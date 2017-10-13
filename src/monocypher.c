@@ -83,6 +83,34 @@ int crypto_zerocmp(const u8 *p, size_t n)
     return (1 & ((diff - 1) >> 8)) - 1;
 }
 
+static int neq0(u64 diff)
+{   // constant time comparison to zero
+    // return diff != 0 ? -1 : 0
+    u64 half = (diff >> 32) ^ ((u32)diff);
+    return (1 & ((half - 1) >> 32)) - 1;
+}
+
+int zerocmp32(const u8 p[32])
+{
+    u64 all = load64_le(p +  0)
+        +     load64_le(p +  8)
+        +     load64_le(p + 16)
+        +     load64_le(p + 24);
+    return neq0(all);
+}
+
+static u64 x16(const u8 a[16], const u8 b[16])
+{
+    return (load64_le(a + 0) ^ load64_le(b + 0))
+        |  (load64_le(a + 8) ^ load64_le(b + 8));
+}
+static u64 x32(const u8 a[16],const u8 b[16]){return x16(a,b) ^ x16(a+16, b+16);}
+static u64 x64(const u8 a[64],const u8 b[64]){return x32(a,b) ^ x32(a+32, b+32);}
+int crypto_verify16(const u8 a[16], const u8 b[16]){ return neq0(x16(a, b)); }
+int crypto_verify32(const u8 a[32], const u8 b[32]){ return neq0(x32(a, b)); }
+int crypto_verify64(const u8 a[64], const u8 b[64]){ return neq0(x64(a, b)); }
+
+
 /////////////////
 /// Chacha 20 ///
 /////////////////
@@ -1174,7 +1202,7 @@ static int fe_isnonzero(const fe f)
 {
     u8 s[32];
     fe_tobytes(s, f);
-    return crypto_zerocmp(s, 32);
+    return zerocmp32(s);
 }
 
 ///////////////
@@ -1247,7 +1275,7 @@ int crypto_x25519(u8       raw_shared_secret[32],
 
     // Returns -1 if the input is all zero
     // (happens with some malicious public keys)
-    return -1 - crypto_zerocmp(raw_shared_secret, 32);
+    return -1 - zerocmp32(raw_shared_secret);
 }
 
 void crypto_x25519_public_key(u8       public_key[32],
@@ -1572,16 +1600,16 @@ int crypto_check_final(crypto_check_ctx *ctx)
 {
     ge p, sB, diff, A;
     u8 h_ram[64], R_check[32];
-    if (ge_frombytes_neg(&A, ctx->pk)) {         // -A
+    if (ge_frombytes_neg(&A, ctx->pk)) {       // -A
         return -1;
     }
     HASH_FINAL(&(ctx->hash), h_ram);
     reduce(h_ram);
-    ge_scalarmult(&p, &A, h_ram);                // p    = -A*h_ram
+    ge_scalarmult(&p, &A, h_ram);              // p    = -A*h_ram
     ge_scalarmult_base(&sB, ctx->sig + 32);
-    ge_add(&diff, &p, &sB);                      // diff = s - A*h_ram
+    ge_add(&diff, &p, &sB);                    // diff = s - A*h_ram
     ge_tobytes(R_check, &diff);
-    return crypto_memcmp(ctx->sig, R_check, 32); // R == s - A*h_ram ? OK : fail
+    return crypto_verify32(ctx->sig, R_check); // R == s - A*h_ram ? OK : fail
 }
 
 int crypto_check(const u8  signature[64],
@@ -1654,7 +1682,7 @@ int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
 {
     u8 real_mac[16];
     crypto_lock_final(ctx, real_mac);
-    return crypto_memcmp(real_mac, mac, 16);
+    return crypto_verify16(real_mac, mac);
 }
 
 void crypto_aead_lock(u8        mac[16],

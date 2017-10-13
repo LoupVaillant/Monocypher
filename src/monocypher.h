@@ -12,6 +12,12 @@ int crypto_memcmp(const uint8_t *p1, const uint8_t *p2, size_t n);
 // returns 0 if the input is all zero, -1 otherwise.
 int crypto_zerocmp(const uint8_t *p, size_t n);
 
+// Constant time comparisons.
+// Return 0 if a and b are equal, -1 otherwise
+int crypto_verify16(const uint8_t a[16], const uint8_t b[16]);
+int crypto_verify32(const uint8_t a[32], const uint8_t b[32]);
+int crypto_verify64(const uint8_t a[64], const uint8_t b[64]);
+
 ////////////////
 /// Chacha20 ///
 ////////////////
