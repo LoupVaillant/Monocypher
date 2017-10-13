@@ -45,14 +45,7 @@ static u32 load32_le(const u8 s[4])
 
 static u64 load64_le(const u8 s[8])
 {
-    return (u64)s[0]
-        | ((u64)s[1] <<  8)
-        | ((u64)s[2] << 16)
-        | ((u64)s[3] << 24)
-        | ((u64)s[4] << 32)
-        | ((u64)s[5] << 40)
-        | ((u64)s[6] << 48)
-        | ((u64)s[7] << 56);
+    return load32_le(s) | ((u64)load32_le(s+4) << 32);
 }
 
 static void store32_le(u8 out[4], u32 in)
@@ -65,14 +58,8 @@ static void store32_le(u8 out[4], u32 in)
 
 static void store64_le(u8 out[8], u64 in)
 {
-    out[0] =  in        & 0xff;
-    out[1] = (in >>  8) & 0xff;
-    out[2] = (in >> 16) & 0xff;
-    out[3] = (in >> 24) & 0xff;
-    out[4] = (in >> 32) & 0xff;
-    out[5] = (in >> 40) & 0xff;
-    out[6] = (in >> 48) & 0xff;
-    out[7] = (in >> 56) & 0xff;
+    store32_le(out    , in      );
+    store32_le(out + 4, in >> 32);
 }
 
 static u64 rotr64(u64 x, u64 n) { return (x >> n) ^ (x << (64 - n)); }
