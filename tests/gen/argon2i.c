@@ -9,7 +9,7 @@ void test(size_t nb_blocks, size_t hash_size, size_t nb_iterations)
 
     if (crypto_pwhash(hash, hash_size, (char*)password, 16, salt,
                       nb_iterations, nb_blocks * 1024,
-                      crypto_pwhash_ALG_DEFAULT)) {
+                      crypto_pwhash_ALG_ARGON2I13)) {
         fprintf(stderr, "Argon2i failed.  "
                 "nb_blocks = %lu, "
                 "hash_size = %lu "
