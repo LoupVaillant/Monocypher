@@ -1510,7 +1510,7 @@ void crypto_sign_init_second_pass(crypto_sign_ctx *ctx)
     ge_tobytes(half_sig, &R);
 
     // Hash R, the public key, and the message together.
-    // It cannot be done in paralell with the first hash.
+    // It cannot be done in parallel with the first hash.
     HASH_INIT  (&ctx->hash);
     HASH_UPDATE(&ctx->hash, half_sig, 32);
     HASH_UPDATE(&ctx->hash, ctx->pk , 32);
