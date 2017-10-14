@@ -50,11 +50,11 @@ clean:
 	rm -f  *.out
 
 uninstall:
-	rm $(DESTDIR)/$(PREFIX)/lib/libmonocypher.a
-	rm $(DESTDIR)/$(PREFIX)/lib/libmonocypher.so
-	rm $(DESTDIR)/$(PREFIX)/include/monocypher.h
-	rm $(PKGCONFIG)/monocypher.pc
-	rm $(MAN_DIR)/*.3monocypher
+	rm -f $(DESTDIR)/$(PREFIX)/lib/libmonocypher.a
+	rm -f $(DESTDIR)/$(PREFIX)/lib/libmonocypher.so
+	rm -f $(DESTDIR)/$(PREFIX)/include/monocypher.h
+	rm -f $(PKGCONFIG)/monocypher.pc
+	rm -f $(MAN_DIR)/*.3monocypher
 
 check: test
 test: test.out
