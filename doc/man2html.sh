@@ -2,6 +2,9 @@
 
 DIR=$(dirname "$0")
 
+# clean before build
+rm -rf "$DIR/html/*.html"
+
 for name in $(ls -1 "$DIR/man/man3/" | sed 's/.3monocypher//')
 do
     mandoc                            \
