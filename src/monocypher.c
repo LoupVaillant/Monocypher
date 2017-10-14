@@ -72,15 +72,6 @@ static int neq0(u64 diff)
     return (1 & ((half - 1) >> 32)) - 1;
 }
 
-static int zerocmp32(const u8 p[32])
-{
-    u64 all = load64_le(p +  0)
-        |     load64_le(p +  8)
-        |     load64_le(p + 16)
-        |     load64_le(p + 24);
-    return neq0(all);
-}
-
 static u64 x16(const u8 a[16], const u8 b[16])
 {
     return (load64_le(a + 0) ^ load64_le(b + 0))
@@ -92,6 +83,11 @@ int crypto_verify16(const u8 a[16], const u8 b[16]){ return neq0(x16(a, b)); }
 int crypto_verify32(const u8 a[32], const u8 b[32]){ return neq0(x32(a, b)); }
 int crypto_verify64(const u8 a[64], const u8 b[64]){ return neq0(x64(a, b)); }
 
+static int zerocmp32(const u8 p[32])
+{
+    u8 zero[32] = {0};
+    return crypto_verify32(p, zero);
+}
 
 /////////////////
 /// Chacha 20 ///
