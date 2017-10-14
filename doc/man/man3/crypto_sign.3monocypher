@@ -88,11 +88,8 @@ and the
 .Fa message
 arguments may overlap.
 .Pp
-An incremental interface is not available.
-If you require an incremental interface, signing a hash of your data
-is an acceptable substitute; see
-.Xr crypto_blake2b_init 3monocypher
-for details about incrementally hashing data.
+An incremental interface is available; see
+.Xr crypto_sign_init_first_pass 3monocypher .
 .Sh RETURN VALUES
 The
 .Fn crypto_sign_public_key
@@ -149,12 +146,3 @@ work with custom hashes.
 .Pp
 The reason why there is a SHA-512 option at all is due to official test
 vectors.
-.Pp
-There is no incremental interface because EdDSA requires the full
-message to be hashed twice in a way that makes parallel hashing
-impossible.
-Workarounds for providing an incremental interface would involve
-lowering the security guarantees of the underlying hash function or
-would introduce grave potential for misuse, likely leading to situations
-such as the Sony PlayStation EdDSA nonce randomization failure.
-For this reason, an incremental interface has not been provided.

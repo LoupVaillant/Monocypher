@@ -1,10 +1,10 @@
-.Dd August 25, 2017
+.Dd October 14, 2017
 .Dt CRYPTO_MEMCMP 3MONOCYPHER
 .Os
 .Sh NAME
 .Nm crypto_memcmp ,
 .Nm crypto_zerocmp
-.Nd timing-safe data comparisons
+.Nd deprecated timing-safe data comparisons
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft int
@@ -12,56 +12,21 @@
 .Ft int
 .Fn crypto_zerocmp "const uint8_t *p" "size_t n"
 .Sh DESCRIPTION
-In cryptography, we often need to compare secrets or values derived from
-secrets.
-A message authentication code for instance:
-while the MAC sent over the network along with a message is public, the
-true MAC is secret.
-If the attacker attempts a forgery, you do not want to state
-.Dq your MAC is wrong, Em and it took 384 microseconds to know .
-If the next attempt takes 462 microseconds instead, it gives away the
-fact that the attacker just got a few bytes right.
-That way, an attacker can derive the correct MAC.
-.Pp
-To avoid such catastrophe,
+The
 .Fn crypto_memcmp
 and
 .Fn crypto_zerocmp
-provide comparison functions whose timing is independent from the
-context of their input.
-.Pp
-The
-.Fn crypto_memcmp
-function compares the first
-.Fa n
-bytes of the two byte arrays
-.Fa p1
+functions were meant to provide timing-safe data comparison.
+They have been removed from Monocypher because they could not uphold
+those guarantees when compiled with
+.Fl O3
+on common compilers.
+Use
+.Xr crypto_verify16 3monocypher ,
+.Xr crypto_verify32 3monocypher
 and
-.Fa p2 .
-The
-.Fn crypto_zerocmp
-function compares the first
-.Fa n
-bytes of the byte array
-.Fa p1
-against zero.
-.Pp
-You should not need these functions if you use the high-level interface
-of Monocypher \(en just look at the return codes.
-But if you do have to compare secrets, make sure you use
-.Fn crypto_memcmp
-or
-.Fn crypto_zerocmp .
-If you are in doubt whether you need to use these functions, prefer
-these over
-.Fn memcmp .
-.Sh RETURN VALUES
-The
-.Fn crypto_memcmp
-function returns 0 if the two memory chunks are the same, -1 otherwise.
-The
-.Fn crypto_zerocmp
-function returns 0 if all bytes of the memory chunk are zero, -1
-otherwise.
+.Xr crypto_verify64 3monocypher
+instead.
 .Sh SEE ALSO
+.Xr crypto_verify16 3monocypher ,
 .Xr intro 3monocypher
