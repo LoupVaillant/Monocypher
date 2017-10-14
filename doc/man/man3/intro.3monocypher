@@ -85,17 +85,18 @@ Monocypher provides functions the following:
 .Bl -tag -offset indent-two -width Ds
 .It Xr crypto_lock 3monocypher
 .It Xr crypto_unlock 3monocypher
+.El
+.It Authenticated encryption with additional data (AEAD)
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_aead_lock 3monocypher
+.It Xr crypto_aead_unlock 3monocypher
 .It Xr crypto_lock_init 3monocypher
 .It Xr crypto_lock_auth 3monocypher
 .It Xr crypto_lock_update 3monocypher
 .It Xr crypto_lock_final 3monocypher
 .It Xr crypto_unlock_update 3monocypher
 .It Xr crypto_unlock_final 3monocypher
-.El
-.It Authenticated encryption with additional data (AEAD)
-.Bl -tag -offset indent-two -width Ds
-.It Xr crypto_aead_lock 3monocypher
-.It Xr crypto_aead_unlock 3monocypher
+.It Xr crypto_lock_encrypt 3monocypher
 .El
 .It (Elliptic Curve) Diffie-Hellman key exchange
 .Bl -tag -offset indent-two -width Ds
@@ -108,6 +109,13 @@ Monocypher provides functions the following:
 .It Xr crypto_sign_public_key 3monocypher
 .It Xr crypto_sign 3monocypher
 .It Xr crypto_check 3monocypher
+.It Xr crypto_sign_init_first_pass 3monocypher
+.It Xr crypto_sign_update 3monocypher
+.It Xr crypto_sign_final 3monocypher
+.It Xr crypto_sign_init_second_pass 3monocypher
+.It Xr crypto_check_init 3monocypher
+.It Xr crypto_check_update 3monocypher
+.It Xr crypto_check_final 3monocypher
 .El
 .It Cryptographic hashing
 .Bl -tag -offset indent-two -width Ds
@@ -141,10 +149,11 @@ Monocypher provides functions the following:
 .It Xr crypto_poly1305_update 3monocypher
 .It Xr crypto_poly1305_final 3monocypher
 .El
-.It Utility functions
+.It Comparison functions
 .Bl -tag -offset indent-two -width Ds
-.It Xr crypto_memcmp 3monocypher
-.It Xr crypto_zerocmp 3monocypher
+.It Xr crypto_verify16 3monocypher
+.It Xr crypto_verify32 3monocypher
+.It Xr crypto_verify64 3monocypher
 .El
 .El
 .Sh SEE ALSO
@@ -157,23 +166,38 @@ Monocypher provides functions the following:
 .Xr crypto_blake2b_general_init 3monocypher ,
 .Xr crypto_blake2b_init 3monocypher ,
 .Xr crypto_blake2b_update 3monocypher ,
-.Xr crypto_chacha20_H 3monocypher ,
 .Xr crypto_chacha20_encrypt 3monocypher ,
+.Xr crypto_chacha20_H 3monocypher ,
 .Xr crypto_chacha20_init 3monocypher ,
 .Xr crypto_chacha20_set_ctr 3monocypher ,
 .Xr crypto_chacha20_stream 3monocypher ,
 .Xr crypto_chacha20_x_init 3monocypher ,
 .Xr crypto_check 3monocypher ,
+.Xr crypto_check_final 3monocypher ,
+.Xr crypto_check_init 3monocypher ,
+.Xr crypto_check_update 3monocypher ,
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock 3monocypher ,
-.Xr crypto_memcmp 3monocypher ,
+.Xr crypto_lock_auth 3monocypher ,
+.Xr crypto_lock_encrypt 3monocypher ,
+.Xr crypto_lock_final 3monocypher ,
+.Xr crypto_lock_init 3monocypher ,
+.Xr crypto_lock_update 3monocypher ,
 .Xr crypto_poly1305_auth 3monocypher ,
-.Xr crypto_poly1305_final 3monocypher
+.Xr crypto_poly1305_final 3monocypher ,
 .Xr crypto_poly1305_init 3monocypher ,
 .Xr crypto_poly1305_update 3monocypher ,
 .Xr crypto_sign 3monocypher ,
+.Xr crypto_sign_final 3monocypher ,
+.Xr crypto_sign_init_first_pass 3monocypher ,
+.Xr crypto_sign_init_second_pass 3monocypher ,
 .Xr crypto_sign_public_key 3monocypher ,
-.Xr crypto_unlock 3monocypher ,
+.Xr crypto_sign_update 3monocypher ,
+.Xr crypto_unlock 3monocypher 3monocypher ,
+.Xr crypto_unlock_update 3monocypher ,
+.Xr crypto_unlock_final 3monocypher ,
+.Xr crypto_verify16 3monocypher ,
+.Xr crypto_verify32 3monocypher ,
+.Xr crypto_verify64 3monocypher ,
 .Xr crypto_x25519 3monocypher ,
-.Xr crypto_x25519_public_key 3monocypher ,
-.Xr crypto_zerocmp 3monocypher
+.Xr crypto_x25519_public_key 3monocypher

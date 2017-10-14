@@ -2,9 +2,11 @@
 .Dt CRYPTO_LOCK 3MONOCYPHER
 .Os
 .Sh NAME
+.Nm crypto_aead_lock ,
+.Nm crypto_aead_unlock ,
 .Nm crypto_lock ,
 .Nm crypto_unlock
-.Nd authenticated encryption
+.Nd authenticated encryption (optionally with additional data)
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
@@ -26,40 +28,26 @@
 .Fa "size_t text_size"
 .Fc
 .Ft void
-.Fo crypto_lock_init
-.Fa "crypto_lock_ctx *ctx"
+.Fo crypto_aead_lock
+.Fa "uint8_t mac[16]"
+.Fa "uint8_t *cipher_text"
 .Fa "const uint8_t key[32]"
 .Fa "const uint8_t nonce[24]"
-.Fc
-.Ft void
-.Fo crypto_lock_auth
-.Fa "crypto_lock_ctx *ctx"
 .Fa "const uint8_t *ad"
 .Fa "size_t ad_size"
-.Fc
-.Ft void
-.Fo crypto_lock_update
-.Fa "crypto_lock_ctx *ctx"
-.Fa "uint8_t *cipher_text"
 .Fa "const uint8_t *plain_text"
 .Fa "size_t text_size"
 .Fc
-.Ft void
-.Fo crypto_lock_final
-.Fa "crypto_lock_ctx *ctx"
-.Fa "uint8_t mac[16]"
-.Fc
-.Ft void
-.Fo crypto_unlock_update
-.Fa "crypto_lock_ctx *ctx"
+.Ft int
+.Fo crypto_aead_unlock
 .Fa "uint8_t *plain_text"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[24]"
+.Fa "const uint8_t mac[16]"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
 .Fa "const uint8_t *cipher_text"
 .Fa "size_t text_size"
-.Fc
-.Ft int
-.Fo crypto_unlock_final
-.Fa "crypto_lock_ctx *ctx"
-.Fa "const uint8_t mac[16]"
 .Fc
 .Sh DESCRIPTION
 Encryption makes your messages unreadable to eavesdroppers.
@@ -71,7 +59,7 @@ authentication, you can fall prey to forgeries (messages that look
 legitimate, but actually come from an attacker).
 A clever attacker may even leverage forgeries to steal your secrets.
 Always authenticate your messages.
-.Ss Direct interface
+.Pp
 The
 .Fn crypto_lock
 function encrypts and authenticates a plaintext.
@@ -146,80 +134,109 @@ If the message is genuine, the
 .Fn crypto_aead_unlock
 function decrypts the ciphertext.
 .Em Always check the return value .
-.Ss Incremental interface
-The incremental interface allows to split up decryption and
-authentication of larger messages too large to fit into a single buffer
-or to handle individual pieces of data located in different buffers.
+.\" AEAD
 .Pp
-The arguments are the same as described for the direct interface.
-It instead uses three steps:
-.Bl -bullet
-.It
-initialisation, where we set up a context for encryption/decryption and
-authentication;
-.It
-update, where we encrypt/decrypt and incrementally generate the MAC;
-.It
-final, where we generate/check the MAC.
+The
+.Fn crypto_aead_lock
+and
+.Fn crypto_aead_unlock
+functions are variants of
+.Fn crypto_lock
+and
+.Fn crypto_unlock ,
+permitting additional data.
+Additional data is authenticated, but
+.Em not
+encrypted.
+.Pp
+.Bf Em
+Note: using these functions is discouraged:
+if the data you are transmitting is worth authenticating, it is probably
+worth encrypting as well.
+Do so if you can, using
+.Fn crypto_lock
+and
+.Fn crypto_unlock .
+.Ef
+.Pp
+If you must send unencrypted data, remember that you cannot trust
+unauthenticated data,
+.Em including the length of the additional data .
+If you transmit that length over the wire, you must authenticate it.
+(The easiest way to do so is to append that length to the additional
+data before you call
+.Fn crypto_aead_lock
+or
+.Fn crypto_aead_unlock ) .
+Otherwise, an attacker could provide a false length, effectively moving
+the boundary between the additional data and the ciphertext or possibly
+causing buffer overflows.
+If however the length of the additional data is implicit (fixed size)
+or self-contained (such as length appending or null termination), you do
+not need to authenticate it explicitly.
+.Pp
+The
+.Fn crypto_aead_lock
+function encrypts and authenticates a plaintext and authenticates
+additional data.
+It can be decrypted by the
+.Fn crypto_aead_unlock
+function.
+Arguments that are already documented above will not be repeated here.
+The arguments are:
+.Bl -tag -width Ds
+.It Fa ad
+additional data.
+This can be any arbitrary byte sequence.
+It will not be encrypted.
+.It Fa ad_size
+length of the additional data.
 .El
 .Pp
-Because the incremental interface interleaves both encryption and
-authentication,
-.Sy a message with a mismatched MAC is three times slower
-to process than when using the direct interface.
-The direct interface checks the MAC first and only then proceeds to
-decrypt.
-If you expect to frequently encounter messages whose MAC mismatches,
-especially large messages, you may want to forgo the incremental
-interface for a different approach.
-.Pp
-.Sy Both encryption and decryption
-are initialized with
-.Fn crypto_lock_init .
-If you need to authenticate data without encrypting like with
-.Xr crypto_aead_lock 3monocypher ,
-plaintext data can be authenticated with
-.Fn crypto_lock_auth .
-Calls to
-.Fn crypto_lock_auth
-.Em can
-be interleaved with calls to
-.Fn crypto_lock_update
+If
+.Fa ad
+is
+.Dv NULL
 and
-.Fn crypto_unlock_update .
+.Fa ad_size
+is zero, these functions behave like
+.Xr crypto_lock 3monocypher
+and
+.Xr crypto_unlock 3monocypher .
+This can be useful if your protocol somehow requires you to
+send unencrypted data.
 .Pp
-.Sy For encryption,
-.Fn crypto_lock_update
-authenticates and encrypts the data;
-.Fn crypto_lock_final
-generates the MAC.
-.Sy For decryption ,
-.Fn crypto_unlock_update
-authenticates and decrypts the data;
-.Fn crypto_unlock_final
-checks the MAC.
+Unlocking proceeds in two steps: first, we authenticate the ciphertext
+and additional data with the provided MAC.
+If it has been corrupted, the
+.Fn crypto_aead_unlock
+function returns immediately,
+without decrypting the message.
+If the message is genuine, the
+.Fn crypto_aead_unlock
+function decrypts the ciphertext.
 .Em Always check the return value .
+.Pp
+An incremental interface is available; see
+.Xr crypto_lock_init 3monocypher .
 .Sh RETURN VALUES
 The
-.Fn crypto_lock ,
-.Fn crypto_lock_init ,
-.Fn crypto_lock_auth ,
-.Fn crypto_lock_update ,
+.Fn crypto_lock
 and
-.Fn crypto_lock_final
+.Fn crypto_aead_lock
 functions return nothing.
 They cannot fail.
-.Pp
 The
 .Fn crypto_unlock
 and
-.Fn crypto_unlock_final
+.Fn crypto_aead_unlock
 functions return 0 on success or -1 if the message was corrupted
 (i.e.
 .Fa mac
 mismatched the combination of
 .Fa key ,
-.Fa nonce
+.Fa nonce ,
+.Fa ad
 and
 .Fa cipher_text ) .
 Corruption can happen because of transmission errors, programmer error
@@ -228,7 +245,6 @@ of the expected
 .Fa cipher_text )
 or an attacker's interference.
 .Sh EXAMPLES
-.Ss Direct interface
 Encryption:
 .Bd -literal -offset indent
 uint8_t key[32], nonce[24];
@@ -271,93 +287,25 @@ if (ret != 0) {
          */
 }
 .Ed
-.Ss Incremental interface
-Useful for decrypting huge inputs.
-This time, decryption is performed regardless of whether the message
-is corrupted or not.
-This may be relevant if you expect a high rate of corrupted messages.
-.Pp
-Encryption:
-.Bd -literal -offset indent
-/* Prepare the key, nonce, and input */
-
-/* First, initialise the context */
-crypto_lock_ctx ctx;
-crypto_lock_init(&ctx, key, nonce);
-
-/* Second, authenticate the additional data, if any. */
-crypto_lock_auth(&ctx, ad1, ad_size1);
-crypto_lock_auth(&ctx, ad2, ad_size2);
-crypto_lock_auth(&ctx, ad3, ad_size3);
-
-/* Third, encrypt the plain text */
-crypto_lock_update(&ctx, cipher1, plain1, text_size1);
-crypto_lock_update(&ctx, cipher2, plain2, text_size2);
-crypto_lock_update(&ctx, cipher3, plain2, text_size3);
-
-/* Finally, compute the authentication code */
-crypto_lock_final (&ctx, mac);
-.Ed
-.Pp
-Make sure you authenticate the additional data before you begin the
-encryption, or the mac won't be compatible with the direct interface.
-.Pp
-To decrypt the above:
-.Bd -literal -offset indent
-/* First, initialise the context.
- * Use the key and nonce that were used for encryption.
- */
-crypto_lock_ctx ctx;
-crypto_lock_init(&ctx, key, nonce);
-
-/* Second, authenticate the additional data, if any. */
-crypto_lock_auth(&ctx, ad1, ad_size1);
-crypto_lock_auth(&ctx, ad2, ad_size2);
-crypto_lock_auth(&ctx, ad3, ad_size3);
-
-/* Third, decrypt the cipher text */
-crypto_unlock_update(&ctx, re_plain1, cipher1, text_size1);
-crypto_unlock_update(&ctx, re_plain2, cipher2, text_size2);
-crypto_unlock_update(&ctx, re_plain3, cipher3, text_size3);
-
-/* Finally, check the authentication code */
-if (crypto_unlock_final(&ctx, mac2)) {
-    /* Message corrupted. */
-} else {
-    /* Decryption went well. */
-}
-.Ed
-.Pp
-To authenticate without decrypting at all:
-.Bd -literal -offset indent
-/* First, initialise the context.
- * Use the key and nonce that were used for encryption.
- */
-crypto_lock_ctx ctx;
-crypto_lock_init(&ctx, key, nonce);
-
-/* Second, authenticate the additional data, if any. */
-crypto_lock_auth(&ctx, ad1, ad_size1);
-crypto_lock_auth(&ctx, ad2, ad_size2);
-crypto_lock_auth(&ctx, ad3, ad_size3);
-
-/* Third, authenticate the cipher text */
-crypto_lock_auth(&ctx, re_plain1, cipher1, text_size1);
-crypto_lock_auth(&ctx, re_plain2, cipher2, text_size2);
-crypto_lock_auth(&ctx, re_plain3, cipher3, text_size3);
-
-/* Finally, check the authentication code */
-if (crypto_unlock_final(&ctx, mac2)) {
-    /* Message corrupted. */
-} else {
-    /* Message authentic. */
-}
-.Ed
 .Sh SEE ALSO
-.Xr crypto_aead_lock 3monocypher ,
-.Xr crypto_aead_unlock 3monocypher ,
 .Xr crypto_key_exchange 3monocypher ,
+.Xr crypto_lock_init 3monocypher ,
 .Xr intro 3monocypher
 .Sh IMPLEMENTATION DETAILS
 These functions implement the XChacha20 (encryption) and Poly1305 (MAC)
 primitives.
+.Pp
+The
+.Fn crypto_aead_lock
+and
+.Fn crypto_aead_unlock
+functions do not authenticate the length themselves for simplicity,
+compatibility, and efficiency reasons:
+most of the time, the length of the additional data is either fixed or
+self-contained, and thus outside of attacker control.
+It also makes them compatible with
+.Fn crypto_lock
+and
+.Fn crypto_unlock
+when the size of the additional data is zero, and simplifies the
+implementation.

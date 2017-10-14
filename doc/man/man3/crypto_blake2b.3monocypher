@@ -76,6 +76,16 @@ May be
 if
 .Fa key_size
 is 0.
+This can be used to create a message authentication code (MAC).
+Use the
+.Xr crypto_verify16 3monocypher ,
+.Xr crypto_verify32 3monocypher
+or the
+.Xr crypto_verify64 3monocypher
+function to compare MACs created this way.
+Choose
+.Fa hash_size
+appropriately for the verification functions.
 .It Fa key_size
 length of the
 .Fa key .
