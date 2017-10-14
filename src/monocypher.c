@@ -68,16 +68,16 @@ static u32 rotl32(u32 x, u32 n) { return (x << n) ^ (x >> (32 - n)); }
 static int neq0(u64 diff)
 {   // constant time comparison to zero
     // return diff != 0 ? -1 : 0
-    u64 half = (diff >> 32) ^ ((u32)diff);
+    u64 half = (diff >> 32) | ((u32)diff);
     return (1 & ((half - 1) >> 32)) - 1;
 }
 
-int zerocmp32(const u8 p[32])
+static int zerocmp32(const u8 p[32])
 {
     u64 all = load64_le(p +  0)
-        +     load64_le(p +  8)
-        +     load64_le(p + 16)
-        +     load64_le(p + 24);
+        |     load64_le(p +  8)
+        |     load64_le(p + 16)
+        |     load64_le(p + 24);
     return neq0(all);
 }
 
