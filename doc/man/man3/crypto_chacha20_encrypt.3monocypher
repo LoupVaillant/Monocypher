@@ -11,13 +11,6 @@
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
-.Fo crypto_chacha20_encrypt
-.Fa "crypto_chacha_ctx *ctx"
-.Fa "uint8_t *cipher_text"
-.Fa "const uint8_t *plain_text"
-.Fa "size_t text_size"
-.Fc
-.Ft void
 .Fo crypto_chacha20_init
 .Fa "crypto_chacha_ctx *ctx"
 .Fa "const uint8_t key[32]"
@@ -48,113 +41,219 @@
 .Fa "uint64_t ctr"
 .Fc
 .Sh DESCRIPTION
-These functions provide an incremental interface for Chacha20, with an
-initialisation function, and as many encryption steps as desired.
+These functions provide an incremental interface for the Chacha20
+encryption primitive.
 .Pp
-To use these functions, you must first initialize a
-.Vt crypto_chacha_ctx
-using
+Chacha20 is a low-level primitive.  Consider using authenticated
+encryption, implemented by
+.Xr crypto_lock 3monocypher .
+.Pp
 .Fn crypto_chacha20_init
-or
-.Fn crypto_chacha20_x_init .
-When using the former,
-.Em do not select the nonce at random, use a counter instead .
-When using the latter, select the nonce at random.
-See
+initialises the
+.Vt crypto_chacha_ctx
+context.  It needs a 32-byte secret
+.Fa key
+and an 8-byte
+.Fa nonce .
+The nonce must be used only once per secret key (repeating them
+destroys confidentiality).  Counters and (unique) message numbers can
+be used as nonces.  Random numbers
+.Em cannot :
+8-byte nonces are too small to prevent accidental reuse.
+.Pp
+.Fn crypto_chacha20_x_init
+initialises the
+.Vt crypto_chacha_ctx
+context.  It needs a 32-byte secret
+.Fa key
+and a 24-byte
+.Fa nonce .
+The nonce is big enough to be selected at random.  See
 .Xr intro 3monocypher
 about generating random numbers (use the operating system's random
 number generator).
-The initialization routine
-.Fn crypto_chacha20_x_init
-is a tiny bit slower \(en though that is irrelevant in practice.
 .Pp
-The
+The recommended initialisation routine is
+.Fn crypto_chacha20_x_init .
+The ability to use random nonces makes it easier to use securely, and
+the performance hit, equivalent to the encryption of 64 bytes, doesn't
+matter in practice.
+.Pp
+The following functions need an initialised context to work properly.
+Calling them with an uninitialised context triggers undefined
+behaviour.
+.Pp
 .Fn crypto_chacha20_encrypt
-function encrypts the
+encrypts the
 .Fa plain_text
 by XORing it with a pseudo-random stream of
 numbers, seeded by the provided
-.Vt crypto_chacha_ctx .
-Decryption is the same operation as encryption.
-Once the context is initialised, encryption can safely be chained thus:
-.Bd -literal -offset indent
-    crypto_encrypt_chacha20(ctx, plain_0, cipher_0, length_0);
-    crypto_encrypt_chacha20(ctx, plain_1, cipher_1, length_1);
-    crypto_encrypt_chacha20(ctx, plain_2, cipher_2, length_2);
-.Ed
+.Vt crypto_chacha_ctx
+context.  Once the encryption is done, the context is updated to allow
+subsequent calls of
+.Fn crypto_chacha20_encrypt
+on the rest of the message, if any.
 .Pp
-The input
+The
 .Fa plain_text
-and the output
+and
 .Fa cipher_text
-may point to the same location, for in-place encryption.
-The input
+may point to the same buffer for in-place encryption.  If they don't,
+the buffers they point to
+.Em must not overlap .
+.Pp
+The
 .Fa plain_text
-is allowed to be
+pointer is allowed to be
 .Dv NULL
 (0), in which case it will be interpreted as an all zero input.
 The cipher_text will then contain the raw Chacha20 stream.
 .Pp
-The
+Decryption is the same as encryption.  To Decrypt the
+.Fa cipher_text ,
+encrypt it again with the same
+.Fa key
+and
+.Fa nonce .
+.Pp
 .Fn crypto_chacha20_stream
-function is provided for convenience.
-It is the same as
+is the same as
 .Fn crypto_chacha20_encrypt
 with
 .Fa plain_text
 being
 .Dv NULL .
-This is useful as a user space random number generator.
-.Sy \&Do not use this as a cryptographic random number generator .
-Still, this function can be used outside of a security context:
-deterministic procedural generation comes to mind.
+This is useful as a user space random number generator.  While
+.Sy \&this must not be used as a cryptographic random number generator ,
+it can be handy outside of a security context.  Deterministic
+procedural generation and reproducible property-based tests come to
+mind.
 .Pp
-The
 .Fn crypto_chacha20_set_ctr
-function resets the internal counter of the Chacha context to the value
-specified in
+resets the internal counter of the
+.Vt crypto_chacha_ctx
+to the value specified in
 .Fa ctr .
-Resuming the encryption will use the stream at the
-block
+Resuming the encryption will use the stream at the block
 .Fa ctr
 (which is the byte
 .Ql ctr \(mu 64 ) .
 This can be used to encrypt (or decrypt) part of a long message, or to
-implement some AEAD constructions such as the one described in RFC 7539
-(not implemented in Monocypher because of its complexity and
-limitations).
+implement some AEAD constructions such as the one described in RFC
+7539 (not implemented in Monocypher because of its complexity and
+limitations).  Be careful when using this not to accidentally reuse
+parts of the random stream.  This would destroy confidentiality.
 .Sh RETURN VALUES
 These functions return nothing.
 They cannot fail.
+.Sh EXAMPLES
+Simple encryption:
+.Bd -literal -offset indent
+const uint8_t key        [ 32];  /* Secret random key              */
+const uint8_t nonce      [ 24];  /* Unique nonce (possibly random) */
+const uint8_t plain_text [500];  /* Message to be encrypted        */
+uint8_t       cipher_text[500];  /* Will be the encrypted message  */
+crypto_chacha_ctx ctx;
+crypto_chacha20_x_init(&ctx, key, nonce);
+crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 500);
+.Ed
+.Pp
+To decrypt the above:
+.Bd -literal -offset indent
+const uint8_t key        [ 32];  /* Same key as above              */
+const uint8_t nonce      [ 24];  /* Same nonce as above            */
+const uint8_t cipher_text[500];  /* Encrypted message              */
+uint8_t plain_text       [500];  /* Will be the decrypted message  */
+crypto_chacha_ctx ctx;
+crypto_chacha20_x_init(&ctx, key, nonce);
+crypto_chacha20_encrypt(&ctx, plain_text, cipher_text, 500);
+.Ed
+.Pp
+Encryption chunk by chunk (same as simple encryption):
+.Bd -literal -offset indent
+const uint8_t key        [ 32];  /* Secret random key              */
+const uint8_t nonce      [ 24];  /* Unique nonce (possibly random) */
+const uint8_t plain_text [500];  /* Message to be encrypted        */
+uint8_t       cipher_text[500];  /* Will be the encrypted message  */
+crypto_chacha_ctx ctx;
+crypto_chacha20_x_init(&ctx, key, nonce);
+crypto_chacha20_encrypt(&ctx, cipher_text +   0, plain_text +   0, 100);
+crypto_chacha20_encrypt(&ctx, cipher_text + 100, plain_text + 100, 100);
+crypto_chacha20_encrypt(&ctx, cipher_text + 200, plain_text + 200, 100);
+crypto_chacha20_encrypt(&ctx, cipher_text + 300, plain_text + 300, 100);
+crypto_chacha20_encrypt(&ctx, cipher_text + 400, plain_text + 400, 100);
+.Ed
+.Pp
+In place encryption (same results as simple encryption):
+.Bd -literal -offset indent
+const uint8_t key     [ 32];  /* Secret random key               */
+const uint8_t nonce   [ 24];  /* Unique nonce (possibly random)  */
+uint8_t       message [500];  /* Buffer to be encrypted in place */
+crypto_chacha_ctx ctx;
+crypto_chacha20_x_init(&ctx, key, nonce);
+crypto_chacha20_encrypt(&ctx, message, message, 500);
+.Ed
+.Pp
+Simple encryption with a small,
+.Em not
+random nonce:
+.Bd -literal -offset indent
+const uint8_t key        [ 32];  /* Secret, random key        */
+const uint8_t nonce      [  8];  /* Unique nonce (NOT random) */
+const uint8_t plain_text [500];  /* Message to be encrypted   */
+crypto_chacha_ctx ctx;
+crypto_chacha20_init(&ctx, key, nonce);
+crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 500);
+.Ed
+.Pp
+Encryption by jumping around (don't do that):
+.Bd -literal -offset indent
+const uint8_t key        [ 32];  /* Secret random key              */
+const uint8_t nonce      [ 24];  /* Unique nonce (possibly random) */
+const uint8_t plain_text [500];  /* Message to be encrypted        */
+uint8_t       cipher_text[500];  /* Will be the encrypted message  */
+crypto_chacha_ctx ctx;
+crypto_chacha20_x_init(&ctx, key, nonce);
+/* Encrypt the second part of the message first... */
+crypto_chacha20_set_ctr(&ctx, 3);
+crypto_chacha20_encrypt(&ctx,
+                        cipher_text + (3 * 64),
+                        plain_text  + (3 * 64),
+                        500         - (3 * 64));
+/* ...then encrypt the first part */
+crypto_chacha20_set_ctr(&ctx, 0);
+crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 3 * 64);
+.Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,
 .Xr intro 3monocypher
-.Sh CAVEATS
+.Sh STANDARDS
+These functions implement Chacha20 and XChacha20.
+.Sh SECURITY CONSIDERATIONS
 .Sy Encryption alone is not sufficient for security .
-Using Chacha20 directly is therefore discouraged.
-Use authenticated encryption instead; see
-.Xr crypto_lock 3monocypher .
+Chacha20 should never be used alone.  It only protects against
+eavesdropping, not forgeries.  To ensure the integrity of a message,
+use Blake2b in keyed mode, or authenticated encryption; see
+.Xr crypto_blake2b 3monocypher
+and
+.Xr crypto_lock 3monocypher
 .Pp
 When using
 .Fn crypto_chacha20_init ,
-.Sy do not select the nonce at random .
-Unlike the authenticated encryption we've seen at the top, this nonce is
-only 64 bits in length.
-This is too small for random nonces: you might reuse one by sheer
-misfortune.
-Use a counter instead.
-If there are multiple parties sending out messages, you can give them
-all an initial nonce of 0, 1 .. n-1 respectively, and have them
-increment their nonce by n and make sure the counters never wrap
-around.
 .Pp
-Do not reuse a nonce for the same key.
-You would expose the XOR of subsequent encrypted messages, and
-destroy confidentiality.
+Do not reuse a nonce for the same key.  This would expose the XOR of
+subsequent encrypted messages, and destroy confidentiality.
+.Pp
+.Sy do not select small nonces at random .
+The
+.Fn crypto_chacha20_init
+nonce spans only 64 bits, which is small enough to trigger accidental
+reuses.  A counter should be used instead.  If multiple parties send
+out messages, Each can start with an initial nonce of 0, 1 .. n-1
+respectively, and increment them by n for each new message. (Make sure
+the counters never wrap around).
 .Pp
 Do not use these functions as cryptographic random number generator.
 Always use the operating system's random number generator for
 cryptographic purposes, see
 .Xr intro 3monocypher .
-.Sh IMPLEMENTATION DETAILS
-These functions implement Chacha20 and XChacha20.
