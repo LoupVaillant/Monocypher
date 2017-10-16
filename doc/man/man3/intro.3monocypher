@@ -8,23 +8,28 @@
 Monocypher is a cryptographic library.
 It provides functions for authenticated encryption, cryptographic
 hashing, public key signatures and password key derivation.
-The rest of this section covers various topics that require special
-consideration, followed by an index.
+This section covers various topics that require special consideration,
+followed by an index.
 .Ss Random number generation
 Monocypher does not provide a random number generator.
 You are supposed to use the facilities of your operating system.
 Avoid user space random number generators.
-They are easy to misuse, which has lead to countless vulnerabilities
-in the past, typically by repeating parts of the random stream.
-They typically require an external random seed anyway.
+They require an external random seed anyway, and they are easy to
+misuse, which has lead to countless vulnerabilities in the past,
+typically by repeating parts of the random stream.
 .Pp
+Generating cryptographically secure random numbers portably is
+currently impossible without using other libraries.  You need system
+specific calls:
+.Bl -bullet
+.It
 On recent versions of Linux (glibc >= 2.25, Linux >= 3.17), you can use
 the
 .Fn getrandom
 system call from
 .In linux/random.h .
 Do not set any flag.
-.Pp
+.It
 On BSD, you can use
 .Fn arc4random_buf
 from
@@ -33,10 +38,11 @@ or
 .In bsd/stdlib.h .
 This is arguably even easier to use than
 .Fn getrandom .
-.Pp
+.It
 Windows provides the
 .Fn CryptGenRandom
 function.
+.El
 .Pp
 If no easy to use system call is available on your system, you may
 have to use
@@ -44,8 +50,6 @@ have to use
 It is more difficult to use, however, because it involves reading a file
 and the read may get aborted.
 Make sure you indeed get all the random bytes you requested.
-Generating random numbers for cryptographic purposes portably is
-currently impossible without using other libraries.
 .Ss Avoid swapping secrets to disk
 Ideally, you want your computer to reliably forget your secrets once
 it is done with them.
@@ -72,12 +76,10 @@ system call, which locks
 memory used by a single process.
 Though possibly overkill, this is easier to use safely.
 .Pp
-.Bf Em
 Note: core dumps cause similar problems.
 Disable them.
 Also beware of suspend to disk (deep sleep mode), which writes all RAM
 to disk regardless of swap policy, as well as virtual machine snapshots.
-.Ef
 .Ss Index
 Monocypher provides functions the following:
 .Bl -ohang -offset indent
