@@ -19,8 +19,8 @@ misuse, which has lead to countless vulnerabilities in the past,
 typically by repeating parts of the random stream.
 .Pp
 Generating cryptographically secure random numbers portably is
-currently impossible without using other libraries.  You need system
-specific calls:
+currently impossible without using other libraries.
+You need system specific calls:
 .Bl -bullet
 .It
 On recent versions of Linux (glibc >= 2.25, Linux >= 3.17), you can use
