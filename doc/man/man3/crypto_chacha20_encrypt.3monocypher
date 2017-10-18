@@ -236,7 +236,7 @@ crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 3 * 64);
 .Xr intro 3monocypher
 .Sh STANDARDS
 These functions implement Chacha20 and XChacha20.
-Chacha20 is described in rfc7539.
+Chacha20 is described in RFC 7539.
 XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
