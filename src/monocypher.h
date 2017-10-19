@@ -10,6 +10,10 @@ int crypto_verify16(const uint8_t a[16], const uint8_t b[16]);
 int crypto_verify32(const uint8_t a[32], const uint8_t b[32]);
 int crypto_verify64(const uint8_t a[64], const uint8_t b[64]);
 
+// Erase a buffer from existence.
+// It probably wasn't the only copy...
+void crypto_wipe(void *secret, size_t size);
+
 ////////////////
 /// Chacha20 ///
 ////////////////
@@ -134,6 +138,8 @@ typedef crypto_sha512_ctx crypto_hash_ctx;
 typedef crypto_blake2b_ctx crypto_hash_ctx;
 #endif
 
+// EdDSA signatures context.  Do not rely on its contents or its size,
+// they may change without notice.
 typedef struct {
     crypto_hash_ctx hash;
     uint8_t buf[96];
@@ -158,6 +164,8 @@ void crypto_sign(uint8_t        signature [64],
 
 int crypto_check_public_key(const uint8_t public_key[32]);
 
+// EdDSA check context.  Do not rely on its contents or its size, they
+// may change without notice.
 typedef struct {
     crypto_hash_ctx hash;
     uint8_t sig[64];
@@ -187,6 +195,9 @@ int crypto_key_exchange(uint8_t       shared_key      [32],
 ////////////////////////////////
 /// Authenticated encryption ///
 ////////////////////////////////
+
+// Authenticated encryption context.  Do not rely on its contents or
+// its size, they may change without notice.
 typedef struct {
     crypto_chacha_ctx   chacha;
     crypto_poly1305_ctx poly;

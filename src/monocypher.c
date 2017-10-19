@@ -89,6 +89,14 @@ static int zerocmp32(const u8 p[32])
     return crypto_verify32(p, zero);
 }
 
+void crypto_wipe(void *secret, size_t size)
+{
+    volatile u8 *v_secret = (u8*)secret;
+    FOR (i, 0, size) {
+        v_secret[i] = 0;
+    }
+}
+
 /////////////////
 /// Chacha 20 ///
 /////////////////
@@ -409,6 +417,8 @@ void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
     u += (i64)(ctx->h[1]) + ctx->pad[1];  store32_le(mac +  4, u);  u >>= 32;
     u += (i64)(ctx->h[2]) + ctx->pad[2];  store32_le(mac +  8, u);  u >>= 32;
     u += (i64)(ctx->h[3]) + ctx->pad[3];  store32_le(mac + 12, u);
+
+    crypto_wipe(ctx, sizeof(*ctx));
 }
 
 void crypto_poly1305_auth(u8     mac[16],  const u8 *message,
@@ -600,6 +610,7 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
     FOR (i, nb_words * 8, ctx->hash_size) {
         hash[i] = (ctx->hash[i / 8] >> (8 * (i % 8))) & 0xff;
     }
+    crypto_wipe(ctx, sizeof(*ctx));
 }
 
 void crypto_blake2b_general(u8       *hash   , size_t hash_size,
@@ -900,6 +911,9 @@ void crypto_argon2i(u8       *hash,      u32 hash_size,
         extended_hash(hash_area, 1024, initial_hash, 72);
         load_block(&tmp_block, hash_area);
         copy_block(blocks + 1, &tmp_block);
+
+        crypto_wipe(initial_hash,   72);
+        crypto_wipe(hash_area   , 1024);
     }
 
     // Actual number of blocks
@@ -937,6 +951,11 @@ void crypto_argon2i(u8       *hash,      u32 hash_size,
     u8 final_block[1024];
     store_block(final_block, blocks + (nb_blocks - 1));
     extended_hash(hash, hash_size, final_block, 1024);
+
+    crypto_wipe(final_block , 1024);
+    // Note: the work area is *not* wiped by default.  It would erase
+    // the final hash if the user wanted to use it to store the final
+    // hash, for instance to conserve stack space.
 }
 
 ////////////////////////////////////
@@ -1537,6 +1556,8 @@ void crypto_sign_final(crypto_sign_ctx *ctx, u8 signature[64])
         signature[i] = half_sig[i];
     }
     modL(signature + 32, s);  // second half of the signature = s
+
+    crypto_wipe(ctx, sizeof(*ctx));
 }
 
 void crypto_sign(u8        signature[64],
@@ -1646,7 +1667,7 @@ void crypto_lock_update(crypto_lock_ctx *ctx, u8 *cipher_text,
 
 void crypto_lock_final(crypto_lock_ctx *ctx, u8 mac[16])
 {
-    crypto_poly1305_final (&(ctx->poly), mac);
+    crypto_poly1305_final(&(ctx->poly), mac);
 }
 
 void crypto_unlock_update(crypto_lock_ctx *ctx, u8 *plain_text,
@@ -1676,6 +1697,7 @@ void crypto_aead_lock(u8        mac[16],
     crypto_lock_auth   (&ctx, ad, ad_size);
     crypto_lock_update (&ctx, cipher_text, plain_text, text_size);
     crypto_lock_final  (&ctx, mac);
+    crypto_wipe(&(ctx.chacha), sizeof(ctx.chacha));
 }
 
 int crypto_aead_unlock(u8       *plain_text,
@@ -1693,6 +1715,7 @@ int crypto_aead_unlock(u8       *plain_text,
         return -1; // reject forgeries before wasting our time decrypting
     }
     crypto_lock_encrypt(&ctx, plain_text, cipher_text, text_size);
+    crypto_wipe(&(ctx.chacha), sizeof(ctx.chacha));
     return 0;
 }
 
