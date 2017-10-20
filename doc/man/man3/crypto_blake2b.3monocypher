@@ -116,6 +116,10 @@ If you use the
 function, you can specify the size of the hash, and use a secret key to
 make the hash unpredictable \(en useful for message authentication
 codes.
+Even when using a
+.Fa key ,
+you do not have to wipe the context struct with
+.Xr crypto_wipe 3monocypher .
 .Ss Incremental interface
 Incremental interfaces are useful to handle streams of data or large
 files without using too much memory.

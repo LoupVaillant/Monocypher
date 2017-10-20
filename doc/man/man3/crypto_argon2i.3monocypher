@@ -80,6 +80,9 @@ It must be at least 1.
 A value of 3 is recommended.
 .It Fa password
 the password to hash.
+You will likely want to wipe this using
+.Xr crypto_wipe 3monocypher
+after hashing it.
 .It Fa password_size
 the length of
 .Fa password .
@@ -180,10 +183,12 @@ crypto_argon2i(hash, sizeof(hash),
     salt, sizeof(salt),
     NULL, 0,
     NULL, 0);
+crypto_wipe(password, strlen(password));
 .Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_verify16 3monocypher ,
+.Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh CAVEATS
 Any deviation from the specified input and output length ranges results
