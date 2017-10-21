@@ -33,7 +33,8 @@
 .Fa "const uint8_t mac[16]"
 .Fc
 .Sh DESCRIPTION
-Poly1305 is a one-time message authentication code.  "One time" means
+Poly1305 is a one-time message authentication code.
+"One time" means
 the authentication key can be used only once.
 This makes Poly1305
 .Sy easy to mess up .
@@ -96,12 +97,12 @@ const uint8_t key     [ 32];  /* The above key     */
 const uint8_t mac     [ 16];  /* The above MAC     */
 uint8_t       real_mac[ 16];  /* The actual MAC    */
 crypto_poly1305_auth(real_mac, msg, 500, key);
+crypto_wipe(key, 32);         /* Wipe right away   */
 if (crypto_verify16(mac, real_mac)) {
     /* The message is corrupted */
 } else {
     /* The message is real */
 }
-crypto_wipe(key, 32);    /* The key should be wiped after use */
 .Ed
 .Pp
 Authentication chunk by chunk (same as the above):
@@ -110,10 +111,10 @@ const uint8_t msg[500];  /* Message to authenticate           */
 const uint8_t key[ 32];  /* Random secret key (use only once) */
 uint8_t       mac[ 16];  /* Message authentication code (MAC) */
 crypto_poly1305_ctx ctx;
+crypto_poly1305_init(&ctx, key);
 crypto_wipe(key, 32);    /* The key should be wiped after use */
-crypto_wipe(key, 32);
 for(int i = 0; i < 500; i += 100) {
-    crypto_poly1305_update(&ctx, msg, 500);
+    crypto_poly1305_update(&ctx, msg, 100);
 }
 crypto_poly1305_final(&ctx, mac);
 .Ed
