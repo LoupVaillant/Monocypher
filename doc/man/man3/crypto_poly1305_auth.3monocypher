@@ -33,47 +33,137 @@
 .Fa "const uint8_t mac[16]"
 .Fc
 .Sh DESCRIPTION
-Monocypher provides both a direct interface and an incremental
-interface for Poly1305, which is used to generate a one-time message
-authentication code (MAC).
-.Sy Poly1305 is easy to mess up .
-Using it directly is likely to lead to mistakes.
+Poly1305 is a one-time message authentication code.  "One time" means
+the authentication key can be used only once.
+This makes Poly1305
+.Sy easy to mess up .
+On the other hand, Poly1305 is fast, as well as provably secure if
+used correctly.
 .Pp
-Be careful when using this function.
-The requirements for a Poly1305 key are
-.Em stringent :
-.Bl -bullet
-.It
-It must be secret: the attacker cannot be allowed to guess that key.
-.It
-It must be shared: the recipient must know this key.
-Without it, the integrity of the message cannot be verified.
-.It
-It must
-.Sy never
-be reused.
-That would allow the attacker to recover the key then forge messages,
-destroying any security.
-.El
+Poly1305 is a low-level primitive.
+Consider using authenticated encryption, implemented by
+.Xr crypto_lock 3monocypher .
+.Ss Direct interface
+The
+.Fn crypto_poly1305_auth
+function produces a message authentication code for the given
+message and authentication key.
+The authentication key must be used only once.
+.Fa mac
+and the
+.Fa message
+arguments may overlap.
 .Pp
-You cannot use the session key for this: it is secret and shared, but
+Once the authentication is done, the
+.Fa key
+should be wiped with
+.Xr crypto_wipe 3monocypher .
+.Pp
+To verify the integrity of a message, use
+.Xr crypto_verify16 3monocypher
+to compare the received MAC to the output
+.Fa mac .
+.Ss Streaming interface
+The
+.Fn crypto_poly1305_init
+function initialises a context.
+The
+.Fa key
+should be wiped once the context is initialised.
+Then,
+.Fn crypto_poly1305_update
+authenticates the message chunk by chunk.
+Once the message is entirely processed,
+.Fn crypto_poly1305_final
+yields the message authentication code.
+.Sh RETURN VALUES
+These functions return nothing.
+They cannot fail.
+.Sh EXAMPLES
+To authenticate a message:
+.Bd -literal -offset indent
+const uint8_t msg[500];  /* Message to authenticate           */
+const uint8_t key[ 32];  /* Random secret key (use only once) */
+uint8_t       mac[ 16];  /* Message authentication code (MAC) */
+crypto_poly1305_auth(mac, msg, 500, key);
+crypto_wipe(key, 32);    /* The key should be wiped after use */
+.Ed
+.Pp
+To verify the above message:
+.Bd -literal -offset indent
+const uint8_t msg     [500];  /* Message to verify */
+const uint8_t key     [ 32];  /* The above key     */
+const uint8_t mac     [ 16];  /* The above MAC     */
+uint8_t       real_mac[ 16];  /* The actual MAC    */
+crypto_poly1305_auth(real_mac, msg, 500, key);
+if (crypto_verify16(mac, real_mac)) {
+    /* The message is corrupted */
+} else {
+    /* The message is real */
+}
+crypto_wipe(key, 32);    /* The key should be wiped after use */
+.Ed
+.Pp
+Authentication chunk by chunk (same as the above):
+.Bd -literal -offset indent
+const uint8_t msg[500];  /* Message to authenticate           */
+const uint8_t key[ 32];  /* Random secret key (use only once) */
+uint8_t       mac[ 16];  /* Message authentication code (MAC) */
+crypto_poly1305_ctx ctx;
+crypto_wipe(key, 32);    /* The key should be wiped after use */
+crypto_wipe(key, 32);
+for(int i = 0; i < 500; i += 100) {
+    crypto_poly1305_update(&ctx, msg, 500);
+}
+crypto_poly1305_final(&ctx, mac);
+.Ed
+.Sh SEE ALSO
+.Xr crypto_blake2b 3monocypher ,
+.Xr crypto_lock 3monocypher ,
+.Xr crypto_verify16 3monocypher ,
+.Xr intro 3monocypher
+.Sh STANDARDS
+These functions implement Poly1305, described in RFC 7539.
+.Sh  SECURITY CONSIDERATIONS
+Using Poly1305 correctly is difficult.
+Do not use it unless you are absolutely sure what you are doing.
+Use authenticated encryption instead; see
+.Xr crypto_lock 3monocypher .
+If you are absolutely certain you do not want encryption, refer to
+.Xr crypto_blake2b 3monocypher
+on how to use Blake2b to generate message authentication codes.
+.Pp
+If you still want to use Poly1305, keep in mind that it is very easy
+to make mistakes that destroy all security.
+This is because the requirements for the
+.Fa key
+are stringent:
+it must be secret, shared, and
+.Sy unique .
+The attacker must not be able to guess the key;
+it must be shared with the recipient to allow verification;
+and it must be used
+.Sy only once .
+If it is ever reused, the attacker can easily recover it, then forge
+arbitrary messages, or even destroy all security.
+.Pp
+The session key cannot be used for this: it is secret and shared, but
 it is
 .Em reused .
-If you use it, the attacker will recover it as soon as the second
-message is sent, and will break all security.
+The attacker will recover it and break all security.
 .Pp
-You cannot use a random number: if you do not send it over the network,
-it will not be shared, and the recipient will be unable to check the
-MAC.
-If you do, it will not be secret, and the attacker will be able to forge
-messages.
+A simple random number cannot be used either: there is no reasonable
+way to give it to the recipient without also revealing it to the
+attacker.
 .Pp
 The only practical source for the authentication key is a chunk of the
 encryption stream used to encrypt the message.
-However, you must ensure you do not reuse that part of the stream to
-encrypt the message itself:
-the attacker could guess the stream by guessing the message, and forge
-messages afterwards.
+That chunk must be
+.Em dedicated
+to the authentication key:
+if it is reused to encrypt the message itself, the attacker may
+recover that chunk by guessing the message, then forge arbitrary
+messages.
 .Pp
 To get this right, you need a session key, a
 .Em unique
@@ -84,55 +174,17 @@ Take the first 32 bits of that stream as your authentication key, then
 use the
 .Em rest
 of the stream to encrypt your message.
-Check out the source code of
+The source code of
 .Xr crypto_aead_lock 3monocypher
-to see how it is done.
-.Pp
-The direct interface consists of the
-.Fn crypto_poly1305_auth
-function produces a message authentication code for the given
-message and authentication key.
-The
-.Fa mac
-and the
-.Fa message
-arguments may overlap.
-.Pp
-The indirect interface consists of the
-.Fn crypto_poly1305_init ,
-.Fn crypto_poly1305_update ,
-and
-.Fn crypto_poly1305_final
-functions.
-The
-.Fn crypto_poly1305_init
-function initialises a context, and the
-.Fn crypto_poly1305_update
-function authenticates the message chunk by chunk.
-Once the message is entirely processed, the
-.Fn crypto_poly1305_final
-function yields the message authentication code.
-.Pp
+shows how it is done.
+.Ss Protection against side channels
 Use
 .Xr crypto_verify16 3monocypher
-to compare the MAC received to the output
-.Fa mac .
-.Sh RETURN VALUES
-These functions return nothing.
-They cannot fail.
-.Sh SEE ALSO
-.Xr crypto_blake2b 3monocypher ,
-.Xr crypto_lock 3monocypher ,
-.Xr crypto_verify16 3monocypher ,
-.Xr intro 3monocypher
-.Sh CAVEATS
-Using Poly1305 correctly is very difficult.
-Please do not use it unless you are absolutely sure what you are doing.
-Use authenticated encryption instead; see
-.Xr crypto_lock 3monocypher .
-If you are absolutely certain you do not want encryption, refer to
-.Xr crypto_blake2b 3monocypher ,
-which contains information on how to use Blake2b to generate message
-authentication codes.
-.Sh IMPLEMENTATION DETAILS
-These functions implement Poly1305.
+To compare message authentication code.
+Avoid standard buffer comparison functions.
+They don't run in constant time, and allow attackers to recover the
+MAC in relatively few tries.
+.Pp
+The authentication key should be wiped with
+.Xr crypto_wipe 3monocypher
+after use.
