@@ -179,6 +179,11 @@ void crypto_chacha20_H(u8 out[32], const u8 key[32], const u8 in[16])
         store32_le(out      + i*4, buffer[i     ]); // constant
         store32_le(out + 16 + i*4, buffer[i + 12]); // counter and nonce
     }
+    // Wipe buffer
+    volatile u32 *v_buffer = buffer;
+    FOR (i, 0, 16) {
+        v_buffer[i] = 0;
+    }
 }
 
 void crypto_chacha20_init(crypto_chacha_ctx *ctx,
@@ -509,6 +514,11 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
     // update hash
     FOR (i, 0, 8) {
         ctx->hash[i] ^= v[i] ^ v[i+8];
+    }
+    // Wipe v
+    volatile u64 *vv = v;
+    FOR (i, 0, 16) {
+        vv[i] = 0;
     }
 }
 
@@ -1558,6 +1568,7 @@ void crypto_sign_final(crypto_sign_ctx *ctx, u8 signature[64])
     modL(signature + 32, s);  // second half of the signature = s
 
     crypto_wipe(ctx, sizeof(*ctx));
+    crypto_wipe(h_ram, 64);
 }
 
 void crypto_sign(u8        signature[64],
@@ -1645,6 +1656,7 @@ void crypto_lock_init(crypto_lock_ctx *ctx, const u8 key[32], const u8 nonce[24]
     crypto_chacha20_x_init(&(ctx->chacha), key, nonce);
     crypto_chacha20_stream(&(ctx->chacha), auth_key, 32);
     crypto_poly1305_init  (&(ctx->poly  ), auth_key);
+    crypto_wipe(auth_key, 32);
 }
 
 void crypto_lock_encrypt(crypto_lock_ctx *ctx, u8 *cipher_text,
