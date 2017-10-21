@@ -257,6 +257,9 @@ uint8_t cipher_text[51]; /* strlen(plain_text) + terminating NUL */
 crypto_lock(mac, cipher_text, key, nonce, plain_text,
         sizeof(plain_text));
 
+/* Once you're done with encryption, wipe the key from memory */
+crypto_wipe(key, sizeof(key));
+
 /* You can now transmit over the network:
  * - cipher_text
  * - nonce
@@ -281,6 +284,8 @@ int ret;
 
 ret = crypto_unlock(plain_text, key, nonce, mac, cipher_text,
         sizeof(cipher_text));
+/* Once you're done with decryption, wipe the key from memory */
+crypto_wipe(key, sizeof(key));
 if (ret != 0) {
         /* Message corrupted; possibly an attacker is interfering
          * with the connection.
@@ -290,6 +295,7 @@ if (ret != 0) {
 .Sh SEE ALSO
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock_init 3monocypher ,
+.Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh IMPLEMENTATION DETAILS
 These functions implement the XChacha20 (encryption) and Poly1305 (MAC)

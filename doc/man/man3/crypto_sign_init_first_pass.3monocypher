@@ -89,6 +89,9 @@ update, where the message is processed;
 final, where the signature is actually verified.
 .El
 .Pp
+You do not have to wipe the context structs with
+.Xr crypto_wipe 3monocypher .
+.Pp
 Signatures made with this interface are compatible with the direct
 interface and vice-versa.
 .Sh RETURN VALUES
@@ -118,6 +121,11 @@ crypto_sign_public_key(pk, sk);
 uint8_t sig[64];
 crypto_sign_ctx sctx;
 crypto_sign_init_first_pass (&sctx, sk, pk);
+/* You can wipe the key from memory as early as this.
+ * Obviously, if you still need to sign more messages, do not wipe
+ * the secret key yet.
+ */
+crypto_wipe(sk, sizeof(sk));
 crypto_sign_update          (&sctx, msg, sizeof(msg));
 crypto_sign_init_second_pass(&sctx);
 crypto_sign_update          (&sctx, msg, sizeof(msg));
@@ -134,6 +142,7 @@ int is_valid_sig = (crypto_check_final(&cctx) == 0);
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_sign 3monocypher ,
+.Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh CAVEATS
 The same caveats as documented on

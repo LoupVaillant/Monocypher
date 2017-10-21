@@ -121,6 +121,11 @@ encrypt it again with the same
 .Fa key
 and
 .Fa nonce .
+You will likely want to wipe the key and context when you are done with
+encryption or decryption.
+Use
+.Xr crypto_wipe 3monocypher
+to wipe them.
 .Pp
 .Fn crypto_chacha20_stream
 is the same as
@@ -176,6 +181,12 @@ uint8_t plain_text       [500];  /* Will be the decrypted message  */
 crypto_chacha_ctx ctx;
 crypto_chacha20_x_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, plain_text, cipher_text, 500);
+/* If you're done with encryption, you will want to wipe the key and
+ * context, possibly the plaintext, too.
+ */
+crypto_wipe(key,        sizeof(key));
+crypto_wipe(&ctx,       sizeof(ctx));
+crypto_wipe(plain_text, sizeof(plain_text));
 .Ed
 .Pp
 Encryption chunk by chunk (same as simple encryption):
@@ -189,6 +200,11 @@ crypto_chacha20_x_init(&ctx, key, nonce);
 for(int i = 0; i < 500; i += 100) {
     crypto_chacha20_encrypt(&ctx, cipher_text+i, plain_text+i, 100);
 }
+/* If you're done with decryption, you will want to wipe the key and
+ * context.
+ */
+crypto_wipe(key,  sizeof(key));
+crypto_wipe(&ctx, sizeof(ctx));
 .Ed
 .Pp
 In place encryption (same results as simple encryption):
@@ -199,6 +215,8 @@ uint8_t       message [500];  /* Buffer to be encrypted in place */
 crypto_chacha_ctx ctx;
 crypto_chacha20_x_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, message, message, 500);
+crypto_wipe(key,  sizeof(key));
+crypto_wipe(&ctx, sizeof(ctx));
 .Ed
 .Pp
 Simple encryption with a small,
@@ -211,6 +229,8 @@ const uint8_t plain_text [500];  /* Message to be encrypted   */
 crypto_chacha_ctx ctx;
 crypto_chacha20_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 500);
+crypto_wipe(key,  sizeof(key));
+crypto_wipe(&ctx, sizeof(ctx));
 .Ed
 .Pp
 Encryption by jumping around (don't do that):
@@ -230,9 +250,12 @@ crypto_chacha20_encrypt(&ctx,
 /* ...then encrypt the first part */
 crypto_chacha20_set_ctr(&ctx, 0);
 crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 3 * 64);
+crypto_wipe(key,  sizeof(key));
+crypto_wipe(&ctx, sizeof(ctx));
 .Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,
+.Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
 These functions implement Chacha20 and XChacha20.

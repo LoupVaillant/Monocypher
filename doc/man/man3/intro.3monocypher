@@ -80,6 +80,10 @@ Note: core dumps cause similar problems.
 Disable them.
 Also beware of suspend to disk (deep sleep mode), which writes all RAM
 to disk regardless of swap policy, as well as virtual machine snapshots.
+It is recommended to also use
+.Xr crypto_wipe 3monocypher
+to clear secrets from memory as soon as possible to mitigate these
+dangers.
 .Ss Index
 Monocypher provides functions the following:
 .Bl -ohang -offset indent
@@ -157,6 +161,10 @@ Monocypher provides functions the following:
 .It Xr crypto_verify32 3monocypher
 .It Xr crypto_verify64 3monocypher
 .El
+.It Utility functions
+.Bl -tag -offset indent-two -width Ds
+.It Xr crypto_wipe 3monocypher
+.El
 .El
 .Sh SEE ALSO
 .Xr crypto_aead_lock 3monocypher ,
@@ -201,5 +209,6 @@ Monocypher provides functions the following:
 .Xr crypto_verify16 3monocypher ,
 .Xr crypto_verify32 3monocypher ,
 .Xr crypto_verify64 3monocypher ,
+.Xr crypto_wipe 3monocypher ,
 .Xr crypto_x25519 3monocypher ,
 .Xr crypto_x25519_public_key 3monocypher

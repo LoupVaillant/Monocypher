@@ -110,7 +110,7 @@ and
 .Fn crypto_lock_update
 authenticates and encrypts the data;
 .Fn crypto_lock_final
-generates the MAC.
+generates the MAC and wipes the context.
 .Sy For decryption ,
 .Fn crypto_unlock_update
 authenticates and decrypts the data;
@@ -169,6 +169,8 @@ Encryption:
 /* First, initialise the context */
 crypto_lock_ctx ctx;
 crypto_lock_init(&ctx, key, nonce);
+/* Wipe the key unless you need it for another operation. */
+crypto_wipe(key, sizeof(key));
 
 /* Second, authenticate the additional data, if any. */
 crypto_lock_auth(&ctx, ad1, ad_size1);
@@ -194,6 +196,8 @@ To decrypt the above:
  */
 crypto_lock_ctx ctx;
 crypto_lock_init(&ctx, key, nonce);
+/* Wipe the key unless you need it for another operation. */
+crypto_wipe(key, sizeof(key));
 
 /* Second, authenticate the additional data, if any. */
 crypto_lock_auth(&ctx, ad1, ad_size1);
@@ -220,6 +224,8 @@ To authenticate without decrypting at all:
  */
 crypto_lock_ctx ctx;
 crypto_lock_init(&ctx, key, nonce);
+/* Wipe the key unless you need it for another operation. */
+crypto_wipe(key, sizeof(key));
 
 /* Second, authenticate the additional data, if any. */
 crypto_lock_auth(&ctx, ad1, ad_size1);
@@ -244,6 +250,7 @@ if (crypto_unlock_final(&ctx, mac2)) {
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_unlock 3monocypher ,
+.Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh IMPLEMENTATION DETAILS
 These functions implement the XChacha20 (encryption) and Poly1305 (MAC)

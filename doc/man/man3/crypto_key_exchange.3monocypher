@@ -134,6 +134,11 @@ if (crypto_key_exchange(shared_key, sk, theirpk) != 0) {
          */
 }
 
+/* You will want to wipe the secret key unless you specifically need
+ * it for another key exchange.
+ */
+crypto_wipe(sk, sizeof(sk));
+
 /* shared_key can now be used as key, for example in
  * crypto_lock/crypto_unlock.
  */
