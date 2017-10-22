@@ -126,6 +126,7 @@ crypto_poly1305_final(&ctx, mac);
 .Sh STANDARDS
 These functions implement Poly1305, described in RFC 7539.
 .Sh  SECURITY CONSIDERATIONS
+.Ss User error
 Using Poly1305 correctly is difficult.
 Do not use it unless you are absolutely sure what you are doing.
 Use authenticated encryption instead; see
@@ -152,7 +153,6 @@ The session key cannot be used for this: it is secret and shared, but
 it is
 .Em reused .
 The attacker will recover it and break all security.
-.Pp
 A simple random number cannot be used either: there is no reasonable
 way to give it to the recipient without also revealing it to the
 attacker.
@@ -189,3 +189,9 @@ MAC in relatively few tries.
 The authentication key should be wiped with
 .Xr crypto_wipe 3monocypher
 after use.
+.Pp
+Incremental interface users don't need to wipe the
+.Ft crypto_poly1305_ctx
+explicitly,
+.Fn crypto_poly1305_final
+does it automatically.

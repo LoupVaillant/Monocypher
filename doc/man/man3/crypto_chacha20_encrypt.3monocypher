@@ -170,6 +170,10 @@ uint8_t       cipher_text[500];  /* Will be the encrypted message  */
 crypto_chacha_ctx ctx;
 crypto_chacha20_x_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 500);
+/* Wipe secrets if they're no longer needed */
+crypto_wipe(key,        sizeof(key));
+crypto_wipe(&ctx,       sizeof(ctx));
+crypto_wipe(plain_text, sizeof(plain_text));
 .Ed
 .Pp
 To decrypt the above:
@@ -181,12 +185,10 @@ uint8_t plain_text       [500];  /* Will be the decrypted message  */
 crypto_chacha_ctx ctx;
 crypto_chacha20_x_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, plain_text, cipher_text, 500);
-/* If you're done with encryption, you will want to wipe the key and
- * context, possibly the plaintext, too.
- */
-crypto_wipe(key,        sizeof(key));
-crypto_wipe(&ctx,       sizeof(ctx));
-crypto_wipe(plain_text, sizeof(plain_text));
+/* Wipe secrets if they're no longer needed */
+crypto_wipe(key,  sizeof(key));
+crypto_wipe(&ctx, sizeof(ctx));
+/* The plain text likely needs to be processed before you wipe it */
 .Ed
 .Pp
 Encryption chunk by chunk (same as simple encryption):
@@ -200,11 +202,10 @@ crypto_chacha20_x_init(&ctx, key, nonce);
 for(int i = 0; i < 500; i += 100) {
     crypto_chacha20_encrypt(&ctx, cipher_text+i, plain_text+i, 100);
 }
-/* If you're done with decryption, you will want to wipe the key and
- * context.
- */
-crypto_wipe(key,  sizeof(key));
-crypto_wipe(&ctx, sizeof(ctx));
+/* Wipe secrets if they're no longer needed */
+crypto_wipe(key,        sizeof(key));
+crypto_wipe(&ctx,       sizeof(ctx));
+crypto_wipe(plain_text, sizeof(plain_text));
 .Ed
 .Pp
 In place encryption (same results as simple encryption):
@@ -215,6 +216,9 @@ uint8_t       message [500];  /* Buffer to be encrypted in place */
 crypto_chacha_ctx ctx;
 crypto_chacha20_x_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, message, message, 500);
+crypto_wipe(key,  sizeof(key));
+crypto_wipe(&ctx, sizeof(ctx));
+/* Wipe secrets if they're no longer needed */
 crypto_wipe(key,  sizeof(key));
 crypto_wipe(&ctx, sizeof(ctx));
 .Ed
@@ -231,6 +235,10 @@ crypto_chacha20_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 500);
 crypto_wipe(key,  sizeof(key));
 crypto_wipe(&ctx, sizeof(ctx));
+/* Wipe secrets if they're no longer needed */
+crypto_wipe(key,        sizeof(key));
+crypto_wipe(&ctx,       sizeof(ctx));
+crypto_wipe(plain_text, sizeof(plain_text));
 .Ed
 .Pp
 Encryption by jumping around (don't do that):
@@ -250,8 +258,10 @@ crypto_chacha20_encrypt(&ctx,
 /* ...then encrypt the first part */
 crypto_chacha20_set_ctr(&ctx, 0);
 crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 3 * 64);
-crypto_wipe(key,  sizeof(key));
-crypto_wipe(&ctx, sizeof(ctx));
+/* Wipe secrets if they're no longer needed */
+crypto_wipe(key,        sizeof(key));
+crypto_wipe(&ctx,       sizeof(ctx));
+crypto_wipe(plain_text, sizeof(plain_text));
 .Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,
@@ -264,19 +274,20 @@ XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
 .Sh SECURITY CONSIDERATIONS
-.Sy Encryption alone is not sufficient for security .
-Chacha20 should never be used alone.
-It only protects against eavesdropping, not forgeries.
+.Ss Encrypted doesn't mean secure
+Chacha20 only protects against eavesdropping, not forgeries.
+Most applications need protection against forgeries to be properly
+secure.
 To ensure the integrity of a message, use Blake2b in keyed mode, or
 authenticated encryption; see
 .Xr crypto_blake2b 3monocypher
 and
 .Xr crypto_lock 3monocypher
+.Ss Nonce reuse
+Repeating a nonce with the same key exposes the XOR of two or more
+plaintext messages, effectively destroying confidentiality.
 .Pp
-Do not reuse a nonce for the same key.
-This would expose the XOR of subsequent encrypted messages, and
-destroy confidentiality.
-.Pp
+For the same reason,
 .Sy do not select small nonces at random .
 The
 .Fn crypto_chacha20_init
@@ -286,8 +297,15 @@ A counter should be used instead.
 If multiple parties send out messages, Each can start with an initial
 nonce of 0, 1 .. n-1 respectively, and increment them by n for each
 new message (make sure the counters never wrap around).
-.Pp
+.Ss Secure random number generation
 Do not use these functions as cryptographic random number generator.
 Always use the operating system's random number generator for
 cryptographic purposes, see
 .Xr intro 3monocypher .
+.Ss Protection against side channels
+Secrets should not dwell in memory longer than needed.
+Use
+.Xr crypto_wipe 3monocypher
+to erase secrets you no longer need.
+For Chacha20, this means the context, the key, and in some cases the
+plain text itself.
