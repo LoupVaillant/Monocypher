@@ -60,60 +60,59 @@ It can authenticate messages with a naive approach.
 The arguments are:
 .Bl -tag -width Ds
 .It Fa hash
-the output hash.
+The output hash.
 Must have at least
 .Fa hash_size
 free bytes.
 .It Fa hash_size
-the length of the output hash.
+Length of the output hash, in bytes.
 Must be between 1 and 64.
-A value of 64 is recommended.
-Values below 32 are discouraged.
+64 is recommended.
+Anything below 32 is discouraged.
 .It Fa key
-some secret key.
+Some secret key.
+Those who don't know it cannot predict the final hash.
 May be
 .Dv NULL
 if
 .Fa key_size
 is 0.
-This can be used to create a message authentication code (MAC).
-Use the
+Keys can be used to create a message authentication code (MAC).
+Use
 .Xr crypto_verify16 3monocypher ,
-.Xr crypto_verify32 3monocypher
-or the
+.Xr crypto_verify32 3monocypher ,
+or
 .Xr crypto_verify64 3monocypher
-function to compare MACs created this way.
-Choose
-.Fa hash_size
-appropriately for the verification functions.
+to compare MACs created this way.
+Choose the size of the hash accordingly.
+Users may want to wipe the key with
+.Xr crypto_wipe 3monocypher
+once they're done with it.
 .It Fa key_size
-length of the
-.Fa key .
+Length of the
+.Fa key
+in bytes.
 Must be between 0 and 64.
+32 is a good default.
 .It Fa message
-the message to hash.
-It may overlap with the
+Message to hash.
+May overlap with the
 .Fa hash
 argument where present.
 .It Fa message_size
-the length of the message.
+the length of the message in bytes.
 .El
 .Ss Direct interface
-The direct interface sports 2 functions:
-.Fn crypto_blake2b
+The direct interface has 2 functions:
+.Fn crypto_blake2b_general ,
 and
-.Fn crypto_blake2b_general .
-The
-.Fn crypto_blake2b
-function is provided for convenience.
-It uses a 64 byte hash and no key.
-These values are good defaults for
-.Fn crypto_blake2b_general_init ,
-too.
-.Pp
-If you use the
+.Fn crypto_blake2b ,
+provided for convenience (calling it is the same as calling
 .Fn crypto_blake2b_general
-function, you can specify the size of the hash, and use a secret key to
+with a null key and a 64-byte hash.)
+.Pp
+.Fn crypto_blake2b_general
+users can specify the size of the hash, and use a secret key to
 make the hash unpredictable \(en useful for message authentication
 codes.
 Even when using a
@@ -126,13 +125,23 @@ files without using too much memory.
 This interface uses 3 steps:
 .Bl -bullet
 .It
-initialisation, where we set up a context with the various hashing
-parameters;
+initialisation with
+.Fn crypto_blake2b_general_init
+or
+.Fn crypto_blake2b_init ,
+where we set up a context with the hashing parameters;
 .It
-update, where we hash the message chunk by chunk, and keep the
-intermediary result in the context;
+update with
+.Fn crypto_blake2b_update ,
+where we hash the message chunk by chunk, and keep the intermediary
+result in the context;
 .It
-and finalisation, where we produce the final hash.
+and finalisation with
+.Fn crypto_blake2b_final ,
+where we produce the final hash.
+The
+.Ft crypto_blake2b_ctx
+is automatically wiped upon finalisation.
 .El
 .Pp
 The invariants of the parameters are the same as for
@@ -144,26 +153,58 @@ This is considered a good default.
 .Sh RETURN VALUES
 These functions return nothing.
 .Sh EXAMPLES
-This example shows how to hash the concatenation of 3 chunks using the
-incremental interface:
+Hashes a message all at once.
 .Bd -literal -offset indent
 uint8_t hash[64];
 crypto_blake2b_ctx ctx;
-
+uint8_t hash   [ 64]; /* output hash (must be 64 bytes) */
+uint8_t message[500]; /* message to hash                */
+crypto_blake2b_ctx ctx;
+crypto_blake2b(hash, message, 500);
+.Ed
+.Pp
+Computes a message authentication code all at once.
+.Bd -literal -offset indent
+uint8_t hash   [ 64]; /* output hash  (between 1 and 64 bytes) */
+uint8_t key    [ 32]; /* optional key (between 0 and 64 bytes) */
+uint8_t message[500]; /* message to hash                       */
+crypto_blake2b_ctx ctx;
+crypto_blake2b_general(hash, 64, key, 32, message, 500);
+crypto_wipe(key, 32); /* You may want to wipe the key          */
+.Ed
+.Pp
+Hashes a message incrementally.
+.Bd -literal -offset indent
+uint8_t hash    [ 64]; /* output hash (must be 64 bytes) */
+uint8_t message [500]; /* message to hash                */
 crypto_blake2b_init  (&ctx);
-crypto_blake2b_update(&ctx, chunk1, chunk1_size);
-crypto_blake2b_update(&ctx, chunk2, chunk2_size);
-crypto_blake2b_update(&ctx, chunk3, chunk3_size);
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_blake2b_update(&ctx, message + i, 100);
+}
+crypto_blake2b_final (&ctx, hash);
+.Ed
+.Pp
+Computes a message authentication code incrementally.
+.Bd -literal -offset indent
+uint8_t hash   [ 64]; /* output hash  (between 1 and 64 bytes) */
+uint8_t key    [ 32]; /* optional key (between 0 and 64 bytes) */
+uint8_t message[500]; /* message to hash                       */
+crypto_blake2b_general_init(&ctx, 64, key, 32);
+crypto_wipe(key, 32); /* You may want to wipe the key          */
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_blake2b_update(&ctx, message + i, 100);
+}
 crypto_blake2b_final (&ctx, hash);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock 3monocypher ,
 .Xr intro 3monocypher
+.Sh STANDARDS
+These functions implement Blake2b.
 .Sh CAVEATS
+Monocypher doesn't perform any input verification.
 Any deviation from the specified input and output length ranges results
 in
-.Sy undefined behavior .
+.Sy undefined behaviour .
 Make sure your inputs are correct.
-.Sh IMPLEMENTATION DETAILS
-These functions implement Blake2b.
