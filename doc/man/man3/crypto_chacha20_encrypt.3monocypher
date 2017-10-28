@@ -80,8 +80,7 @@ number generator).
 The recommended initialisation routine is
 .Fn crypto_chacha20_x_init .
 The ability to use random nonces makes it easier to use securely, and
-the performance hit, equivalent to the encryption of 64 bytes, doesn't
-matter in practice.
+the performance hit is negligible in practice.
 .Pp
 The following functions need an initialised context to work properly.
 Calling them with an uninitialised context triggers undefined
@@ -104,7 +103,7 @@ The
 and
 .Fa cipher_text
 may point to the same buffer for in-place encryption.
-If they don't, the buffers they point to
+Otherwise, the buffers they point to
 .Em must not overlap .
 .Pp
 The
@@ -185,7 +184,7 @@ uint8_t plain_text       [500];  /* Will be the decrypted message  */
 crypto_chacha_ctx ctx;
 crypto_chacha20_x_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, plain_text, cipher_text, 500);
-/* Wipe secrets if they're no longer needed */
+/* Wipe secrets if they are no longer needed */
 crypto_wipe(key,  sizeof(key));
 crypto_wipe(&ctx, sizeof(ctx));
 /* The plain text likely needs to be processed before you wipe it */
@@ -202,7 +201,7 @@ crypto_chacha20_x_init(&ctx, key, nonce);
 for(int i = 0; i < 500; i += 100) {
     crypto_chacha20_encrypt(&ctx, cipher_text+i, plain_text+i, 100);
 }
-/* Wipe secrets if they're no longer needed */
+/* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        sizeof(key));
 crypto_wipe(&ctx,       sizeof(ctx));
 crypto_wipe(plain_text, sizeof(plain_text));
@@ -218,7 +217,7 @@ crypto_chacha20_x_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, message, message, 500);
 crypto_wipe(key,  sizeof(key));
 crypto_wipe(&ctx, sizeof(ctx));
-/* Wipe secrets if they're no longer needed */
+/* Wipe secrets if they are no longer needed */
 crypto_wipe(key,  sizeof(key));
 crypto_wipe(&ctx, sizeof(ctx));
 .Ed
@@ -235,7 +234,7 @@ crypto_chacha20_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 500);
 crypto_wipe(key,  sizeof(key));
 crypto_wipe(&ctx, sizeof(ctx));
-/* Wipe secrets if they're no longer needed */
+/* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        sizeof(key));
 crypto_wipe(&ctx,       sizeof(ctx));
 crypto_wipe(plain_text, sizeof(plain_text));
@@ -258,7 +257,7 @@ crypto_chacha20_encrypt(&ctx,
 /* ...then encrypt the first part */
 crypto_chacha20_set_ctr(&ctx, 0);
 crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 3 * 64);
-/* Wipe secrets if they're no longer needed */
+/* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        sizeof(key));
 crypto_wipe(&ctx,       sizeof(ctx));
 crypto_wipe(plain_text, sizeof(plain_text));
@@ -274,7 +273,7 @@ XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
 .Sh SECURITY CONSIDERATIONS
-.Ss Encrypted doesn't mean secure
+.Ss Encrypted does not mean secure
 Chacha20 only protects against eavesdropping, not forgeries.
 Most applications need protection against forgeries to be properly
 secure.

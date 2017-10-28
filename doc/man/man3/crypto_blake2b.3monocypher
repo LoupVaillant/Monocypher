@@ -49,11 +49,11 @@
 .Fa "uint8_t *hash"
 .Fc
 .Sh DESCRIPTION
-Blake2b is a fast cryptographically secure hash, based on the ideas of
+BLAKE2b is a fast cryptographically secure hash, based on the ideas of
 Chacha20.
 It is faster than MD5, yet just as secure as SHA-3.
 .Pp
-Blake2b is immune to length extension attacks, and as such does not
+BLAKE2b is immune to length extension attacks, and as such does not
 require any specific precautions, such as using the HMAC algorithm.
 It can authenticate messages with a naive approach.
 .Pp
@@ -71,12 +71,12 @@ Must be between 1 and 64.
 Anything below 32 is discouraged.
 .It Fa key
 Some secret key.
-Those who don't know it cannot predict the final hash.
+One cannot predict the final hash without it.
 May be
 .Dv NULL
 if
 .Fa key_size
-is 0.
+is 0 (this means there is no key).
 Keys can be used to create a message authentication code (MAC).
 Use
 .Xr crypto_verify16 3monocypher ,
@@ -87,7 +87,7 @@ to compare MACs created this way.
 Choose the size of the hash accordingly.
 Users may want to wipe the key with
 .Xr crypto_wipe 3monocypher
-once they're done with it.
+once they are done with it.
 .It Fa key_size
 Length of the
 .Fa key
@@ -109,7 +109,7 @@ and
 .Fn crypto_blake2b ,
 provided for convenience (calling it is the same as calling
 .Fn crypto_blake2b_general
-with a null key and a 64-byte hash.)
+with a null key and a 64-byte hash).
 .Pp
 .Fn crypto_blake2b_general
 users can specify the size of the hash, and use a secret key to
@@ -201,9 +201,9 @@ crypto_blake2b_final (&ctx, hash);
 .Xr crypto_lock 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement Blake2b.
+These functions implement BLAKE2b.
 .Sh CAVEATS
-Monocypher doesn't perform any input verification.
+Monocypher does not perform any input verification.
 Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .

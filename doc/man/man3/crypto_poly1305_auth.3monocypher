@@ -183,8 +183,8 @@ Use
 .Xr crypto_verify16 3monocypher
 To compare message authentication code.
 Avoid standard buffer comparison functions.
-They don't run in constant time, and allow attackers to recover the
-MAC in relatively few tries.
+They do not run in constant time, which allows attackers to recover
+the MAC in relatively few tries.
 .Pp
 The authentication key should be wiped with
 .Xr crypto_wipe 3monocypher
