@@ -169,7 +169,7 @@ uint8_t       cipher_text[500];  /* Will be the encrypted message  */
 crypto_chacha_ctx ctx;
 crypto_chacha20_x_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 500);
-/* Wipe secrets if they're no longer needed */
+/* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        sizeof(key));
 crypto_wipe(&ctx,       sizeof(ctx));
 crypto_wipe(plain_text, sizeof(plain_text));
