@@ -23,99 +23,85 @@
 .Fa "const uint32_t ad_size"
 .Fc
 .Sh DESCRIPTION
-Storing passwords in plaintext is a serious security liability.
-Storing hashed and salted passwords is better, but still very dangerous:
-passwords simply do not have enough entropy to prevent a dedicated
-attacker from guessing them by sheer brute force.
-.Pp
-One way to prevent such attacks is to make sure hashing a password
-takes too much resources for a brute force search to be effective.
-Moreover, we would like the attacker to spend as much resources for each
-attempt as we do, even if they have access to dedicated hardware.
-.Pp
 Argon2i is a resource intensive password key derivation scheme
 optimised for the typical x86-like processor.
 It runs in constant time with respect to the contents of the password.
 .Pp
 Typical applications are password checking (for online services), and
 key derivation (for encryption).
-You can use this, for instance, to protect your private keys:
-Encrypt the private keys using a key derived from a strong passphrase.
+It can be used to encrypt private keys or password databases.
 .Pp
-The version currently provided by Monocypher has no threading support,
-so the degree of parallelism is currently limited to 1.
-This is considered good enough for most purposes anyway.
+The version provided by Monocypher has no threading support, so the
+degree of parallelism is limited to 1.
+This is considered good enough for most purposes.
 .Pp
 The arguments are:
 .Bl -tag -width Ds
 .It Fa hash
-the output hash.
-The length of the output hash must be at least 4.
-A length of 32 is recommended.
+Buffer for the output hash.
 .It Fa hash_size
-the length of the output
-.Fa hash .
-Because only fixed-length functions for constant-time comparison of
-hashes are available, it is recommended to set this argument to either
-16, 32 or 64.
+The length of the output
+.Fa hash
+in bytes.
+This argument should be set to 16, 32 or 64 for compatibility with the
+.Fn crypto_verify*
+constant time comparison functions.
 .It Fa work_area
-The address of a work area for the algorithm.
-It must be big enough to hold
+Temporary buffer for the algorithm.
+Must be
 .Fa nb_blocks
-blocks and suitably aligned for 64-bit integers.
-A block is 1024 bytes in length.
+× 1024 bytes big, and suitably aligned for 64-bit integers.
 .Fn malloc
 should yield a suitable chunk of memory.
+.Pp
+The work area should be wiped after use.
 .It Fa nb_blocks
-the number of blocks for the work area.
-It must be at least 8.
-A value of 100000 (one hundred megabytes) is recommended.
+The number of blocks for the work area.
+Must be at least 8.
+A value of 100000 (one hundred megabytes) is a good starting point.
 If the computation takes too long, reduce this number.
-If the computation does not take long enough, increase this number.
-If the computation still does not take long enough, increase
+If it is too fast, increase this number.
+If it is still too fast with all available memory, increase
 .Fa nb_iterations .
 .It Fa nb_iterations
-the number of iterations.
+The number of iterations.
 It must be at least 1.
 A value of 3 is recommended.
 .It Fa password
-the password to hash.
-You will likely want to wipe this using
+The password to hash.
+It should be wiped with
 .Xr crypto_wipe 3monocypher
-after hashing it.
+after being hashed.
 .It Fa password_size
 the length of
 .Fa password .
 .It Fa salt
 a password salt.
-This is a random value generated separately for each password to be
-hashed.
-It must be at least 8 bytes long.
-A length of 16 is recommended.
+This should be filled with random bytes, generated separately for each
+password to be hashed.
 .It Fa salt_size
 the length of
-.Fa salt .
+.Fa salt ,
+in bytes.
+Must be at least 8.
+16 is recommended.
 .It Fa key
 a key to use in the hash.
-This parameter can be
+Can be
 .Dv NULL
 if
 .Fa key_size
 is zero.
-You generally do not need this parameter, but it does have some use:
-The key is supposed to be unknown to the attacker.
+The key is generally not needed, but it does have some uses: it is
+supposed to be unknown to the attacker.
 In the context of password derivation, it would stay unknown
-.Em even if an attacker steals your password database .
-This may be possible if that key is stored separately from your password
-database (like on a separate server, and never written on the main
-server's disks).
-Note: to change the key, you have to re-hash the user's password,
+.Em even if an attacker steals the password database .
+This may be possible if that key is stored on a separate server.
+Note: changing the key, requires hashing the user's password,
 which is only possible upon user login.
 .It Fa key_size
-the length of the key.
-This is normally zero, unless you use the
-.Fa key
-parameter.
+the length of the key, in bytes.
+Must be zero if there is no key.
 .It Fa ad
 additional data.
 This is additional data that goes into the hash, similar to the
@@ -149,14 +135,13 @@ The hardness of the computation can be chosen thus:
 Decide how long the computation should take.
 For user authentication, this is typically somewhere between half a
 second (convenient) and several seconds (paranoid).
-You may likely have to do some benchmarking which parameters take how
-long.
 .It
 Try to hash a password with 3 iterations and 100000 blocks (one hundred
 megabytes) to establish a baseline.
-See above for adjusting
+Adjust
 .Fa nb_blocks
-and
+first.
+If using all available memory is not enough, increase
 .Fa nb_iterations .
 .El
 .Sh RETURN VALUES
@@ -165,35 +150,36 @@ This function returns nothing.
 This example shows how to hash a password with the recommended baseline
 parameters:
 .Bd -literal -offset indent
-uint8_t hash[32], salt[16];
-const uint32_t nb_blocks = 100000;
-const uint32_t nb_iterations = 3;
-void *work_area = malloc(nb_blocks * 1024);
-const char *password = "TooManySecrets";
-
-if (work_area == NULL) {
-        /* handle malloc() failure */
+uint8_t hash[32],                           /* output hash     */
+const uint8_t *password;                    /* user's password */
+uint8_t        password_size;               /* password length */
+const uint8_t  salt[16];                    /* random salt     */
+const uint32_t nb_blocks = 100000;          /* 100 megabytes   */
+const uint32_t nb_iterations = 3;           /* 3 iterations    */
+void *work_area = malloc(nb_blocks * 1024); /* work area       */
+if (work_area == 0) {
+    /* handle malloc() failure */
 }
-
-/* ...randomly generate salt here... */
-
-crypto_argon2i(hash, sizeof(hash),
-    work_area, nb_blocks, nb_iterations,
-    password, strlen(password),
-    salt, sizeof(salt),
-    NULL, 0,
-    NULL, 0);
-crypto_wipe(password, strlen(password));
+crypto_argon2i(hash, 32,
+               work_area, nb_blocks, nb_iterations,
+               password, password_size,
+               salt, 16,
+               0, 0,  /* no key              */
+               0, 0); /* no additional data  */
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(password , password_size   );
+crypto_wipe(work_area, nb_blocks * 1024);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_verify16 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
+.Sh STANDARDS
+This function implements Argon2i.
+An RFC draft is being maintained.
 .Sh CAVEATS
 Any deviation from the specified input and output length ranges results
 in
-.Sy undefined behavior .
+.Sy undefined behaviour .
 Make sure your inputs are correct.
-.Sh IMPLEMENTATION DETAILS
-This function implements Argon2i.
