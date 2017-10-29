@@ -27,7 +27,7 @@ The output
 .Fa out
 is a cryptographically secure random number
 .Em if
-there is enough entropy in in the input
+there is enough entropy in the input
 .Fa key .
 X25519 shared secrets have enough entropy.
 The input
@@ -38,6 +38,17 @@ It does not have to be random.
 .Sh RETURN VALUES
 This function returns nothing.
 It cannot fail.
+.Sh EXAMPLES
+Simple hash.
+.Bd -literal -offset indent
+const uint8_t key[32] /* Must have enough entropy           */
+const uint8_t in [16] /* Does not have to be random         */
+uint8_t       out[32] /* will be random iff the above holds */
+crypto_chacha20_H(out, key, in);
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(key, 32);
+crypto_wipe(in , 16);
+.Ed
 .Sh SEE ALSO
 .Xr crypto_chacha20_encrypt 3monocypher ,
 .Xr crypto_key_exchange 3monocypher ,
