@@ -37,7 +37,7 @@ HChacha20 to get a suitably random shared key.
 .Pp
 The
 .Fn crypto_x25519_public_key
-function eterministically computes the public key from a random
+function deterministically computes the public key from a random
 .Fa secret_key .
 See
 .Xr intro 3monocypher
