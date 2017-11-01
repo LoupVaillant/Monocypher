@@ -962,10 +962,12 @@ void crypto_argon2i(u8       *hash,      u32 hash_size,
     store_block(final_block, blocks + (nb_blocks - 1));
     extended_hash(hash, hash_size, final_block, 1024);
 
-    crypto_wipe(final_block , 1024);
-    // Note: the work area is *not* wiped by default.  It would erase
-    // the final hash if the user wanted to use it to store the final
-    // hash, for instance to conserve stack space.
+    // wipe final block and work area
+    crypto_wipe(final_block, 1024);
+    volatile u64 *p = (u64*)work_area;
+    FOR (i, 0, 128 * nb_blocks) {
+        p[i] = 0;
+    }
 }
 
 ////////////////////////////////////
