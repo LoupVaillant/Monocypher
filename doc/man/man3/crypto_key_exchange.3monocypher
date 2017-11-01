@@ -26,88 +26,44 @@
 .Fa "const uint8_t their_public_key[32]"
 .Fc
 .Sh DESCRIPTION
-Key exchange works thus: Alice and Bob each have a key pair (a secret
-key and a public key).
-They know each other's public key, but they keep their own secret key
-secret.
-If Eve (an attacker) learns Alice's secret key, she could compute the
-shared secret between Alice and anyone else (including Bob), allowing
-her to read and forge correspondence.
-Protect your secret key.
-.Pp
-Furthermore, Alice and Bob must know each other's public keys
-.Em beforehand .
-If they do not, and try to communicate those keys over an insecure
-channel, Eve might intercept their communications (Man-in-the-middle
-attack) and provide false public keys.
-There are various ways to learn of each other's public keys (crypto
-parties, certificate authorities, web of trust…), each with their own
-advantages and drawbacks.
-.Pp
 The
 .Fn crypto_key_exchange
 function computes a shared key with your secret key and their public
 key, suitable for the
-.Xr crypto_lock 3monocypher ,
-.Xr crypto_unlock 3monocypher ,
-.Xr crypto_aead_lock 3monocypher ,
-and
-.Xr crypto_aead_unlock 3monocypher
-functions.
-It performs an X25519 key exchange, then hashes the shared secret (with
-HChacha20) to get a suitably random shared key.
-.Pp
-Keep in mind that if either of the long term secret keys leaks, it
-may compromise
-.Em all past messages !
-If you want forward secrecy, you will need to exchange temporary public
-keys, then compute your shared secret with
-.Em them .
+.Xr crypto_lock 3monocypher
+family of functions.
+It performs an X25519 key exchange, then hashes the shared secret with
+HChacha20 to get a suitably random shared key.
 .Pp
 The
 .Fn crypto_x25519_public_key
-function deterministically computes the public key from
+function deterministically computes the public key from a random
 .Fa secret_key .
-Make sure the secret key is random.
 See
 .Xr intro 3monocypher
-for advice about generating random bytes (basically, use your operating
-system's random number generator).
+about generating random bytes (use the operating system's random
+number generator).
 .Pp
 The
 .Fn crypto_x25519
-function allows doing a raw X25519 key exchange.
-This is a low-level function.
-Unless you
-.Em really
-know what you are doing, you should use
-.Fn crypto_key_exchange
-instead.
-This function computes a shared secret with your secret key
+function computes a shared secret with
 .Fa your_secret_key
-and the other party's public key
+and
 .Fa their_public_key .
 .Sy Warning: the shared secret is not cryptographically random .
 Do not use it directly as a session key.
-You need to hash it first.
-Any cryptographically secure hash will do.
-The
-.Fn crypto_key_exchange
-function uses HChacha20 via
-.Xr crypto_chacha20_H 3monocypher ,
-which is not a general purpose hash, but here it works just fine.
+Hash it first with
+.Xr crypto_chacha20_H
+or
+.Xr crypto_blake2b .
 .Sh RETURN VALUES
 The
 .Fn crypto_key_exchange
 and
 .Fn crypto_x25519
-functions return zero on success.
-The return value serves as a security check: there are public keys that
-force the shared key to a known constant (the HChacha20 of zero in the
-case of
-.Fn crypto_key_exchange
-or all-zero in the case of
-.Fn crypto_x25519 ) .
+functions return zero on success, or -1 on failure.
+The return value serves as a security check: some public keys force
+the shared key to a known constant.
 This never happens with legitimate public keys, but if the ones you
 process are not known to be trustworthy, check the return value.
 .Pp
@@ -116,53 +72,71 @@ The
 function returns nothing.
 It cannot fail.
 .Sh EXAMPLES
-This example outlines how to generate a private key and a public key,
-then perform a key exchange.
+Generate a public key from a randomly generated secret key:
 .Bd -literal -offset indent
-uint8_t sk[32], pk[32];
-uint8_t theirpk[32];
-uint8_t shared_key[32];
-
-/* ...randomly generate sk here... */
+const uint8_t sk[32]; /* Random secret key */
+uint8_t       pk[32]; /* Public key        */
 crypto_x25519_public_key(pk, sk);
-
-/* ...read their public key... */
-
-if (crypto_key_exchange(shared_key, sk, theirpk) != 0) {
-        /* ...handle weak key (see RETURN VALUES)...
-         * You probably want to stop processing now.
-         */
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(sk, 32);
+.Ed
+.Pp
+Generate a shared, symmetric key with your secret key and their public
+key.
+(The other party will generate the same shared key with your public
+key and their secret key.)
+.Bd -literal -offset indent
+const uint8_t their_pk  [32]; /* Their public key   */
+const uint8_t your_sk   [32]; /* Your secret key    */
+uint8_t       shared_key[32]; /* Shared session key */
+if (crypto_key_exchange(shared_key, your_sk, their_pk) != 0) {
+    /* Their public key is evil.     */
+    /* The exchange must be aborted. */
 }
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(your_sk, 32);
+.Ed
+.Pp
+Generate
+.Em two
+shared keys with your secret key and their public key.
+(This can help nonce management for full duplex communications.)
+.Bd -literal -offset indent
+const uint8_t their_pk     [32]; /* Their public key          */
+const uint8_t your_sk      [32]; /* Your secret key           */
+uint8_t       shared_secret[32]; /* Shared secret (NOT a key) */
+if (crypto_x25519(shared_secret, your_sk, their_pk) != 0) {
+    /* Their public key is evil.     */
+    /* The exchange must be aborted. */
+}
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(your_sk, 32);
 
-/* You will want to wipe the secret key unless you specifically need
- * it for another key exchange.
- */
-crypto_wipe(sk, sizeof(sk));
-
-/* shared_key can now be used as key, for example in
- * crypto_lock/crypto_unlock.
- */
+uint8_t shared_keys[64];           /* Two shared session keys  */
+uint8_t *key_1 = shared_keys;      /* Shared key 1             */
+uint8_t *key_2 = shared_keys + 32; /* Shared key 2             */
+crypto_blake2b(shared_keys, shared_secret, 32);
+crypto_wipe(shared_secret, 32);    /* wipe the unneeded secret */
 .Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,
 .Xr intro 3monocypher
-.Sh CAVEATS
-No implementation advice can be given for implementing forward secrecy
-using temporary public/private key pairs due to unfamiliarity of the
-author with that matter.
-.Pp
-X25519 generally encodes all numbers in little endian.
-This may require special attention when interoperating with other
-cryptographic libraries that expose an ECDH interface consuming only
-big integers in big endian representation, notably mbedTLS.
-.Sh IMPLEMENTATION DETAILS
-These functions implement X25519.
+.Sh STANDARDS
+These functions implement X25519, described in RFC 7748.
 The
 .Fn crypto_key_exchange
-function utilizes HChacha20 as well.
-.Pp
-Note that the most significant bit of the public key is systematically
-ignored.
+function uses HChacha20 as well.
+.Sh SECURITY CONSIDERATIONS
+If either of the long term secret keys leaks, it
+may compromise
+.Em all past messages .
+Users who want forward secrecy need to generate temporary public keys,
+send them to one another, (use
+.Xr crypto_lock 3monocypher
+to authenticate them), and compute a shared secret with those
+temporary keys.
+.Sh IMPLEMENTATION DETAILS
+The most significant bit of the public key is systematically ignored.
 It is not needed because every public key should be smaller than
 2^255-19, which fits in 255 bits.
 If another implementation of X25519 gives you a key that's not fully
