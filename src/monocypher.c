@@ -1695,7 +1695,9 @@ int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
 {
     u8 real_mac[16];
     crypto_lock_final(ctx, real_mac);
-    return crypto_verify16(real_mac, mac);
+    int mismatch = crypto_verify16(real_mac, mac);
+    crypto_wipe(real_mac, 16);
+    return mismatch;
 }
 
 void crypto_aead_lock(u8        mac[16],
