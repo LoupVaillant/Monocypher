@@ -50,16 +50,6 @@
 .Fa "size_t text_size"
 .Fc
 .Sh DESCRIPTION
-Encryption makes your messages unreadable to eavesdroppers.
-Authentication ascertain the origin and integrity of the messages you
-read.
-Both are important.
-Without encryption, you give away all your secrets, and without
-authentication, you can fall prey to forgeries (messages that look
-legitimate, but actually come from an attacker).
-A clever attacker may even leverage forgeries to steal your secrets.
-Always authenticate your messages.
-.Pp
 The
 .Fn crypto_lock
 function encrypts and authenticates a plaintext.
@@ -69,72 +59,67 @@ function.
 The arguments are:
 .Bl -tag -width Ds
 .It Fa key
-a 32-byte session key, shared between you and the recipient.
-It must be secret (unknown to the attacker) and random (unpredictable to
-an attacker).
-Of course, one does not simply transmit this key over the network.
-Meeting physically or performing a Diffie Hellman key exchange (see
-.Xr crypto_key_exchange 3monocypher )
-are preferable methods.
+A 32-byte session key, shared between the sender and the recipient.
+It must be secret and random.
+Different methods can be used to produce and exchange this key, such
+as Diffie Hellman key exchange, password key derivation (the password
+must be communicated on a secure channel), or even meeting physically.
+See
+.Xr crypto_key_exchange 3monocypher
+for key exchange, and
+.Xr crypto_argon2i 3monocypher
+for password key derivation.
 .It Fa nonce
-a 24-byte number, used only once with any given session key.
-It does not have to be secret or random.
-But you must
-.Em never
-reuse that number with the same key.
-If you do, the attacker will have access to the XOR of 2 different
-messages, allowing decryption,
-.Em and
-the ability to forge messages in your stead.
+A 24-byte number, used only once with any given session key.
+It does not need to be secret or random, but it does have to be
+unique.
+.Em Never
+use the same nonce twice with the same key.
+This would reveal the XOR of 2 different messages, which allows
+decryption and forgeries.
 The easiest (and recommended) way to generate this nonce is to
 select it at random.
 See
 .Xr intro 3monocypher
-about random number generation (in short: use your operating
-system's random number generator).
+about random number generation (use your operating system's random
+number generator).
 .It Fa mac
 a 16-byte
 .Em message authentication code (MAC) ,
-that only you could have produced.
-This guarantee cannot be upheld once an attacker learns your session
-key, or sees 2 messages with the same nonce.
-Seriously, do not reuse the nonce.
+that can only be produced by someone who know the session key.
+This guarantee cannot be upheld if a nonce has been reused with the
+session key, because doing so allows the attacker to learn the
+authentication key associated with that nonce.
 The MAC is intended to be sent along with the ciphertext.
 .It Fa plain_text
-the secret you want to send.
-Of course, it must be unknown to an attacker.
-Keep in mind however that the
-.Em length
-of the plaintext, unlike its content, is not made secret by these
-functions.
-Make sure your protocol does not leak secret information with the length
-of messages.
+The secret message.
+Its content will be kept hidden from attackers.
+Its length however, will
+.Em not .
+Make sure message lengths do not leak secret information.
 This has happened before with variable-length voice
 encoding software.
 Solutions to mitigate this include constant-length encodings and
 padding.
 .It Fa cipher_text
-the encrypted message (same length as the plaintext
-message).
-Transmit it over the network so the recipient can decrypt
-and read it.
-Note:
-.Fa cipher_text is allowed to have the same value as
-.Fa plain_text .
-If so, encryption or decryption will happen in place.
+The encrypted message, to be transmitted over the network.
 .El
 .Pp
-Unlocking proceeds in two steps: first, we authenticate the ciphertext
-with the provided MAC.
-If it has been corrupted, the
-.Fn crypto_aead_unlock
-function returns immediately,
-without decrypting the message.
-If the message is genuine, the
-.Fn crypto_aead_unlock
-function decrypts the ciphertext.
+The
+.Fa cipher_text
+and
+.Fa plain_text
+arguments may point to the same buffer for in-place encryption.
+Otherwise, the buffers they point to must not overlap.
+.Pp
+The
+.Fn crypto_unlock
+function first checks the integrity of an encrypted message.
+If it has been corrupted,
+.Fn crypto_unlock
+returns -1 immediately.
+Otherwise, it decrypts the message, then returns zero.
 .Em Always check the return value .
-.\" AEAD
 .Pp
 The
 .Fn crypto_aead_lock
@@ -148,74 +133,30 @@ permitting additional data.
 Additional data is authenticated, but
 .Em not
 encrypted.
-.Pp
-.Bf Em
-Note: using these functions is discouraged:
-if the data you are transmitting is worth authenticating, it is probably
-worth encrypting as well.
-Do so if you can, using
-.Fn crypto_lock
-and
-.Fn crypto_unlock .
-.Ef
-.Pp
-If you must send unencrypted data, remember that you cannot trust
-unauthenticated data,
-.Em including the length of the additional data .
-If you transmit that length over the wire, you must authenticate it.
-(The easiest way to do so is to append that length to the additional
-data before you call
-.Fn crypto_aead_lock
-or
-.Fn crypto_aead_unlock ) .
-Otherwise, an attacker could provide a false length, effectively moving
-the boundary between the additional data and the ciphertext or possibly
-causing buffer overflows.
-If however the length of the additional data is implicit (fixed size)
-or self-contained (such as length appending or null termination), you do
-not need to authenticate it explicitly.
-.Pp
-The
-.Fn crypto_aead_lock
-function encrypts and authenticates a plaintext and authenticates
-additional data.
-It can be decrypted by the
-.Fn crypto_aead_unlock
-function.
-Arguments that are already documented above will not be repeated here.
+This is used to authenticate relevant data that cannot be encrypted.
 The arguments are:
 .Bl -tag -width Ds
 .It Fa ad
-additional data.
-This can be any arbitrary byte sequence.
+Additional data to authenticate.
 It will not be encrypted.
+May be NULL if
+.Fa ad_size
+is zero.
+Setting
+.Fa ad_size
+to zero gives the same results as
+.Fn crypto_lock
+and
+.Fn crypto_unlock .
 .It Fa ad_size
 length of the additional data.
+.Sy That length is not authenticated.
+If it is transmitted over the wire, it should be appended to the
+additional data, and authenticated with it.
+Otherwise an attacker could provide a false length, effectively moving
+the boundary between the additional data and the ciphertext.
+This may cause buffer overflows in some programs.
 .El
-.Pp
-If
-.Fa ad
-is
-.Dv NULL
-and
-.Fa ad_size
-is zero, these functions behave like
-.Xr crypto_lock 3monocypher
-and
-.Xr crypto_unlock 3monocypher .
-This can be useful if your protocol somehow requires you to
-send unencrypted data.
-.Pp
-Unlocking proceeds in two steps: first, we authenticate the ciphertext
-and additional data with the provided MAC.
-If it has been corrupted, the
-.Fn crypto_aead_unlock
-function returns immediately,
-without decrypting the message.
-If the message is genuine, the
-.Fn crypto_aead_unlock
-function decrypts the ciphertext.
-.Em Always check the return value .
 .Pp
 An incremental interface is available; see
 .Xr crypto_lock_init 3monocypher .
@@ -239,79 +180,93 @@ mismatched the combination of
 .Fa ad
 and
 .Fa cipher_text ) .
-Corruption can happen because of transmission errors, programmer error
-(e.g. failed to parse the protocol properly and thus supplied only part
-of the expected
-.Fa cipher_text )
-or an attacker's interference.
+Corruption can happen because of transmission errors, programmer
+error, or an attacker's interference.
 .Sh EXAMPLES
 Encryption:
 .Bd -literal -offset indent
-uint8_t key[32], nonce[24];
-uint8_t mac[16];
-char plain_text[] = "This does not have to be literally text.";
-uint8_t cipher_text[51]; /* strlen(plain_text) + terminating NUL */
-
-/* ...Generate a key, as well as a random nonce... */
-
-crypto_lock(mac, cipher_text, key, nonce, plain_text,
-        sizeof(plain_text));
-
-/* Once you're done with encryption, wipe the key from memory */
-crypto_wipe(key, sizeof(key));
-
-/* You can now transmit over the network:
- * - cipher_text
- * - nonce
- * - mac
- */
+const uint8_t  key  [32];    /* Random, secret session key  */
+const uint8_t  nonce[24];    /* Use only once per key       */
+const uint8_t *plain_text;   /* Secret message              */
+size_t         text_size;    /* Message size (NOT secret)   */
+uint8_t        mac  [16];    /* Message authentication code */
+uint8_t       *cipher_text;  /* Encrypted message           */
+crypto_lock(mac, cipher_text, key, nonce, plain_text, text_size);
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(plain_text, text_size);
+crypto_wipe(key, 32);
+/* Transmit cipher_text, nonce, and mac over the network */
+.Ed
+.Pp
+Encryption (in place):
+.Bd -literal -offset indent
+const uint8_t  key  [32];  /* Random, secret session key  */
+const uint8_t  nonce[24];  /* Use only once per key       */
+uint8_t       *text;       /* Secret message              */
+size_t         text_size;  /* Message size (NOT secret)   */
+uint8_t        mac  [16];  /* Message authentication code */
+uint8_t       *cipher_text;/* Encrypted message           */
+crypto_lock(mac, text, key, nonce, text, text_size);
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(plain_text, text_size);
+crypto_wipe(key, 32);
+/* Transmit cipher_text, nonce, and mac over the network */
 .Ed
 .Pp
 To decrypt the above:
 .Bd -literal -offset indent
-uint8_t key[32], nonce[24];
-uint8_t mac[16];
-char plain_text[51]; /* strlen(plain_text) + terminating NUL */
-uint8_t cipher_text[51];
-int ret;
-
-/* Ensure that the key and nonce match the ones used in the
- * encryption process.
- *
- * Now read mac and cipher_text from the network; nonce as well if it
- * was sent along.
- */
-
-ret = crypto_unlock(plain_text, key, nonce, mac, cipher_text,
-        sizeof(cipher_text));
-/* Once you're done with decryption, wipe the key from memory */
-crypto_wipe(key, sizeof(key));
-if (ret != 0) {
-        /* Message corrupted; possibly an attacker is interfering
-         * with the connection.
-         */
+const uint8_t  key  [32];    /* Same as the above         */
+const uint8_t  nonce[24];    /* Same as the above         */
+const uint8_t  mac  [16];    /* Received from the network */
+const uint8_t *cipher_text;  /* Encrypted message         */
+size_t         text_size;    /* Message size (NOT secret) */
+uint8_t       *plain_text;   /* Secret message            */
+if (crypto_unlock(plain_text, key, nonce, mac,
+                  cipher_text, text_size)) {
+    /* The message is corrupted */
+    /* Abort the decryption     */
 }
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(plain_text, text_size);
+crypto_wipe(key, 32);
+.Ed
+.Pp
+To decrypt the above (in place):
+.Bd -literal -offset indent
+const uint8_t  key  [32];    /* Same as the above         */
+const uint8_t  nonce[24];    /* Same as the above         */
+const uint8_t  mac  [16];    /* Received from the network */
+uint8_t       *text;         /* Message to decrypt        */
+size_t         text_size;    /* Message size (NOT secret) */
+if (crypto_unlock(text, key, nonce, mac, text, text_size)) {
+    /* The message is corrupted */
+    /* Abort the decryption     */
+}
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(text, text_size);
+crypto_wipe(key, 32);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock_init 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
+.Sh STANDARDS
+These functions implement the XChacha20 (encryption) and Poly1305
+(MAC) primitives, described in RFC 7539.
 .Sh IMPLEMENTATION DETAILS
-These functions implement the XChacha20 (encryption) and Poly1305 (MAC)
-primitives.
-.Pp
 The
 .Fn crypto_aead_lock
 and
 .Fn crypto_aead_unlock
-functions do not authenticate the length themselves for simplicity,
-compatibility, and efficiency reasons:
-most of the time, the length of the additional data is either fixed or
-self-contained, and thus outside of attacker control.
-It also makes them compatible with
+functions do not authenticate the length themselves to make them
+compatible with
 .Fn crypto_lock
 and
 .Fn crypto_unlock
-when the size of the additional data is zero, and simplifies the
-implementation.
+when the size of the additional data is zero.
+This also simplifies the implementation.
+.Pp
+This rarely causes problems in practice, because most of the time, the
+length of the additional data is either fixed or self-contained, and
+thus outside of attacker control.
