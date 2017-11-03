@@ -62,7 +62,7 @@ The arguments are:
 A 32-byte session key, shared between the sender and the recipient.
 It must be secret and random.
 Different methods can be used to produce and exchange this key, such
-as Diffie Hellman key exchange, password key derivation (the password
+as Diffie-Hellman key exchange, password key derivation (the password
 must be communicated on a secure channel), or even meeting physically.
 See
 .Xr crypto_key_exchange 3monocypher
@@ -86,7 +86,7 @@ number generator).
 .It Fa mac
 a 16-byte
 .Em message authentication code (MAC) ,
-that can only be produced by someone who know the session key.
+that can only be produced by someone who knows the session key.
 This guarantee cannot be upheld if a nonce has been reused with the
 session key, because doing so allows the attacker to learn the
 authentication key associated with that nonce.
@@ -144,7 +144,7 @@ May be NULL if
 is zero.
 Setting
 .Fa ad_size
-to zero gives the same results as
+to zero yields the same results as
 .Fn crypto_lock
 and
 .Fn crypto_unlock .
@@ -253,7 +253,11 @@ crypto_wipe(key, 32);
 .Xr intro 3monocypher
 .Sh STANDARDS
 These functions implement the XChacha20 (encryption) and Poly1305
-(MAC) primitives, described in RFC 7539.
+(MAC) primitives.
+Chacha20 and Poly1305 are described in RFC 7539.
+XChacha20 derives from Chacha20 the same way XSalsa20 derives from
+Salsa20, and benefits from the same security reduction (proven secure
+as long as Chacha20 itself is secure).
 .Sh IMPLEMENTATION DETAILS
 The
 .Fn crypto_aead_lock
