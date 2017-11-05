@@ -95,7 +95,6 @@ You do not have to wipe the context structs with
 Signatures made with this interface are compatible with the direct
 interface and vice-versa.
 .Sh RETURN VALUES
-The
 .Fn crypto_sign_init_first_pass ,
 .Fn crypto_sign_init_second_pass ,
 .Fn crypto_sign_update ,
@@ -103,12 +102,11 @@ The
 .Fn crypto_check_init
 and
 .Fn crypto_check_update
-functions return nothing.
+return nothing.
 They cannot fail.
 .Pp
-The
 .Fn crypto_check_final
-function returns zero for legitimate messages and -1 for forgeries.
+returns zero for legitimate messages and -1 for forgeries.
 .Sh EXAMPLES
 This example signs a random message and verifies the signature.
 .Bd -literal -offset indent

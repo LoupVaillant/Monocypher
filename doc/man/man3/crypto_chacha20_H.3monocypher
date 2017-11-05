@@ -13,9 +13,8 @@
 .Fa "const uint8_t in[16]"
 .Fc
 .Sh DESCRIPTION
-The
 .Fn crypto_chacha20_H
-function provides a not-so-cryptographic hash.
+provides a not-so-cryptographic hash.
 It may be used for some specific purposes, such as X25519 key
 derivation, or XChacha20 initialisation.
 If in doubt, do not use directly.
@@ -53,7 +52,9 @@ crypto_wipe(in , 16);
 .Xr crypto_chacha20_encrypt 3monocypher ,
 .Xr crypto_key_exchange 3monocypher ,
 .Xr intro 3monocypher
+.Sh STANDARDS
+This function implements HChacha20.
+HChacha20 derives from Chacha20 the same way HSalsa20 derives from
+Salsa20.
 .Sh CAVEATS
 .Sy This is not a general-purpose cryptographic hash function .
-.Sh IMPLEMENTATION DETAILS
-This function implements HChacha20.

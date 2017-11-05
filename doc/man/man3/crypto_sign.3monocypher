@@ -29,9 +29,8 @@
 .Fa "size_t message_size"
 .Fc
 .Sh DESCRIPTION
-The
 .Fn crypto_sign_public_key
-function deterministically computes a public key from the specified
+deterministically computes a public key from the specified
 secret key.
 That key must be random.
 See
@@ -75,16 +74,14 @@ arguments may overlap.
 An incremental interface is available; see
 .Xr crypto_sign_init_first_pass 3monocypher .
 .Sh RETURN VALUES
-The
 .Fn crypto_sign_public_key
 and
 .Fn crypto_sign
-functions return nothing.
+return nothing.
 They cannot fail.
 .Pp
-The
 .Fn crypto_check
-function returns zero for legitimate messages and -1 for forgeries.
+returns zero for legitimate messages and -1 for forgeries.
 .Sh EXAMPLES
 Generate a public key from a random secret key:
 .Bd -literal -offset indent

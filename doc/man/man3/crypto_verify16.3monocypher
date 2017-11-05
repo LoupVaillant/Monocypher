@@ -32,12 +32,11 @@ forge a message.
 This has lead to practical attacks in the past.
 .Pp
 To avoid such catastrophic failure,
-the
 .Fn crypto_verify16 ,
 .Fn crypto_verify32
 and
 .Fn crypto_verify64
-functions provide comparison functions whose timing is independent from
+provide comparison functions whose timing is independent from
 the content of their input.
 They compare the first
 16, 32, or 64 bytes of the two byte arrays

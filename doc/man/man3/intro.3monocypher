@@ -39,9 +39,8 @@ or
 This is arguably even easier to use than
 .Fn getrandom .
 .It
-Windows provides the
-.Fn CryptGenRandom
-function.
+Windows provides
+.Fn CryptGenRandom .
 .El
 .Pp
 If no easy to use system call is available on your system, you may
@@ -85,7 +84,7 @@ It is recommended to also use
 to clear secrets from memory as soon as possible to mitigate these
 dangers.
 .Ss Index
-Monocypher provides functions the following:
+Monocypher provides the following:
 .Bl -ohang -offset indent
 .It Authenticated encryption
 .Bl -tag -offset indent-two -width Ds

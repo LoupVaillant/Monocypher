@@ -102,9 +102,8 @@ authentication, it treats corrupted messages three times slower than
 the direct interface.
 Users who expect a high corruption rate may want a different approach.
 .Pp
-The
 .Fn crypto_lock_encrypt
-function encrypts or decrypts data
+encrypts or decrypts data
 .Em without authenticating it .
 It is meant as a building block.
 Used with
@@ -117,19 +116,17 @@ and
 .Fn crypto_unlock_update
 instead.
 .Sh RETURN VALUES
-The
 .Fn crypto_lock_init ,
 .Fn crypto_lock_auth ,
 .Fn crypto_lock_encrypt ,
 .Fn crypto_lock_update ,
 and
 .Fn crypto_lock_final
-functions return nothing.
+return nothing.
 They cannot fail.
 .Pp
-The
 .Fn crypto_unlock_final
-function returns 0 on success or -1 if the message was corrupted.
+returns 0 on success or -1 if the message was corrupted.
 Corruption can happen because of transmission errors, programmer
 error, or attacker interference.
 .Em Always check the return value .

@@ -50,12 +50,10 @@
 .Fa "size_t text_size"
 .Fc
 .Sh DESCRIPTION
-The
 .Fn crypto_lock
-function encrypts and authenticates a plaintext.
-It can be decrypted by the
-.Fn crypto_unlock
-function.
+encrypts and authenticates a plaintext.
+It can be decrypted by
+.Fn crypto_unlock .
 The arguments are:
 .Bl -tag -width Ds
 .It Fa key
@@ -112,20 +110,18 @@ and
 arguments may point to the same buffer for in-place encryption.
 Otherwise, the buffers they point to must not overlap.
 .Pp
-The
 .Fn crypto_unlock
-function first checks the integrity of an encrypted message.
+first checks the integrity of an encrypted message.
 If it has been corrupted,
 .Fn crypto_unlock
 returns -1 immediately.
 Otherwise, it decrypts the message, then returns zero.
 .Em Always check the return value .
 .Pp
-The
 .Fn crypto_aead_lock
 and
 .Fn crypto_aead_unlock
-functions are variants of
+are variants of
 .Fn crypto_lock
 and
 .Fn crypto_unlock ,
@@ -161,18 +157,15 @@ This may cause buffer overflows in some programs.
 An incremental interface is available; see
 .Xr crypto_lock_init 3monocypher .
 .Sh RETURN VALUES
-The
 .Fn crypto_lock
 and
 .Fn crypto_aead_lock
-functions return nothing.
+return nothing.
 They cannot fail.
-The
 .Fn crypto_unlock
 and
 .Fn crypto_aead_unlock
-functions return 0 on success or -1 if the message was corrupted
-(i.e.
+return 0 on success or -1 if the message was corrupted (i.e.
 .Fa mac
 mismatched the combination of
 .Fa key ,
@@ -259,12 +252,10 @@ XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
 .Sh IMPLEMENTATION DETAILS
-The
 .Fn crypto_aead_lock
 and
 .Fn crypto_aead_unlock
-functions do not authenticate the length themselves to make them
-compatible with
+do not authenticate the length themselves to make them compatible with
 .Fn crypto_lock
 and
 .Fn crypto_unlock
