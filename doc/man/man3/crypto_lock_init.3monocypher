@@ -80,7 +80,7 @@ is used for both).
 .It
 Authentication with
 .Fn crypto_lock_auth .
-This authenticates (or verifies) aditional data, if any.
+This authenticates (or verifies) additional data, if any.
 This step is optional.
 .It
 Update, with
@@ -133,13 +133,13 @@ The
 function returns 0 on success or -1 if the message was corrupted.
 Corruption can happen because of transmission errors, programmer
 error, or attacker interference.
-.Em Allways check the return value.
+.Em Always check the return value.
 .Sh EXAMPLES
 Encryption:
 .Bd -literal -offset indent
 const uint8_t key        [ 32]; /* session key                 */
 const uint8_t nonce      [ 32]; /* unique per session key      */
-const uint8_t ad         [500]; /* optionnal aditional data    */
+const uint8_t ad         [500]; /* optional additional data    */
 const uint8_t plain_text [500]; /* secret message              */
 uint8_t       cipher_text[500]; /* encrypted message           */
 uint8_t       mac        [ 16]; /* message authentication code */
@@ -149,7 +149,7 @@ crypto_lock_ctx ctx;
 crypto_lock_init(&ctx, key, nonce);
 crypto_wipe(key, 32);      /* wipe the key if no longer needed */
 
-/* Authenticate aditional data (if any) */
+/* Authenticate additional data, if any */
 for (size_t i = 0; i < 500; i += 100) {
     crypto_lock_auth(&ctx, ad + i, 100);
 }
@@ -170,7 +170,7 @@ To decrypt the above:
 const uint8_t key        [ 32]; /* session key              */
 const uint8_t nonce      [ 32]; /* unique per session key   */
 const uint8_t mac        [ 16]; /* transmitted MAC          */
-const uint8_t ad         [500]; /* optionnal aditional data */
+const uint8_t ad         [500]; /* optional additional data */
 const uint8_t cipher_text[500]; /* encrypted message        */
 uint8_t       plain_text [500]; /* secret message           */
 
@@ -179,7 +179,7 @@ crypto_lock_ctx ctx;
 crypto_lock_init(&ctx, key, nonce);
 crypto_wipe(key, 32);   /* wipe the key if no longer needed */
 
-/* Authenticate aditional data (if any) */
+/* Authenticate additional data, if any */
 for (size_t i = 0; i < 500; i += 100) {
     crypto_lock_auth(&ctx, ad + i, 100);
 }
