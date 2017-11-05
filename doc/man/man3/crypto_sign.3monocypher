@@ -108,7 +108,11 @@ Check the above:
 const uint8_t pk       [ 32]; /* their public key   */
 const uint8_t message  [500]; /* signed message     */
 const uint8_t signature[ 64]; /* signature to check */
-crypto_check(signature, pk, message, 500);
+if (crypto_check(signature, pk, message, 500)) {
+    /* message is corrupted, abort processing */
+} else {
+    /* message is genuine */
+}
 .Ed
 .Sh SEE ALSO
 .Xr crypto_blake2b 3monocypher ,

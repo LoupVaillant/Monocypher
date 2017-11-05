@@ -57,43 +57,51 @@ and
 Prefer those more simple functions if possible.
 .Pp
 This incremental interface allows splitting up decryption and
-authentication of larger messages too large to fit into a single buffer
-or to handle individual pieces of data located in different buffers.
+authentication messages too large to fit into a single buffer, or to
+handle individual pieces of data located in different buffers.
 The arguments are the same as described for the direct interface on
 .Xr crypto_sign 3monocypher .
 .Pp
-For signing, this interface uses
-.Em five
-steps:
+The direct and incremental interface are compatible.
+They produce and accept the same signatures.
+.Pp
+Signing is done in two passes.
+This requires five steps:
 .Bl -bullet
 .It
-initialisation of the first pass, where a context for signing is set up;
+Initialisation of the first pass with
+.Fn crypto_sign_init_first_pass .
+The public key is optional, and will be recomputed if not provided.
+This recomputation doubles the execution time for short messages.
 .It
-update, where the message is processed for the first time;
+The first pass proper, with
+.Fn crypto_sign_update .
 .It
-initialisation of the second pass, where the result from the first pass
-is used to prepare the second pass;
+Initialisation of the second pass with
+.Fn crypto_sign_init_second_pass .
 .It
-update, where the message is processed for the second time;
+The second pass proper, with
+.Fn crypto_sign_update .
+The same update function is used for both passes.
 .It
-final, where we generate/check the signature.
+Signature generation with
+.Fn crypto_sign_final .
+This also wipes the context.
 .El
 .Pp
-For verification, this interface uses three steps:
+Verification requires three steps:
 .Bl -bullet
 .It
-initialization, where a context for verification is set up;
+Initialisation with
+.Fn crypto_check_init .
 .It
-update, where the message is processed;
+Update with
+.Fn crypto_check_update .
 .It
-final, where the signature is actually verified.
+Signature verification with
+.Fn crypto_check_final .
+This also wipes the context.
 .El
-.Pp
-You do not have to wipe the context structs with
-.Xr crypto_wipe 3monocypher .
-.Pp
-Signatures made with this interface are compatible with the direct
-interface and vice-versa.
 .Sh RETURN VALUES
 .Fn crypto_sign_init_first_pass ,
 .Fn crypto_sign_init_second_pass ,
@@ -108,32 +116,42 @@ They cannot fail.
 .Fn crypto_check_final
 returns zero for legitimate messages and -1 for forgeries.
 .Sh EXAMPLES
-This example signs a random message and verifies the signature.
+Sign a message:
 .Bd -literal -offset indent
-uint8_t sk[32], pk[32], msg[128];
+const uint8_t sk       [ 32]; /* secret key            */
+const uint8_t pk       [ 32]; /* public key (optional) */
+const uint8_t message  [500]; /* message to sign       */
+uint8_t       signature[ 64];
+crypto_sign_ctx ctx;
+crypto_sign_init_first_pass(&ctx, sk, pk);
+/* wipe the secret key if no longer needed */
+crypto_wipe(sk, 32);
+qfor (size_t i = 0; i < 500; i += 100) {
+    crypto_sign_update(&ctx, message + i, 100);
+}
+crypto_sign_init_second_pass(&ctx);
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_sign_update(&ctx, message + i, 100);
+}
+crypto_sign_final(&ctx, signature);
+.Ed
+.Pp
+Check the above:
+.Bd -literal -offset indent
+const uint8_t pk       [ 32]; /* public key      */
+const uint8_t message  [500]; /* message to sign */
+const uint8_t signature[ 64];
+crypto_check_ctx ctx;
+crypto_check_init(&ctx, signature, pk);
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_check_update(&ctx, message + i, 100);
+}
+if (crypto_check_final(&ctx)) {
+    /* message is corrupted, abort processing */
+} else {
+    /* message is genuine */
+}
 
-/* ...randomly generate sk and msg here... */
-crypto_sign_public_key(pk, sk);
-
-/* Signing */
-uint8_t sig[64];
-crypto_sign_ctx sctx;
-crypto_sign_init_first_pass (&sctx, sk, pk);
-/* You can wipe the key from memory as early as this.
- * Obviously, if you still need to sign more messages, do not wipe
- * the secret key yet.
- */
-crypto_wipe(sk, sizeof(sk));
-crypto_sign_update          (&sctx, msg, sizeof(msg));
-crypto_sign_init_second_pass(&sctx);
-crypto_sign_update          (&sctx, msg, sizeof(msg));
-crypto_sign_final           (&sctx, sig);
-
-/* Verifying */
-crypto_check_ctx cctx;
-crypto_check_init           (&cctx, sig, pk);
-crypto_check_update         (&cctx, msg, sizeof(msg));
-int is_valid_sig = (crypto_check_final(&cctx) == 0);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_blake2b 3monocypher ,
@@ -142,15 +160,16 @@ int is_valid_sig = (crypto_check_final(&cctx) == 0);
 .Xr crypto_sign 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
-.Sh CAVEATS
-The same caveats as documented on
-.Xr crypto_sign 3monocypher
-apply.
+.Sh STANDARDS
+These functions implement EdDSA with Curve25519 and Blake2b.
+This is the same as Ed25519, with Blake2b instead of SHA-512.
+Ed25519 is described in RFC 7748.
+.Sh SECURITY CONSIDERATIONS
+The same as documented on
+.Xr crypto_sign 3monocypher .
 .Sh IMPLEMENTATION DETAILS
-These functions provide public key signatures with a variant of Ed25519,
-which uses Blake2b as the hash instead of SHA-512.
-.Pp
-Ed25519 is designed as a two-pass algorithm.
-See
-.Xr crypto_sign 3monocypher
-for other details.
+EdDSA signatures require two passes, that cannot be performed in
+parallel.
+There are ways around this limitation, but they all lower security in
+some way.
+For this reason, Monocypher doesn't support them.
