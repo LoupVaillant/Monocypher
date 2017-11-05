@@ -62,78 +62,61 @@ These functions are variants of
 .Xr crypto_aead_lock 3monocypher
 and
 .Xr crypto_aead_unlock 3monocypher .
-Prefer those more simple functions if possible.
+Prefer those simpler functions if possible.
 .Pp
 This incremental interface allows splitting up decryption and
-authentication of larger messages too large to fit into a single buffer
+authentication of messages too large to fit into a single buffer
 or to handle individual pieces of data located in different buffers.
 The arguments are the same as described for the direct interface on
 .Xr crypto_lock 3monocypher .
 .Pp
-This interface uses three steps:
+This interface uses four steps:
 .Bl -bullet
 .It
-initialisation, where we set up a context for encryption/decryption and
-authentication;
+Initialisation with
+.Fn crypto_lock_init .
+This sets up a context for encryption or decryption (the same function
+is used for both).
 .It
-update, where we encrypt/decrypt and incrementally generate the MAC;
+Authentication with
+.Fn crypto_lock_auth .
+This authenticates (or verifies) aditional data, if any.
+This step is optional.
 .It
-final, where we generate/check the MAC.
+Update, with
+.Fn crypto_lock_update
+for encryption, or
+.Fn crypto_unlock_update
+for decryption.
+This encrypts (or decrypts) and authenticates (or verifies) part of
+the secret message.
+.It
+Final, with
+.Fn crypto_lock_final
+to generate the MAC, or
+.Fn crypto_unlock_final
+to verify the MAC.
 .El
 .Pp
-Because the incremental interface interleaves both encryption and
-authentication,
-.Sy a message with a mismatched MAC is three times slower
-to process than when using the direct interface.
-The direct interface checks the MAC first and only then proceeds to
-decrypt.
-If you expect to frequently encounter messages whose MAC mismatches,
-especially large messages, you may want to forgo the incremental
-interface for a different approach.
-.Pp
-.Sy Both encryption and decryption
-are initialized with
-.Fn crypto_lock_init .
-If you need to authenticate data without encrypting like with
-.Xr crypto_aead_lock 3monocypher ,
-plaintext data can be authenticated with
-.Fn crypto_lock_auth .
-Calls to
-.Fn crypto_lock_auth
-.Em can
-be interleaved with calls to
-.Fn crypto_lock_update
-and
-.Fn crypto_unlock_update .
-.Pp
-.Sy For encryption ,
-.Fn crypto_lock_update
-authenticates and encrypts the data;
-.Fn crypto_lock_final
-generates the MAC and wipes the context.
-.Sy For decryption ,
-.Fn crypto_unlock_update
-authenticates and decrypts the data;
-.Fn crypto_unlock_final
-checks the MAC.
-.Em Always check the return value .
+Because the incremental interface interleaves encryption and
+authentication, it treats corrupted messages three times slower than
+the direct interface.
+Users who expect a high corruption rate may want a different approach.
 .Pp
 The
 .Fn crypto_lock_encrypt
 function encrypts or decrypts data
 .Em without authenticating it .
-You will likely not require this function unless you wish to implement
-most of the actual AEAD work yourself.
-The
+It is meant as a building block.
+Used with
+.Fn crypto_lock_auth ,
+it enables various AEAD constructions.
+Most users don't need it.
+Prefer
 .Fn crypto_lock_update
 and
 .Fn crypto_unlock_update
-functions are convenience wrappers around
-the
-.Fn crypto_lock_encrypt
-and
-.Fn crypto_lock_auth
-functions.
+instead.
 .Sh RETURN VALUES
 The
 .Fn crypto_lock_init ,
@@ -147,102 +130,92 @@ They cannot fail.
 .Pp
 The
 .Fn crypto_unlock_final
-function returns 0 on success or -1 if the message was corrupted
-(i.e.
-.Fa mac
-mismatched the combination of
-.Fa key ,
-.Fa nonce ,
-.Fa mac
-and
-.Fa cipher_text ) .
-Corruption can happen because of transmission errors, programmer error
-(e.g. failed to parse the protocol properly and thus supplied only part
-of the expected
-.Fa cipher_text )
-or an attacker's interference.
+function returns 0 on success or -1 if the message was corrupted.
+Corruption can happen because of transmission errors, programmer
+error, or attacker interference.
+.Em Allways check the return value.
 .Sh EXAMPLES
 Encryption:
 .Bd -literal -offset indent
-/* Prepare the key, nonce, and input */
+const uint8_t key        [ 32]; /* session key                 */
+const uint8_t nonce      [ 32]; /* unique per session key      */
+const uint8_t ad         [500]; /* optionnal aditional data    */
+const uint8_t plain_text [500]; /* secret message              */
+uint8_t       cipher_text[500]; /* encrypted message           */
+uint8_t       mac        [ 16]; /* message authentication code */
 
-/* First, initialise the context */
+/* Set up initial context */
 crypto_lock_ctx ctx;
 crypto_lock_init(&ctx, key, nonce);
-/* Wipe the key unless you need it for another operation. */
-crypto_wipe(key, sizeof(key));
+crypto_wipe(key, 32);      /* wipe the key if no longer needed */
 
-/* Second, authenticate the additional data, if any. */
-crypto_lock_auth(&ctx, ad1, ad_size1);
-crypto_lock_auth(&ctx, ad2, ad_size2);
-crypto_lock_auth(&ctx, ad3, ad_size3);
+/* Authenticate aditional data (if any) */
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_lock_auth(&ctx, ad + i, 100);
+}
 
-/* Third, encrypt the plain text */
-crypto_lock_update(&ctx, cipher1, plain1, text_size1);
-crypto_lock_update(&ctx, cipher2, plain2, text_size2);
-crypto_lock_update(&ctx, cipher3, plain2, text_size3);
+/* Encrypt message */
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_lock_update(&ctx, cipher_text + i, plain_text + i, 100);
+    /* wipe the secret message if no longer needed */
+    crypto_wipe(plain_text + i, 100);
+}
 
-/* Finally, compute the authentication code */
-crypto_lock_final (&ctx, mac);
+/* Produce the MAC */
+crypto_lock_final(&ctx, mac);
 .Ed
-.Pp
-Make sure you authenticate the additional data before you begin the
-encryption, or the mac won't be compatible with the direct interface.
 .Pp
 To decrypt the above:
 .Bd -literal -offset indent
-/* First, initialise the context.
- * Use the key and nonce that were used for encryption.
- */
+const uint8_t key        [ 32]; /* session key              */
+const uint8_t nonce      [ 32]; /* unique per session key   */
+const uint8_t mac        [ 16]; /* transmitted MAC          */
+const uint8_t ad         [500]; /* optionnal aditional data */
+const uint8_t cipher_text[500]; /* encrypted message        */
+uint8_t       plain_text [500]; /* secret message           */
+
+/* Set up initial context */
 crypto_lock_ctx ctx;
 crypto_lock_init(&ctx, key, nonce);
-/* Wipe the key unless you need it for another operation. */
-crypto_wipe(key, sizeof(key));
+crypto_wipe(key, 32);   /* wipe the key if no longer needed */
 
-/* Second, authenticate the additional data, if any. */
-crypto_lock_auth(&ctx, ad1, ad_size1);
-crypto_lock_auth(&ctx, ad2, ad_size2);
-crypto_lock_auth(&ctx, ad3, ad_size3);
+/* Authenticate aditional data (if any) */
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_lock_auth(&ctx, ad + i, 100);
+}
 
-/* Third, decrypt the cipher text */
-crypto_unlock_update(&ctx, re_plain1, cipher1, text_size1);
-crypto_unlock_update(&ctx, re_plain2, cipher2, text_size2);
-crypto_unlock_update(&ctx, re_plain3, cipher3, text_size3);
+/* Decrypt message */
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_unlock_update(&ctx, plain_text + i, cipher_text + i, 100);
+}
 
-/* Finally, check the authentication code */
-if (crypto_unlock_final(&ctx, mac2)) {
-    /* Message corrupted. */
+/* Check the MAC */
+if (crypto_unlock_final(&ctx, mac)) {
+    /* corrupted message, abort processing */
 } else {
-    /* Decryption went well. */
+    /* genuine message */
 }
 .Ed
 .Pp
-To authenticate without decrypting at all:
+In place Encryption (without additional data for clarity):
 .Bd -literal -offset indent
-/* First, initialise the context.
- * Use the key and nonce that were used for encryption.
- */
+const uint8_t key   [ 32]; /* session key                 */
+const uint8_t nonce [ 32]; /* unique per session key      */
+uint8_t       text  [500]; /* message                     */
+uint8_t       mac   [ 16]; /* message authentication code */
+
+/* Set up initial context */
 crypto_lock_ctx ctx;
 crypto_lock_init(&ctx, key, nonce);
-/* Wipe the key unless you need it for another operation. */
-crypto_wipe(key, sizeof(key));
+crypto_wipe(key, 32); /* wipe the key if no longer needed */
 
-/* Second, authenticate the additional data, if any. */
-crypto_lock_auth(&ctx, ad1, ad_size1);
-crypto_lock_auth(&ctx, ad2, ad_size2);
-crypto_lock_auth(&ctx, ad3, ad_size3);
-
-/* Third, authenticate the cipher text */
-crypto_lock_auth(&ctx, re_plain1, cipher1, text_size1);
-crypto_lock_auth(&ctx, re_plain2, cipher2, text_size2);
-crypto_lock_auth(&ctx, re_plain3, cipher3, text_size3);
-
-/* Finally, check the authentication code */
-if (crypto_unlock_final(&ctx, mac2)) {
-    /* Message corrupted. */
-} else {
-    /* Message authentic. */
+/* Encrypt message */
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_lock_update(&ctx, text + i, text + i, 100);
 }
+
+/* Produce the MAC */
+crypto_lock_final(&ctx, mac);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_aead_lock 3monocypher ,
@@ -252,6 +225,10 @@ if (crypto_unlock_final(&ctx, mac2)) {
 .Xr crypto_unlock 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
-.Sh IMPLEMENTATION DETAILS
-These functions implement the XChacha20 (encryption) and Poly1305 (MAC)
-primitives.
+.Sh STANDARDS
+These functions implement the XChacha20 (encryption) and Poly1305
+(MAC) primitives.
+Chacha20 and Poly1305 are described in RFC 7539.
+XChacha20 derives from Chacha20 the same way XSalsa20 derives from
+Salsa20, and benefits from the same security reduction (proven secure
+as long as Chacha20 itself is secure).
