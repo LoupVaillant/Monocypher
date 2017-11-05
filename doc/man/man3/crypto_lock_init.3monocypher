@@ -75,13 +75,12 @@ This interface uses four steps:
 .It
 Initialisation with
 .Fn crypto_lock_init .
-This sets up a context for encryption or decryption (the same function
-is used for both).
+This sets up a context for encryption or decryption.
+The same function is used for both.
 .It
 Authentication with
 .Fn crypto_lock_auth .
 This authenticates (or verifies) additional data, if any.
-This step is optional.
 .It
 Update, with
 .Fn crypto_lock_update
@@ -111,7 +110,7 @@ It is meant as a building block.
 Used with
 .Fn crypto_lock_auth ,
 it enables various AEAD constructions.
-Most users don't need it.
+Most users do not need it.
 Prefer
 .Fn crypto_lock_update
 and
@@ -133,7 +132,7 @@ The
 function returns 0 on success or -1 if the message was corrupted.
 Corruption can happen because of transmission errors, programmer
 error, or attacker interference.
-.Em Always check the return value.
+.Em Always check the return value .
 .Sh EXAMPLES
 Encryption:
 .Bd -literal -offset indent
@@ -197,7 +196,7 @@ if (crypto_unlock_final(&ctx, mac)) {
 }
 .Ed
 .Pp
-In place Encryption (without additional data for clarity):
+In-place Encryption (without additional data for clarity):
 .Bd -literal -offset indent
 const uint8_t key   [ 32]; /* session key                 */
 const uint8_t nonce [ 32]; /* unique per session key      */

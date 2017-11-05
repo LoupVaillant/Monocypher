@@ -9,11 +9,11 @@
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
-.Ft void
 .Fo crypto_sign_public_key
 .Fa "uint8_t public_key[32]"
 .Fa "const uint8_t secret_key[32]"
 .Fc
+.Ft void
 .Fo crypto_sign
 .Fa "uint8_t signature[64]"
 .Fa "const uint8_t secret_key[32]"
@@ -44,20 +44,19 @@ the same as those used for
 .Xr crypto_key_exchange 3monocypher .
 Do not use the same private key for both purposes.
 .Pp
-The
 .Fn crypto_sign
-function signs a message with
+signs a message with
 .Fa secret_key .
 The public key is optional, and will be recomputed if not provided.
-This doubles execution time.
+This recomputation doubles the execution time.
 .Pp
-The
 .Fn crypto_check
-function checks that a given signature is genuine.
+checks that a given signature is genuine.
 Meaning, only someone who had the private key could have signed the
 message.
 .Pp
-It does
+.Fn crypto_check
+does
 .Em not
 run in constant time.
 It does not have to in most threat models, because nothing is secret:
@@ -120,7 +119,7 @@ crypto_check(signature, pk, message, 500);
 .Xr crypto_lock 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement EdDSA with curve25519 and Blake2b.
+These functions implement EdDSA with Curve25519 and Blake2b.
 This is the same as Ed25519, with Blake2b instead of SHA-512.
 Ed25519 is described in RFC 7748.
 .Sh SECURITY CONSIDERATIONS
@@ -130,6 +129,6 @@ This requires hardware access.
 If attackers are expected to have such access and the relevant
 equipment, use
 .Fn crypto_check
-to verify the signature.
+to verify the signature before sending it away.
 This verification reduces the speed of the whole operation by a factor
 of 3, and only provides an incomplete protection.
