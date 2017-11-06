@@ -1475,6 +1475,7 @@ static void modL(u8 *r, i64 x[64])
         x[i+1] += x[i] >> 8;
         r[i  ]  = x[i] & 255;
     }
+    crypto_wipe(x, 64 * 8);
 }
 
 static void reduce(u8 r[64])
