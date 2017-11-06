@@ -168,8 +168,8 @@ Ed25519 is described in RFC 7748.
 The same as documented on
 .Xr crypto_sign 3monocypher .
 .Sh IMPLEMENTATION DETAILS
-EdDSA signatures require two passes, that cannot be performed in
+EdDSA signatures require two passes that cannot be performed in
 parallel.
 There are ways around this limitation, but they all lower security in
 some way.
-For this reason, Monocypher doesn't support them.
+For this reason, Monocypher does not support them.

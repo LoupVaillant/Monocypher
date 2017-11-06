@@ -9,7 +9,7 @@
 .Nm crypto_lock_final ,
 .Nm crypto_unlock_update ,
 .Nm crypto_unlock_final
-.Nd incremental authenticated encryption with authenticated data
+.Nd incremental authenticated encryption with additional data
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
@@ -82,7 +82,7 @@ Authentication with
 .Fn crypto_lock_auth .
 This authenticates (or verifies) additional data, if any.
 .It
-Update, with
+Update with
 .Fn crypto_lock_update
 for encryption, or
 .Fn crypto_unlock_update
@@ -90,7 +90,7 @@ for decryption.
 This encrypts (or decrypts) and authenticates (or verifies) part of
 the secret message.
 .It
-Final, with
+Finalisation with
 .Fn crypto_lock_final
 to generate the MAC, or
 .Fn crypto_unlock_final

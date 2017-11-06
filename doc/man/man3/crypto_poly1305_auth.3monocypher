@@ -188,7 +188,7 @@ The authentication key should be wiped with
 .Xr crypto_wipe 3monocypher
 after use.
 .Pp
-Incremental interface users don't need to wipe the
+Incremental interface users do not need to wipe the
 .Ft crypto_poly1305_ctx
 explicitly,
 .Fn crypto_poly1305_final
