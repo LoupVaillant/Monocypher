@@ -6,165 +6,60 @@
 .Nd introduction to Monocypher
 .Sh DESCRIPTION
 Monocypher is a cryptographic library.
-It provides functions for authenticated encryption, cryptographic
-hashing, public key signatures and password key derivation.
-This section covers various topics that require special consideration,
-followed by an index.
-.Ss Random number generation
-Monocypher does not provide a random number generator.
-You are supposed to use the facilities of your operating system.
-Avoid user space random number generators.
-They require an external random seed anyway, and they are easy to
-misuse, which has lead to countless vulnerabilities in the past,
-typically by repeating parts of the random stream.
+It provides functions for authenticated encryption, hashing, password
+key derivation, key exchange, and public key signatures.
+.Ss Authenticated encryption
+.Xr crypto_lock 3monocypher
+and
+.Xr crypto_unlock 3monocypher
+use the Chacha20 cipher and the Poly1305 one time authenticator.
+An incremental interface is also available.
 .Pp
-Generating cryptographically secure random numbers portably is
-currently impossible without using other libraries.
-You need system specific calls:
-.Bl -bullet
-.It
-On recent versions of Linux (glibc >= 2.25, Linux >= 3.17), you can use
-the
-.Fn getrandom
-system call from
-.In linux/random.h .
-Do not set any flag.
-.It
-On BSD, you can use
-.Fn arc4random_buf
-from
-.In stdlib.h
-or
-.In bsd/stdlib.h .
-This is arguably even easier to use than
-.Fn getrandom .
-.It
-Windows provides
-.Fn CryptGenRandom .
-.El
+Chacha20 is a stream cipher based on a cryptographic hash function.
+It runs efficiently on a wide variety of hardware, and unlike AES
+naturally runs in constant time on all hardware.
 .Pp
-If no easy to use system call is available on your system, you may
-have to use
-.Pa /dev/urandom .
-It is more difficult to use, however, because it involves reading a file
-and the read may get aborted.
-Make sure you indeed get all the random bytes you requested.
-.Ss Avoid swapping secrets to disk
-Ideally, you want your computer to reliably forget your secrets once
-it is done with them.
-Unfortunately, computers often need to swap memory to disk.
-This would make your secrets persistent, and may allow an attacker to
-recover them later if they can read the swap partition.
-.Pp
-There are several ways to avoid swapping secrets to disk.
-The most secure is to disable swapping entirely.
-Doing so is recommended on sensitive machines.
-Or you could use an encrypted partition for the swap (less safe).
-In addition, you can disable swap locally \(en this is often the only
-way.
-.Pp
-To disable swap on specific memory regions, UNIX systems provide the
-.Fn mlock
-system call.
-Windows has
-.Fn VirtualLock .
-UNIX systems also provide the
-.Fn mlockall
-system call, which locks
-.Em all
-memory used by a single process.
-Though possibly overkill, this is easier to use safely.
-.Pp
-Note: core dumps cause similar problems.
-Disable them.
-Also beware of suspend to disk (deep sleep mode), which writes all RAM
-to disk regardless of swap policy, as well as virtual machine snapshots.
-It is recommended to also use
+Poly1305 is a one time authenticator, derived from Carter & Wegman
+universal hashing.
+It is very fast and very simple.
+.Ss Hashing
+.Xr crypto_blake2b 3monocypher
+implements the Blake2b hash.
+Blake2b combines the security of SHA-3 and the speed of MD5.
+It is immune to length extension attacks and provides a keyed mode
+that makes it a very safe authenticator.
+.Ss Password key derivation
+.Xr crypto_argon2i 3monocypher
+implements the Argon2i resource intensive hash algorithm.
+Argon2 won the password hashing competition in 2015.
+Unlike Scrypt, Argon2i is immune to timing attacks.
+.Ss Key exchange
+.Xr crypto_key_exchange 3monocypher
+implements X25519, an elliptic curve Diffie Hellman key exchange
+algorithm based on curve25519.
+X25519 derives a shared secret from two private/public key pairs.
+It is fast, simple, and relatively easy to implement securely.
+.Ss Public key signatures
+.Xr crypto_sign 3monocypher
+and
+.Xr crypto_check 3monocypher
+implement EdDSA, with curve 25519 and Blake2b.
+This is the same as the more famous Ed25519, with SHA-512 replaced by
+the more modern Blake2b.
+Ed25519 is supported as a compilation option.
+.Ss Constant time comparison
+.Xr crypto_verify16 3monocypher ,
+.Xr crypto_verify32 3monocypher ,
+and
+.Xr crypto_verify64 3monocypher
+compare buffers in constant time.
+This avoids timing attacks when comparing secrets.
+Supported buffer sizes are 16 bytes, 32 bytes, and 64 bytes.
+.Ss Memory wipe
 .Xr crypto_wipe 3monocypher
-to clear secrets from memory as soon as possible to mitigate these
-dangers.
-.Ss Index
-Monocypher provides the following:
-.Bl -ohang -offset indent
-.It Authenticated encryption
-.Bl -tag -offset indent-two -width Ds
-.It Xr crypto_lock 3monocypher
-.It Xr crypto_unlock 3monocypher
-.El
-.It Authenticated encryption with additional data (AEAD)
-.Bl -tag -offset indent-two -width Ds
-.It Xr crypto_aead_lock 3monocypher
-.It Xr crypto_aead_unlock 3monocypher
-.It Xr crypto_lock_init 3monocypher
-.It Xr crypto_lock_auth 3monocypher
-.It Xr crypto_lock_update 3monocypher
-.It Xr crypto_lock_final 3monocypher
-.It Xr crypto_unlock_update 3monocypher
-.It Xr crypto_unlock_final 3monocypher
-.It Xr crypto_lock_encrypt 3monocypher
-.El
-.It (Elliptic Curve) Diffie-Hellman key exchange
-.Bl -tag -offset indent-two -width Ds
-.It Xr crypto_key_exchange 3monocypher
-.It Xr crypto_x25519_public_key 3monocypher
-.It Xr crypto_x25519 3monocypher
-.El
-.It Public key signatures
-.Bl -tag -offset indent-two -width Ds
-.It Xr crypto_sign_public_key 3monocypher
-.It Xr crypto_sign 3monocypher
-.It Xr crypto_check 3monocypher
-.It Xr crypto_sign_init_first_pass 3monocypher
-.It Xr crypto_sign_update 3monocypher
-.It Xr crypto_sign_final 3monocypher
-.It Xr crypto_sign_init_second_pass 3monocypher
-.It Xr crypto_check_init 3monocypher
-.It Xr crypto_check_update 3monocypher
-.It Xr crypto_check_final 3monocypher
-.El
-.It Cryptographic hashing
-.Bl -tag -offset indent-two -width Ds
-.It Xr crypto_blake2b_general 3monocypher
-.It Xr crypto_blake2b 3monocypher
-.It Xr crypto_blake2b_general_init 3monocypher
-.It Xr crypto_blake2b_init 3monocypher
-.It Xr crypto_blake2b_update 3monocypher
-.It Xr crypto_blake2b_final 3monocypher
-.El
-.It Special-purpose hashing
-.Bl -tag -offset indent-two -width Ds
-.It Xr crypto_chacha20_H 3monocypher
-.El
-.It Password key derivation
-.Bl -tag -offset indent-two -width Ds
-.It Xr crypto_argon2i 3monocypher
-.El
-.It Unauthenticated encryption
-.Bl -tag -offset indent-two -width Ds
-.It Xr crypto_chacha20_init 3monocypher
-.It Xr crypto_chacha20_x_init 3monocypher
-.It Xr crypto_chacha20_encrypt 3monocypher
-.It Xr crypto_chacha20_stream 3monocypher
-.It Xr crypto_chacha20_set_ctr 3monocypher
-.El
-.It One-time authentication
-.Bl -tag -offset indent-two -width Ds
-.It Xr crypto_poly1305_auth 3monocypher
-.It Xr crypto_poly1305_init 3monocypher
-.It Xr crypto_poly1305_update 3monocypher
-.It Xr crypto_poly1305_final 3monocypher
-.El
-.It Comparison functions
-.Bl -tag -offset indent-two -width Ds
-.It Xr crypto_verify16 3monocypher
-.It Xr crypto_verify32 3monocypher
-.It Xr crypto_verify64 3monocypher
-.El
-.It Utility functions
-.Bl -tag -offset indent-two -width Ds
-.It Xr crypto_wipe 3monocypher
-.El
-.El
+wipes a buffer.
+It is meant to erase secrets when they are no longer needed, to reduce
+the chances of leaks.
 .Sh SEE ALSO
 .Xr crypto_aead_lock 3monocypher ,
 .Xr crypto_aead_unlock 3monocypher ,
@@ -211,3 +106,136 @@ Monocypher provides the following:
 .Xr crypto_wipe 3monocypher ,
 .Xr crypto_x25519 3monocypher ,
 .Xr crypto_x25519_public_key 3monocypher
+.Sh SECURITY CONSIDERATIONS
+Using cryptography securely is difficult.
+Flaws that never manifest under normal use might be exploited by a
+clever adversary.
+Cryptography itself is counter intuitive, and cryptographic libraries
+are easy to misuse.
+Despite its simplicity, even Monocypher allows a number of fatal
+mistakes.
+.Pp
+Users should follow a formal introduction to cryptography.
+We currently recommend the https://www.crypto101.io/ online course.
+.Ss Random number generation
+Use the facilities of your operating system.
+Avoid user space random number generators.
+They are easy to misuse, which has lead to countless vulnerabilities
+in the past.
+For instance, the random stream may be repeated if one is not careful
+with multi-threading, and forward secrecy is lost without proper key
+erasure.
+.Pp
+Different system calls are available on different systems:
+.Bl -bullet
+.It
+Recent versions of Linux (glibc >= 2.25, Linux >= 3.17), provide
+.Fn getrandom
+in
+.In linux/random.h .
+Do not set any flag.
+.It
+BSD provides
+.Fn arc4random_buf
+in
+.In stdlib.h
+or
+.In bsd/stdlib.h .
+This is easier to use than
+.Fn getrandom .
+.It
+Windows provides
+.Fn CryptGenRandom .
+.El
+.Pp
+The
+.Pa /dev/urandom
+special file may be used on systems that do not provide an easy to use
+system call.
+Being a file makes it harder to use correctly (reads may be aborted
+halfway through).
+.Ss Timing attacks
+Monocypher runs in "constant time".
+There is no flow from secrets to timings.
+No secret dependent indices, no secret dependent branches.
+Nevertheless, there are a couple important caveats.
+.Pp
+Comparing secrets should be done with constant-time comparison
+functions, such as
+.Xr crypto_verify16 3monocypher ,
+.Xr crypto_verify32 3monocypher ,
+or
+.Xr crypto_verify32 3monocypher .
+Do not use standard comparison functions.
+They tend to stop as soon as a difference is spotted.
+In many cases, this enables attackers to recover the secrets and
+destroy all security.
+.Pp
+The Poly1305 authenticator, X25519, and EdDSA use the multiplication
+instruction.
+Some older processors do not run this instruction in constant time.
+They are no longer in use, though.
+.Pp
+.Sy The lengths of the inputs are not secret.
+Timings do reveal them \(en So do network traffic and file sizes.
+Most of the time, lengths do not contain enough information for this
+to be a problem.
+Sometimes however they do.
+It has happened before with variable-length voice encoding software.
+The researchers managed to identify the speakers and recover parts of
+the conversation.
+.Ss Forward secrecy.
+Long term secrets cannot be expected to stay safe indefinitely.
+Users may reveal them by mistake, or the host computer might have a
+vulnerability and be compromised.
+To mitigate this problem, some protocols guarantee that past messages
+are not compromised even if the long term keys are.
+This is done by generating temporary keys, then encrypting messages
+with them.
+.Pp
+This can be generalised.
+To the extent possible, secrets that went through a computer should not
+be compromised when this computer is stolen or infected at a later
+point.
+This generally means making sure those secrets are erased when no
+longer used.
+.Pp
+A first layer of defence is to explicitly wipe secrets as soon as
+they are no longer used.
+Monocypher already wipes its own temporary buffers, and contexts are
+erased with the
+.Fn crypto_*_final
+functions.
+The secret keys and messages however are the responsibility of the
+user.
+Use
+.Xr crypto_wipe 3monocypher
+to erase them.
+.Pp
+A second layer of defence is to ensure those secrets are not swapped
+to disk while they are used.
+There are several ways to do this.
+The most secure is to disable swapping entirely.
+Doing so is recommended on sensitive machines.
+Another way is to encrypt the swap partition (this is less safe).
+Finally, swap can be disabled locally \(en this is often the only
+way.
+.Pp
+To disable swap on specific memory regions, UNIX systems provide
+.Fn mlock .
+Windows has
+.Fn VirtualLock .
+UNIX systems also provide the
+.Fn mlockall
+system call, which locks
+.Em all
+memory used by a single process.
+Though possibly overkill, this is easier to use safely.
+.Pp
+Note: core dumps cause similar problems.
+Disable them.
+Also beware of suspend to disk (deep sleep mode), which writes all RAM
+to disk regardless of swap policy, as well as virtual machine snapshots.
+Erasing secrets with
+.Xr crypto_wipe 3monocypher
+is often the only way to mitigate these dangers.
