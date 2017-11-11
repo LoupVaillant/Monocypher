@@ -87,7 +87,7 @@ the chances of leaks.
 .Xr crypto_lock_final 3monocypher ,
 .Xr crypto_lock_init 3monocypher ,
 .Xr crypto_lock_update 3monocypher ,
-.Xr crypto_poly1305_auth 3monocypher ,
+.Xr crypto_poly1305 3monocypher ,
 .Xr crypto_poly1305_final 3monocypher ,
 .Xr crypto_poly1305_init 3monocypher ,
 .Xr crypto_poly1305_update 3monocypher ,

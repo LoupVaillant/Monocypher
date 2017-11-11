@@ -69,9 +69,12 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
 
 void crypto_poly1305_final(crypto_poly1305_ctx *ctx, uint8_t mac[16]);
 
-void crypto_poly1305_auth(uint8_t        mac[16],
-                          const uint8_t *message, size_t message_size,
-                          const uint8_t  key[32]);
+void crypto_poly1305(uint8_t        mac[16],
+                     const uint8_t *message, size_t message_size,
+                     const uint8_t  key[32]);
+
+// Deprecated name
+#define crypto_poly1305_auth crypto_poly1305
 
 ////////////////
 /// Blake2 b ///

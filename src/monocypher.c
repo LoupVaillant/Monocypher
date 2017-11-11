@@ -426,8 +426,8 @@ void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
     crypto_wipe(ctx, sizeof(*ctx));
 }
 
-void crypto_poly1305_auth(u8     mac[16],  const u8 *message,
-                          size_t message_size, const u8  key[32])
+void crypto_poly1305(u8     mac[16],  const u8 *message,
+                     size_t message_size, const u8  key[32])
 {
     crypto_poly1305_ctx ctx;
     crypto_poly1305_init  (&ctx, key);

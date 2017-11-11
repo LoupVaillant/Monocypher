@@ -2,7 +2,7 @@
 .Dt CRYPTO_POLY1305_AUTH 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_poly1305_auth ,
+.Nm crypto_poly1305 ,
 .Nm crypto_poly1305_init ,
 .Nm crypto_poly1305_update ,
 .Nm crypto_poly1305_final
@@ -10,7 +10,7 @@
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
-.Fo crypto_poly1305_auth
+.Fo crypto_poly1305
 .Fa "uint8_t mac[16]"
 .Fa "const uint8_t *message"
 .Fa "size_t message_size"
@@ -45,7 +45,7 @@ Poly1305 is a low-level primitive.
 Consider using authenticated encryption, implemented by
 .Xr crypto_lock 3monocypher .
 .Ss Direct interface
-.Fn crypto_poly1305_auth
+.Fn crypto_poly1305
 produces a message authentication code for the given
 message and authentication key.
 The authentication key must be used only once.
@@ -84,7 +84,7 @@ To authenticate a message:
 const uint8_t msg[500];  /* Message to authenticate           */
 const uint8_t key[ 32];  /* Random secret key (use only once) */
 uint8_t       mac[ 16];  /* Message authentication code (MAC) */
-crypto_poly1305_auth(mac, msg, 500, key);
+crypto_poly1305(mac, msg, 500, key);
 crypto_wipe(key, 32);    /* The key should be wiped after use */
 .Ed
 .Pp
@@ -94,7 +94,7 @@ const uint8_t msg     [500];  /* Message to verify */
 const uint8_t key     [ 32];  /* The above key     */
 const uint8_t mac     [ 16];  /* The above MAC     */
 uint8_t       real_mac[ 16];  /* The actual MAC    */
-crypto_poly1305_auth(real_mac, msg, 500, key);
+crypto_poly1305(real_mac, msg, 500, key);
 crypto_wipe(key, 32);         /* Wipe right away   */
 if (crypto_verify16(mac, real_mac)) {
     /* The message is corrupted */

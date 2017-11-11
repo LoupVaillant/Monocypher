@@ -89,7 +89,7 @@ static u64 poly1305(void)
     static u8  out  [  16];
 
     TIMING_START {
-        crypto_poly1305_auth(out, in, SIZE, key);
+        crypto_poly1305(out, in, SIZE, key);
     }
     TIMING_END;
 }

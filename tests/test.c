@@ -111,7 +111,7 @@ static void poly1305(const vector in[], vector *out)
 {
     const vector *key = in;
     const vector *msg = in + 1;
-    crypto_poly1305_auth(out->buf, msg->buf, msg->size, key->buf);
+    crypto_poly1305(out->buf, msg->buf, msg->size, key->buf);
 }
 
 static void blake2b(const vector in[], vector *out)
@@ -348,7 +348,7 @@ static int p_poly1305()
         crypto_poly1305_final(&ctx, mac_chunk);
 
         // Authenticate all at once
-        crypto_poly1305_auth(mac_whole, input, offset, key);
+        crypto_poly1305(mac_whole, input, offset, key);
 
         // Compare the results (must be the same)
         status |= memcmp(mac_chunk, mac_whole, 16);
@@ -367,8 +367,8 @@ static int p_poly1305_overlap()
         u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
         u8 key  [32];          p_random(key  , 32);
         u8 mac  [16];
-        crypto_poly1305_auth(mac    , input + 16, POLY1305_BLOCK_SIZE, key);
-        crypto_poly1305_auth(input+i, input + 16, POLY1305_BLOCK_SIZE, key);
+        crypto_poly1305(mac    , input + 16, POLY1305_BLOCK_SIZE, key);
+        crypto_poly1305(input+i, input + 16, POLY1305_BLOCK_SIZE, key);
         status |= memcmp(mac, input + i, 16);
     }
     printf("%s: Poly1305 (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
