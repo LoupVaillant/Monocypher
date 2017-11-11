@@ -135,7 +135,9 @@ The arguments are:
 .It Fa ad
 Additional data to authenticate.
 It will not be encrypted.
-May be NULL if
+May be
+.Dv NULL
+if
 .Fa ad_size
 is zero.
 Setting

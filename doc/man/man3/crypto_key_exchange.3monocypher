@@ -50,9 +50,9 @@ and
 .Sy Warning: the shared secret is not cryptographically random .
 Do not use it directly as a session key.
 Hash it first with
-.Xr crypto_chacha20_H
+.Xr crypto_chacha20_H 3monocypher
 or
-.Xr crypto_blake2b .
+.Xr crypto_blake2b 3monocypher .
 .Sh RETURN VALUES
 .Fn crypto_key_exchange
 and
