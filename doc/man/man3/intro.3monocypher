@@ -174,6 +174,8 @@ destroy all security.
 .Pp
 The Poly1305 authenticator, X25519, and EdDSA use multiplication.
 Some older processors do not multiply in constant time.
+If the target platform is something other than x86, x86_64, ARM or
+ARM64, double check how it handles multiplication.
 .Pp
 .Sy The lengths of the inputs are not secret.
 Timings do reveal them \(en So do network traffic and file sizes.
