@@ -477,49 +477,48 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
         { 13, 11,  7, 14, 12,  1,  3,  9,  5,  0, 15,  4,  8,  6,  2, 10 },
         {  6, 15, 14,  9, 11,  3,  0,  8, 12,  2, 13,  7,  1,  4, 10,  5 },
         { 10,  2,  8,  4,  7,  6,  1,  5, 15, 11,  9, 14,  3, 12, 13,  0 },
-        {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 },
-        { 14, 10,  4,  8,  9, 15, 13,  6,  1, 12,  0,  2, 11,  7,  5,  3 },
     };
 
     // init work vector
-    u64 v[16];
-    FOR (i, 0, 8) {
-        v[i  ] = ctx->hash[i];
-        v[i+8] = iv[i];
-    }
-    v[12] ^= ctx->input_offset[0];
-    v[13] ^= ctx->input_offset[1];
-    if (is_last_block) {
-        v[14] = ~v[14];
-    }
+    u64 v0 = ctx->hash[0];  u64 v8  = iv[0];
+    u64 v1 = ctx->hash[1];  u64 v9  = iv[1];
+    u64 v2 = ctx->hash[2];  u64 v10 = iv[2];
+    u64 v3 = ctx->hash[3];  u64 v11 = iv[3];
+    u64 v4 = ctx->hash[4];  u64 v12 = iv[4] ^ ctx->input_offset[0];
+    u64 v5 = ctx->hash[5];  u64 v13 = iv[5] ^ ctx->input_offset[1];
+    u64 v6 = ctx->hash[6];  u64 v14 = iv[6] ^ is_last_block;
+    u64 v7 = ctx->hash[7];  u64 v15 = iv[7];
 
     // mangle work vector
     uint64_t *input = ctx->input;
-    FOR (i, 0, 12) {
-#define BLAKE2_G(v, a, b, c, d, x, y)                       \
-        v[a] += v[b] + x;  v[d] = rotr64(v[d] ^ v[a], 32);  \
-        v[c] += v[d];      v[b] = rotr64(v[b] ^ v[c], 24);  \
-        v[a] += v[b] + y;  v[d] = rotr64(v[d] ^ v[a], 16);  \
-        v[c] += v[d];      v[b] = rotr64(v[b] ^ v[c], 63);  \
+#define BLAKE2_G(v, a, b, c, d, x, y)                  \
+    v##a += v##b + x;  v##d = rotr64(v##d ^ v##a, 32); \
+    v##c += v##d;      v##b = rotr64(v##b ^ v##c, 24); \
+    v##a += v##b + y;  v##d = rotr64(v##d ^ v##a, 16); \
+    v##c += v##d;      v##b = rotr64(v##b ^ v##c, 63);
+#define BLAKE2_ROUND(i)                                                 \
+    BLAKE2_G(v, 0, 4,  8, 12, input[sigma[i][ 0]], input[sigma[i][ 1]]);\
+    BLAKE2_G(v, 1, 5,  9, 13, input[sigma[i][ 2]], input[sigma[i][ 3]]);\
+    BLAKE2_G(v, 2, 6, 10, 14, input[sigma[i][ 4]], input[sigma[i][ 5]]);\
+    BLAKE2_G(v, 3, 7, 11, 15, input[sigma[i][ 6]], input[sigma[i][ 7]]);\
+    BLAKE2_G(v, 0, 5, 10, 15, input[sigma[i][ 8]], input[sigma[i][ 9]]);\
+    BLAKE2_G(v, 1, 6, 11, 12, input[sigma[i][10]], input[sigma[i][11]]);\
+    BLAKE2_G(v, 2, 7,  8, 13, input[sigma[i][12]], input[sigma[i][13]]);\
+    BLAKE2_G(v, 3, 4,  9, 14, input[sigma[i][14]], input[sigma[i][15]])
 
-        BLAKE2_G(v, 0, 4,  8, 12, input[sigma[i][ 0]], input[sigma[i][ 1]]);
-        BLAKE2_G(v, 1, 5,  9, 13, input[sigma[i][ 2]], input[sigma[i][ 3]]);
-        BLAKE2_G(v, 2, 6, 10, 14, input[sigma[i][ 4]], input[sigma[i][ 5]]);
-        BLAKE2_G(v, 3, 7, 11, 15, input[sigma[i][ 6]], input[sigma[i][ 7]]);
-        BLAKE2_G(v, 0, 5, 10, 15, input[sigma[i][ 8]], input[sigma[i][ 9]]);
-        BLAKE2_G(v, 1, 6, 11, 12, input[sigma[i][10]], input[sigma[i][11]]);
-        BLAKE2_G(v, 2, 7,  8, 13, input[sigma[i][12]], input[sigma[i][13]]);
-        BLAKE2_G(v, 3, 4,  9, 14, input[sigma[i][14]], input[sigma[i][15]]);
-    }
+    BLAKE2_ROUND(0);  BLAKE2_ROUND(1);  BLAKE2_ROUND(2);  BLAKE2_ROUND(3);
+    BLAKE2_ROUND(4);  BLAKE2_ROUND(5);  BLAKE2_ROUND(6);  BLAKE2_ROUND(7);
+    BLAKE2_ROUND(8);  BLAKE2_ROUND(9);  BLAKE2_ROUND(0);  BLAKE2_ROUND(1);
+
     // update hash
-    FOR (i, 0, 8) {
-        ctx->hash[i] ^= v[i] ^ v[i+8];
-    }
-    // Wipe v
-    volatile u64 *vv = v;
-    FOR (i, 0, 16) {
-        vv[i] = 0;
-    }
+    ctx->hash[0] ^= v0 ^ v8;
+    ctx->hash[1] ^= v1 ^ v9;
+    ctx->hash[2] ^= v2 ^ v10;
+    ctx->hash[3] ^= v3 ^ v11;
+    ctx->hash[4] ^= v4 ^ v12;
+    ctx->hash[5] ^= v5 ^ v13;
+    ctx->hash[6] ^= v6 ^ v14;
+    ctx->hash[7] ^= v7 ^ v15;
 }
 
 static void blake2b_reset_input(crypto_blake2b_ctx *ctx)
@@ -611,8 +610,8 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
 
 void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
 {
-    blake2b_incr(ctx);        // update the input offset
-    blake2b_compress(ctx, 1); // compress the last block
+    blake2b_incr(ctx);         // update the input offset
+    blake2b_compress(ctx, -1); // compress the last block
     size_t nb_words  = ctx->hash_size / 8;
     FOR (i, 0, nb_words) {
         store64_le(hash + i*8, ctx->hash[i]);
