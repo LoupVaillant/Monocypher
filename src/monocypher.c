@@ -876,12 +876,13 @@ static u32 gidx_next(gidx_ctx *ctx)
 }
 
 // Main algorithm
-void crypto_argon2i(u8       *hash,      u32 hash_size,
-                    void     *work_area, u32 nb_blocks, u32 nb_iterations,
-                    const u8 *password,  u32 password_size,
-                    const u8 *salt,      u32 salt_size,
-                    const u8 *key,       u32 key_size,
-                    const u8 *ad,        u32 ad_size)
+void crypto_argon2i_general(u8       *hash,      u32 hash_size,
+                            void     *work_area, u32 nb_blocks,
+                            u32 nb_iterations,
+                            const u8 *password,  u32 password_size,
+                            const u8 *salt,      u32 salt_size,
+                            const u8 *key,       u32 key_size,
+                            const u8 *ad,        u32 ad_size)
 {
     // work area seen as blocks (must be suitably aligned)
     block *blocks = (block*)work_area;
@@ -968,6 +969,21 @@ void crypto_argon2i(u8       *hash,      u32 hash_size,
         p[i] = 0;
     }
 }
+
+void crypto_argon2i(u8       *hash,      u32 hash_size,
+                    void     *work_area, u32 nb_blocks,
+                    u32 nb_iterations,
+                    const u8 *password,  u32 password_size,
+                    const u8 *salt,      u32 salt_size)
+{
+    crypto_argon2i_general(hash, hash_size,
+                           work_area, nb_blocks, nb_iterations,
+                           password, password_size,
+                           salt    , salt_size,
+                           0, 0, 0, 0);
+}
+
+
 
 ////////////////////////////////////
 /// Arithmetic modulo 2^255 - 19 ///

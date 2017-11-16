@@ -139,8 +139,7 @@ static void argon2i(const vector in[], vector *out)
     crypto_argon2i(out->buf, out->size,
                    work_area, nb_blocks, nb_iterations,
                    password->buf, password->size,
-                   salt    ->buf, salt    ->size,
-                   0, 0, 0, 0); // can't test key and ad with libsodium
+                   salt    ->buf, salt    ->size);
     free(work_area);
 }
 
@@ -504,13 +503,13 @@ static int p_argon2i_overlap()
         u8 key  [32];  FOR (i, 0, 32) { key [i] = work_area[i +  key_offset]; }
         u8 ad   [32];  FOR (i, 0, 32) { ad  [i] = work_area[i +   ad_offset]; }
 
-        crypto_argon2i(hash1, 32, clean_work_area, 8, 1,
-                       pass, 16, salt, 16, key, 32, ad, 32);
-        crypto_argon2i(hash2, 32, work_area, 8, 1,
-                       work_area + pass_offset, 16,
-                       work_area + salt_offset, 16,
-                       work_area +  key_offset, 32,
-                       work_area +   ad_offset, 32);
+        crypto_argon2i_general(hash1, 32, clean_work_area, 8, 1,
+                               pass, 16, salt, 16, key, 32, ad, 32);
+        crypto_argon2i_general(hash2, 32, work_area, 8, 1,
+                               work_area + pass_offset, 16,
+                               work_area + salt_offset, 16,
+                               work_area +  key_offset, 32,
+                               work_area +   ad_offset, 32);
         status |= memcmp(hash1, hash2, 32);
     }
     printf("%s: Argon2i (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");

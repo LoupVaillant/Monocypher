@@ -17,6 +17,18 @@
 .Fa "const uint32_t password_size"
 .Fa "const uint8_t *salt"
 .Fa "const uint32_t salt_size"
+.Fc
+.Ft void
+.Fo crypto_argon2i_general
+.Fa "uint8_t *hash"
+.Fa "uint32_t hash_size"
+.Fa "void *work_area"
+.Fa "uint32_t nb_blocks"
+.Fa "uint32_t nb_iterations"
+.Fa "const uint8_t *password"
+.Fa "const uint32_t password_size"
+.Fa "const uint8_t *salt"
+.Fa "const uint32_t salt_size"
 .Fa "const uint8_t *key"
 .Fa "const uint32_t key_size"
 .Fa "const uint8_t *ad"
@@ -166,9 +178,7 @@ if (work_area == 0) {
 crypto_argon2i(hash, 32,
                work_area, nb_blocks, nb_iterations,
                password, password_size,
-               salt, 16,
-               0, 0,  /* no key              */
-               0, 0); /* no additional data  */
+               salt, 16);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(password, password_size);
 .Ed
