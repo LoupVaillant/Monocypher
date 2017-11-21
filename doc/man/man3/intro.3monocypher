@@ -177,14 +177,13 @@ Some older processors do not multiply in constant time.
 If the target platform is something other than x86, x86_64, ARM or
 ARM64, double check how it handles multiplication.
 .Pp
-.Sy The lengths of the inputs are not secret.
-Timings do reveal them \(en So do network traffic and file sizes.
-Most of the time, lengths do not contain enough information for this
-to be a problem.
-Sometimes however they do.
-It has happened before with variable-length voice encoding software.
-The researchers managed to identify the speakers and recover parts of
-the conversation.
+.Ss Data compression
+Encryption does not hide the length of the input plaintext. Most
+compression algorithms work by using fewer bytes to encode previously
+seen data or common characters. If an attacker can add data to the input
+before it is compressed and encrypted, they can observe changes to the
+ciphertext length to recover secrets from the input, as demonstrated by
+researchers in the CRIME attack against HTTPS.
 .Ss Forward secrecy
 Long term secrets cannot be expected to stay safe indefinitely.
 Users may reveal them by mistake, or the host computer might have a
