@@ -149,13 +149,14 @@ and
 .It Fa ad_size
 length of the additional data.
 .Sy That length is not authenticated.
-If the additional data is of variable length, the length should be appended to
+If the additional data is of variable length, the length should be
+appended to
 .Fa ad
 so it gets authenticated, and should be extracted from the end of the
 message when decrypting.
 Otherwise an attacker could provide a false length, effectively moving
-the boundary between the additional data and the ciphertext.
-This may cause buffer overflows in some programs.
+the boundary between the additional data and the ciphertext. This may
+cause buffer overflows in some programs.
 .El
 .Pp
 An incremental interface is available; see
