@@ -183,8 +183,9 @@ Most compression algorithms work by using fewer bytes to encode
 previously seen data or common characters.
 If an attacker can add data to the input before it is compressed and
 encrypted, they can observe changes to the ciphertext length to recover
-secrets from the input, as demonstrated by researchers in the CRIME
-attack against HTTPS.
+secrets from the input.
+Researchers have demonstrated an attack on HTTPS to steal session cookies when
+compression is enabled, dubbed "CRIME".
 .Ss Forward secrecy
 Long term secrets cannot be expected to stay safe indefinitely.
 Users may reveal them by mistake, or the host computer might have a
