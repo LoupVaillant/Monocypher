@@ -178,12 +178,13 @@ If the target platform is something other than x86, x86_64, ARM or
 ARM64, double check how it handles multiplication.
 .Pp
 .Ss Data compression
-Encryption does not hide the length of the input plaintext. Most
-compression algorithms work by using fewer bytes to encode previously
-seen data or common characters. If an attacker can add data to the input
-before it is compressed and encrypted, they can observe changes to the
-ciphertext length to recover secrets from the input, as demonstrated by
-researchers in the CRIME attack against HTTPS.
+Encryption does not hide the length of the input plaintext.
+Most compression algorithms work by using fewer bytes to encode
+previously seen data or common characters.
+If an attacker can add data to the input before it is compressed and
+encrypted, they can observe changes to the ciphertext length to recover
+secrets from the input, as demonstrated by researchers in the CRIME
+attack against HTTPS.
 .Ss Forward secrecy
 Long term secrets cannot be expected to stay safe indefinitely.
 Users may reveal them by mistake, or the host computer might have a
