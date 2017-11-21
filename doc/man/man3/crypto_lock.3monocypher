@@ -94,11 +94,9 @@ The secret message.
 Its content will be kept hidden from attackers.
 Its length however, will
 .Em not .
-Make sure message lengths do not leak secret information.
-This has happened before with variable-length voice
-encoding software.
-Solutions to mitigate this include constant-length encodings and
-padding.
+Be careful when combining encryption with compression. See
+.Xr intro 3monocypher
+for details.
 .It Fa cipher_text
 The encrypted message, to be transmitted over the network.
 .El
