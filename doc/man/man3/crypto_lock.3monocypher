@@ -149,8 +149,10 @@ and
 .It Fa ad_size
 length of the additional data.
 .Sy That length is not authenticated.
-If it is transmitted over the wire, it should be appended to the
-additional data, and authenticated with it.
+If the additional data is of variable length, the length should be appended to
+.Fa ad
+so it gets authenticated, and should be extracted from the end of the
+message when decrypting.
 Otherwise an attacker could provide a false length, effectively moving
 the boundary between the additional data and the ciphertext.
 This may cause buffer overflows in some programs.
@@ -177,6 +179,8 @@ and
 .Fa cipher_text ) .
 Corruption can happen because of transmission errors, programmer
 error, or an attacker's interference.
+.Fa plain_text
+does not need wiping if the decryption fails.
 .Sh EXAMPLES
 Encryption:
 .Bd -literal -offset indent
@@ -195,17 +199,15 @@ crypto_wipe(key, 32);
 .Pp
 Encryption (in place):
 .Bd -literal -offset indent
-const uint8_t  key  [32];  /* Random, secret session key  */
-const uint8_t  nonce[24];  /* Use only once per key       */
-uint8_t       *text;       /* Secret message              */
-size_t         text_size;  /* Message size (NOT secret)   */
-uint8_t        mac  [16];  /* Message authentication code */
-uint8_t       *cipher_text;/* Encrypted message           */
-crypto_lock(mac, text, key, nonce, text, text_size);
+const uint8_t  key  [32];   /* Random, secret session key  */
+const uint8_t  nonce[24];   /* Use only once per key       */
+uint8_t       *plain_text;  /* Secret message              */
+size_t         text_size;   /* Message size (NOT secret)   */
+uint8_t        mac  [16];   /* Message authentication code */
+crypto_lock(mac, plain_text, key, nonce, plain_text, text_size);
 /* Wipe secrets if they are no longer needed */
-crypto_wipe(plain_text, text_size);
 crypto_wipe(key, 32);
-/* Transmit cipher_text, nonce, and mac over the network */
+/* Transmit plain_text, nonce, and mac over the network */
 .Ed
 .Pp
 To decrypt the above:
@@ -218,8 +220,10 @@ size_t         text_size;    /* Message size (NOT secret) */
 uint8_t       *plain_text;   /* Secret message            */
 if (crypto_unlock(plain_text, key, nonce, mac,
                   cipher_text, text_size)) {
-    /* The message is corrupted */
-    /* Abort the decryption     */
+    /* The message is corrupted           */
+    /* Wipe key if it is no longer needed */
+    /* and abort the decryption           */
+    crypto_wipe(key, 32);
 }
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(plain_text, text_size);
@@ -234,8 +238,10 @@ const uint8_t  mac  [16];    /* Received from the network */
 uint8_t       *text;         /* Message to decrypt        */
 size_t         text_size;    /* Message size (NOT secret) */
 if (crypto_unlock(text, key, nonce, mac, text, text_size)) {
-    /* The message is corrupted */
-    /* Abort the decryption     */
+    /* The message is corrupted           */
+    /* Wipe key if it is no longer needed */
+    /* and abort the decryption           */
+    crypto_wipe(key, 32);
 }
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(text, text_size);
