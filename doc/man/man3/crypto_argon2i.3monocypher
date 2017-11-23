@@ -41,7 +41,7 @@ It runs in constant time with respect to the contents of the password.
 .Pp
 Typical applications are password checking (for online services), and
 key derivation (for encryption).
-It can be used to encrypt private keys or password databases.
+Derived keys can be used to encrypt private keys or password databases.
 .Pp
 The version provided by Monocypher has no threading support, so the
 degree of parallelism is limited to 1.
@@ -64,7 +64,8 @@ Must be
 .Fa nb_blocks
 × 1024 bytes big, and suitably aligned for 64-bit integers.
 .Fn malloc
-should yield a suitable chunk of memory.
+will yield a suitable chunk of memory on platforms that support 64-bit types
+(e.g. int64_t or IEEE double precision floats).
 .Pp
 The work area is automatically wiped by
 .Fn crypto_argon2i .
@@ -141,22 +142,22 @@ Use
 .Xr crypto_verify32 3monocypher
 or
 .Xr crypto_verify64 3monocypher
-to compare password hashes to prevent timing attacks, which are feasible
-against the weakest passwords.
+to compare password hashes to prevent timing attacks.
 .Pp
-The hardness of the computation can be chosen thus:
-.Bl -bullet
-.It
-Decide how long the computation should take.
-For user authentication, this is typically somewhere between half a
-second (convenient) and several seconds (paranoid).
-.It
-Try to hash a password with 3 iterations and 100000 blocks (one hundred
-megabytes) to establish a baseline.
+To select the nb_blocks and nb_iterations parameters, it should first be
+decided how long the computation should take.
+For user authentication, somewhere between half a second (convenient)
+and several seconds (paranoid) is a good starting point.
+The computation should use as much memory as can be spared.
+.Pp
+Since parameter selection depends on your hardware, some trial and error
+will be required in order to determine the ideal settings.
+Three iterations and 100000 blocks (that is, one hundred megabytes of
+memory) is a good starting point.
 Adjust
 .Fa nb_blocks
 first.
-If using all available memory is not enough, increase
+If using all available memory is not slow enough, increase
 .Fa nb_iterations .
 .El
 .Sh RETURN VALUES
@@ -172,7 +173,7 @@ const uint8_t  salt[16];                    /* random salt     */
 const uint32_t nb_blocks = 100000;          /* 100 megabytes   */
 const uint32_t nb_iterations = 3;           /* 3 iterations    */
 void *work_area = malloc(nb_blocks * 1024); /* work area       */
-if (work_area == 0) {
+if (work_area == NULL) {
     /* handle malloc() failure */
 }
 crypto_argon2i(hash, 32,
