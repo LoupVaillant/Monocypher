@@ -91,10 +91,11 @@ authentication key associated with that nonce.
 The MAC is intended to be sent along with the ciphertext.
 .It Fa plain_text
 The secret message.
-Its content will be kept hidden from attackers.
+Its contents will be kept hidden from attackers.
 Its length however, will
 .Em not .
-Be careful when combining encryption with compression. See
+Be careful when combining encryption with compression.
+See
 .Xr intro 3monocypher
 for details.
 .It Fa cipher_text
@@ -153,8 +154,8 @@ appended to
 so it gets authenticated, and should be extracted from the end of the
 message when decrypting.
 Otherwise an attacker could provide a false length, effectively moving
-the boundary between the additional data and the ciphertext. This may
-cause buffer overflows in some programs.
+the boundary between the additional data and the ciphertext.
+This may cause buffer overflows in some programs.
 .El
 .Pp
 An incremental interface is available; see
@@ -179,7 +180,7 @@ and
 Corruption can happen because of transmission errors, programmer
 error, or an attacker's interference.
 .Fa plain_text
-does not need wiping if the decryption fails.
+does not need to be wiped if the decryption fails.
 .Sh EXAMPLES
 Encryption:
 .Bd -literal -offset indent
@@ -219,9 +220,10 @@ size_t         text_size;    /* Message size (NOT secret) */
 uint8_t       *plain_text;   /* Secret message            */
 if (crypto_unlock(plain_text, key, nonce, mac,
                   cipher_text, text_size)) {
-    /* The message is corrupted           */
-    /* Wipe key if it is no longer needed */
-    /* and abort the decryption           */
+    /* The message is corrupted.
+     * Wipe key if it is no longer needed,
+     * and abort the decryption.
+     */
     crypto_wipe(key, 32);
 }
 /* Wipe secrets if they are no longer needed */
@@ -237,9 +239,10 @@ const uint8_t  mac  [16];    /* Received from the network */
 uint8_t       *text;         /* Message to decrypt        */
 size_t         text_size;    /* Message size (NOT secret) */
 if (crypto_unlock(text, key, nonce, mac, text, text_size)) {
-    /* The message is corrupted           */
-    /* Wipe key if it is no longer needed */
-    /* and abort the decryption           */
+    /* The message is corrupted.
+     * Wipe key if it is no longer needed,
+     * and abort the decryption.
+     */
     crypto_wipe(key, 32);
 }
 /* Wipe secrets if they are no longer needed */

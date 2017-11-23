@@ -64,8 +64,7 @@ Must be
 .Fa nb_blocks
 × 1024 bytes big, and suitably aligned for 64-bit integers.
 .Fn malloc
-will yield a suitable chunk of memory on platforms that support 64-bit types
-(e.g. int64_t or IEEE double precision floats).
+will yield a suitable chunk of memory.
 .Pp
 The work area is automatically wiped by
 .Fn crypto_argon2i .
@@ -146,8 +145,8 @@ to compare password hashes to prevent timing attacks.
 .Pp
 To select the nb_blocks and nb_iterations parameters, it should first be
 decided how long the computation should take.
-For user authentication, somewhere between half a second (convenient)
-and several seconds (paranoid) is a good starting point.
+For user authentication, we recommend somewhere between half a second
+(convenient) and several seconds (paranoid).
 The computation should use as much memory as can be spared.
 .Pp
 Since parameter selection depends on your hardware, some trial and error
@@ -159,7 +158,6 @@ Adjust
 first.
 If using all available memory is not slow enough, increase
 .Fa nb_iterations .
-.El
 .Sh RETURN VALUES
 This function returns nothing.
 .Sh EXAMPLES

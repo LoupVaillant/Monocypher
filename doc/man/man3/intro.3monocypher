@@ -176,7 +176,6 @@ The Poly1305 authenticator, X25519, and EdDSA use multiplication.
 Some older processors do not multiply in constant time.
 If the target platform is something other than x86, x86_64, ARM or
 ARM64, double check how it handles multiplication.
-.Pp
 .Ss Data compression
 Encryption does not hide the length of the input plaintext.
 Most compression algorithms work by using fewer bytes to encode
