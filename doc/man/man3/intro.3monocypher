@@ -64,6 +64,7 @@ the chances of leaks.
 .Xr crypto_aead_lock 3monocypher ,
 .Xr crypto_aead_unlock 3monocypher ,
 .Xr crypto_argon2i 3monocypher ,
+.Xr crypto_argon2i_general 3monocypher ,
 .Xr crypto_blake2b 3monocypher ,
 .Xr crypto_blake2b_final 3monocypher ,
 .Xr crypto_blake2b_general 3monocypher ,
