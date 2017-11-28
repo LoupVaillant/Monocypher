@@ -55,15 +55,11 @@ It is faster than MD5, yet just as secure as SHA-3.
 .Pp
 BLAKE2b is immune to length extension attacks, and as such does not
 require any specific precautions, such as using the HMAC algorithm.
-It can authenticate messages with a naive approach.
 .Pp
 The arguments are:
 .Bl -tag -width Ds
 .It Fa hash
 The output hash.
-Must have at least
-.Fa hash_size
-free bytes.
 .It Fa hash_size
 Length of the output hash, in bytes.
 Must be between 1 and 64.
@@ -76,7 +72,7 @@ May be
 .Dv NULL
 if
 .Fa key_size
-is 0 (this means there is no key).
+is 0, in which case no key is used.
 Keys can be used to create a message authentication code (MAC).
 Use
 .Xr crypto_verify16 3monocypher ,
@@ -98,18 +94,19 @@ Must be between 0 and 64.
 Message to hash.
 May overlap with the
 .Fa hash
-argument where present.
+argument.
 .It Fa message_size
-the length of the message in bytes.
+The length of the message in bytes.
 .El
 .Ss Direct interface
-The direct interface has 2 functions:
-.Fn crypto_blake2b_general ,
+The direct interface has two functions,
+.Fn crypto_blake2b
 and
-.Fn crypto_blake2b ,
-provided for convenience (calling it is the same as calling
+.Fn crypto_blake2b_general .
+.Fn crypto_blake2b
+is provided for convenience, and is equivalent to calling
 .Fn crypto_blake2b_general
-with a null key and a 64-byte hash).
+with no key and a 64 bit hash.
 .Pp
 .Fn crypto_blake2b_general
 users can specify the size of the hash, and use a secret key to
@@ -120,9 +117,9 @@ Even when using a
 you do not have to wipe the context struct with
 .Xr crypto_wipe 3monocypher .
 .Ss Incremental interface
-Incremental interfaces are useful to handle streams of data or large
-files without using too much memory.
-This interface uses 3 steps:
+The incremental interface is useful for handling streams of data or
+large files without using too much memory.
+This interface uses three steps:
 .Bl -bullet
 .It
 initialisation with
