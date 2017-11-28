@@ -56,14 +56,13 @@ and
 .Xr crypto_check 3monocypher .
 Prefer those more simple functions if possible.
 .Pp
-This incremental interface allows splitting up decryption and
-authentication messages too large to fit into a single buffer, or to
-handle individual pieces of data located in different buffers.
-The arguments are the same as described for the direct interface on
+This incremental interface can be used to sign or verify messages too
+large to fit in a single buffer.
+The arguments are the same as the direct interface described in
 .Xr crypto_sign 3monocypher .
 .Pp
-The direct and incremental interface are compatible.
-They produce and accept the same signatures.
+The direct and incremental interface produce and accept the same
+signatures.
 .Pp
 Signing is done in two passes.
 This requires five steps:
@@ -114,7 +113,7 @@ return nothing.
 They cannot fail.
 .Pp
 .Fn crypto_check_final
-returns zero for legitimate messages and -1 for forgeries.
+returns 0 for legitimate messages and -1 for forgeries.
 .Sh EXAMPLES
 Sign a message:
 .Bd -literal -offset indent
@@ -126,7 +125,7 @@ crypto_sign_ctx ctx;
 crypto_sign_init_first_pass(&ctx, sk, pk);
 /* wipe the secret key if no longer needed */
 crypto_wipe(sk, 32);
-qfor (size_t i = 0; i < 500; i += 100) {
+for (size_t i = 0; i < 500; i += 100) {
     crypto_sign_update(&ctx, message + i, 100);
 }
 crypto_sign_init_second_pass(&ctx);
