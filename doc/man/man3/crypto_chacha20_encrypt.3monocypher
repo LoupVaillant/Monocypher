@@ -57,8 +57,8 @@ It needs a 32-byte secret
 and an 8-byte
 .Fa nonce .
 The nonce must be used only once per secret key (repeating them
-destroys confidentiality).  Counters and (unique) message numbers can
-be used as nonces.
+destroys confidentiality).  Counters and unique message numbers can be
+used as nonces.
 Random numbers
 .Em cannot :
 8-byte nonces are too small to prevent accidental reuse.
@@ -74,11 +74,12 @@ and a 24-byte
 The nonce is big enough to be selected at random.
 See
 .Xr intro 3monocypher
-about generating random numbers (use the operating system's random
-number generator).
+for advice about generating random numbers (use the operating system's
+random number generator).
 .Pp
-The recommended initialisation routine is
-.Fn crypto_chacha20_x_init .
+.Fn crypto_chacha20_x_init
+is recommended over
+.Fn crypto_chacha20_init .
 The ability to use random nonces makes it easier to use securely, and
 the performance hit is negligible in practice.
 .Pp
@@ -93,12 +94,11 @@ by XORing it with a pseudo-random stream of
 numbers, seeded by the provided
 .Vt crypto_chacha_ctx
 context.
-Once the encryption is done, the context is updated to allow
-subsequent calls of
+You may call
 .Fn crypto_chacha20_encrypt
-on the rest of the message, if any.
+repeatedly with the same context struct to encrypt a message
+incrementally.
 .Pp
-The
 .Fa plain_text
 and
 .Fa cipher_text
@@ -109,12 +109,13 @@ Otherwise, the buffers they point to
 The
 .Fa plain_text
 pointer is allowed to be
-.Dv NULL
-(0), in which case it will be interpreted as an all zero input.
+.Dv NULL ,
+in which case it will be interpreted as an all zero input.
 The cipher_text will then contain the raw Chacha20 stream.
 .Pp
-Decryption is the same as encryption.
-To Decrypt the
+Since XOR is its own inverse, decryption is the same operation as
+encryption.
+To decrypt the
 .Fa cipher_text ,
 encrypt it again with the same
 .Fa key
@@ -188,9 +189,10 @@ crypto_chacha20_encrypt(&ctx, plain_text, cipher_text, 500);
 crypto_wipe(key,  sizeof(key));
 crypto_wipe(&ctx, sizeof(ctx));
 /* The plain text likely needs to be processed before you wipe it */
+crypto_wipe(plain_text, 500);
 .Ed
 .Pp
-Encryption chunk by chunk (same as simple encryption):
+Incremental encryption:
 .Bd -literal -offset indent
 const uint8_t key        [ 32];  /* Secret random key              */
 const uint8_t nonce      [ 24];  /* Unique nonce (possibly random) */
@@ -205,21 +207,6 @@ for(int i = 0; i < 500; i += 100) {
 crypto_wipe(key,        sizeof(key));
 crypto_wipe(&ctx,       sizeof(ctx));
 crypto_wipe(plain_text, sizeof(plain_text));
-.Ed
-.Pp
-In place encryption (same results as simple encryption):
-.Bd -literal -offset indent
-const uint8_t key     [ 32];  /* Secret random key               */
-const uint8_t nonce   [ 24];  /* Unique nonce (possibly random)  */
-uint8_t       message [500];  /* Buffer to be encrypted in place */
-crypto_chacha_ctx ctx;
-crypto_chacha20_x_init(&ctx, key, nonce);
-crypto_chacha20_encrypt(&ctx, message, message, 500);
-crypto_wipe(key,  sizeof(key));
-crypto_wipe(&ctx, sizeof(ctx));
-/* Wipe secrets if they are no longer needed */
-crypto_wipe(key,  sizeof(key));
-crypto_wipe(&ctx, sizeof(ctx));
 .Ed
 .Pp
 Simple encryption with a small,
@@ -295,9 +282,10 @@ reuses.
 A counter should be used instead.
 If multiple parties send out messages, Each can start with an initial
 nonce of 0, 1 .. n-1 respectively, and increment them by n for each
-new message (make sure the counters never wrap around).
+new message.
+Make sure the counters never wrap around.
 .Ss Secure random number generation
-Do not use these functions as cryptographic random number generator.
+Do not use these functions as a cryptographic random number generator.
 Always use the operating system's random number generator for
 cryptographic purposes, see
 .Xr intro 3monocypher .
