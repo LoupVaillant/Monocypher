@@ -17,16 +17,15 @@
 .Sh DESCRIPTION
 Cryptographic operations often require comparison of secrets or values
 derived from secrets.
-Standard comparison functions tend to exit as soo as they find a
-difference, and doing so leaks information through variable timings.
+Standard comparison functions (like memcmp) tend to exit when they find
+the first difference, leaking information through timing differences.
 .Pp
-A cannonical example is the message authentication code (MAC).
-A MAC may be sent over the network along with a message.
-However, the correct MAC is secret.
+As an example, say a message authentication code (MAC) is sent over the
+network along with a message, but the correct MAC is secret.
 If the attacker attempts a forgery, one does not want to reveal
 .Dq your MAC is wrong, Em and it took 384 microseconds to tell .
-If the next attempt takes 462 microseconds instead, it gives away the
-fact that the attacker just guessed a few bytes correctly.
+If the next attempt takes 462 microseconds instead, it tells the
+attacker they just guessed a few bytes correctly.
 That way, an attacker can derive the correct MAC, and sucessfully
 forge a message.
 This has lead to practical attacks in the past.
