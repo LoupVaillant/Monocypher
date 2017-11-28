@@ -32,7 +32,7 @@
 .Fn crypto_sign_public_key
 deterministically computes a public key from the specified
 secret key.
-That key must be random.
+The secret key must be random.
 See
 .Xr intro 3monocypher
 about random number generation (use your operating system's random
@@ -81,7 +81,7 @@ return nothing.
 They cannot fail.
 .Pp
 .Fn crypto_check
-returns zero for legitimate messages and -1 for forgeries.
+returns 0 for legitimate messages and -1 for forgeries.
 .Sh EXAMPLES
 Generate a public key from a random secret key:
 .Bd -literal -offset indent
