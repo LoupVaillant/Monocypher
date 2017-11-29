@@ -57,8 +57,8 @@ It needs a 32-byte secret
 and an 8-byte
 .Fa nonce .
 The nonce must be used only once per secret key (repeating them
-destroys confidentiality).  Counters and unique message numbers can be
-used as nonces.
+destroys confidentiality).
+Counters and unique message numbers can be used as nonces.
 Random numbers
 .Em cannot :
 8-byte nonces are too small to prevent accidental reuse.
