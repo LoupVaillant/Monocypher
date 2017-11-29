@@ -7,19 +7,23 @@
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft int
-.Fn crypto_wipe "void *secret" "size_t size"
+.Fn crypto_wipe "void *secret" "size_t secret_size"
 .Sh DESCRIPTION
-Secrets and values derived from them should stay in memory for the
-shortest possible amount of time.
 .Fn crypto_wipe
-allows zeroing out contents that contain secrets.
-A secret may be a cryptographic key or a decrypted message.
+securely erases sensitive data in memory.
+.Pp
+Sensitive data (such as cryptographic keys or secret plaintexts) should
+be erased from memory as early as possible, to minimise the window in
+which it can be leaked.
+Standard functions like memset and bzero are not safe to use, as the
+compiler may decide they have no effect and optimise them out.
+.Pp
 The arguments are:
 .Bl -tag -width Ds
 .It Fa secret
-the buffer to erase.
-.It Fa size
-the number of bytes to erase from the buffer.
+The buffer to erase.
+.It Fa secret_size
+The number of bytes to erase from the buffer.
 This will normally be the entire buffer.
 .El
 .Pp
@@ -32,7 +36,7 @@ They are exposed in incremental interfaces like
 .Xr crypto_lock_init 3monocypher .
 The original key buffer does not get automatically wiped.
 When using incremental interfaces, you may want to wipe the original key
-buffer(s) immediately after calling the respective init function.
+buffers immediately after calling the respective init function.
 .Pp
 Using
 .Fn crypto_wipe
