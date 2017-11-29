@@ -106,7 +106,7 @@ and
 .Fn crypto_blake2b
 is provided for convenience, and is equivalent to calling
 .Fn crypto_blake2b_general
-with no key and a 64 bit hash.
+with no key and a 64-byte hash.
 .Pp
 .Fn crypto_blake2b_general
 users can specify the size of the hash, and use a secret key to
