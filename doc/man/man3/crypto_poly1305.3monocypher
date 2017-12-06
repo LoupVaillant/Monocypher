@@ -167,7 +167,7 @@ To get this right, you need a session key, a
 nonce, and a
 stream cipher.
 Generate a stream with the session key and nonce.
-Take the first 32 bits of that stream as your authentication key, then
+Take the first 32 bytes of that stream as your authentication key, then
 use the
 .Em rest
 of the stream to encrypt your message.
