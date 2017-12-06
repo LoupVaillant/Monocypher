@@ -33,31 +33,30 @@
 .Fa "const uint8_t mac[16]"
 .Fc
 .Sh DESCRIPTION
-Poly1305 is a one-time message authentication code.
-"One time" means
-the authentication key can be used only once.
-This makes Poly1305
-.Sy easy to mess up .
-On the other hand, Poly1305 is fast, as well as provably secure if
-used correctly.
+Poly1305 is a one-time message authentication code. "One-time" means the
+authentication key can be used only once.
+.Sy This makes Poly1305 easy to misuse .
+On the other hand, Poly1305 is fast, as well as provably secure if used
+correctly.
 .Pp
 Poly1305 is a low-level primitive.
 Consider using authenticated encryption, implemented by
 .Xr crypto_lock 3monocypher .
 .Ss Direct interface
 .Fn crypto_poly1305
-produces a message authentication code for the given
-message and authentication key.
-The authentication key must be used only once.
+produces a message authentication code for the given message and
+authentication key.
+The
 .Fa mac
 and the
 .Fa message
 arguments may overlap.
 .Pp
-Once the authentication is done, the
+The
 .Fa key
 should be wiped with
-.Xr crypto_wipe 3monocypher .
+.Xr crypto_wipe 3monocypher
+after being used.
 .Pp
 To verify the integrity of a message, use
 .Xr crypto_verify16 3monocypher
@@ -66,7 +65,6 @@ to compare the received MAC to the output
 .Ss Streaming interface
 .Fn crypto_poly1305_init
 initialises a context.
-The
 .Fa key
 should be wiped once the context is initialised.
 Then,
@@ -85,7 +83,8 @@ const uint8_t msg[500];  /* Message to authenticate           */
 const uint8_t key[ 32];  /* Random secret key (use only once) */
 uint8_t       mac[ 16];  /* Message authentication code (MAC) */
 crypto_poly1305(mac, msg, 500, key);
-crypto_wipe(key, 32);    /* The key should be wiped after use */
+/* Wipe the key */
+crypto_wipe(key, 32);
 .Ed
 .Pp
 To verify the above message:
@@ -95,23 +94,25 @@ const uint8_t key     [ 32];  /* The above key     */
 const uint8_t mac     [ 16];  /* The above MAC     */
 uint8_t       real_mac[ 16];  /* The actual MAC    */
 crypto_poly1305(real_mac, msg, 500, key);
-crypto_wipe(key, 32);         /* Wipe right away   */
+/* Wipe the key */
+crypto_wipe(key, 32);
 if (crypto_verify16(mac, real_mac)) {
-    /* The message is corrupted */
+    /* Corrupted message, abort processing */
 } else {
-    /* The message is real */
+    /* Genuine message */
 }
 .Ed
 .Pp
-Authentication chunk by chunk (same as the above):
+Incremental authentication:
 .Bd -literal -offset indent
 const uint8_t msg[500];  /* Message to authenticate           */
 const uint8_t key[ 32];  /* Random secret key (use only once) */
 uint8_t       mac[ 16];  /* Message authentication code (MAC) */
 crypto_poly1305_ctx ctx;
 crypto_poly1305_init(&ctx, key);
-crypto_wipe(key, 32);    /* The key should be wiped after use */
-for(int i = 0; i < 500; i += 100) {
+/* Wipe the key */
+crypto_wipe(key, 32);
+for (int i = 0; i < 500; i += 100) {
     crypto_poly1305_update(&ctx, msg, 100);
 }
 crypto_poly1305_final(&ctx, mac);
@@ -125,7 +126,7 @@ crypto_poly1305_final(&ctx, mac);
 These functions implement Poly1305, described in RFC 7539.
 .Sh  SECURITY CONSIDERATIONS
 .Ss User error
-Using Poly1305 correctly is difficult.
+Poly1305 is difficult to use correctly.
 Do not use it unless you are absolutely sure what you are doing.
 Use authenticated encryption instead; see
 .Xr crypto_lock 3monocypher .
@@ -133,9 +134,9 @@ If you are absolutely certain you do not want encryption, refer to
 .Xr crypto_blake2b 3monocypher
 on how to use Blake2b to generate message authentication codes.
 .Pp
-If you still want to use Poly1305, keep in mind that it is very easy
-to make mistakes that destroy all security.
-This is because the requirements for the
+If you still want to use Poly1305, keep in mind that it is very easy to
+make mistakes that destroy all security.
+The requirements for the
 .Fa key
 are stringent:
 it must be secret, shared, and
@@ -144,25 +145,22 @@ The attacker must not be able to guess the key;
 it must be shared with the recipient to allow verification;
 and it must be used
 .Sy only once .
-If it is ever reused, the attacker can easily recover it, then forge
-arbitrary messages, or even destroy all security.
+If it is ever reused, the attacker can easily recover it and then forge
+arbitrary messages.
 .Pp
-The session key cannot be used for this: it is secret and shared, but
-it is
-.Em reused .
-The attacker will recover it and break all security.
-A simple random number cannot be used either: there is no reasonable
-way to give it to the recipient without also revealing it to the
-attacker.
+Session keys cannot be used for this.
+They are shared and secret, but would be reused when sending multiple
+messages.
+Random numbers cannot be used either as there is no reasonable way to
+share it with the recipient without also revealing it to the attacker.
 .Pp
 The only practical source for the authentication key is a chunk of the
 encryption stream used to encrypt the message.
 That chunk must be
 .Em dedicated
 to the authentication key:
-if it is reused to encrypt the message itself, the attacker may
-recover that chunk by guessing the message, then forge arbitrary
-messages.
+if it is reused to encrypt the message itself, the attacker may recover
+that chunk by guessing the message, then forge arbitrary messages.
 .Pp
 To get this right, you need a session key, a
 .Em unique
@@ -173,23 +171,18 @@ Take the first 32 bits of that stream as your authentication key, then
 use the
 .Em rest
 of the stream to encrypt your message.
-The source code of
-.Xr crypto_aead_lock 3monocypher
-shows how it is done.
+This is the approach used by
+.Xr crypto_aead_lock 3monocypher .
 .Ss Protection against side channels
 Use
 .Xr crypto_verify16 3monocypher
-To compare message authentication code.
-Avoid standard buffer comparison functions.
-They do not run in constant time, which allows attackers to recover
-the MAC in relatively few tries.
+to compare message authentication codes.
+Avoid standard buffer comparison functions, as they may not run in
+constant time.
 .Pp
 The authentication key should be wiped with
 .Xr crypto_wipe 3monocypher
 after use.
 .Pp
-Incremental interface users do not need to wipe the
-.Ft crypto_poly1305_ctx
-explicitly,
-.Fn crypto_poly1305_final
-does it automatically.
+The incremental interface automatically wipes its context when finished
+so users do not need to do it themselves.
