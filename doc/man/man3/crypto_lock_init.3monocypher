@@ -64,43 +64,42 @@ and
 .Xr crypto_aead_unlock 3monocypher .
 Prefer those simpler functions if possible.
 .Pp
-This incremental interface allows splitting up decryption and
-authentication of messages too large to fit into a single buffer
-or to handle individual pieces of data located in different buffers.
-The arguments are the same as described for the direct interface on
+This incremental interface can be used to encrypt and decrypt messages too
+large to fit in a single buffer.
+The arguments are the same as described for the direct interface described in
 .Xr crypto_lock 3monocypher .
 .Pp
-This interface uses four steps:
+Encryption requires four steps:
 .Bl -bullet
 .It
-Initialisation with
+Initialise a context with
 .Fn crypto_lock_init .
-This sets up a context for encryption or decryption.
-The same function is used for both.
 .It
-Authentication with
+Authenticate additional data, if any, with
 .Fn crypto_lock_auth .
-This authenticates (or verifies) additional data, if any.
 .It
-Update with
-.Fn crypto_lock_update
-for encryption, or
-.Fn crypto_unlock_update
-for decryption.
-This encrypts (or decrypts) and authenticates (or verifies) part of
-the secret message.
+Encrypt and authenticate some data with
+.Fn crypto_lock_update .
 .It
-Finalisation with
-.Fn crypto_lock_final
-to generate the MAC, or
-.Fn crypto_unlock_final
-to verify the MAC.
+Generate the MAC with
+.Fn crypto_lock_final .
 .El
 .Pp
-Because the incremental interface interleaves encryption and
-authentication, it treats corrupted messages three times slower than
-the direct interface.
-Users who expect a high corruption rate may want a different approach.
+Decryption also requires four steps:
+.Bl -bullet
+.It
+Initialise a context with
+.Fn crypto_lock_init .
+.It
+Verify additional data, if any, with
+.Fn crypto_lock_auth .
+.It
+Decrypt and verify some data with
+.Fn crypto_unlock_update .
+.It
+Verify the MAC with
+.Fn crypto_unlock_final .
+.El
 .Pp
 .Fn crypto_lock_encrypt
 encrypts or decrypts data
@@ -127,25 +126,26 @@ They cannot fail.
 .Pp
 .Fn crypto_unlock_final
 returns 0 on success or -1 if the message was corrupted.
-Corruption can happen because of transmission errors, programmer
-error, or attacker interference.
+Corruption can happen because of transmission errors, programmer error, or an
+attacker's interference.
 .Em Always check the return value .
 .Sh EXAMPLES
 Encryption:
 .Bd -literal -offset indent
-const uint8_t key        [ 32]; /* session key                 */
-const uint8_t nonce      [ 32]; /* unique per session key      */
-const uint8_t ad         [500]; /* optional additional data    */
-const uint8_t plain_text [500]; /* secret message              */
-uint8_t       cipher_text[500]; /* encrypted message           */
-uint8_t       mac        [ 16]; /* message authentication code */
+const uint8_t key        [ 32]; /* Session key                 */
+const uint8_t nonce      [ 32]; /* Unique per session key      */
+const uint8_t ad         [500]; /* Optional additional data    */
+const uint8_t plain_text [500]; /* Secret message              */
+uint8_t       cipher_text[500]; /* Encrypted message           */
+uint8_t       mac        [ 16]; /* Message authentication code */
 
 /* Set up initial context */
 crypto_lock_ctx ctx;
 crypto_lock_init(&ctx, key, nonce);
-crypto_wipe(key, 32);      /* wipe the key if no longer needed */
+/* Wipe the key if it is no longer needed */
+crypto_wipe(key, 32);
 
-/* Authenticate additional data, if any */
+/* Authenticate additional data */
 for (size_t i = 0; i < 500; i += 100) {
     crypto_lock_auth(&ctx, ad + i, 100);
 }
@@ -153,7 +153,7 @@ for (size_t i = 0; i < 500; i += 100) {
 /* Encrypt message */
 for (size_t i = 0; i < 500; i += 100) {
     crypto_lock_update(&ctx, cipher_text + i, plain_text + i, 100);
-    /* wipe the secret message if no longer needed */
+    /* Wipe the secret message if it is no longer needed */
     crypto_wipe(plain_text + i, 100);
 }
 
@@ -163,19 +163,20 @@ crypto_lock_final(&ctx, mac);
 .Pp
 To decrypt the above:
 .Bd -literal -offset indent
-const uint8_t key        [ 32]; /* session key              */
-const uint8_t nonce      [ 32]; /* unique per session key   */
-const uint8_t mac        [ 16]; /* transmitted MAC          */
-const uint8_t ad         [500]; /* optional additional data */
-const uint8_t cipher_text[500]; /* encrypted message        */
-uint8_t       plain_text [500]; /* secret message           */
+const uint8_t key        [ 32]; /* Session key              */
+const uint8_t nonce      [ 32]; /* Unique per session key   */
+const uint8_t mac        [ 16]; /* Transmitted MAC          */
+const uint8_t ad         [500]; /* Optional additional data */
+const uint8_t cipher_text[500]; /* Encrypted message        */
+uint8_t       plain_text [500]; /* Secret message           */
 
 /* Set up initial context */
 crypto_lock_ctx ctx;
 crypto_lock_init(&ctx, key, nonce);
-crypto_wipe(key, 32);   /* wipe the key if no longer needed */
+/* Wipe the key if it is no longer needed */
+crypto_wipe(key, 32);
 
-/* Authenticate additional data, if any */
+/* Verify additional data */
 for (size_t i = 0; i < 500; i += 100) {
     crypto_lock_auth(&ctx, ad + i, 100);
 }
@@ -187,23 +188,27 @@ for (size_t i = 0; i < 500; i += 100) {
 
 /* Check the MAC */
 if (crypto_unlock_final(&ctx, mac)) {
-    /* corrupted message, abort processing */
+    /* Corrupted message, abort processing */
 } else {
-    /* genuine message */
+    /* Genuine message */
 }
+
+/* Wipe the secret message if it is no longer needed */
+crypto_wipe(plain_text, 500);
 .Ed
 .Pp
-In-place Encryption (without additional data for clarity):
+In-place encryption without additional data:
 .Bd -literal -offset indent
-const uint8_t key   [ 32]; /* session key                 */
-const uint8_t nonce [ 32]; /* unique per session key      */
-uint8_t       text  [500]; /* message                     */
-uint8_t       mac   [ 16]; /* message authentication code */
+const uint8_t key   [ 32]; /* Session key                 */
+const uint8_t nonce [ 32]; /* Unique per session key      */
+uint8_t       text  [500]; /* Message                     */
+uint8_t       mac   [ 16]; /* Message authentication code */
 
 /* Set up initial context */
 crypto_lock_ctx ctx;
 crypto_lock_init(&ctx, key, nonce);
-crypto_wipe(key, 32); /* wipe the key if no longer needed */
+/* Wipe the key if it is no longer needed */
+crypto_wipe(key, 32);
 
 /* Encrypt message */
 for (size_t i = 0; i < 500; i += 100) {

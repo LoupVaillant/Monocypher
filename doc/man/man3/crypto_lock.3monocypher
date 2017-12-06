@@ -6,7 +6,7 @@
 .Nm crypto_aead_unlock ,
 .Nm crypto_lock ,
 .Nm crypto_unlock
-.Nd authenticated encryption (optionally with additional data)
+.Nd authenticated encryption with additional data
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
@@ -197,19 +197,6 @@ crypto_wipe(key, 32);
 /* Transmit cipher_text, nonce, and mac over the network */
 .Ed
 .Pp
-Encryption (in place):
-.Bd -literal -offset indent
-const uint8_t  key  [32];   /* Random, secret session key  */
-const uint8_t  nonce[24];   /* Use only once per key       */
-uint8_t       *plain_text;  /* Secret message              */
-size_t         text_size;   /* Message size (NOT secret)   */
-uint8_t        mac  [16];   /* Message authentication code */
-crypto_lock(mac, plain_text, key, nonce, plain_text, text_size);
-/* Wipe secrets if they are no longer needed */
-crypto_wipe(key, 32);
-/* Transmit plain_text, nonce, and mac over the network */
-.Ed
-.Pp
 To decrypt the above:
 .Bd -literal -offset indent
 const uint8_t  key  [32];    /* Same as the above         */
@@ -231,7 +218,20 @@ crypto_wipe(plain_text, text_size);
 crypto_wipe(key, 32);
 .Ed
 .Pp
-To decrypt the above (in place):
+In-place encryption:
+.Bd -literal -offset indent
+const uint8_t  key  [32];   /* Random, secret session key  */
+const uint8_t  nonce[24];   /* Use only once per key       */
+uint8_t       *plain_text;  /* Secret message              */
+size_t         text_size;   /* Message size (NOT secret)   */
+uint8_t        mac  [16];   /* Message authentication code */
+crypto_lock(mac, plain_text, key, nonce, plain_text, text_size);
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(key, 32);
+/* Transmit plain_text, nonce, and mac over the network */
+.Ed
+.Pp
+In-place decryption:
 .Bd -literal -offset indent
 const uint8_t  key  [32];    /* Same as the above         */
 const uint8_t  nonce[24];    /* Same as the above         */
