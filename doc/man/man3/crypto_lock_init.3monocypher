@@ -64,9 +64,10 @@ and
 .Xr crypto_aead_unlock 3monocypher .
 Prefer those simpler functions if possible.
 .Pp
-This incremental interface can be used to encrypt and decrypt messages too
-large to fit in a single buffer.
-The arguments are the same as described for the direct interface described in
+This incremental interface can be used to encrypt and decrypt messages
+too large to fit in a single buffer.
+The arguments are the same as described for the direct interface
+described in
 .Xr crypto_lock 3monocypher .
 .Pp
 Encryption requires four steps:
@@ -126,7 +127,7 @@ They cannot fail.
 .Pp
 .Fn crypto_unlock_final
 returns 0 on success or -1 if the message was corrupted.
-Corruption can happen because of transmission errors, programmer error, or an
+Corruption can be caused by transmission errors, programmer error, or an
 attacker's interference.
 .Em Always check the return value .
 .Sh EXAMPLES

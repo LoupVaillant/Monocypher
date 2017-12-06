@@ -177,8 +177,8 @@ mismatched the combination of
 .Fa ad
 and
 .Fa cipher_text ) .
-Corruption can happen because of transmission errors, programmer
-error, or an attacker's interference.
+Corruption can be caused by transmission errors, programmer error, or an
+attacker's interference.
 .Fa plain_text
 does not need to be wiped if the decryption fails.
 .Sh EXAMPLES
