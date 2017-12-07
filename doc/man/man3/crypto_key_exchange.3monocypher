@@ -3,8 +3,7 @@
 .Os
 .Sh NAME
 .Nm crypto_key_exchange ,
-.Nm crypto_x25519_public_key ,
-.Nm crypto_x25519
+.Nm crypto_x25519_public_key
 .Nd Elliptic Curve Diffie-Hellman key exchange
 .Sh SYNOPSIS
 .In monocypher.h
@@ -19,47 +18,24 @@
 .Fa "uint8_t public_key[32]"
 .Fa "const uint8_t secret_key[32]"
 .Fc
-.Ft int
-.Fo crypto_x25519
-.Fa "uint8_t raw_shared_secret[32]"
-.Fa "const uint8_t your_secret_key[32]"
-.Fa "const uint8_t their_public_key[32]"
-.Fc
 .Sh DESCRIPTION
 .Fn crypto_key_exchange
 computes a shared key with your secret key and their public key,
-suitable for the
+suitable for use with the
 .Xr crypto_lock 3monocypher
 family of functions.
-It performs an X25519 key exchange, then hashes the shared secret with
-HChacha20 to get a suitably random shared key.
 .Pp
 .Fn crypto_x25519_public_key
-deterministically computes the public key from a random
-.Fa secret_key .
+deterministically computes the public key from a random secret key.
 See
 .Xr intro 3monocypher
-about generating random bytes (use the operating system's random
-number generator).
+for advice about generating random bytes (use the operating system's
+random number generator).
 .Pp
-.Fn crypto_x25519
-computes a shared secret with
-.Fa your_secret_key
-and
-.Fa their_public_key .
-.Sy Warning: the shared secret is not cryptographically random .
-Do not use it directly as a session key.
-Hash it first with
-.Xr crypto_chacha20_H 3monocypher
-or
-.Xr crypto_blake2b 3monocypher .
 .Sh RETURN VALUES
+Some public keys force the shared key to a known constant.
 .Fn crypto_key_exchange
-and
-.Fn crypto_x25519
-return zero on success, or -1 on failure.
-The return value serves as a security check: some public keys force
-the shared key to a known constant.
+returns -1 if it detects such a public key, otherwise it returns 0.
 This never happens with legitimate public keys, but if the ones you
 process are not known to be trustworthy, check the return value.
 .Pp
@@ -91,28 +67,6 @@ if (crypto_key_exchange(shared_key, your_sk, their_pk) != 0) {
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(your_sk, 32);
 .Ed
-.Pp
-Generate
-.Em two
-shared keys with your secret key and their public key.
-(This can help nonce management for full duplex communications.)
-.Bd -literal -offset indent
-const uint8_t their_pk     [32]; /* Their public key          */
-const uint8_t your_sk      [32]; /* Your secret key           */
-uint8_t       shared_secret[32]; /* Shared secret (NOT a key) */
-if (crypto_x25519(shared_secret, your_sk, their_pk) != 0) {
-    /* Their public key is malicious. */
-    /* The exchange must be aborted.  */
-}
-/* Wipe secrets if they are no longer needed */
-crypto_wipe(your_sk, 32);
-
-uint8_t shared_keys[64];           /* Two shared session keys  */
-uint8_t *key_1 = shared_keys;      /* Shared key 1             */
-uint8_t *key_2 = shared_keys + 32; /* Shared key 2             */
-crypto_blake2b(shared_keys, shared_secret, 32);
-crypto_wipe(shared_secret, 32);    /* wipe the unneeded secret */
-.Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,
 .Xr intro 3monocypher
@@ -121,19 +75,10 @@ These functions implement X25519, described in RFC 7748.
 .Fn crypto_key_exchange
 uses HChacha20 as well.
 .Sh SECURITY CONSIDERATIONS
-If either of the long term secret keys leaks, it
-may compromise
+If either of the long term secret keys leaks, it may compromise
 .Em all past messages .
 Users who want forward secrecy need to generate temporary public keys,
 send them to one another, (use
 .Xr crypto_lock 3monocypher
 to authenticate them), and compute a shared secret with those
 temporary keys.
-.Sh IMPLEMENTATION DETAILS
-The most significant bit of the public key is systematically ignored.
-It is not needed because every public key should be smaller than
-2^255-19, which fits in 255 bits.
-If another implementation of X25519 gives you a key that's not fully
-reduced and has its high bit set, the computation will fail.
-On the other hand, it also means you may use this bit for other purposes
-(such as parity flipping for Ed25519 compatibility).
