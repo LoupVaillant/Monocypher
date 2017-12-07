@@ -33,10 +33,10 @@
 .Fa "const uint8_t mac[16]"
 .Fc
 .Sh DESCRIPTION
-Poly1305 is a one-time message authentication code. "One-time" means the
-authentication key can be used only once.
+Poly1305 is a one-time message authentication code.
+"One-time" means the authentication key can be used only once.
 .Sy This makes Poly1305 easy to misuse .
-On the other hand, Poly1305 is fast, as well as provably secure if used
+On the other hand, Poly1305 is fast, and provably secure if used
 correctly.
 .Pp
 Poly1305 is a low-level primitive.
@@ -46,13 +46,11 @@ Consider using authenticated encryption, implemented by
 .Fn crypto_poly1305
 produces a message authentication code for the given message and
 authentication key.
-The
 .Fa mac
-and the
+and
 .Fa message
-arguments may overlap.
+may overlap.
 .Pp
-The
 .Fa key
 should be wiped with
 .Xr crypto_wipe 3monocypher
@@ -124,7 +122,7 @@ crypto_poly1305_final(&ctx, mac);
 .Xr intro 3monocypher
 .Sh STANDARDS
 These functions implement Poly1305, described in RFC 7539.
-.Sh  SECURITY CONSIDERATIONS
+.Sh SECURITY CONSIDERATIONS
 .Ss User error
 Poly1305 is difficult to use correctly.
 Do not use it unless you are absolutely sure what you are doing.
