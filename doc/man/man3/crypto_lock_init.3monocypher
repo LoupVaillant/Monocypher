@@ -234,3 +234,9 @@ Chacha20 and Poly1305 are described in RFC 7539.
 XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
+.Sh IMPLEMENTATION DETAILS
+The incremental interface is roughly three times slower than the direct
+interface at identifying corrupted messages.
+This is because the incremental interface works in a single pass and has
+to interleave decryption and verification.
+Users who expect a high corruption rate may want to avoid it.
