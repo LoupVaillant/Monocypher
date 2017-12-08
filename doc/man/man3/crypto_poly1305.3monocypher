@@ -150,7 +150,8 @@ Session keys cannot be used for this.
 They are shared and secret, but would be reused when sending multiple
 messages.
 Random numbers cannot be used either as there is no reasonable way to
-share it with the recipient without also revealing it to the attacker.
+share them with the recipient without also revealing them to the
+attacker.
 .Pp
 The only practical source for the authentication key is a chunk of the
 encryption stream used to encrypt the message.
@@ -175,8 +176,9 @@ This is the approach used by
 Use
 .Xr crypto_verify16 3monocypher
 to compare message authentication codes.
-Avoid standard buffer comparison functions, as they may not run in
-constant time.
+Avoid standard buffer comparison functions.
+They may not run in constant time, enabling an attacker to exploit timing
+attacks to recover the MAC.
 .Pp
 The authentication key should be wiped with
 .Xr crypto_wipe 3monocypher
