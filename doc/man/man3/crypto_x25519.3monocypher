@@ -1,1 +1,81 @@
-crypto_key_exchange.3monocypher
+.Dd December 7, 2017
+.Dt CRYPTO_X25519 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm crypto_x25519
+.Nd X25519 key exchange
+.Sh SYNOPSIS
+.In monocypher.h
+.Ft int
+.Fo crypto_x25519
+.Fa "uint8_t raw_shared_secret[32]"
+.Fa "const uint8_t your_secret_key[32]"
+.Fa "const uint8_t their_public_key[32]"
+.Fc
+.Sh DESCRIPTION
+.Fn crypto_x25519
+computes a shared secret with
+.Fa your_secret_key
+and
+.Fa their_public_key .
+.Sy The shared secret is not cryptographically random .
+Do not use it directly as a session key.
+Hash it with
+.Xr crypto_chacha20_H 3monocypher
+or
+.Xr crypto_blake2b 3monocypher 
+first.
+.Pp
+.Fn crypto_x25519
+is a low-level primitive.
+Users should use
+.Xr crypto_key_exchange 3monocypher
+unless they have a specific reason not to.
+.Sh RETURN VALUES
+Some public keys force the shared key to a known constant.
+This function returns -1 if it detects such a public key, otherwise it
+returns 0.
+This never happens with legitimate public keys, but if the ones you
+process are not known to be trustworthy, check the return value.
+.Sh EXAMPLES
+Generate a pair of shared keys with your secret key and their public
+key.
+(This can help nonce management for full duplex communications.)
+.Bd -literal -offset indent
+const uint8_t their_pk     [32]; /* Their public key          */
+const uint8_t your_sk      [32]; /* Your secret key           */
+uint8_t       shared_secret[32]; /* Shared secret (NOT a key) */
+if (crypto_x25519(shared_secret, your_sk, their_pk) != 0) {
+    /* Their public key is malicious. */
+    /* The exchange must be aborted.  */
+}
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(your_sk, 32);
+
+uint8_t shared_keys[64];           /* Two shared session keys  */
+uint8_t *key_1 = shared_keys;      /* Shared key 1             */
+uint8_t *key_2 = shared_keys + 32; /* Shared key 2             */
+crypto_blake2b(shared_keys, shared_secret, 32);
+/* Wipe the secret /
+crypto_wipe(shared_secret, 32);    
+.Sh SEE ALSO
+.Xr crypto_key_exchange 3monocypher ,
+.Xr intro 3monocypher
+.Sh STANDARDS
+This function implements X25519, described in RFC 7748.
+.Sh SECURITY CONSIDERATIONS
+If either of the long term secret keys leaks, it may compromise
+.Em all past messages .
+Users who want forward secrecy need to generate temporary public keys,
+send them to one another, (use
+.Xr crypto_lock 3monocypher
+to authenticate them), and compute a shared secret with those
+temporary keys.
+.Sh IMPLEMENTATION DETAILS
+The most significant bit of the public key is systematically ignored.
+It is not needed because every public key should be smaller than
+2^255-19, which fits in 255 bits.
+If another implementation of X25519 gives you a key that's not fully
+reduced and has its high bit set, the computation will fail.
+On the other hand, it also means you may use this bit for other purposes
+(such as parity flipping for Ed25519 compatibility).
