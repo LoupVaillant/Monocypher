@@ -234,6 +234,20 @@ Chacha20 and Poly1305 are described in RFC 7539.
 XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
+.Sh SECURITY CONSIDERATIONS
+Using this incremental for decryption means authentication is
+incremental as well.
+This allows two errors: forgetting to call
+.Fn crypto_unlock_final
+altogether, and start processing the message before the authentication
+is complete.
+Messages may be stored before they are verified, but they cannot be
+.Em trusted .
+Processing untrusted messages increases the attack surface of the
+system.
+Doing so securely is hard.
+Don't process messages before calling
+.Fn crypto_unlock_final .
 .Sh IMPLEMENTATION DETAILS
 The incremental interface is roughly three times slower than the direct
 interface at identifying corrupted messages.
