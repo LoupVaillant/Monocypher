@@ -23,7 +23,7 @@ Do not use it directly as a session key.
 Hash it with
 .Xr crypto_chacha20_H 3monocypher
 or
-.Xr crypto_blake2b 3monocypher 
+.Xr crypto_blake2b 3monocypher
 first.
 .Pp
 .Fn crypto_x25519
@@ -57,7 +57,8 @@ uint8_t *key_1 = shared_keys;      /* Shared key 1             */
 uint8_t *key_2 = shared_keys + 32; /* Shared key 2             */
 crypto_blake2b(shared_keys, shared_secret, 32);
 /* Wipe the secret /
-crypto_wipe(shared_secret, 32);    
+crypto_wipe(shared_secret, 32);
+.Ed
 .Sh SEE ALSO
 .Xr crypto_key_exchange 3monocypher ,
 .Xr intro 3monocypher
@@ -66,11 +67,8 @@ This function implements X25519, described in RFC 7748.
 .Sh SECURITY CONSIDERATIONS
 If either of the long term secret keys leaks, it may compromise
 .Em all past messages .
-Users who want forward secrecy need to generate temporary public keys,
-send them to one another, (use
-.Xr crypto_lock 3monocypher
-to authenticate them), and compute a shared secret with those
-temporary keys.
+This can be avoided by using protocols that provide forward secrecy,
+such as the Double Ratchet Algorithm.
 .Sh IMPLEMENTATION DETAILS
 The most significant bit of the public key is systematically ignored.
 It is not needed because every public key should be smaller than

@@ -31,7 +31,6 @@ See
 .Xr intro 3monocypher
 for advice about generating random bytes (use the operating system's
 random number generator).
-.Pp
 .Sh RETURN VALUES
 Some public keys force the shared key to a known constant.
 .Fn crypto_key_exchange
@@ -77,8 +76,5 @@ uses HChacha20 as well.
 .Sh SECURITY CONSIDERATIONS
 If either of the long term secret keys leaks, it may compromise
 .Em all past messages .
-Users who want forward secrecy need to generate temporary public keys,
-send them to one another, (use
-.Xr crypto_lock 3monocypher
-to authenticate them), and compute a shared secret with those
-temporary keys.
+This can be avoided by using protocols that provide forward secrecy,
+such as the Double Ratchet Algorithm.
