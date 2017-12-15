@@ -56,7 +56,7 @@ uint8_t shared_keys[64];           /* Two shared session keys  */
 uint8_t *key_1 = shared_keys;      /* Shared key 1             */
 uint8_t *key_2 = shared_keys + 32; /* Shared key 2             */
 crypto_blake2b(shared_keys, shared_secret, 32);
-/* Wipe the secret /
+/* Wipe the secret */
 crypto_wipe(shared_secret, 32);
 .Ed
 .Sh SEE ALSO

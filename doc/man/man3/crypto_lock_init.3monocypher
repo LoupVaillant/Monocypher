@@ -246,7 +246,7 @@ Messages may be stored before they are verified, but they cannot be
 Processing untrusted messages increases the attack surface of the
 system.
 Doing so securely is hard.
-Don't process messages before calling
+Do not process messages before calling
 .Fn crypto_unlock_final .
 .Sh IMPLEMENTATION DETAILS
 The incremental interface is roughly three times slower than the direct
