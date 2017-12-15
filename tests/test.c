@@ -221,6 +221,41 @@ static int test_x25519()
 /// Self consistency tests ///
 //////////////////////////////
 
+static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
+{
+    int status = 0;
+    u8 a[64]; // size <= 64
+    u8 b[64]; // size <= 64
+    FOR (i, 0, 256) {
+        FOR (j, 0, 256) {
+            // Set every byte to the chosen value, then compare
+            FOR (k, 0, size) {
+                a[k] = i;
+                b[k] = j;
+            }
+            int cmp = compare(a, b);
+            status |= (i == j ? cmp : ~cmp);
+            // Set only two bytes to the chosen value, then compare
+            FOR (k, 0, size / 2) {
+                FOR (l, 0, size) {
+                    a[l] = 0;
+                    b[l] = 0;
+                }
+                a[k] = i; a[k + size/2] = i;
+                b[k] = j; b[k + size/2] = j;
+                int cmp = compare(a, b);
+                status |= (i == j ? cmp : ~cmp);
+            }
+        }
+    }
+    printf("%s: crypto_verify%zu\n", status != 0 ? "FAILED" : "OK", size);
+    return status;
+}
+static int p_verify16(){ return p_verify(16, crypto_verify16); }
+static int p_verify32(){ return p_verify(32, crypto_verify32); }
+static int p_verify64(){ return p_verify(64, crypto_verify64); }
+
+
 // Tests that encrypting in chunks yields the same result than
 // encrypting all at once.
 static int p_chacha20()
@@ -685,6 +720,9 @@ int main(void)
 
     printf("\nProperty based tests");
     printf("\n--------------------\n");
+    status |= p_verify16();
+    status |= p_verify32();
+    status |= p_verify64();
     status |= p_chacha20();
     status |= p_chacha20_same_ptr();
     status |= p_chacha20_set_ctr();
