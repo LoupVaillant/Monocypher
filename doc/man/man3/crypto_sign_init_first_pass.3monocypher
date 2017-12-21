@@ -164,8 +164,17 @@ These functions implement EdDSA with Curve25519 and Blake2b.
 This is the same as Ed25519, with Blake2b instead of SHA-512.
 Ed25519 is described in RFC 7748.
 .Sh SECURITY CONSIDERATIONS
-The same as documented on
-.Xr crypto_sign 3monocypher .
+In addition to those documented on
+.Xr crypto_sign 3monocypher ,
+incremental signature verification encourages the user to start
+processing the message before verification is done.
+Messages may be stored before they are verified, but they cannot be
+.Em trusted .
+Processing untrusted messages increases the attack surface of the
+system.
+Doing so securely is hard.
+Do not process messages before calling
+.Fn crypto_check_final .
 .Sh IMPLEMENTATION DETAILS
 EdDSA signatures require two passes that cannot be performed in
 parallel.
