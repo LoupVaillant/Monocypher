@@ -33,7 +33,7 @@
 .Fo crypto_chacha20_stream
 .Fa "crypto_chacha_ctx *ctx"
 .Fa "uint8_t *stream"
-.Fa "size_t size"
+.Fa "size_t stream_size"
 .Fc
 .Ft void
 .Fo crypto_chacha20_set_ctr
@@ -48,34 +48,70 @@ Chacha20 is a low-level primitive.
 Consider using authenticated encryption, implemented by
 .Xr crypto_lock 3monocypher .
 .Pp
+The arguments are:
+.Bl -tag -width Ds
+.It Fa key
+A 32-byte secret key.
+.It Fa nonce
+An 8 or 24 byte number, used only once with any given key.
+It does not need to be secret or random, but it does have to be unique.
+Repeating a nonce with the same key reveals the XOR of two different
+messages, which allows decryption.
+24 byte nonces can be selected at random.
+8 byte nonces
+.Em cannot .
+They are too small, and the same number may be selected twice by
+accident.
+See
+.Xr intro 3monocypher
+for advice about generating random numbers (use the operating system's
+random number generator).
+.It Fa plain_text
+The message to encrypt.
+It is allowed to be
+.Dv NULL ,
+in which case it will be interpreted as an all zero input.
+The cipher_text will then contain the raw Chacha20 stream.
+.It Fa cipher_text
+The encrypted message, to be transmitted over the network.
+.It Fa text_size
+The size of both
+.Fa plain_text and
+.Fa cipher_text .
+.It Fa stream
+the raw Chacha20 stream.
+.It Fa stream_size
+The size of the stream.
+.It Fa ctr
+The number of 64-byte blocks since the beginning of the stream.
+.El
+.Pp
+The
+.Fa key
+and
+.Fa nonce
+buffers may overlap.
+The
+.Fa plain_text
+and
+.Fa cipher_text
+buffers may
+.Em not .
+They must either be the same buffer (for in-place encryption), or
+disjoint.
+.Pp
 .Fn crypto_chacha20_init
 initialises the
 .Vt crypto_chacha_ctx
 context.
-It needs a 32-byte secret
-.Fa key
-and an 8-byte
-.Fa nonce .
-The nonce must be used only once per secret key (repeating them
-destroys confidentiality).
-Counters and unique message numbers can be used as nonces.
-Random numbers
-.Em cannot :
-8-byte nonces are too small to prevent accidental reuse.
+It uses an 8 byte nonce, too small to be selected at random.
+Use a counter.
 .Pp
 .Fn crypto_chacha20_x_init
 initialises the
 .Vt crypto_chacha_ctx
 context.
-It needs a 32-byte secret
-.Fa key
-and a 24-byte
-.Fa nonce .
-The nonce is big enough to be selected at random.
-See
-.Xr intro 3monocypher
-for advice about generating random numbers (use the operating system's
-random number generator).
+It uses 24-byte nonce, big enough to be selected at random.
 .Pp
 .Fn crypto_chacha20_x_init
 is recommended over
@@ -98,20 +134,11 @@ You may call
 .Fn crypto_chacha20_encrypt
 repeatedly with the same context struct to encrypt a message
 incrementally.
-.Pp
-.Fa plain_text
-and
-.Fa cipher_text
-may point to the same buffer for in-place encryption.
-Otherwise, the buffers they point to
-.Em must not overlap .
-.Pp
 The
 .Fa plain_text
 pointer is allowed to be
 .Dv NULL ,
 in which case it will be interpreted as an all zero input.
-The cipher_text will then contain the raw Chacha20 stream.
 .Pp
 Since XOR is its own inverse, decryption is the same operation as
 encryption.
@@ -227,7 +254,10 @@ crypto_wipe(&ctx,       sizeof(ctx));
 crypto_wipe(plain_text, sizeof(plain_text));
 .Ed
 .Pp
-Encryption by jumping around (don't do that):
+Encryption by jumping around (do not do that, this is only meant to show
+how
+.Fn crypto_chacha20_set_ctr
+works):
 .Bd -literal -offset indent
 const uint8_t key        [ 32];  /* Secret random key              */
 const uint8_t nonce      [ 24];  /* Unique nonce (possibly random) */
@@ -271,7 +301,7 @@ and
 .Xr crypto_lock 3monocypher
 .Ss Nonce reuse
 Repeating a nonce with the same key exposes the XOR of two or more
-plaintext messages, effectively destroying confidentiality.
+plain text messages, effectively destroying confidentiality.
 .Pp
 For the same reason,
 .Sy do not select small nonces at random .

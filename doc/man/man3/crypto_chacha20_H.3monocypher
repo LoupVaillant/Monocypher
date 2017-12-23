@@ -22,18 +22,21 @@ Use
 .Xr crypto_blake2b 3monocypher
 instead.
 .Pp
-The output
-.Fa out
-is a cryptographically secure random number
+The arguments are:
+.Bl -tag -width Ds
+.It Fa key
+A sufficiently random key, such as the output of
+.Xr crypto_x25519 3monocypher .
+.It Fa in
+The space reserved for the Chacha20 nonce and counter.
+It does not have to be random.
+.It Fa out
+A cryptographically secure random number
 .Em if
 there is enough entropy in the input
 .Fa key .
 X25519 shared secrets have enough entropy.
-The input
-.Fa in
-fills the space reserved for the
-nonce and counter.
-It does not have to be random.
+.El
 .Sh RETURN VALUES
 This function returns nothing.
 It cannot fail.

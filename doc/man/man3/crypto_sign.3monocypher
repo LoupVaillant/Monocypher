@@ -29,19 +29,40 @@
 .Fa "size_t message_size"
 .Fc
 .Sh DESCRIPTION
-.Fn crypto_sign_public_key
-deterministically computes a public key from the specified
-secret key.
-The secret key must be random.
+.Fn crypto_sign
+and
+.Fn crypto_check
+provide EdDSA public key signatures and verification.
+.Pp
+The arguments are:
+.Bl -tag -width Ds
+.It Fa secret_key
+A 32 byte random number, known only to you.
 See
 .Xr intro 3monocypher
 about random number generation (use your operating system's random
 number generator).
-The key pairs generated here are
-.Em not
-the same as those used for
-.Xr crypto_key_exchange 3monocypher .
-Do not use the same private key for both purposes.
+Do not use the same private key for both signatures and key exchanges.
+The public keys are different, and revealing both may leak information.
+.It Fa public_key
+The public key, generated from a
+.Fa secret_key
+with
+.Fn crypto_sign_public_key .
+.It Fa message
+Message to sign.
+.It Fa message_size
+Size of the message, in bytes.
+.El
+.Pp
+The
+.Fa signature
+and the
+.Fa message
+arguments may overlap.
+.Pp
+.Fn crypto_sign_public_key
+computes the public key of the specified secret key.
 .Pp
 .Fn crypto_sign
 signs a message with
@@ -53,23 +74,13 @@ This recomputation doubles the execution time.
 checks that a given signature is genuine.
 Meaning, only someone who had the private key could have signed the
 message.
-.Pp
-.Fn crypto_check
-does
-.Em not
-run in constant time.
+.Sy \It does not run in constant time .
 It does not have to in most threat models, because nothing is secret:
 everyone knows the public key, and the signature and message are
 rarely secret.
 To ascertain the origin of a secret message, use
 .Xr crypto_key_exchange 3monocypher
 instead.
-.Pp
-The
-.Fa signature
-and the
-.Fa message
-arguments may overlap.
 .Pp
 An incremental interface is available; see
 .Xr crypto_sign_init_first_pass 3monocypher .

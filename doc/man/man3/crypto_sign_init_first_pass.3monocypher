@@ -56,6 +56,9 @@ and
 .Xr crypto_check 3monocypher .
 Prefer those more simple functions if possible.
 .Pp
+The arguments are the same as those described in
+.Xr crypto_sign 3monocypher .
+.Pp
 This incremental interface can be used to sign or verify messages too
 large to fit in a single buffer.
 The arguments are the same as the direct interface described in

@@ -21,16 +21,37 @@
 .Sh DESCRIPTION
 .Fn crypto_key_exchange
 computes a shared key with your secret key and their public key,
-suitable for use with the
-.Xr crypto_lock 3monocypher
-family of functions.
 .Pp
 .Fn crypto_x25519_public_key
 deterministically computes the public key from a random secret key.
+.Pp
+The arguments are:
+.Bl -tag -width Ds
+.It Fa shared_key
+The shared secret, known only to those who know a relevant secret key
+(yours or theirs).
+It is cryptographically random, and suitable for use with the
+.Xr crypto_lock 3monocypher
+family of functions.
+.It Fa your_secret_key
+A 32 byte random number, known only to you.
 See
 .Xr intro 3monocypher
 for advice about generating random bytes (use the operating system's
 random number generator).
+Do not use the same private key for both key exchanges and signatures.
+The public keys are different, and revealing both may leak information.
+.It Fa their_public_key
+The public key of the other party, generated from their secret key with
+.Fn crypto_x25519_public_key .
+.It Fa public_key
+The public key, generated from a
+.Fa secret_key
+with
+.Fn crypto_x25519_public_key .
+.It Fa secret_key
+A 32 byte random number, known only to you.
+.El
 .Sh RETURN VALUES
 Some public keys force the shared key to a known constant.
 .Fn crypto_key_exchange

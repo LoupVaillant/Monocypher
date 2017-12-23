@@ -100,6 +100,10 @@ See
 for details.
 .It Fa cipher_text
 The encrypted message, to be transmitted over the network.
+.It Fa text_size
+The size of both
+.Fa plain_text and
+.Fa cipher_text .
 .El
 .Pp
 The

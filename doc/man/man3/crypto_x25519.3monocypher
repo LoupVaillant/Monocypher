@@ -18,19 +18,33 @@ computes a shared secret with
 .Fa your_secret_key
 and
 .Fa their_public_key .
-.Sy The shared secret is not cryptographically random .
-Do not use it directly as a session key.
+It is a low-level primitive.
+Users should use
+.Xr crypto_key_exchange 3monocypher
+unless they have a specific reason not to.
+.Pp
+The arguments are:
+.Bl -tag -width Ds
+.It Fa raw_shared_secret
+The shared secret, known only to those who know a relevant secret key
+(yours or theirs).
+It is not cryptographically random.
+Do not use it directly as a key.
 Hash it with
 .Xr crypto_chacha20_H 3monocypher
 or
 .Xr crypto_blake2b 3monocypher
 first.
-.Pp
-.Fn crypto_x25519
-is a low-level primitive.
-Users should use
-.Xr crypto_key_exchange 3monocypher
-unless they have a specific reason not to.
+.It Fa your_secret_key
+A 32 byte secret random number.
+See
+.Xr intro 3monocypher
+for advice about generating random bytes (use the operating system's
+random number generator).
+.It Fa their_public_key
+The public key of the other party, generated from their secret key with
+.Xr crypto_x25519_public_key 3monocypher .
+.El
 .Sh RETURN VALUES
 Some public keys force the shared key to a known constant.
 This function returns -1 if it detects such a public key, otherwise it
