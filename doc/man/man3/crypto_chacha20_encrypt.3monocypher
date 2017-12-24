@@ -73,7 +73,7 @@ It is allowed to be
 in which case it will be interpreted as an all zero input.
 The cipher_text will then contain the raw Chacha20 stream.
 .It Fa cipher_text
-The encrypted message, to be transmitted over the network.
+The encrypted message.
 .It Fa text_size
 The size of both
 .Fa plain_text and

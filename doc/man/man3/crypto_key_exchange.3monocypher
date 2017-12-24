@@ -20,7 +20,7 @@
 .Fc
 .Sh DESCRIPTION
 .Fn crypto_key_exchange
-computes a shared key with your secret key and their public key,
+computes a shared key with your secret key and their public key.
 .Pp
 .Fn crypto_x25519_public_key
 deterministically computes the public key from a random secret key.
@@ -42,10 +42,9 @@ random number generator).
 Do not use the same private key for both key exchanges and signatures.
 The public keys are different, and revealing both may leak information.
 .It Fa their_public_key
-The public key of the other party, generated from their secret key with
-.Fn crypto_x25519_public_key .
+The public key of the other party.
 .It Fa public_key
-The public key, generated from a
+The public key, generated from the
 .Fa secret_key
 with
 .Fn crypto_x25519_public_key .

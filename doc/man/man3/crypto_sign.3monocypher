@@ -45,7 +45,7 @@ number generator).
 Do not use the same private key for both signatures and key exchanges.
 The public keys are different, and revealing both may leak information.
 .It Fa public_key
-The public key, generated from a
+The public key, generated from the
 .Fa secret_key
 with
 .Fn crypto_sign_public_key .

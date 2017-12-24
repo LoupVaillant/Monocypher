@@ -42,8 +42,7 @@ See
 for advice about generating random bytes (use the operating system's
 random number generator).
 .It Fa their_public_key
-The public key of the other party, generated from their secret key with
-.Xr crypto_x25519_public_key 3monocypher .
+The public key of the other party.
 .El
 .Sh RETURN VALUES
 Some public keys force the shared key to a known constant.
