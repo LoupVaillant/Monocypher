@@ -36,7 +36,7 @@ or
 .Xr crypto_blake2b 3monocypher
 first.
 .It Fa your_secret_key
-A 32 byte secret random number.
+A 32-byte secret random number.
 See
 .Xr intro 3monocypher
 for advice about generating random bytes (use the operating system's

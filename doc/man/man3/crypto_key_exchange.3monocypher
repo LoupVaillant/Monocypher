@@ -34,7 +34,7 @@ It is cryptographically random, and suitable for use with the
 .Xr crypto_lock 3monocypher
 family of functions.
 .It Fa your_secret_key
-A 32 byte random number, known only to you.
+A 32-byte random number, known only to you.
 See
 .Xr intro 3monocypher
 for advice about generating random bytes (use the operating system's
@@ -50,7 +50,7 @@ The public key, generated from a
 with
 .Fn crypto_x25519_public_key .
 .It Fa secret_key
-A 32 byte random number, known only to you.
+A 32-byte random number, known only to you.
 .El
 .Sh RETURN VALUES
 Some public keys force the shared key to a known constant.

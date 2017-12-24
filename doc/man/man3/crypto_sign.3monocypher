@@ -37,7 +37,7 @@ provide EdDSA public key signatures and verification.
 The arguments are:
 .Bl -tag -width Ds
 .It Fa secret_key
-A 32 byte random number, known only to you.
+A 32-byte random number, known only to you.
 See
 .Xr intro 3monocypher
 about random number generation (use your operating system's random

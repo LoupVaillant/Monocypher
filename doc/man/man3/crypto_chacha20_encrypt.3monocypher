@@ -53,12 +53,12 @@ The arguments are:
 .It Fa key
 A 32-byte secret key.
 .It Fa nonce
-An 8 or 24 byte number, used only once with any given key.
+An 8-byte or 24-byte number, used only once with any given key.
 It does not need to be secret or random, but it does have to be unique.
 Repeating a nonce with the same key reveals the XOR of two different
 messages, which allows decryption.
-24 byte nonces can be selected at random.
-8 byte nonces
+24-byte nonces can be selected at random.
+8-byte nonces
 .Em cannot .
 They are too small, and the same number may be selected twice by
 accident.
@@ -104,7 +104,7 @@ disjoint.
 initialises the
 .Vt crypto_chacha_ctx
 context.
-It uses an 8 byte nonce, too small to be selected at random.
+It uses an 8-byte nonce, too small to be selected at random.
 Use a counter.
 .Pp
 .Fn crypto_chacha20_x_init
