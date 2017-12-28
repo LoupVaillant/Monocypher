@@ -1,4 +1,4 @@
-.Dd October 14, 2017
+.Dd December 28, 2017
 .Dt CRYPTO_LOCK_INIT 3MONOCYPHER
 .Os
 .Sh NAME
