@@ -152,28 +152,26 @@ These functions return nothing.
 .Sh EXAMPLES
 Hashes a message all at once.
 .Bd -literal -offset indent
-uint8_t hash[64];
-crypto_blake2b_ctx ctx;
-uint8_t hash   [ 64]; /* output hash (must be 64 bytes) */
-uint8_t message[500]; /* message to hash                */
-crypto_blake2b_ctx ctx;
+uint8_t hash   [ 64]; /* Output hash (64 bytes) */
+uint8_t message[500]; /* Message to hash        */
 crypto_blake2b(hash, message, 500);
 .Ed
 .Pp
 Computes a message authentication code all at once.
 .Bd -literal -offset indent
-uint8_t hash   [ 64]; /* output hash  (between 1 and 64 bytes) */
-uint8_t key    [ 32]; /* optional key (between 0 and 64 bytes) */
-uint8_t message[500]; /* message to hash                       */
-crypto_blake2b_ctx ctx;
+uint8_t hash   [ 64]; /* Output hash  (between 1 and 64 bytes) */
+uint8_t key    [ 32]; /* Optional key (between 0 and 64 bytes) */
+uint8_t message[500]; /* Message to hash                       */
 crypto_blake2b_general(hash, 64, key, 32, message, 500);
-crypto_wipe(key, 32); /* You may want to wipe the key          */
+/* Wipe the key. */
+crypto_wipe(key, 32);
 .Ed
 .Pp
 Hashes a message incrementally.
 .Bd -literal -offset indent
-uint8_t hash    [ 64]; /* output hash (must be 64 bytes) */
-uint8_t message [500]; /* message to hash                */
+uint8_t hash   [ 64]; /* Output hash (64 bytes) */
+uint8_t message[500]; /* Message to hash        */
+crypto_blake2b_ctx ctx;
 crypto_blake2b_init  (&ctx);
 for (size_t i = 0; i < 500; i += 100) {
     crypto_blake2b_update(&ctx, message + i, 100);
@@ -183,11 +181,13 @@ crypto_blake2b_final (&ctx, hash);
 .Pp
 Computes a message authentication code incrementally.
 .Bd -literal -offset indent
-uint8_t hash   [ 64]; /* output hash  (between 1 and 64 bytes) */
-uint8_t key    [ 32]; /* optional key (between 0 and 64 bytes) */
-uint8_t message[500]; /* message to hash                       */
+uint8_t hash   [ 64]; /* Output hash  (between 1 and 64 bytes) */
+uint8_t key    [ 32]; /* Optional key (between 0 and 64 bytes) */
+uint8_t message[500]; /* Message to hash                       */
+crypto_blake2b_ctx ctx;
 crypto_blake2b_general_init(&ctx, 64, key, 32);
-crypto_wipe(key, 32); /* You may want to wipe the key          */
+/* Wipe the key. */
+crypto_wipe(key, 32);
 for (size_t i = 0; i < 500; i += 100) {
     crypto_blake2b_update(&ctx, message + i, 100);
 }

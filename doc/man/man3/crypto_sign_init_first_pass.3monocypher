@@ -120,13 +120,13 @@ returns 0 for legitimate messages and -1 for forgeries.
 .Sh EXAMPLES
 Sign a message:
 .Bd -literal -offset indent
-const uint8_t sk       [ 32]; /* secret key            */
-const uint8_t pk       [ 32]; /* public key (optional) */
-const uint8_t message  [500]; /* message to sign       */
+const uint8_t sk       [ 32]; /* Secret key            */
+const uint8_t pk       [ 32]; /* Public key (optional) */
+const uint8_t message  [500]; /* Message to sign       */
 uint8_t       signature[ 64];
 crypto_sign_ctx ctx;
 crypto_sign_init_first_pass(&ctx, sk, pk);
-/* wipe the secret key if no longer needed */
+/* Wipe the secret key if no longer needed */
 crypto_wipe(sk, 32);
 for (size_t i = 0; i < 500; i += 100) {
     crypto_sign_update(&ctx, message + i, 100);
@@ -140,8 +140,8 @@ crypto_sign_final(&ctx, signature);
 .Pp
 Check the above:
 .Bd -literal -offset indent
-const uint8_t pk       [ 32]; /* public key      */
-const uint8_t message  [500]; /* message to sign */
+const uint8_t pk       [ 32]; /* Public key      */
+const uint8_t message  [500]; /* Message to sign */
 const uint8_t signature[ 64];
 crypto_check_ctx ctx;
 crypto_check_init(&ctx, signature, pk);
@@ -149,9 +149,9 @@ for (size_t i = 0; i < 500; i += 100) {
     crypto_check_update(&ctx, message + i, 100);
 }
 if (crypto_check_final(&ctx)) {
-    /* message is corrupted, abort processing */
+    /* Message is corrupted, abort processing */
 } else {
-    /* message is genuine */
+    /* Message is genuine */
 }
 
 .Ed

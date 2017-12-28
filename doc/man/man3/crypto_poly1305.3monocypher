@@ -109,6 +109,8 @@ if (crypto_verify16(mac, real_mac)) {
 } else {
     /* Genuine message */
 }
+/* The real mac is secret.  Wipe it */
+crypto_wipe(real_mac, 16);
 .Ed
 .Pp
 Incremental authentication:
