@@ -60,7 +60,7 @@ messages, which allows decryption.
 24-byte nonces can be selected at random.
 8-byte nonces
 .Em cannot .
-They are too small, and the same number may be selected twice by
+They are too small, and the same nonce may be selected twice by
 accident.
 See
 .Xr intro 3monocypher
@@ -95,23 +95,21 @@ The
 .Fa plain_text
 and
 .Fa cipher_text
-buffers may
-.Em not .
-They must either be the same buffer (for in-place encryption), or
-disjoint.
+must either be the same buffer (for in-place encryption), or
+non-overlapping.
 .Pp
 .Fn crypto_chacha20_init
 initialises the
 .Vt crypto_chacha_ctx
 context.
-It uses an 8-byte nonce, too small to be selected at random.
+It uses an 8-byte nonce, which is too small to be selected at random.
 Use a counter.
 .Pp
 .Fn crypto_chacha20_x_init
 initialises the
 .Vt crypto_chacha_ctx
 context.
-It uses 24-byte nonce, big enough to be selected at random.
+It uses a 24-byte nonce, which is big enough to be selected at random.
 .Pp
 .Fn crypto_chacha20_x_init
 is recommended over

@@ -235,14 +235,14 @@ XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
 .Sh SECURITY CONSIDERATIONS
-Using this incremental for decryption means authentication is
-incremental as well.
-This allows two errors: forgetting to call
-.Fn crypto_unlock_final
-altogether, and start processing the message before the authentication
-is complete.
+Messages must be completely decrypted before they can be verified.
+Make sure to call
+.Fn crypto_unlock_final ,
+and make sure to check its return value
+.Em before
+processing the message.
 Messages may be stored before they are verified, but they cannot be
-.Em trusted .
+trusted.
 Processing untrusted messages increases the attack surface of the
 system.
 Doing so securely is hard.
