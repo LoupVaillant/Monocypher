@@ -168,7 +168,7 @@ This is the same as Ed25519, with Blake2b instead of SHA-512.
 Ed25519 is described in RFC 7748.
 .Sh SECURITY CONSIDERATIONS
 Messages are not verified until the call to
-.Xr crypto_check_final .
+.Fn crypto_check_final .
 Messages may be stored before they are verified, but they cannot be
 .Em trusted .
 Processing untrusted messages increases the attack surface of the
@@ -176,9 +176,10 @@ system.
 Doing so securely is hard.
 Do not process messages before calling
 .Fn crypto_check_final .
-Additionally, the security considerations documented in
-.Xr crypto_sign 3monocypher ,
-apply here too.
+.Pp
+When signing messages, the security considerations documented in
+.Xr crypto_sign 3monocypher
+also apply.
 .Sh IMPLEMENTATION DETAILS
 EdDSA signatures require two passes that cannot be performed in
 parallel.

@@ -235,10 +235,9 @@ XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
 .Sh SECURITY CONSIDERATIONS
-Messages must be completely decrypted before they can be verified.
-Make sure to call
-.Fn crypto_unlock_final ,
-and make sure to check its return value
+Messages are not verified until the call to
+.Fn crypto_unlock_final .
+Make sure to call it and check the return value
 .Em before
 processing the message.
 Messages may be stored before they are verified, but they cannot be
