@@ -159,7 +159,8 @@ If you need Ed25519 compatibility, you need to do the following:
 
 - Compile Monocypher.c with option -DED25519_SHA512.
 - Link the final program with a suitable SHA-512 implementation.  You
-  can use the `sha512.c` and `sha512.h` files provided in `src/`.
+  can use the `sha512.c` and `sha512.h` files provided in
+  `src/optional`.
 
 Note that even though the default hash (Blake2b) is not "standard",
 you can still upgrade to faster implementations if you really need to.
