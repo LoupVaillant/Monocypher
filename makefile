@@ -63,6 +63,9 @@ test: test.out
 speed: speed.out
 	./speed.out
 
+speed-sodium: speed-sodium.out
+	./speed-sodium.out
+
 # Monocypher libraries
 lib/libmonocypher.a: lib/monocypher.o
 	ar cr $@ $^
@@ -89,6 +92,10 @@ test.out : lib/test.o  lib/monocypher.o lib/sha512.o lib/utils.o
 speed.out: lib/speed.o lib/monocypher.o lib/sha512.o lib/utils.o
 test.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
+speed-sodium.out: tests/speed-sodium.c
+	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^ \
+            $$(pkg-config --cflags libsodium)           \
+            $$(pkg-config --libs   libsodium)
 
 tests/vectors.h:
 	@echo ""

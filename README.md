@@ -143,6 +143,9 @@ not sure, you can always switch later.
 Note: the speed benchmark currently requires the POSIX
 `clock_gettime()` function.
 
+There's a similar benchmark for libsodium:
+
+    $ make speed-sodium
 
 Customisation
 -------------
