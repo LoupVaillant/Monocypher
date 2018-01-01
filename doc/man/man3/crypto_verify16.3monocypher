@@ -9,11 +9,20 @@
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft int
-.Fn crypto_verify16 "const uint8_t a[16]" "const uint8_t b[16]"
+.Fo crypto_verify16
+.Fa "const uint8_t a[16]"
+.Fa "const uint8_t b[16]"
+.Fc
 .Ft int
-.Fn crypto_verify32 "const uint8_t a[32]" "const uint8_t b[32]"
+.Fo crypto_verify32
+.Fa "const uint8_t a[32]"
+.Fa "const uint8_t b[32]"
+.Fc
 .Ft int
-.Fn crypto_verify64 "const uint8_t a[64]" "const uint8_t b[64]"
+.Fo crypto_verify64
+.Fa "const uint8_t a[64]"
+.Fa "const uint8_t b[64]"
+.Fc
 .Sh DESCRIPTION
 Cryptographic operations often require comparison of secrets or values
 derived from secrets.

@@ -7,7 +7,10 @@
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
-.Fn crypto_wipe "void *secret" "size_t secret_size"
+.Fo crypto_wipe
+.Fa "void *secret"
+.Fa "size_t secret_size"
+.Fc
 .Sh DESCRIPTION
 .Fn crypto_wipe
 securely erases sensitive data in memory.
