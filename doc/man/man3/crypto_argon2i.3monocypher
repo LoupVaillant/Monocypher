@@ -104,12 +104,11 @@ Can be
 if
 .Fa key_size
 is zero.
-The key is generally not needed, but it does have some uses: it is
-supposed to be unknown to the attacker.
-In the context of password derivation, it would stay unknown
-.Em even if an attacker steals the password database .
-This may be possible if that key is stored on a separate server.
-Note: changing the key requires hashing the user's password,
+The key is generally not needed, but it does have some uses.
+In the context of password derivation, it would be stored separately
+from the password database, and would remain secret even if an
+attacker were to steal the database.
+Note that changing the key requires rehashing the user's password,
 which is only possible upon user login.
 .It Fa key_size
 The length of the key, in bytes.

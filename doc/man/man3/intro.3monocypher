@@ -150,7 +150,7 @@ The
 .Pa /dev/urandom
 special file may be used on systems that do not provide an easy to use
 system call.
-Be careful, though: being a file makes
+Be careful though, being a file makes
 .Pa /dev/urandom
 hard to use correctly and securely.
 Reads may be interrupted, and more attacks are possible on a file than
