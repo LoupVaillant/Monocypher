@@ -30,7 +30,7 @@
 .Ft void
 .Fo crypto_poly1305_final
 .Fa "crypto_poly1305_ctx *ctx"
-.Fa "const uint8_t mac[16]"
+.Fa "uint8_t mac[16]"
 .Fc
 .Sh DESCRIPTION
 Poly1305 is a one-time message authentication code.

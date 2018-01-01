@@ -14,16 +14,16 @@
 .Ft void
 .Fo crypto_blake2b
 .Fa "uint8_t hash[64]"
-.Fa "uint8_t *message"
+.Fa "const uint8_t *message"
 .Fa "size_t message_size"
 .Fc
 .Ft void
 .Fo crypto_blake2b_general
 .Fa "uint8_t *hash"
 .Fa "size_t hash_size"
-.Fa "uint8_t *key"
+.Fa "const uint8_t *key"
 .Fa "size_t key_size"
-.Fa "uint8_t *message"
+.Fa "const uint8_t *message"
 .Fa "size_t message_size"
 .Fc
 .Ft void
@@ -34,7 +34,7 @@
 .Fo crypto_blake2b_general_init
 .Fa "crypto_blake2b_ctx *ctx"
 .Fa "size_t hash_size"
-.Fa "uint8_t *key"
+.Fa "const uint8_t *key"
 .Fa "size_t key_size"
 .Fc
 .Ft void
