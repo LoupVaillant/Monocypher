@@ -41,11 +41,11 @@ X25519 shared secrets have enough entropy.
 This function returns nothing.
 It cannot fail.
 .Sh EXAMPLES
-Simple hash.
+Simple hash:
 .Bd -literal -offset indent
-const uint8_t key[32] /* Must have enough entropy           */
-const uint8_t in [16] /* Does not have to be random         */
-uint8_t       out[32] /* Will be random iff the above holds */
+const uint8_t key[32]; /* Must have enough entropy           */
+const uint8_t in [16]; /* Does not have to be random         */
+uint8_t       out[32]; /* Will be random iff the above holds */
 crypto_chacha20_H(out, key, in);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key, 32);

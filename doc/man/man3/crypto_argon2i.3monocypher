@@ -52,9 +52,7 @@ The arguments are:
 .It Fa hash
 Buffer for the output hash.
 .It Fa hash_size
-The length of the output
-.Fa hash
-in bytes.
+The length of the output hash, in bytes.
 This argument should be set to 16, 32 or 64 for compatibility with the
 .Fn crypto_verify*
 constant time comparison functions.
@@ -86,20 +84,21 @@ It should be wiped with
 .Xr crypto_wipe 3monocypher
 after being hashed.
 .It Fa password_size
-the length of
-.Fa password .
+The length of
+.Fa password ,
+in bytes.
 .It Fa salt
-a password salt.
+A password salt.
 This should be filled with random bytes, generated separately for each
 password to be hashed.
 .It Fa salt_size
-the length of
+The length of
 .Fa salt ,
 in bytes.
 Must be at least 8.
 16 is recommended.
 .It Fa key
-a key to use in the hash.
+A key to use in the hash.
 Can be
 .Dv NULL
 if
@@ -113,10 +112,10 @@ This may be possible if that key is stored on a separate server.
 Note: changing the key requires hashing the user's password,
 which is only possible upon user login.
 .It Fa key_size
-the length of the key, in bytes.
+The length of the key, in bytes.
 Must be zero if there is no key.
 .It Fa ad
-additional data.
+Additional data.
 This is additional data that goes into the hash, similar to the
 authenticated encryption with authenticated data (AEAD) construction in
 .Xr crypto_aead_lock 3monocypher .
@@ -128,8 +127,9 @@ if
 .Fa ad_size
 is zero.
 .It Fa ad_size
-the length of
-.Fa ad .
+Ahe length of
+.Fa ad ,
+in bytes.
 .El
 .Pp
 The output hash must not overlap with the work area, or it will be
@@ -164,15 +164,15 @@ This function returns nothing.
 This example shows how to hash a password with the recommended baseline
 parameters:
 .Bd -literal -offset indent
-uint8_t hash[32],                           /* output hash     */
-const uint8_t *password;                    /* user's password */
-uint8_t        password_size;               /* password length */
-const uint8_t  salt[16];                    /* random salt     */
+uint8_t        hash[32];                    /* Output hash     */
+const uint8_t *password;                    /* User's password */
+uint8_t        password_size;               /* Password length */
+const uint8_t  salt[16];                    /* Random salt     */
 const uint32_t nb_blocks = 100000;          /* 100 megabytes   */
 const uint32_t nb_iterations = 3;           /* 3 iterations    */
-void *work_area = malloc(nb_blocks * 1024); /* work area       */
+void *work_area = malloc(nb_blocks * 1024); /* Work area       */
 if (work_area == NULL) {
-    /* handle malloc() failure */
+    /* Handle malloc() failure */
 }
 crypto_argon2i(hash, 32,
                work_area, nb_blocks, nb_iterations,
@@ -180,6 +180,7 @@ crypto_argon2i(hash, 32,
                salt, 16);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(password, password_size);
+free(work_area);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,

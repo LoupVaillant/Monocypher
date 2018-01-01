@@ -17,8 +17,10 @@
 .Sh DESCRIPTION
 Cryptographic operations often require comparison of secrets or values
 derived from secrets.
-Standard comparison functions like memcmp tend to exit when they find
-the first difference, leaking information through timing differences.
+Standard comparison functions like
+.Fn memcmp
+tend to exit when they find the first difference, leaking information
+through timing differences.
 .Pp
 As an example, say a message authentication code (MAC) is sent over the
 network along with a message, but the correct MAC is secret.

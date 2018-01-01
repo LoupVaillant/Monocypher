@@ -123,7 +123,7 @@ Sign a message:
 const uint8_t sk       [ 32]; /* Secret key            */
 const uint8_t pk       [ 32]; /* Public key (optional) */
 const uint8_t message  [500]; /* Message to sign       */
-uint8_t       signature[ 64];
+uint8_t       signature[ 64]; /* Output signature      */
 crypto_sign_ctx ctx;
 crypto_sign_init_first_pass(&ctx, sk, pk);
 /* Wipe the secret key if no longer needed */
@@ -140,9 +140,9 @@ crypto_sign_final(&ctx, signature);
 .Pp
 Check the above:
 .Bd -literal -offset indent
-const uint8_t pk       [ 32]; /* Public key      */
-const uint8_t message  [500]; /* Message to sign */
-const uint8_t signature[ 64];
+const uint8_t pk       [ 32]; /* Public key         */
+const uint8_t message  [500]; /* Message to sign    */
+const uint8_t signature[ 64]; /* Signature to check */
 crypto_check_ctx ctx;
 crypto_check_init(&ctx, signature, pk);
 for (size_t i = 0; i < 500; i += 100) {

@@ -15,8 +15,8 @@
 .Fc
 .Ft void
 .Fo crypto_x25519_public_key
-.Fa "uint8_t public_key[32]"
-.Fa "const uint8_t secret_key[32]"
+.Fa "uint8_t your_public_key[32]"
+.Fa "const uint8_t your_secret_key[32]"
 .Fc
 .Sh DESCRIPTION
 .Fn crypto_key_exchange
@@ -43,13 +43,11 @@ Do not use the same private key for both key exchanges and signatures.
 The public keys are different, and revealing both may leak information.
 .It Fa their_public_key
 The public key of the other party.
-.It Fa public_key
-The public key, generated from the
+.It Fa your_public_key
+Your public key, generated from
 .Fa secret_key
 with
 .Fn crypto_x25519_public_key .
-.It Fa secret_key
-A 32-byte random number, known only to you.
 .El
 .Sh RETURN VALUES
 Some public keys force the shared key to a known constant.

@@ -45,7 +45,7 @@ number generator).
 Do not use the same private key for both signatures and key exchanges.
 The public keys are different, and revealing both may leak information.
 .It Fa public_key
-The public key, generated from the
+The public key, generated from
 .Fa secret_key
 with
 .Fn crypto_sign_public_key .
@@ -78,8 +78,10 @@ message.
 It does not have to in most threat models, because nothing is secret:
 everyone knows the public key, and the signature and message are
 rarely secret.
-To ascertain the origin of a secret message, use
+If the message needs to be secret, use
 .Xr crypto_key_exchange 3monocypher
+and
+.Xr crypto_aead_lock 3monocypher
 instead.
 .Pp
 An incremental interface is available; see
