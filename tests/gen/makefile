@@ -29,12 +29,9 @@ clean:
             -I ../../src/optional \
             $$(pkg-config --cflags libsodium)
 
-%.out: %.o monocypher.o utils.o ed25519.o
+%.out: %.o monocypher.o ed25519.o
 	$(CC) $(CFLAGS) -o $@ $^ \
             $$(pkg-config --libs libsodium)
-
-utils.o: ../utils.c ../utils.h
-	$(CC) $(CFLAGS) -c $< -I .. -I ../../src
 
 ed25519.o: ../ed25519-donna/ed25519.c  $(wildcard ../ed25519-donna/*.h)
 	$(CC) $(CFLAGS) -c $<       \

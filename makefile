@@ -80,7 +80,6 @@ lib/monocypher.o lib/sha512.o:
 
 # Test & speed libraries
 $TEST_COMMON=tests/utils.h src/monocypher.h src/optional/sha512.h
-lib/utils.o       : tests/utils.c tests/utils.h
 lib/test.o        : tests/test.c         $(TEST_COMMON) tests/vectors.h
 lib/speed.o       : tests/speed.c        $(TEST_COMMON) tests/speed.h
 lib/speed-sodium.o: tests/speed-sodium.c $(TEST_COMMON) tests/speed.h
@@ -89,12 +88,11 @@ lib/utils.o lib/test.o lib/speed.o lib/speed-sodium.o:
 	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ $<
 
 # test & speed executables
-test.out        : lib/test.o         lib/utils.o lib/monocypher.o lib/sha512.o
-speed.out       : lib/speed.o        lib/utils.o lib/monocypher.o lib/sha512.o
-speed-sodium.out: lib/speed-sodium.o lib/utils.o
+test.out : lib/test.o  lib/monocypher.o lib/sha512.o
+speed.out: lib/speed.o lib/monocypher.o lib/sha512.o
 test.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
-speed-sodium.out: lib/speed-sodium.o lib/utils.o
+speed-sodium.out: lib/speed-sodium.o
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^ \
             $$(pkg-config --cflags libsodium)           \
             $$(pkg-config --libs   libsodium)
