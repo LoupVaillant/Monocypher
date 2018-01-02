@@ -19,7 +19,7 @@ Implementors
 - **Argon2i:**  Loup Vaillant, implemented from spec.
 - **X25519:**   Daniel J. Bernstein, taken and packaged from SUPERCOP
                 ref10.
-- **edDSA:**    Daniel J. Bernstein, taken and adapted from SUPERCOP
+- **EdDSA:**    Daniel J. Bernstein, taken and adapted from SUPERCOP
                 ref10 and TweetNaCl.
 
 Test suite
@@ -27,6 +27,13 @@ Test suite
 
 Designed and implemented by Loup Vaillant, using _libsodium_ (by many
 authors), and _ed25519-donna_ (by Andrew Moon —floodyberry).
+
+Manual
+------
+
+Loup Vaillant did a first draft, Fabio Scotoni rewrote the manual into
+proper man pages, and Michael Savage did extensive editing and
+proofreading.
 
 Thanks
 ------
@@ -36,5 +43,5 @@ Monocypher.
 
 Andrew Moon clarified carry propagation in modular arithmetic.
 
-Fabio Scotoni rewrote the manual into proper man pages, and provided
-much needed advice about testing, interface, and above all, packaging.
+Fabio Scotoni provided much needed advice about testing, interface, and
+above all, packaging.
