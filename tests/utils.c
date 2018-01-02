@@ -1,5 +1,4 @@
 #include "utils.h"
-#include "monocypher.h"
 #include "stdio.h"
 
 static void store64_le(u8 out[8], u64 in)
@@ -26,32 +25,22 @@ u64 load64_le(const u8 s[8])
         | ((u64)s[7] << 56);
 }
 
-// Deterministic "random" number generator, so we can make "random", yet
-// reproducible tests.  To change the random stream, change the seed.
-void p_random(u8 *stream, size_t size)
-{
-    static crypto_chacha_ctx ctx;
-    static int is_init = 0;
-    if (!is_init) {
-        static const u8 seed[32] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                                    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-        crypto_chacha20_init(&ctx, seed, seed);
-        is_init = 1;
-    }
-    crypto_chacha20_stream(&ctx, stream, size);
-}
 
-// Random 64 bit number
+// Pseudo-random 64 bit number, based on xorshift*
 u64 rand64()
 {
-    u8  tmp;
-    u64 result = 0;
-    FOR (i, 0, 8) {
-        p_random(&tmp, 1);
-        result <<= 8;
-        result  += tmp;
+    static u64 x = 12345; // Must be seeded with a nonzero value.
+    x ^= x >> 12;
+    x ^= x << 25;
+    x ^= x >> 27;
+    return x * 0x2545F4914F6CDD1D; // magic constant
+}
+
+void p_random(u8 *stream, size_t size)
+{
+    FOR (i, 0, size) {
+        stream[i] = (u8)rand64();
     }
-    return result;
 }
 
 void print_vector(u8 *buf, size_t size)
