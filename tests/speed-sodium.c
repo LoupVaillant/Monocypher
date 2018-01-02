@@ -3,19 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sodium.h"
-
-// Copied from utils.h
-#include <inttypes.h>
-#include <stddef.h>
-typedef int8_t   i8;
-typedef uint8_t  u8;
-typedef uint32_t u32;
-typedef int32_t  i32;
-typedef int64_t  i64;
-typedef uint64_t u64;
-#define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
-#define RANDOM_INPUT(name, size) u8 name[size]; p_random(name, size)
-// end of copy from utils.h
+#include "utils.h"
 
 typedef struct timespec timespec;
 
@@ -77,17 +65,6 @@ static void print(const char *name, u64 speed, const char *unit)
     duration = min(duration, diff(start, end)); \
     } /* end FOR*/                              \
     return speed(duration)
-
-
-// not random at all, it's just to measure the speed
-void p_random(u8 *buf, size_t size)
-{
-    static u8 v = 57; // barely random variable
-    FOR (i, 0, size) {
-        buf[i] = v;
-        v *= 57;
-    }
-}
 
 static u64 chacha20(void)
 {

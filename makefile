@@ -92,7 +92,7 @@ test.out : lib/test.o  lib/monocypher.o lib/sha512.o lib/utils.o
 speed.out: lib/speed.o lib/monocypher.o lib/sha512.o lib/utils.o
 test.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
-speed-sodium.out: tests/speed-sodium.c
+speed-sodium.out: tests/speed-sodium.c lib/utils.o
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^ \
             $$(pkg-config --cflags libsodium)           \
             $$(pkg-config --libs   libsodium)
