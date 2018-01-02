@@ -31,6 +31,8 @@ authors), and _ed25519-donna_ (by Andrew Moon —floodyberry).
 Manual
 ------
 
+Loup Vaillant, Fabio Scotoni, and Michael Savage.
+
 Loup Vaillant did a first draft, Fabio Scotoni rewrote the manual into
 proper man pages, and Michael Savage did extensive editing and
 proofreading.
