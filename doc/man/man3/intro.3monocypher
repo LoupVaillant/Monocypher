@@ -183,8 +183,8 @@ previously seen data or common characters.
 If an attacker can add data to the input before it is compressed and
 encrypted, they can observe changes to the ciphertext length to recover
 secrets from the input.
-Researchers have demonstrated an attack on HTTPS to steal session cookies when
-compression is enabled, dubbed "CRIME".
+Researchers have demonstrated an attack on HTTPS to steal session
+cookies when compression is enabled, dubbed "CRIME".
 .Ss Forward secrecy
 Long term secrets cannot be expected to stay safe indefinitely.
 Users may reveal them by mistake, or the host computer might have a
@@ -194,9 +194,8 @@ are not compromised even if the long term keys are.
 This is done by generating temporary keys, then encrypting messages
 with them.
 .Pp
-.Ss Temporary secrets
-If a computer is stolen or infected after handling secret data, those past
-secrets should not be compromised.
+In general, secrets that went through a computer should not be
+compromised when this computer is stolen or infected at a later point.
 .Pp
 A first layer of defence is to explicitly wipe secrets as soon as
 they are no longer used.

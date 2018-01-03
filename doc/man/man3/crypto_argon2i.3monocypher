@@ -52,7 +52,9 @@ The arguments are:
 .It Fa hash
 Buffer for the output hash.
 .It Fa hash_size
-The length of the output hash, in bytes.
+The length of
+.Fa hash ,
+in bytes.
 This argument should be set to 16, 32 or 64 for compatibility with the
 .Fn crypto_verify*
 constant time comparison functions.

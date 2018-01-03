@@ -61,7 +61,9 @@ The arguments are:
 .It Fa hash
 The output hash.
 .It Fa hash_size
-Length of the output hash, in bytes.
+Length of
+.Fa hash ,
+in bytes.
 Must be between 1 and 64.
 64 is recommended.
 Anything below 32 is discouraged.
@@ -85,7 +87,9 @@ Users may want to wipe the key with
 .Xr crypto_wipe 3monocypher
 once they are done with it.
 .It Fa key_size
-Length of the secret key, in bytes.
+Length of
+.Fa key ,
+in bytes.
 Must be between 0 and 64.
 32 is a good default.
 .It Fa message
@@ -94,7 +98,9 @@ May overlap with the
 .Fa hash
 argument.
 .It Fa message_size
-The length of the message, in bytes.
+Length of
+.Fa message ,
+in bytes.
 .El
 .Ss Direct interface
 The direct interface has two functions,
@@ -151,8 +157,6 @@ Hashing a message all at once:
 uint8_t hash   [ 64]; /* Output hash (64 bytes) */
 uint8_t message[500]; /* Message to hash        */
 crypto_blake2b(hash, message, 500);
-/* Wipe secrets if they are no longer needed */
-crypto_wipe(message, 500);
 .Ed
 .Pp
 Computing a message authentication code all at once:
@@ -174,8 +178,6 @@ crypto_blake2b_ctx ctx;
 crypto_blake2b_init(&ctx);
 for (size_t i = 0; i < 500; i += 100) {
     crypto_blake2b_update(&ctx, message + i, 100);
-    /* Wipe secrets if they are no longer needed */
-    crypto_wipe(message + i, 100);
 }
 crypto_blake2b_final(&ctx, hash);
 .Ed

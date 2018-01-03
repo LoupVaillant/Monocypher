@@ -45,7 +45,7 @@ The public keys are different, and revealing both may leak information.
 The public key of the other party.
 .It Fa your_public_key
 Your public key, generated from
-.Fa secret_key
+.Fa your_secret_key
 with
 .Fn crypto_x25519_public_key .
 .El

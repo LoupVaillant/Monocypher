@@ -83,7 +83,9 @@ in bytes.
 .It Fa stream
 The raw Chacha20 stream.
 .It Fa stream_size
-The size of the stream, in bytes.
+The size of
+.Fa stream ,
+in bytes.
 .It Fa ctr
 The number of 64-byte blocks since the beginning of the stream.
 .El
