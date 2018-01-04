@@ -50,9 +50,9 @@ This is considered good enough for most purposes.
 The arguments are:
 .Bl -tag -width Ds
 .It Fa hash
-Buffer for the output hash.
+The output hash.
 .It Fa hash_size
-The length of
+Length of
 .Fa hash ,
 in bytes.
 This argument should be set to 16, 32 or 64 for compatibility with the
@@ -86,7 +86,7 @@ It should be wiped with
 .Xr crypto_wipe 3monocypher
 after being hashed.
 .It Fa password_size
-The length of
+Length of
 .Fa password ,
 in bytes.
 .It Fa salt
@@ -94,7 +94,7 @@ A password salt.
 This should be filled with random bytes, generated separately for each
 password to be hashed.
 .It Fa salt_size
-The length of
+Length of
 .Fa salt ,
 in bytes.
 Must be at least 8.
@@ -113,7 +113,9 @@ attacker were to steal the database.
 Note that changing the key requires rehashing the user's password,
 which is only possible upon user login.
 .It Fa key_size
-The length of the key, in bytes.
+Length of
+.Fa key ,
+in bytes.
 Must be zero if there is no key.
 .It Fa ad
 Additional data.
@@ -128,7 +130,7 @@ if
 .Fa ad_size
 is zero.
 .It Fa ad_size
-Ahe length of
+Length of
 .Fa ad ,
 in bytes.
 .El
@@ -144,8 +146,12 @@ or
 .Xr crypto_verify64 3monocypher
 to compare password hashes to prevent timing attacks.
 .Pp
-To select the nb_blocks and nb_iterations parameters, it should first be
-decided how long the computation should take.
+To select the
+.Fa nb_blocks
+and
+.Fa nb_iterations
+parameters, it should first be decided how long the computation should
+take.
 For user authentication, we recommend somewhere between half a second
 (convenient) and several seconds (paranoid).
 The computation should use as much memory as can be spared.

@@ -33,7 +33,7 @@ It does not have to be random.
 .It Fa out
 A cryptographically secure random number
 .Em if
-there is enough entropy in the input
+there is enough entropy in
 .Fa key .
 X25519 shared secrets have enough entropy.
 .El

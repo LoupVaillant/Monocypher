@@ -99,9 +99,9 @@ See
 .Xr intro 3monocypher
 for details.
 .It Fa cipher_text
-The encrypted message, to be transmitted over the network.
+The encrypted message.
 .It Fa text_size
-The size of both
+Length of both
 .Fa plain_text and
 .Fa cipher_text ,
 in bytes.

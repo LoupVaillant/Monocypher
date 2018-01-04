@@ -76,14 +76,14 @@ will then contain the raw Chacha20 stream.
 .It Fa cipher_text
 The encrypted message.
 .It Fa text_size
-The size of both
+Length of both
 .Fa plain_text and
 .Fa cipher_text ,
 in bytes.
 .It Fa stream
 The raw Chacha20 stream.
 .It Fa stream_size
-The size of
+Length of
 .Fa stream ,
 in bytes.
 .It Fa ctr
@@ -95,7 +95,6 @@ The
 and
 .Fa nonce
 buffers may overlap.
-The
 .Fa plain_text
 and
 .Fa cipher_text

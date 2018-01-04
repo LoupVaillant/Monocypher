@@ -93,10 +93,9 @@ in bytes.
 Must be between 0 and 64.
 32 is a good default.
 .It Fa message
-Message to hash.
-May overlap with the
-.Fa hash
-argument.
+The message to hash.
+May overlap with
+.Fa hash .
 .It Fa message_size
 Length of
 .Fa message ,

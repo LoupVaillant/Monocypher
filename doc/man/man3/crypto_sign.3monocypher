@@ -36,6 +36,8 @@ provide EdDSA public key signatures and verification.
 .Pp
 The arguments are:
 .Bl -tag -width Ds
+.It Fa signature
+The signature.
 .It Fa secret_key
 A 32-byte random number, known only to you.
 See
@@ -52,14 +54,15 @@ with
 .It Fa message
 Message to sign.
 .It Fa message_size
-Size of the message, in bytes.
+Length of
+.Fa message ,
+in bytes.
 .El
 .Pp
-The
 .Fa signature
-and the
+and
 .Fa message
-arguments may overlap.
+may overlap.
 .Pp
 .Fn crypto_sign_public_key
 computes the public key of the specified secret key.
