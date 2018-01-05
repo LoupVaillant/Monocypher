@@ -6,8 +6,11 @@
 .Nd wipe data from memory
 .Sh SYNOPSIS
 .In monocypher.h
-.Ft int
-.Fn crypto_wipe "void *secret" "size_t secret_size"
+.Ft void
+.Fo crypto_wipe
+.Fa "void *secret"
+.Fa "size_t secret_size"
+.Fc
 .Sh DESCRIPTION
 .Fn crypto_wipe
 securely erases sensitive data in memory.
@@ -24,7 +27,7 @@ The arguments are:
 The buffer to erase.
 .It Fa secret_size
 The number of bytes to erase from the buffer.
-This will normally be the entire buffer.
+Normally this is the size of the entire buffer.
 .El
 .Pp
 Monocypher will wipe its context structs when finalizing an operation

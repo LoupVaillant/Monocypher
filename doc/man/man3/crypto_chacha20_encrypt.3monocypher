@@ -71,17 +71,21 @@ The message to encrypt.
 It is allowed to be
 .Dv NULL ,
 in which case it will be interpreted as an all zero input.
-The cipher_text will then contain the raw Chacha20 stream.
+.Fa cipher_text
+will then contain the raw Chacha20 stream.
 .It Fa cipher_text
 The encrypted message.
 .It Fa text_size
-The size of both
+Length of both
 .Fa plain_text and
-.Fa cipher_text .
+.Fa cipher_text ,
+in bytes.
 .It Fa stream
-the raw Chacha20 stream.
+The raw Chacha20 stream.
 .It Fa stream_size
-The size of the stream.
+Length of
+.Fa stream ,
+in bytes.
 .It Fa ctr
 The number of 64-byte blocks since the beginning of the stream.
 .El
@@ -91,7 +95,6 @@ The
 and
 .Fa nonce
 buffers may overlap.
-The
 .Fa plain_text
 and
 .Fa cipher_text
@@ -122,7 +125,7 @@ Calling them with an uninitialised context triggers undefined
 behaviour.
 .Pp
 .Fn crypto_chacha20_encrypt
-encrypts the
+encrypts
 .Fa plain_text
 by XORing it with a pseudo-random stream of
 numbers, seeded by the provided
@@ -140,12 +143,7 @@ in which case it will be interpreted as an all zero input.
 .Pp
 Since XOR is its own inverse, decryption is the same operation as
 encryption.
-To decrypt the
-.Fa cipher_text ,
-encrypt it again with the same
-.Fa key
-and
-.Fa nonce .
+To decrypt the cipher text, encrypt it again with the same key and nonce.
 You will likely want to wipe the key and context when you are done with
 encryption or decryption.
 Use
@@ -180,38 +178,37 @@ implement some AEAD constructions such as the one described in RFC
 7539 (not implemented in Monocypher because of its complexity and
 limitations).
 Be careful when using this not to accidentally reuse parts of the
-random stream.
-This would destroy confidentiality.
+random stream as that would destroy confidentiality.
 .Sh RETURN VALUES
 These functions return nothing.
 They cannot fail.
 .Sh EXAMPLES
 Simple encryption:
 .Bd -literal -offset indent
-const uint8_t key        [ 32];  /* Secret random key              */
-const uint8_t nonce      [ 24];  /* Unique nonce (possibly random) */
-const uint8_t plain_text [500];  /* Message to be encrypted        */
-uint8_t       cipher_text[500];  /* Will be the encrypted message  */
+const uint8_t key        [ 32]; /* Secret random key              */
+const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
+const uint8_t plain_text [500]; /* Message to be encrypted        */
+uint8_t       cipher_text[500]; /* Will be the encrypted message  */
 crypto_chacha_ctx ctx;
 crypto_chacha20_x_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 500);
 /* Wipe secrets if they are no longer needed */
-crypto_wipe(key,        sizeof(key));
+crypto_wipe(key,        32);
 crypto_wipe(&ctx,       sizeof(ctx));
-crypto_wipe(plain_text, sizeof(plain_text));
+crypto_wipe(plain_text, 500);
 .Ed
 .Pp
 To decrypt the above:
 .Bd -literal -offset indent
-const uint8_t key        [ 32];  /* Same key as above              */
-const uint8_t nonce      [ 24];  /* Same nonce as above            */
-const uint8_t cipher_text[500];  /* Encrypted message              */
-uint8_t plain_text       [500];  /* Will be the decrypted message  */
+const uint8_t key        [ 32]; /* Same key as above              */
+const uint8_t nonce      [ 24]; /* Same nonce as above            */
+const uint8_t cipher_text[500]; /* Encrypted message              */
+uint8_t plain_text       [500]; /* Will be the decrypted message  */
 crypto_chacha_ctx ctx;
 crypto_chacha20_x_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, plain_text, cipher_text, 500);
 /* Wipe secrets if they are no longer needed */
-crypto_wipe(key,  sizeof(key));
+crypto_wipe(key,  32);
 crypto_wipe(&ctx, sizeof(ctx));
 /* The plain text likely needs to be processed before you wipe it */
 crypto_wipe(plain_text, 500);
@@ -219,37 +216,36 @@ crypto_wipe(plain_text, 500);
 .Pp
 Incremental encryption:
 .Bd -literal -offset indent
-const uint8_t key        [ 32];  /* Secret random key              */
-const uint8_t nonce      [ 24];  /* Unique nonce (possibly random) */
-const uint8_t plain_text [500];  /* Message to be encrypted        */
-uint8_t       cipher_text[500];  /* Will be the encrypted message  */
+const uint8_t key        [ 32]; /* Secret random key              */
+const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
+const uint8_t plain_text [500]; /* Message to be encrypted        */
+uint8_t       cipher_text[500]; /* Will be the encrypted message  */
 crypto_chacha_ctx ctx;
 crypto_chacha20_x_init(&ctx, key, nonce);
 for(int i = 0; i < 500; i += 100) {
     crypto_chacha20_encrypt(&ctx, cipher_text+i, plain_text+i, 100);
 }
 /* Wipe secrets if they are no longer needed */
-crypto_wipe(key,        sizeof(key));
+crypto_wipe(key,        32);
 crypto_wipe(&ctx,       sizeof(ctx));
-crypto_wipe(plain_text, sizeof(plain_text));
+crypto_wipe(plain_text, 500);
 .Ed
 .Pp
 Simple encryption with a small,
 .Em not
 random nonce:
 .Bd -literal -offset indent
-const uint8_t key        [ 32];  /* Secret, random key        */
-const uint8_t nonce      [  8];  /* Unique nonce (NOT random) */
-const uint8_t plain_text [500];  /* Message to be encrypted   */
+const uint8_t key        [ 32]; /* Secret, random key             */
+const uint8_t nonce      [  8]; /* Unique nonce (NOT random)      */
+const uint8_t plain_text [500]; /* Message to be encrypted        */
+uint8_t       cipher_text[500]; /* Will be the encrypted message  */
 crypto_chacha_ctx ctx;
 crypto_chacha20_init(&ctx, key, nonce);
 crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 500);
-crypto_wipe(key,  sizeof(key));
-crypto_wipe(&ctx, sizeof(ctx));
 /* Wipe secrets if they are no longer needed */
-crypto_wipe(key,        sizeof(key));
+crypto_wipe(key,        32);
 crypto_wipe(&ctx,       sizeof(ctx));
-crypto_wipe(plain_text, sizeof(plain_text));
+crypto_wipe(plain_text, 500);
 .Ed
 .Pp
 Encryption by jumping around (do not do that, this is only meant to show
@@ -257,10 +253,10 @@ how
 .Fn crypto_chacha20_set_ctr
 works):
 .Bd -literal -offset indent
-const uint8_t key        [ 32];  /* Secret random key              */
-const uint8_t nonce      [ 24];  /* Unique nonce (possibly random) */
-const uint8_t plain_text [500];  /* Message to be encrypted        */
-uint8_t       cipher_text[500];  /* Will be the encrypted message  */
+const uint8_t key        [ 32]; /* Secret random key              */
+const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
+const uint8_t plain_text [500]; /* Message to be encrypted        */
+uint8_t       cipher_text[500]; /* Will be the encrypted message  */
 crypto_chacha_ctx ctx;
 crypto_chacha20_x_init(&ctx, key, nonce);
 /* Encrypt the second part of the message first... */
@@ -273,9 +269,9 @@ crypto_chacha20_encrypt(&ctx,
 crypto_chacha20_set_ctr(&ctx, 0);
 crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 3 * 64);
 /* Wipe secrets if they are no longer needed */
-crypto_wipe(key,        sizeof(key));
+crypto_wipe(key,        32);
 crypto_wipe(&ctx,       sizeof(ctx));
-crypto_wipe(plain_text, sizeof(plain_text));
+crypto_wipe(plain_text, 500);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,

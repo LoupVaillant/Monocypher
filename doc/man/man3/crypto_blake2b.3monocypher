@@ -61,7 +61,9 @@ The arguments are:
 .It Fa hash
 The output hash.
 .It Fa hash_size
-Length of the output hash, in bytes.
+Length of
+.Fa hash ,
+in bytes.
 Must be between 1 and 64.
 64 is recommended.
 Anything below 32 is discouraged.
@@ -85,18 +87,19 @@ Users may want to wipe the key with
 .Xr crypto_wipe 3monocypher
 once they are done with it.
 .It Fa key_size
-Length of the
-.Fa key
+Length of
+.Fa key ,
 in bytes.
 Must be between 0 and 64.
 32 is a good default.
 .It Fa message
-Message to hash.
-May overlap with the
-.Fa hash
-argument.
+The message to hash.
+May overlap with
+.Fa hash .
 .It Fa message_size
-The length of the message in bytes.
+Length of
+.Fa message ,
+in bytes.
 .El
 .Ss Direct interface
 The direct interface has two functions,
@@ -112,9 +115,7 @@ with no key and a 64-byte hash.
 users can specify the size of the hash, and use a secret key to
 make the hash unpredictable \(en useful for message authentication
 codes.
-Even when using a
-.Fa key ,
-you do not have to wipe the context struct with
+Even when using a key, you do not have to wipe the context struct with
 .Xr crypto_wipe 3monocypher .
 .Ss Incremental interface
 The incremental interface is useful for handling streams of data or
@@ -150,48 +151,51 @@ This is considered a good default.
 .Sh RETURN VALUES
 These functions return nothing.
 .Sh EXAMPLES
-Hashes a message all at once.
+Hashing a message all at once:
 .Bd -literal -offset indent
 uint8_t hash   [ 64]; /* Output hash (64 bytes) */
 uint8_t message[500]; /* Message to hash        */
 crypto_blake2b(hash, message, 500);
 .Ed
 .Pp
-Computes a message authentication code all at once.
+Computing a message authentication code all at once:
 .Bd -literal -offset indent
 uint8_t hash   [ 64]; /* Output hash  (between 1 and 64 bytes) */
 uint8_t key    [ 32]; /* Optional key (between 0 and 64 bytes) */
 uint8_t message[500]; /* Message to hash                       */
 crypto_blake2b_general(hash, 64, key, 32, message, 500);
-/* Wipe the key. */
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(message, 500);
 crypto_wipe(key, 32);
 .Ed
 .Pp
-Hashes a message incrementally.
+Hashing a message incrementally:
 .Bd -literal -offset indent
 uint8_t hash   [ 64]; /* Output hash (64 bytes) */
 uint8_t message[500]; /* Message to hash        */
 crypto_blake2b_ctx ctx;
-crypto_blake2b_init  (&ctx);
+crypto_blake2b_init(&ctx);
 for (size_t i = 0; i < 500; i += 100) {
     crypto_blake2b_update(&ctx, message + i, 100);
 }
-crypto_blake2b_final (&ctx, hash);
+crypto_blake2b_final(&ctx, hash);
 .Ed
 .Pp
-Computes a message authentication code incrementally.
+Computing a message authentication code incrementally:
 .Bd -literal -offset indent
 uint8_t hash   [ 64]; /* Output hash  (between 1 and 64 bytes) */
 uint8_t key    [ 32]; /* Optional key (between 0 and 64 bytes) */
 uint8_t message[500]; /* Message to hash                       */
 crypto_blake2b_ctx ctx;
 crypto_blake2b_general_init(&ctx, 64, key, 32);
-/* Wipe the key. */
+/* Wipe the key */
 crypto_wipe(key, 32);
 for (size_t i = 0; i < 500; i += 100) {
     crypto_blake2b_update(&ctx, message + i, 100);
+    /* Wipe secrets if they are no longer needed */
+    crypto_wipe(message + i, 100);
 }
-crypto_blake2b_final (&ctx, hash);
+crypto_blake2b_final(&ctx, hash);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_key_exchange 3monocypher ,

@@ -53,8 +53,7 @@ Ed25519 (EdDSA with SHA-512), is supported as a compilation option.
 and
 .Xr crypto_verify64 3monocypher
 compare buffers in constant time.
-This avoids timing attacks when comparing secrets.
-Supported buffer sizes are 16 bytes, 32 bytes, and 64 bytes.
+They should be used to compare secrets to prevent timing attacks.
 .Ss Memory wipe
 .Xr crypto_wipe 3monocypher
 wipes a buffer.
@@ -98,7 +97,7 @@ the chances of leaks.
 .Xr crypto_sign_init_second_pass 3monocypher ,
 .Xr crypto_sign_public_key 3monocypher ,
 .Xr crypto_sign_update 3monocypher ,
-.Xr crypto_unlock 3monocypher 3monocypher ,
+.Xr crypto_unlock 3monocypher ,
 .Xr crypto_unlock_update 3monocypher ,
 .Xr crypto_unlock_final 3monocypher ,
 .Xr crypto_verify16 3monocypher ,
@@ -151,7 +150,7 @@ The
 .Pa /dev/urandom
 special file may be used on systems that do not provide an easy to use
 system call.
-Be careful, though: being a file makes
+Be careful though, being a file makes
 .Pa /dev/urandom
 hard to use correctly and securely.
 Reads may be interrupted, and more attacks are possible on a file than
@@ -184,8 +183,8 @@ previously seen data or common characters.
 If an attacker can add data to the input before it is compressed and
 encrypted, they can observe changes to the ciphertext length to recover
 secrets from the input.
-Researchers have demonstrated an attack on HTTPS to steal session cookies when
-compression is enabled, dubbed "CRIME".
+Researchers have demonstrated an attack on HTTPS to steal session
+cookies when compression is enabled, dubbed "CRIME".
 .Ss Forward secrecy
 Long term secrets cannot be expected to stay safe indefinitely.
 Users may reveal them by mistake, or the host computer might have a
@@ -195,9 +194,8 @@ are not compromised even if the long term keys are.
 This is done by generating temporary keys, then encrypting messages
 with them.
 .Pp
-This can be generalised: secrets that went through a computer should
-not be compromised when this computer is stolen or infected at a later
-point.
+In general, secrets that went through a computer should not be
+compromised when this computer is stolen or infected at a later point.
 .Pp
 A first layer of defence is to explicitly wipe secrets as soon as
 they are no longer used.
@@ -227,7 +225,7 @@ and disable swap for the whole process with
 Windows can disable swap for specific buffers with
 .Fn VirtualLock .
 .Pp
-Note: core dumps cause similar problems.
+Core dumps cause similar problems.
 Disable them.
 Also beware of suspend to disk (deep sleep mode), which writes all RAM
 to disk regardless of swap policy, as well as virtual machine snapshots.

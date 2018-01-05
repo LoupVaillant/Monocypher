@@ -50,10 +50,10 @@ This is considered good enough for most purposes.
 The arguments are:
 .Bl -tag -width Ds
 .It Fa hash
-Buffer for the output hash.
+The output hash.
 .It Fa hash_size
-The length of the output
-.Fa hash
+Length of
+.Fa hash ,
 in bytes.
 This argument should be set to 16, 32 or 64 for compatibility with the
 .Fn crypto_verify*
@@ -86,37 +86,39 @@ It should be wiped with
 .Xr crypto_wipe 3monocypher
 after being hashed.
 .It Fa password_size
-the length of
-.Fa password .
+Length of
+.Fa password ,
+in bytes.
 .It Fa salt
-a password salt.
+A password salt.
 This should be filled with random bytes, generated separately for each
 password to be hashed.
 .It Fa salt_size
-the length of
+Length of
 .Fa salt ,
 in bytes.
 Must be at least 8.
 16 is recommended.
 .It Fa key
-a key to use in the hash.
+A key to use in the hash.
 Can be
 .Dv NULL
 if
 .Fa key_size
 is zero.
-The key is generally not needed, but it does have some uses: it is
-supposed to be unknown to the attacker.
-In the context of password derivation, it would stay unknown
-.Em even if an attacker steals the password database .
-This may be possible if that key is stored on a separate server.
-Note: changing the key requires hashing the user's password,
+The key is generally not needed, but it does have some uses.
+In the context of password derivation, it would be stored separately
+from the password database, and would remain secret even if an
+attacker were to steal the database.
+Note that changing the key requires rehashing the user's password,
 which is only possible upon user login.
 .It Fa key_size
-the length of the key, in bytes.
+Length of
+.Fa key ,
+in bytes.
 Must be zero if there is no key.
 .It Fa ad
-additional data.
+Additional data.
 This is additional data that goes into the hash, similar to the
 authenticated encryption with authenticated data (AEAD) construction in
 .Xr crypto_aead_lock 3monocypher .
@@ -128,8 +130,9 @@ if
 .Fa ad_size
 is zero.
 .It Fa ad_size
-the length of
-.Fa ad .
+Length of
+.Fa ad ,
+in bytes.
 .El
 .Pp
 The output hash must not overlap with the work area, or it will be
@@ -143,8 +146,12 @@ or
 .Xr crypto_verify64 3monocypher
 to compare password hashes to prevent timing attacks.
 .Pp
-To select the nb_blocks and nb_iterations parameters, it should first be
-decided how long the computation should take.
+To select the
+.Fa nb_blocks
+and
+.Fa nb_iterations
+parameters, it should first be decided how long the computation should
+take.
 For user authentication, we recommend somewhere between half a second
 (convenient) and several seconds (paranoid).
 The computation should use as much memory as can be spared.
@@ -164,15 +171,15 @@ This function returns nothing.
 This example shows how to hash a password with the recommended baseline
 parameters:
 .Bd -literal -offset indent
-uint8_t hash[32],                           /* output hash     */
-const uint8_t *password;                    /* user's password */
-uint8_t        password_size;               /* password length */
-const uint8_t  salt[16];                    /* random salt     */
+uint8_t        hash[32];                    /* Output hash     */
+const uint8_t *password;                    /* User's password */
+uint8_t        password_size;               /* Password length */
+const uint8_t  salt[16];                    /* Random salt     */
 const uint32_t nb_blocks = 100000;          /* 100 megabytes   */
 const uint32_t nb_iterations = 3;           /* 3 iterations    */
-void *work_area = malloc(nb_blocks * 1024); /* work area       */
+void *work_area = malloc(nb_blocks * 1024); /* Work area       */
 if (work_area == NULL) {
-    /* handle malloc() failure */
+    /* Handle malloc() failure */
 }
 crypto_argon2i(hash, 32,
                work_area, nb_blocks, nb_iterations,
@@ -180,6 +187,7 @@ crypto_argon2i(hash, 32,
                salt, 16);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(password, password_size);
+free(work_area);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,

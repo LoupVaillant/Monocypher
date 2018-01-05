@@ -60,7 +60,9 @@ May overlap with the
 .Fa mac
 argument.
 .It Fa message_size
-Size of the message.
+Length of
+.Fa message ,
+in bytes.
 .El
 .Ss Direct interface
 .Fn crypto_poly1305
@@ -87,9 +89,9 @@ They cannot fail.
 .Sh EXAMPLES
 To authenticate a message:
 .Bd -literal -offset indent
-const uint8_t msg[500];  /* Message to authenticate           */
-const uint8_t key[ 32];  /* Random secret key (use only once) */
-uint8_t       mac[ 16];  /* Message authentication code (MAC) */
+const uint8_t msg[500]; /* Message to authenticate           */
+const uint8_t key[ 32]; /* Random secret key (use only once) */
+uint8_t       mac[ 16]; /* Message authentication code (MAC) */
 crypto_poly1305(mac, msg, 500, key);
 /* Wipe the key */
 crypto_wipe(key, 32);
@@ -97,10 +99,10 @@ crypto_wipe(key, 32);
 .Pp
 To verify the above message:
 .Bd -literal -offset indent
-const uint8_t msg     [500];  /* Message to verify */
-const uint8_t key     [ 32];  /* The above key     */
-const uint8_t mac     [ 16];  /* The above MAC     */
-uint8_t       real_mac[ 16];  /* The actual MAC    */
+const uint8_t msg     [500]; /* Message to verify */
+const uint8_t key     [ 32]; /* The above key     */
+const uint8_t mac     [ 16]; /* The above MAC     */
+uint8_t       real_mac[ 16]; /* The actual MAC    */
 crypto_poly1305(real_mac, msg, 500, key);
 /* Wipe the key */
 crypto_wipe(key, 32);
@@ -115,9 +117,9 @@ crypto_wipe(real_mac, 16);
 .Pp
 Incremental authentication:
 .Bd -literal -offset indent
-const uint8_t msg[500];  /* Message to authenticate           */
-const uint8_t key[ 32];  /* Random secret key (use only once) */
-uint8_t       mac[ 16];  /* Message authentication code (MAC) */
+const uint8_t msg[500]; /* Message to authenticate           */
+const uint8_t key[ 32]; /* Random secret key (use only once) */
+uint8_t       mac[ 16]; /* Message authentication code (MAC) */
 crypto_poly1305_ctx ctx;
 crypto_poly1305_init(&ctx, key);
 /* Wipe the key */

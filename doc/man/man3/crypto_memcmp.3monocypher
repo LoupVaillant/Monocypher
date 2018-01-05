@@ -8,9 +8,16 @@
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft int
-.Fn crypto_memcmp "const uint8_t *p1" "const uint8_t *p2" "size_t n"
+.Fo crypto_memcmp
+.Fa "const uint8_t *p1"
+.Fa"const uint8_t *p2"
+.Fa "size_t n"
+.Fc
 .Ft int
-.Fn crypto_zerocmp "const uint8_t *p" "size_t n"
+.Fo crypto_zerocmp
+.Fa "const uint8_t *p"
+.Fa "size_t n"
+.Fc
 .Sh DESCRIPTION
 .Fn crypto_memcmp
 and
