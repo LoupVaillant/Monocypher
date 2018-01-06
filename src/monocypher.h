@@ -180,8 +180,6 @@ void crypto_sign(uint8_t        signature [64],
                  const uint8_t  public_key[32], // optional, may be 0
                  const uint8_t *message, size_t message_size);
 
-int crypto_check_public_key(const uint8_t public_key[32]);
-
 // EdDSA check context.  Do not rely on its contents or its size, they
 // may change without notice.
 typedef struct {

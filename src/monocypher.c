@@ -1602,12 +1602,6 @@ void crypto_sign(u8        signature[64],
     crypto_sign_final           (&ctx, signature);
 }
 
-int crypto_check_public_key(const u8 public_key[32])
-{
-    ge A; // wasted result.
-    return ge_frombytes_neg(&A, public_key);
-}
-
 void crypto_check_init(crypto_check_ctx *ctx,
                       const u8 signature[64],
                       const u8 public_key[32])
