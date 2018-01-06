@@ -18,7 +18,7 @@ void crypto_wipe(void *secret, size_t size);
 /// Chacha20 ///
 ////////////////
 
-// Chacha20 is a low-level primitive, not indented for end users.
+// Chacha20 is a low-level primitive, not intended for end users.
 // Use authenticated encryption instead.
 
 // Chacha context.  Do not rely on its contents or its size,
@@ -55,7 +55,7 @@ void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
 /// Poly 1305 ///
 /////////////////
 
-// Poly1305 is a low-level primitive, not indented for end users.
+// Poly1305 is a low-level primitive, not intended for end users.
 // Use authenticated encryption instead.
 
 // Poly 1305 context.  Do not rely on its contents or its size, they
