@@ -11,12 +11,15 @@ int crypto_verify32(const uint8_t a[32], const uint8_t b[32]);
 int crypto_verify64(const uint8_t a[64], const uint8_t b[64]);
 
 // Erase a buffer from existence.
-// It probably wasn't the only copy...
+// It probably wasn't the only copy, make sure you wipe them all.
 void crypto_wipe(void *secret, size_t size);
 
 ////////////////
 /// Chacha20 ///
 ////////////////
+
+// Chacha20 is a low-level primitive, not indented for end users.
+// Use authenticated encryption instead.
 
 // Chacha context.  Do not rely on its contents or its size,
 // they may change without notice.
@@ -51,6 +54,9 @@ void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
 /////////////////
 /// Poly 1305 ///
 /////////////////
+
+// Poly1305 is a low-level primitive, not indented for end users.
+// Use authenticated encryption instead.
 
 // Poly 1305 context.  Do not rely on its contents or its size, they
 // may change without notice.
@@ -127,6 +133,9 @@ void crypto_argon2i(uint8_t       *hash,      uint32_t hash_size,     // >= 4
 ///////////////
 /// X-25519 ///
 ///////////////
+
+// Low-level function, not intended for end users.
+// Use crypto_key_exchange() instead
 int crypto_x25519(uint8_t       raw_shared_secret[32],
                   const uint8_t your_secret_key  [32],
                   const uint8_t their_public_key [32]);
@@ -220,6 +229,8 @@ void crypto_lock_auth(crypto_lock_ctx *ctx,
                       const uint8_t   *message,
                       size_t           message_size);
 
+// Low-level function, not intended for end users.
+// Use crypto_lock_update() and crypto_unlock_update() instead.
 void crypto_lock_encrypt(crypto_lock_ctx *ctx,
                          uint8_t         *cipher_text,
                          const uint8_t   *plain_text,
