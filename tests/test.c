@@ -662,12 +662,12 @@ static int p_lock_incremental()
         crypto_aead_lock(mac1, cipher1, key, nonce,
                          ad, ad_size, plain, text_size);
         crypto_lock_ctx ctx;
-        crypto_lock_init  (&ctx, key, nonce);
-        crypto_lock_auth  (&ctx, ad1, ad_size1); // just to show ad also have
-        crypto_lock_auth  (&ctx, ad2, ad_size2); // an incremental interface
-        crypto_lock_update(&ctx, cipher2             , plain1, text_size1);
-        crypto_lock_update(&ctx, cipher2 + text_size1, plain2, text_size2);
-        crypto_lock_final (&ctx, mac2);
+        crypto_lock_init     (&ctx, key, nonce);
+        crypto_lock_aead_auth(&ctx, ad1, ad_size1); // just to show ad also have
+        crypto_lock_aead_auth(&ctx, ad2, ad_size2); // an incremental interface
+        crypto_lock_update   (&ctx, cipher2             , plain1, text_size1);
+        crypto_lock_update   (&ctx, cipher2 + text_size1, plain2, text_size2);
+        crypto_lock_final    (&ctx, mac2);
         status |= memcmp(mac1   , mac2   , 16       );
         status |= memcmp(cipher1, cipher2, text_size);
 
@@ -676,25 +676,25 @@ static int p_lock_incremental()
         u8 re_plain2[256];
         status |= crypto_aead_unlock(re_plain1, key, nonce, mac1,
                                      ad, ad_size, cipher1, text_size);
-        crypto_lock_init    (&ctx, key, nonce);
-        crypto_lock_auth    (&ctx, ad, ad_size);
-        crypto_unlock_update(&ctx, re_plain2, cipher2, text_size);
+        crypto_unlock_init     (&ctx, key, nonce);
+        crypto_unlock_aead_auth(&ctx, ad, ad_size);
+        crypto_unlock_update   (&ctx, re_plain2, cipher2, text_size);
         status |= crypto_unlock_final(&ctx, mac2);
         status |= memcmp(mac1 , mac2     , 16       );
         status |= memcmp(plain, re_plain1, text_size);
         status |= memcmp(plain, re_plain2, text_size);
 
         // Test authentication without decryption
-        crypto_lock_init(&ctx, key, nonce);
-        crypto_lock_auth(&ctx, ad     , ad_size  );
-        crypto_lock_auth(&ctx, cipher2, text_size);
+        crypto_lock_init     (&ctx, key, nonce);
+        crypto_lock_aead_auth(&ctx, ad     , ad_size  );
+        crypto_lock_aead_auth(&ctx, cipher2, text_size);
         status |= crypto_unlock_final(&ctx, mac2);
         // The same, except we're supposed to reject forgeries
         if (text_size > 0) {
             cipher2[0]++; // forgery attempt
-            crypto_lock_init(&ctx, key, nonce);
-            crypto_lock_auth(&ctx, ad     , ad_size  );
-            crypto_lock_auth(&ctx, cipher2, text_size);
+            crypto_lock_init     (&ctx, key, nonce);
+            crypto_lock_aead_auth(&ctx, ad     , ad_size  );
+            crypto_lock_aead_auth(&ctx, cipher2, text_size);
             status |= !crypto_unlock_final(&ctx, mac2);
         }
     }
