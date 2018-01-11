@@ -214,51 +214,67 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                              const u8          *plain_text,
                              size_t             text_size)
 {
-    // Align ourselves with a block
-    while (ctx->pool_idx % 64 != 0 && text_size > 0) {
-        u8 stream = chacha20_pool_byte(ctx);
-        u8 plain  = 0;
-        if (plain_text != 0) {
-            plain = *plain_text;
+    if (plain_text != 0) {
+        // Align ourselves with a block
+        while (ctx->pool_idx % 64 != 0 && text_size > 0) {
+            *cipher_text = chacha20_pool_byte(ctx) ^ *plain_text;
             plain_text++;
+            cipher_text++;
+            text_size--;
         }
-        *cipher_text = stream ^ plain;
-        text_size--;
-        cipher_text++;
-    }
-    // Main processing by 64 byte chunks
-    size_t nb_blocks = text_size / 64;
-    size_t remainder = text_size % 64;
-    FOR (i, 0, nb_blocks) {
-        chacha20_refill_pool(ctx);
-        FOR (j, 0, 16) {
-            u32 txt;
-            if (plain_text) {
-                txt = load32_le(plain_text);
-                plain_text += 4;
-            } else {
-                txt = 0;
-            }
-            store32_le(cipher_text + j * 4, ctx->pool[j] ^ txt);
-        }
-        cipher_text += 64;
-    }
-    if (nb_blocks > 0) {
-        ctx->pool_idx = 64;
-    }
-    // Remaining input, byte by byte
-    FOR (i, 0, remainder) {
-        if (ctx->pool_idx == 64) {
+        // Main processing by 64 byte chunks
+        size_t nb_blocks = text_size / 64;
+        size_t remainder = text_size % 64;
+        FOR (i, 0, nb_blocks) {
             chacha20_refill_pool(ctx);
+            FOR (j, 0, 16) {
+                store32_le(cipher_text + j * 4,
+                           ctx->pool[j] ^ load32_le(plain_text));
+                plain_text += 4;
+            }
+            cipher_text += 64;
         }
-        u8 stream = chacha20_pool_byte(ctx);
-        u8 plain  = 0;
-        if (plain_text != 0) {
-            plain = *plain_text;
+        if (nb_blocks > 0) {
+            ctx->pool_idx = 64;
+        }
+        // Remaining input, byte by byte
+        FOR (i, 0, remainder) {
+            if (ctx->pool_idx == 64) {
+                chacha20_refill_pool(ctx);
+            }
+            *cipher_text = chacha20_pool_byte(ctx) ^ *plain_text;
             plain_text++;
+            cipher_text++;
         }
-        *cipher_text = stream ^ plain;
-        cipher_text++;
+    }
+    else {
+        // Align ourselves with a block
+        while (ctx->pool_idx % 64 != 0 && text_size > 0) {
+            *cipher_text = chacha20_pool_byte(ctx);
+            cipher_text++;
+            text_size--;
+        }
+        // Main processing by 64 byte chunks
+        size_t nb_blocks = text_size / 64;
+        size_t remainder = text_size % 64;
+        FOR (i, 0, nb_blocks) {
+            chacha20_refill_pool(ctx);
+            FOR (j, 0, 16) {
+                store32_le(cipher_text + j * 4, ctx->pool[j]);
+            }
+            cipher_text += 64;
+        }
+        if (nb_blocks > 0) {
+            ctx->pool_idx = 64;
+        }
+        // Remaining input, byte by byte
+        FOR (i, 0, remainder) {
+            if (ctx->pool_idx == 64) {
+                chacha20_refill_pool(ctx);
+            }
+            *cipher_text = chacha20_pool_byte(ctx);
+            cipher_text++;
+        }
     }
 }
 
