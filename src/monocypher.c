@@ -769,27 +769,23 @@ static void g_rounds(block *work_block)
 }
 
 // The compression function G (copy version for the first pass)
-static void g_copy(block *result, const block *x, const block *y)
+static void g_copy(block *result, const block *x, const block *y, block* tmp)
 {
-    block tmp;
-    copy_block(&tmp  , x   ); // tmp    = X
-    xor_block (&tmp  , y   ); // tmp    = X ^ Y = R
-    copy_block(result, &tmp); // result = R         (only difference with g_xor)
-    g_rounds  (&tmp);         // tmp    = Z
-    xor_block (result, &tmp); // result = R ^ Z
-    wipe_block(&tmp);
+    copy_block(tmp   , x  ); // tmp    = X
+    xor_block (tmp   , y  ); // tmp    = X ^ Y = R
+    copy_block(result, tmp); // result = R         (only difference with g_xor)
+    g_rounds  (tmp);         // tmp    = Z
+    xor_block (result, tmp); // result = R ^ Z
 }
 
 // The compression function G (xor version for subsequent passes)
-static void g_xor(block *result, const block *x, const block *y)
+static void g_xor(block *result, const block *x, const block *y, block *tmp)
 {
-    block tmp;
-    copy_block(&tmp  , x   ); // tmp    = X
-    xor_block (&tmp  , y   ); // tmp    = X ^ Y = R
-    xor_block (result, &tmp); // result = R ^ old   (only difference with g_copy)
-    g_rounds  (&tmp);         // tmp    = Z
-    xor_block (result, &tmp); // result = R ^ old ^ Z
-    wipe_block(&tmp);
+    copy_block(tmp   , x  ); // tmp    = X
+    xor_block (tmp   , y  ); // tmp    = X ^ Y = R
+    xor_block (result, tmp); // result = R ^ old   (only difference with g_copy)
+    g_rounds  (tmp);         // tmp    = Z
+    xor_block (result, tmp); // result = R ^ old ^ Z
 }
 
 // unary version of the compression function.
@@ -956,11 +952,12 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
     const u32 segment_size = nb_blocks / 4;
 
     // fill (then re-fill) the rest of the blocks
+    block tmp;
+    gidx_ctx ctx;
     FOR (pass_number, 0, nb_iterations) {
         int first_pass = pass_number == 0;
 
         FOR (segment, 0, 4) {
-            gidx_ctx ctx;
             gidx_init(&ctx, pass_number, segment, nb_blocks, nb_iterations);
 
             // On the first segment of the first pass,
@@ -977,12 +974,13 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
                 block *c = blocks + current_block;
                 block *p = blocks + previous_block;
                 block *r = blocks + reference_block;
-                if (first_pass) { g_copy(c, p, r); }
-                else            { g_xor (c, p, r); }
+                if (first_pass) { g_copy(c, p, r, &tmp); }
+                else            { g_xor (c, p, r, &tmp); }
             }
-            wipe_block(&(ctx.b));
         }
     }
+    wipe_block(&(ctx.b));
+    wipe_block(&tmp);
     // hash the very last block with H' into the output hash
     u8 final_block[1024];
     store_block(final_block, blocks + (nb_blocks - 1));
