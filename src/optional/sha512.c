@@ -28,6 +28,14 @@ static void store64_be(u8 out[8], u64 in)
     out[7] =  in        & 0xff;
 }
 
+static void crypto_wipe(void *secret, size_t size)
+{
+    volatile u8 *v_secret = (u8*)secret;
+    FOR (i, 0, size) {
+        v_secret[i] = 0;
+    }
+}
+
 static u64 rot(u64 x, int c       ) { return (x >> c) | (x << (64 - c));   }
 static u64 ch (u64 x, u64 y, u64 z) { return (x & y) ^ (~x & z);           }
 static u64 maj(u64 x, u64 y, u64 z) { return (x & y) ^ ( x & z) ^ (y & z); }
@@ -80,6 +88,11 @@ static void sha512_compress(crypto_sha512_ctx *ctx)
     ctx->hash[2] += c;    ctx->hash[3] += d;
     ctx->hash[4] += e;    ctx->hash[5] += f;
     ctx->hash[6] += g;    ctx->hash[7] += h;
+
+    volatile u64 *W = w;
+    FOR (i, 0, 80) {
+        W[i] = 0;
+    }
 }
 
 static void sha512_set_input(crypto_sha512_ctx *ctx, u8 input)
@@ -179,6 +192,8 @@ void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 hash[64])
     FOR (i, 0, 8) {
         store64_be(hash + i*8, ctx->hash[i]);
     }
+
+    crypto_wipe(ctx, sizeof(*ctx));
 }
 
 void crypto_sha512(u8 *hash, const u8 *message, size_t message_size)
