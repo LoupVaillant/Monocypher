@@ -56,6 +56,17 @@ static u64 blake2b(void)
     TIMING_END;
 }
 
+static u64 sha512(void)
+{
+    static u8 in  [SIZE];  p_random(in , SIZE);
+    static u8 hash[  64];
+
+    TIMING_START {
+        crypto_sha512(hash, in, SIZE);
+    }
+    TIMING_END;
+}
+
 static u64 argon2i(void)
 {
     size_t    nb_blocks = SIZE / 1024;
@@ -120,6 +131,7 @@ int main()
     print("Poly1305         ", poly1305()      * MULT/DIV, "Mb/s"            );
     print("Auth'd encryption", authenticated() * MULT/DIV, "Mb/s"            );
     print("Blake2b          ", blake2b()       * MULT/DIV, "Mb/s"            );
+    print("Sha512           ", sha512()        * MULT/DIV, "Mb/s"            );
     print("Argon2i          ", argon2i()       * MULT/DIV, "Mb/s (3 passes)" );
     print("x25519           ", x25519()        / DIV, "exchanges  per second");
     print("EdDSA(sign)      ", edDSA_sign()    / DIV, "signatures per second");
