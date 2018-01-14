@@ -258,7 +258,7 @@ static int p_verify64(){ return p_verify(64, crypto_verify64); }
 
 // Tests that encrypting in chunks yields the same result than
 // encrypting all at once.
-static int p_chacha20()
+static int p_chacha20(int use_input)
 {
 #undef INPUT_SIZE
 #undef C_MAX_SIZE
@@ -283,17 +283,28 @@ static int p_chacha20()
             if (offset + chunk_size > INPUT_SIZE) { break; }
             u8 *out = output_chunk + offset;
             u8 *in  = input        + offset;
-            crypto_chacha20_encrypt(&ctx, out, in, chunk_size);
+            if (use_input) {
+                crypto_chacha20_encrypt(&ctx, out, in, chunk_size);
+            } else {
+                crypto_chacha20_stream(&ctx, out, chunk_size);
+            }
             offset += chunk_size;
         }
         // Encrypt all at once
         crypto_chacha20_init(&ctx, key, nonce);
-        crypto_chacha20_encrypt(&ctx, output_whole, input, offset);
-
+        if (use_input) {
+            crypto_chacha20_encrypt(&ctx, output_whole, input, offset);
+        } else {
+            crypto_chacha20_stream(&ctx, output_whole, offset);
+        }
         // Compare the results (must be the same)
         status |= memcmp(output_chunk, output_whole, offset);
     }
-    printf("%s: Chacha20\n", status != 0 ? "FAILED" : "OK");
+    if (use_input) {
+        printf("%s: Chacha20\n", status != 0 ? "FAILED" : "OK");
+    } else {
+        printf("%s: Chacha20 (stream)\n", status != 0 ? "FAILED" : "OK");
+    }
     return status;
 }
 
@@ -723,7 +734,8 @@ int main(void)
     status |= p_verify16();
     status |= p_verify32();
     status |= p_verify64();
-    status |= p_chacha20();
+    status |= p_chacha20(1);
+    status |= p_chacha20(0);
     status |= p_chacha20_same_ptr();
     status |= p_chacha20_set_ctr();
     status |= p_poly1305();
