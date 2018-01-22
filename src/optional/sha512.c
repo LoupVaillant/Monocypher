@@ -69,7 +69,7 @@ static const u64 K[80] = {
 
 static void sha512_compress(crypto_sha512_ctx *ctx)
 {
-    u64 w[80];
+    u64 *w = ctx->w;
     FOR(i,  0, 16) { w[i] = ctx->input[i]; }
     FOR(i, 16, 80) { w[i] = (lit_sigma1(w[i- 2]) + w[i- 7] +
                              lit_sigma0(w[i-15]) + w[i-16]); }
@@ -88,11 +88,6 @@ static void sha512_compress(crypto_sha512_ctx *ctx)
     ctx->hash[2] += c;    ctx->hash[3] += d;
     ctx->hash[4] += e;    ctx->hash[5] += f;
     ctx->hash[6] += g;    ctx->hash[7] += h;
-
-    volatile u64 *W = w;
-    FOR (i, 0, 80) {
-        W[i] = 0;
-    }
 }
 
 static void sha512_set_input(crypto_sha512_ctx *ctx, u8 input)

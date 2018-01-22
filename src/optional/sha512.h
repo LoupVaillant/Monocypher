@@ -5,6 +5,7 @@
 #include <inttypes.h>
 
 typedef struct {
+    uint64_t w[80]; // work area
     uint64_t hash[8];
     uint64_t input[16];
     uint64_t input_size[2];
