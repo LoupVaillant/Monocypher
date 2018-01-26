@@ -370,7 +370,7 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
         poly_block(ctx);
         poly_clear_c(ctx);
     }
-    // Process the input blok by block
+    // Process the input block by block
     size_t nb_blocks = message_size / 16;
     size_t remainder = message_size % 16;
     FOR (i, 0, nb_blocks) {
