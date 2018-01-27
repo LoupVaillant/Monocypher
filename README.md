@@ -138,7 +138,7 @@ signatures default to EdDSA with curve25519 and Blake2b.  This is
 different from the more mainstream Ed25519, which uses SHA-512
 instead.
 
-If you need Ed25519 compatibility, you need to do the following:
+If you need Ed25519 compatibility, you must do the following:
 
 - Compile Monocypher.c with option -DED25519_SHA512.
 - Link the final program with a suitable SHA-512 implementation.  You
