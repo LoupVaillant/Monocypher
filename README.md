@@ -54,23 +54,6 @@ The `cflags` line gives the include path for monocypher.h, and the
 `libmonocypher.a` (or `libmonocypher.so`).
 
 
-### Known language bindings
-
-* [Crystal](https://github.com/konovod/monocypher.cr)
-* [Lua](https://github.com/philanc/luanacha)
-* [Zig](https://bitbucket.org/mihailp/zig-monocypher/src/default)
-  (http://ziglang.org/).
-
-
-### Known alternate distributions
-
-* [AUR package](https://aur.archlinux.org/packages/monocypher/) for
-  Arch Linux.
-* If you are using [Buck Build](https://buckbuild.com) and
-  [Buckaroo](https://buckaroo.pm), then there is a Buck port
-  maintained at [njlr/Monocypher](https://github.com/njlr/Monocypher).
-
-
 Test suite
 ----------
 
