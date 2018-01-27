@@ -47,7 +47,9 @@ The version provided by Monocypher has no threading support, so the
 degree of parallelism is limited to 1.
 This is considered good enough for most purposes.
 .Pp
-The arguments are:
+The arguments of
+.Fn crypto_argon2i
+are:
 .Bl -tag -width Ds
 .It Fa hash
 The output hash.
@@ -93,12 +95,29 @@ in bytes.
 A password salt.
 This should be filled with random bytes, generated separately for each
 password to be hashed.
+See
+.Xr intro 3monocypher
+for advice about generating random bytes (use the operating system's
+random number generator).
 .It Fa salt_size
 Length of
 .Fa salt ,
 in bytes.
 Must be at least 8.
 16 is recommended.
+.El
+.Pp
+The output hash must not overlap with the work area, or it will be
+wiped along with it.
+Any other overlap is permitted.
+.Pp
+.Fn crypto_argon2i_general
+is a variant of
+.Fn crypto_argon2i ,
+that hashes a secret key and additional data, in addition to the
+password and salt.
+The arguments are:
+.Bl -tag -width Ds
 .It Fa key
 A key to use in the hash.
 Can be
@@ -133,11 +152,8 @@ is zero.
 Length of
 .Fa ad ,
 in bytes.
+Must be zero if there is no additional data.
 .El
-.Pp
-The output hash must not overlap with the work area, or it will be
-wiped along with it.
-Any other overlap is permitted.
 .Pp
 Use
 .Xr crypto_verify16 3monocypher ,
