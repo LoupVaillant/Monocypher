@@ -2,7 +2,8 @@
 .Dt CRYPTO_X25519 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_x25519
+.Nm crypto_x25519 ,
+.Nm crypto_x25519_public_key
 .Nd X25519 key exchange
 .Sh SYNOPSIS
 .In monocypher.h
@@ -12,6 +13,11 @@
 .Fa "const uint8_t your_secret_key[32]"
 .Fa "const uint8_t their_public_key[32]"
 .Fc
+.Ft void
+.Fo crypto_x25519_public_key
+.Fa "uint8_t your_public_key[32]"
+.Fa "const uint8_t your_secret_key[32]"
+.Fc
 .Sh DESCRIPTION
 .Fn crypto_x25519
 computes a shared secret with
@@ -20,8 +26,13 @@ and
 .Fa their_public_key .
 It is a low-level primitive.
 Users should use
-.Xr crypto_key_exchange 3monocypher
+.Xr crypto_key_exchange 3monocypher .
 unless they have a specific reason not to.
+.Pp
+.Fn crypto_x25519_public_key
+is the same as
+.Xr crypto_key_exchange_public_key 3monocypher
+It deterministically computes the public key from a random secret key.
 .Pp
 The arguments are:
 .Bl -tag -width Ds
@@ -86,7 +97,7 @@ such as the Double Ratchet Algorithm.
 The most significant bit of the public key is systematically ignored.
 It is not needed because every public key should be smaller than
 2^255-19, which fits in 255 bits.
-If another implementation of X25519 gives you a key that's not fully
+If another implementation of X25519 gives you a key that is not fully
 reduced and has its high bit set, the computation will fail.
 On the other hand, it also means you may use this bit for other purposes
 (such as parity flipping for Ed25519 compatibility).

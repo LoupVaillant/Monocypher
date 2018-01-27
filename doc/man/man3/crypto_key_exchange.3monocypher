@@ -3,7 +3,7 @@
 .Os
 .Sh NAME
 .Nm crypto_key_exchange ,
-.Nm crypto_x25519_public_key
+.Nm crypto_key_exchange_public_key
 .Nd Elliptic Curve Diffie-Hellman key exchange
 .Sh SYNOPSIS
 .In monocypher.h
@@ -14,7 +14,7 @@
 .Fa "const uint8_t their_public_key[32]"
 .Fc
 .Ft void
-.Fo crypto_x25519_public_key
+.Fo crypto_key_exchange_public_key
 .Fa "uint8_t your_public_key[32]"
 .Fa "const uint8_t your_secret_key[32]"
 .Fc
@@ -22,7 +22,7 @@
 .Fn crypto_key_exchange
 computes a shared key with your secret key and their public key.
 .Pp
-.Fn crypto_x25519_public_key
+.Fn crypto_key_exchange_public_key
 deterministically computes the public key from a random secret key.
 .Pp
 The arguments are:
@@ -47,7 +47,7 @@ The public key of the other party.
 Your public key, generated from
 .Fa your_secret_key
 with
-.Fn crypto_x25519_public_key .
+.Fn crypto_key_exchange_public_key .
 .El
 .Sh RETURN VALUES
 Some public keys force the shared key to a known constant.
@@ -56,7 +56,7 @@ returns -1 if it detects such a public key, otherwise it returns 0.
 This never happens with legitimate public keys, but if the ones you
 process are not known to be trustworthy, check the return value.
 .Pp
-.Fn crypto_x25519_public_key
+.Fn crypto_key_exchange_public_key
 returns nothing.
 It cannot fail.
 .Sh EXAMPLES
@@ -64,7 +64,7 @@ Generate a public key from a randomly generated secret key:
 .Bd -literal -offset indent
 const uint8_t sk[32]; /* Random secret key */
 uint8_t       pk[32]; /* Public key        */
-crypto_x25519_public_key(pk, sk);
+crypto_key_exchange_public_key(pk, sk);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(sk, 32);
 .Ed
@@ -96,3 +96,7 @@ If either of the long term secret keys leaks, it may compromise
 .Em all past messages .
 This can be avoided by using protocols that provide forward secrecy,
 such as the Double Ratchet Algorithm.
+.Sh IMPLEMENTATION DETAILS
+.Fn crypto_key_exchange_public_key
+is an alias to
+.Xr crypto_x25519_public_key 3monocypher .

@@ -3,12 +3,15 @@
 .Os
 .Sh NAME
 .Nm crypto_lock_init ,
-.Nm crypto_lock_auth ,
-.Nm crypto_lock_encrypt ,
+.Nm crypto_lock_aead_auth ,
 .Nm crypto_lock_update ,
 .Nm crypto_lock_final ,
+.Nm crypto_unlock_init ,
+.Nm crypto_unlock_aead_auth ,
 .Nm crypto_unlock_update ,
-.Nm crypto_unlock_final
+.Nm crypto_unlock_final ,
+.Nm crypto_lock_auth ,
+.Nm crypto_lock_encrypt
 .Nd incremental authenticated encryption with additional data
 .Sh SYNOPSIS
 .In monocypher.h
@@ -19,7 +22,7 @@
 .Fa "const uint8_t nonce[24]"
 .Fc
 .Ft void
-.Fo crypto_lock_auth
+.Fo crypto_lock_aead_auth
 .Fa "crypto_lock_ctx *ctx"
 .Fa "const uint8_t *ad"
 .Fa "size_t ad_size"
@@ -37,16 +40,34 @@
 .Fa "uint8_t mac[16]"
 .Fc
 .Ft void
+.Fo crypto_unlock_init
+.Fa "crypto_unlock_ctx *ctx"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[24]"
+.Fc
+.Ft void
+.Fo crypto_unlock_aead_auth
+.Fa "crypto_unlock_ctx *ctx"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
+.Fc
+.Ft void
 .Fo crypto_unlock_update
-.Fa "crypto_lock_ctx *ctx"
+.Fa "crypto_unlock_ctx *ctx"
 .Fa "uint8_t *plain_text"
 .Fa "const uint8_t *cipher_text"
 .Fa "size_t text_size"
 .Fc
 .Ft int
 .Fo crypto_unlock_final
-.Fa "crypto_lock_ctx *ctx"
+.Fa "crypto_unlock_ctx *ctx"
 .Fa "const uint8_t mac[16]"
+.Fc
+.Ft void
+.Fo crypto_lock_auth
+.Fa "crypto_lock_ctx *ctx"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
 .Fc
 .Ft void
 .Fo crypto_lock_encrypt
@@ -77,7 +98,7 @@ Initialise a context with
 .Fn crypto_lock_init .
 .It
 Authenticate additional data, if any, with
-.Fn crypto_lock_auth .
+.Fn crypto_lock_aead_auth .
 .It
 Encrypt and authenticate some data with
 .Fn crypto_lock_update .
@@ -90,10 +111,10 @@ Decryption also requires four steps:
 .Bl -bullet
 .It
 Initialise a context with
-.Fn crypto_lock_init .
+.Fn crypto_unlock_init .
 .It
 Verify additional data, if any, with
-.Fn crypto_lock_auth .
+.Fn crypto_unlock_aead_auth .
 .It
 Decrypt and verify some data with
 .Fn crypto_unlock_update .
@@ -109,7 +130,7 @@ It is meant as a building block.
 Used with
 .Fn crypto_lock_auth ,
 it enables various AEAD constructions.
-Most users do not need it.
+Most users do not need either of them.
 Prefer
 .Fn crypto_lock_update
 and
@@ -117,9 +138,13 @@ and
 instead.
 .Sh RETURN VALUES
 .Fn crypto_lock_init ,
+.Fn crypto_unlock_init ,
 .Fn crypto_lock_auth ,
 .Fn crypto_lock_encrypt ,
+.Fn crypto_lock_aead_auth ,
+.Fn crypto_unlock_aead_auth ,
 .Fn crypto_lock_update ,
+.Fn crypto_unlock_update ,
 and
 .Fn crypto_lock_final
 return nothing.
@@ -148,7 +173,7 @@ crypto_wipe(key, 32);
 
 /* Authenticate additional data */
 for (size_t i = 0; i < 500; i += 100) {
-    crypto_lock_auth(&ctx, ad + i, 100);
+    crypto_lock_aead_auth(&ctx, ad + i, 100);
 }
 
 /* Encrypt message */
@@ -172,14 +197,14 @@ const uint8_t cipher_text[500]; /* Encrypted message        */
 uint8_t       plain_text [500]; /* Secret message           */
 
 /* Set up initial context */
-crypto_lock_ctx ctx;
-crypto_lock_init(&ctx, key, nonce);
+crypto_unlock_ctx ctx;
+crypto_unlock_init(&ctx, key, nonce);
 /* Wipe the key if it is no longer needed */
 crypto_wipe(key, 32);
 
 /* Verify additional data */
 for (size_t i = 0; i < 500; i += 100) {
-    crypto_lock_auth(&ctx, ad + i, 100);
+    crypto_unlock_aead_auth(&ctx, ad + i, 100);
 }
 
 /* Decrypt message */
@@ -248,6 +273,23 @@ Doing so securely is hard.
 Do not process messages before calling
 .Fn crypto_unlock_final .
 .Sh IMPLEMENTATION DETAILS
+.Bl -bullet
+.It
+.Vt crypto_unlock_ctx
+is an alias to
+.Vt crypto_lock_ctx .
+.It
+.Fn crypto_unlock_init
+is an alias to
+.Fn crypto_lock_init .
+.It
+.Fn crypto_lock_aead_auth
+and
+.Fn crypto_unlock_aead_auth
+are aliases to
+.Fn crypto_lock_auth .
+.El
+.Pp
 The incremental interface is roughly three times slower than the direct
 interface at identifying corrupted messages.
 This is because the incremental interface works in a single pass and has
