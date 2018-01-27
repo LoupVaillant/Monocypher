@@ -6,7 +6,7 @@ inspired by [libsodium][] and [TweetNaCl][], written in portable C.
 
 It means to eat Libsodium's lunch.
 
-[Official site.](http://loup-vaillant.fr/projects/monocypher/)
+[Official site.](https://monocypher.org/)
 
 [libsodium]: http://libsodium.org
 [TweetNaCl]: http://tweetnacl.cr.yp.to/
