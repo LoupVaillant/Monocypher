@@ -1,6 +1,7 @@
 #include "sha512.h"
 
 #define FOR(i, min, max) for (size_t i = min; i < max; i++)
+#define WIPE_CTX(ctx)    crypto_wipe(ctx   , sizeof(*(ctx)))
 typedef uint8_t u8;
 typedef uint64_t u64;
 
@@ -188,7 +189,7 @@ void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 hash[64])
         store64_be(hash + i*8, ctx->hash[i]);
     }
 
-    crypto_wipe(ctx, sizeof(*ctx));
+    WIPE_CTX(ctx);
 }
 
 void crypto_sha512(u8 *hash, const u8 *message, size_t message_size)

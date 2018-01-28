@@ -22,6 +22,8 @@
 #define HASH_FINAL  COMBINE2(HASH, _final)
 
 #define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
+#define WIPE_CTX(ctx)       crypto_wipe(ctx   , sizeof(*(ctx)))
+#define WIPE_BUFFER(buffer) crypto_wipe(buffer, sizeof(buffer))
 typedef uint8_t  u8;
 typedef uint32_t u32;
 typedef int32_t  i32;
@@ -179,8 +181,8 @@ void crypto_chacha20_H(u8 out[32], const u8 key[32], const u8 in[16])
         store32_le(out      + i*4, buffer[i     ]); // constant
         store32_le(out + 16 + i*4, buffer[i + 12]); // counter and nonce
     }
-    crypto_wipe(&ctx  , sizeof(ctx   ));
-    crypto_wipe(buffer, sizeof(buffer));
+    WIPE_CTX(&ctx);
+    WIPE_BUFFER(buffer);
 }
 
 void crypto_chacha20_init(crypto_chacha_ctx *ctx,
@@ -420,7 +422,7 @@ void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
     u += (i64)(ctx->h[2]) + ctx->pad[2];  store32_le(mac +  8, u);  u >>= 32;
     u += (i64)(ctx->h[3]) + ctx->pad[3];  store32_le(mac + 12, u);
 
-    crypto_wipe(ctx, sizeof(*ctx));
+    WIPE_CTX(ctx);
 }
 
 void crypto_poly1305(u8     mac[16],  const u8 *message,
@@ -616,7 +618,7 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
     FOR (i, nb_words * 8, ctx->hash_size) {
         hash[i] = (ctx->hash[i / 8] >> (8 * (i % 8))) & 0xff;
     }
-    crypto_wipe(ctx, sizeof(*ctx));
+    WIPE_CTX(ctx);
 }
 
 void crypto_blake2b_general(u8       *hash   , size_t hash_size,
@@ -659,7 +661,7 @@ static void blake_update_32(crypto_blake2b_ctx *ctx, u32 input)
     u8 buf[4];
     store32_le(buf, input);
     crypto_blake2b_update(ctx, buf, 4);
-    crypto_wipe(buf, 4);
+    WIPE_BUFFER(buf);
 }
 
 static void load_block(block *b, const u8 bytes[1024])
@@ -692,7 +694,7 @@ static void extended_hash(u8       *digest, u32 digest_size,
     blake_update_32            (&ctx, digest_size);
     crypto_blake2b_update      (&ctx, input, input_size);
     crypto_blake2b_final       (&ctx, digest);
-    crypto_wipe(&ctx, sizeof(ctx));
+    WIPE_CTX(&ctx);
 
     if (digest_size > 64) {
         // the conversion to u64 avoids integer overflow on
@@ -928,8 +930,8 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
         load_block(&tmp_block, hash_area);
         copy_block(blocks + 1, &tmp_block);
 
-        crypto_wipe(initial_hash,   72);
-        crypto_wipe(hash_area   , 1024);
+        WIPE_BUFFER(initial_hash);
+        WIPE_BUFFER(hash_area);
         wipe_block(&tmp_block);
     }
 
@@ -973,7 +975,7 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
     extended_hash(hash, hash_size, final_block, 1024);
 
     // wipe final block and work area
-    crypto_wipe(final_block, 1024);
+    WIPE_BUFFER(final_block);
     volatile u64 *p = (u64*)work_area;
     FOR (i, 0, 128 * nb_blocks) {
         p[i] = 0;
@@ -1169,10 +1171,10 @@ static void fe_invert(fe out, const fe z)
     fe_sq(t3, t2); FOR (i, 1, 100) fe_sq(t3, t3); fe_mul(t2 , t3, t2);
     fe_sq(t2, t2); FOR (i, 1,  50) fe_sq(t2, t2); fe_mul(t1 , t2, t1);
     fe_sq(t1, t1); FOR (i, 1,   5) fe_sq(t1, t1); fe_mul(out, t1, t0);
-    crypto_wipe(t0, sizeof(t0));
-    crypto_wipe(t0, sizeof(t1));
-    crypto_wipe(t0, sizeof(t2));
-    crypto_wipe(t0, sizeof(t3));
+    WIPE_BUFFER(t0);
+    WIPE_BUFFER(t1);
+    WIPE_BUFFER(t2);
+    WIPE_BUFFER(t3);
 }
 
 // This could be simplified, but it would be slower
@@ -1191,9 +1193,9 @@ void fe_pow22523(fe out, const fe z)
     fe_sq(t2, t1);  FOR (i, 1, 100) fe_sq(t2, t2);  fe_mul(t1, t2, t1);
     fe_sq(t1, t1);  FOR (i, 1,  50) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
     fe_sq(t0, t0);  FOR (i, 1,   2) fe_sq(t0, t0);  fe_mul(out, t0, z);
-    crypto_wipe(t0, sizeof(t0));
-    crypto_wipe(t0, sizeof(t1));
-    crypto_wipe(t0, sizeof(t2));
+    WIPE_BUFFER(t0);
+    WIPE_BUFFER(t1);
+    WIPE_BUFFER(t2);
 }
 
 static void fe_tobytes(u8 s[32], const fe h)
@@ -1229,7 +1231,7 @@ static void fe_tobytes(u8 s[32], const fe h)
     store32_le(s + 24, ((u32)t[7] >> 13) | ((u32)t[8] << 12));
     store32_le(s + 28, ((u32)t[8] >> 20) | ((u32)t[9] <<  6));
 
-    crypto_wipe(t, sizeof(t));
+    WIPE_BUFFER(t);
 }
 
 //  Parity check.  Returns 0 if even, 1 if odd
@@ -1238,7 +1240,7 @@ static int fe_isnegative(const fe f)
     u8 s[32];
     fe_tobytes(s, f);
     u8 isneg = s[0] & 1;
-    crypto_wipe(s, sizeof(s));
+    WIPE_BUFFER(s);
     return isneg;
 }
 
@@ -1247,7 +1249,7 @@ static int fe_isnonzero(const fe f)
     u8 s[32];
     fe_tobytes(s, f);
     u8 isnonzero = zerocmp32(s);
-    crypto_wipe(s, sizeof(s));
+    WIPE_BUFFER(s);
     return isnonzero;
 }
 
@@ -1294,8 +1296,8 @@ static void x25519_ladder(const fe x1, fe x2, fe z2, fe x3, fe z3,
     fe_cswap(x2, x3, swap);
     fe_cswap(z2, z3, swap);
 
-    crypto_wipe(t0, sizeof(t0));
-    crypto_wipe(t1, sizeof(t1));
+    WIPE_BUFFER(t0);
+    WIPE_BUFFER(t1);
 }
 
 int crypto_x25519(u8       raw_shared_secret[32],
@@ -1322,12 +1324,10 @@ int crypto_x25519(u8       raw_shared_secret[32],
     fe_mul(x2, x2, z2);
     fe_tobytes(raw_shared_secret, x2);
 
-    crypto_wipe(x1, sizeof(x1));
-    crypto_wipe(x2, sizeof(x2));
-    crypto_wipe(z2, sizeof(z2));
-    crypto_wipe(x3, sizeof(x3));
-    crypto_wipe(z3, sizeof(z3));
-    crypto_wipe(e , sizeof(e ));
+    WIPE_BUFFER(x1);
+    WIPE_BUFFER(x2);  WIPE_BUFFER(z2);
+    WIPE_BUFFER(x3);  WIPE_BUFFER(z3);
+    WIPE_BUFFER(e );
 
     // Returns -1 if the input is all zero
     // (happens with some malicious public keys)
@@ -1368,8 +1368,9 @@ static void ge_tobytes(u8 s[32], const ge *h)
     fe_mul(y, h->Y, recip);
     fe_tobytes(s, y);
     s[31] ^= fe_isnegative(x) << 7;
-    crypto_wipe(x, sizeof(x));
-    crypto_wipe(y, sizeof(y));
+
+    WIPE_BUFFER(x);
+    WIPE_BUFFER(y);
 }
 
 // Variable time! s must not be secret!
@@ -1479,17 +1480,10 @@ static void ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
     fe_mul(p->X, x1, t2);    fe_mul(p->Y, y1, t1);    fe_mul(p->Z, y1, t2);
     fe_mul(p->T, x1, t1);
 
-    crypto_wipe(x1, sizeof(x1));
-    crypto_wipe(y1, sizeof(y1));
-    crypto_wipe(z1, sizeof(z1));
-    crypto_wipe(x2, sizeof(x2));
-    crypto_wipe(z2, sizeof(z2));
-    crypto_wipe(x3, sizeof(x3));
-    crypto_wipe(z3, sizeof(z3));
-    crypto_wipe(t1, sizeof(t1));
-    crypto_wipe(t2, sizeof(t2));
-    crypto_wipe(t3, sizeof(t3));
-    crypto_wipe(t4, sizeof(t4));
+    WIPE_BUFFER(x1);  WIPE_BUFFER(y1);  WIPE_BUFFER(z1);
+    WIPE_BUFFER(x2);                    WIPE_BUFFER(z2);
+    WIPE_BUFFER(x3);                    WIPE_BUFFER(z3);
+    WIPE_BUFFER(t1);  WIPE_BUFFER(t2);  WIPE_BUFFER(t3);  WIPE_BUFFER(t4);
 }
 
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
@@ -1548,7 +1542,7 @@ static void reduce(u8 r[64])
         r[i] = 0;
     }
     modL(r, x);
-    crypto_wipe(x, sizeof(x));
+    WIPE_BUFFER(x);
 }
 
 void crypto_sign_public_key(u8       public_key[32],
@@ -1560,8 +1554,8 @@ void crypto_sign_public_key(u8       public_key[32],
     ge A;
     ge_scalarmult_base(&A, a);
     ge_tobytes(public_key, &A);
-    crypto_wipe( a, sizeof(a));
-    crypto_wipe(&A, sizeof(A));
+    WIPE_BUFFER(a);
+    WIPE_CTX(&A);
 }
 
 void crypto_sign_init_first_pass(crypto_sign_ctx *ctx,
@@ -1635,9 +1629,9 @@ void crypto_sign_final(crypto_sign_ctx *ctx, u8 signature[64])
     }
     modL(signature + 32, s);  // second half of the signature = s
 
-    crypto_wipe(ctx  , sizeof(*ctx ));
-    crypto_wipe(h_ram, sizeof(h_ram));
-    crypto_wipe(s    , sizeof(s    ));
+    WIPE_CTX(ctx);
+    WIPE_BUFFER(h_ram);
+    WIPE_BUFFER(s);
 }
 
 void crypto_sign(u8        signature[64],
@@ -1707,7 +1701,7 @@ int crypto_key_exchange(u8       shared_key[32],
     int status = crypto_x25519(raw_shared_secret,
                                your_secret_key, their_public_key);
     crypto_chacha20_H(shared_key, raw_shared_secret, zero);
-    crypto_wipe(raw_shared_secret, 32);
+    WIPE_BUFFER(raw_shared_secret);
     return status;
 }
 
@@ -1720,7 +1714,7 @@ void crypto_lock_init(crypto_lock_ctx *ctx, const u8 key[32], const u8 nonce[24]
     crypto_chacha20_x_init(&(ctx->chacha), key, nonce);
     crypto_chacha20_stream(&(ctx->chacha), auth_key, 32);
     crypto_poly1305_init  (&(ctx->poly  ), auth_key);
-    crypto_wipe(auth_key, 32);
+    WIPE_BUFFER(auth_key);
 }
 
 void crypto_lock_encrypt(crypto_lock_ctx *ctx, u8 *cipher_text,
@@ -1744,7 +1738,7 @@ void crypto_lock_update(crypto_lock_ctx *ctx, u8 *cipher_text,
 void crypto_lock_final(crypto_lock_ctx *ctx, u8 mac[16])
 {
     crypto_poly1305_final(&(ctx->poly), mac);
-    crypto_wipe(ctx, sizeof(ctx));
+    WIPE_CTX(ctx);
 }
 
 void crypto_unlock_update(crypto_lock_ctx *ctx, u8 *plain_text,
@@ -1759,7 +1753,7 @@ int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
     u8 real_mac[16];
     crypto_lock_final(ctx, real_mac);
     int mismatch = crypto_verify16(real_mac, mac);
-    crypto_wipe(real_mac, sizeof(real_mac));
+    WIPE_BUFFER(real_mac);
     return mismatch;
 }
 
@@ -1791,11 +1785,11 @@ int crypto_aead_unlock(u8       *plain_text,
     crypto_lock_auth(&ctx, cipher_text, text_size);
     crypto_chacha_ctx chacha_ctx = ctx.chacha; // avoid the wiping...
     if (crypto_unlock_final(&ctx, mac)) {      // ...that occurs here
-        crypto_wipe(&chacha_ctx, sizeof(chacha_ctx));
+        WIPE_CTX(&chacha_ctx);
         return -1; // reject forgeries before wasting our time decrypting
     }
     crypto_chacha20_encrypt(&chacha_ctx, plain_text, cipher_text, text_size);
-    crypto_wipe(&chacha_ctx, sizeof(chacha_ctx));
+    WIPE_CTX(&chacha_ctx);
     return 0;
 }
 
