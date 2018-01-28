@@ -1791,11 +1791,11 @@ int crypto_aead_unlock(u8       *plain_text,
     crypto_lock_auth(&ctx, cipher_text, text_size);
     crypto_chacha_ctx chacha_ctx = ctx.chacha; // avoid the wiping...
     if (crypto_unlock_final(&ctx, mac)) {      // ...that occurs here
-        crypto_wipe(&chacha_ctx, sizeof(ctx));
+        crypto_wipe(&chacha_ctx, sizeof(chacha_ctx));
         return -1; // reject forgeries before wasting our time decrypting
     }
     crypto_chacha20_encrypt(&chacha_ctx, plain_text, cipher_text, text_size);
-    crypto_wipe(&chacha_ctx, sizeof(ctx));
+    crypto_wipe(&chacha_ctx, sizeof(chacha_ctx));
     return 0;
 }
 
