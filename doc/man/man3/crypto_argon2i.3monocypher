@@ -47,7 +47,7 @@ The version provided by Monocypher has no threading support, so the
 degree of parallelism is limited to 1.
 This is considered good enough for most purposes.
 .Pp
-The arguments of
+The arguments to
 .Fn crypto_argon2i
 are:
 .Bl -tag -width Ds
@@ -111,12 +111,38 @@ The output hash must not overlap with the work area, or it will be
 wiped along with it.
 Any other overlap is permitted.
 .Pp
+Use
+.Xr crypto_verify16 3monocypher ,
+.Xr crypto_verify32 3monocypher
+or
+.Xr crypto_verify64 3monocypher
+to compare password hashes to prevent timing attacks.
+.Pp
+To select the
+.Fa nb_blocks
+and
+.Fa nb_iterations
+parameters, it should first be decided how long the computation should
+take.
+For user authentication, we recommend somewhere between half a second
+(convenient) and several seconds (paranoid).
+The computation should use as much memory as can be spared.
+.Pp
+Since parameter selection depends on your hardware, some trial and error
+will be required in order to determine the ideal settings.
+Three iterations and 100000 blocks (that is, one hundred megabytes of
+memory) is a good starting point.
+Adjust
+.Fa nb_blocks
+first.
+If using all available memory is not slow enough, increase
+.Fa nb_iterations .
+.Pp
 .Fn crypto_argon2i_general
 is a variant of
-.Fn crypto_argon2i ,
-that hashes a secret key and additional data, in addition to the
-password and salt.
-The arguments are:
+.Fn crypto_argon2i
+that supports keyed hashing and hashing of additional data.
+The additional arguments are:
 .Bl -tag -width Ds
 .It Fa key
 A key to use in the hash.
@@ -154,33 +180,6 @@ Length of
 in bytes.
 Must be zero if there is no additional data.
 .El
-.Pp
-Use
-.Xr crypto_verify16 3monocypher ,
-.Xr crypto_verify32 3monocypher
-or
-.Xr crypto_verify64 3monocypher
-to compare password hashes to prevent timing attacks.
-.Pp
-To select the
-.Fa nb_blocks
-and
-.Fa nb_iterations
-parameters, it should first be decided how long the computation should
-take.
-For user authentication, we recommend somewhere between half a second
-(convenient) and several seconds (paranoid).
-The computation should use as much memory as can be spared.
-.Pp
-Since parameter selection depends on your hardware, some trial and error
-will be required in order to determine the ideal settings.
-Three iterations and 100000 blocks (that is, one hundred megabytes of
-memory) is a good starting point.
-Adjust
-.Fa nb_blocks
-first.
-If using all available memory is not slow enough, increase
-.Fa nb_iterations .
 .Sh RETURN VALUES
 This function returns nothing.
 .Sh EXAMPLES

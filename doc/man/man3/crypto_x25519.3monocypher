@@ -26,12 +26,12 @@ and
 .Fa their_public_key .
 It is a low-level primitive.
 Users should use
-.Xr crypto_key_exchange 3monocypher .
+.Xr crypto_key_exchange 3monocypher
 unless they have a specific reason not to.
 .Pp
 .Fn crypto_x25519_public_key
 is the same as
-.Xr crypto_key_exchange_public_key 3monocypher
+.Xr crypto_key_exchange_public_key 3monocypher .
 It deterministically computes the public key from a random secret key.
 .Pp
 The arguments are:
