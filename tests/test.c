@@ -64,7 +64,9 @@ static int test(void (*f)(const vector[], vector*),
         expected.buf  = vectors[idx+nb_inputs];
         expected.size = sizes  [idx+nb_inputs];
         status |= out.size - expected.size;
-        status |= memcmp(out.buf, expected.buf, out.size);
+        if (out.size != 0) {
+            status |= memcmp(out.buf, expected.buf, out.size);
+        }
         free(out.buf);
         idx += nb_inputs + 1;
         nb_tests++;
