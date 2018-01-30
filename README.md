@@ -6,7 +6,8 @@ inspired by [libsodium][] and [TweetNaCl][], written in portable C.
 
 It means to eat Libsodium's lunch.
 
-[Official site.](https://monocypher.org/)
+[Official site.](https://monocypher.org/)  
+[Official releases.](http://monocypher.org/download/)
 
 [libsodium]: http://libsodium.org
 [TweetNaCl]: http://tweetnacl.cr.yp.to/
@@ -14,11 +15,15 @@ It means to eat Libsodium's lunch.
 Manual
 ------
 
+The manual can be found at https://monocypher.org/manual/, and in the
+`doc/` folder.
+
 The `doc/man/` folder contains the man pages.  You can install them in
 your system by running `make install-doc`.
 
-There is a html version in `doc/html/`, that you can regenerate by
-executing the `doc/man2html.sh` script (this requires mandoc).
+Unless you cloned the git repository, there is a html version in
+`doc/html/`, that you can regenerate by executing the `doc/man2html.sh`
+script.  This requires mandoc.
 
 
 Installation
