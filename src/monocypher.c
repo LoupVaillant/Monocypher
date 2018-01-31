@@ -1,4 +1,8 @@
 #include "monocypher.h"
+#ifdef __AVX2__
+    #include <immintrin.h>
+#endif
+
 
 /////////////////
 /// Utilities ///
@@ -64,7 +68,9 @@ static void store64_le(u8 out[8], u64 in)
 }
 
 static u64 rotr64(u64 x, u64 n) { return (x >> n) ^ (x << (64 - n)); }
+#ifndef __AVX2__
 static u32 rotl32(u32 x, u32 n) { return (x << n) ^ (x >> (32 - n)); }
+#endif
 
 static int neq0(u64 diff)
 {   // constant time comparison to zero
@@ -101,6 +107,43 @@ void crypto_wipe(void *secret, size_t size)
 /////////////////
 /// Chacha 20 ///
 /////////////////
+// Vectorised rounds (AVX 2 only)
+#define COLUMNS_ROUND                             \
+    a = _mm_add_epi32   (a, b);      /* add    */ \
+    d = _mm_xor_si128   (d, a);      /* rotate */ \
+    d = _mm_shuffle_epi8(d, rotl16); /* xor    */ \
+    c = _mm_add_epi32(c, d);         /* add    */ \
+    b = _mm_xor_si128(b, c);         /* rotate */ \
+    t = b;                           /* xor    */ \
+    b = _mm_slli_epi32(b, 12);                    \
+    t = _mm_srli_epi32(t, 20);                    \
+    b = _mm_xor_si128 (b, t);                     \
+    a = _mm_add_epi32    (a, b);     /* add    */ \
+    d = _mm_xor_si128    (d, a);     /* rotate */ \
+    d = _mm_shuffle_epi8 (d, rotl8); /* xor    */ \
+    c = _mm_add_epi32(c, d);         /* add    */ \
+    b = _mm_xor_si128(b, c);         /* rotate */ \
+    t = b;                           /* xor    */ \
+    b = _mm_slli_epi32(b, 7);                     \
+    t = _mm_srli_epi32(t, 25);                    \
+    b = _mm_xor_si128(b, t)
+
+#define ROTATE_ROWS(A, C, D)     \
+    a = _mm_shuffle_epi32(a, A); \
+    c = _mm_shuffle_epi32(c, C); \
+    d = _mm_shuffle_epi32(d, D)
+
+#define AVX_ROUNDS {                                                    \
+        __m128i t;                                                      \
+        __m128i rotl16 =_mm_set_epi8(13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2); \
+        __m128i rotl8  =_mm_set_epi8(14,13,12,15,10,9,8,11,6,5,4,7,2,1,0,3); \
+        FOR (i, 0, 10) {                                                \
+            COLUMNS_ROUND;  ROTATE_ROWS(0x93, 0x39, 0x4e);              \
+            COLUMNS_ROUND;  ROTATE_ROWS(0x39, 0x93, 0x4e);              \
+        }                                                               \
+    }
+
+// Quarter rounds for portable code
 #define QUARTERROUND(a, b, c, d)          \
     a += b;  d ^= a;  d = rotl32(d, 16);  \
     c += d;  b ^= c;  b = rotl32(b, 12);  \
@@ -109,6 +152,19 @@ void crypto_wipe(void *secret, size_t size)
 
 static void chacha20_rounds(u32 out[16], const u32 in[16])
 {
+#ifdef __AVX2__
+    __m128i a = _mm_loadu_si128((__m128i*) (in +  0));
+    __m128i b = _mm_loadu_si128((__m128i*) (in +  4));
+    __m128i c = _mm_loadu_si128((__m128i*) (in +  8));
+    __m128i d = _mm_loadu_si128((__m128i*) (in + 12));
+
+    AVX_ROUNDS;
+
+    _mm_storeu_si128((__m128i*) (out +  0), a);
+    _mm_storeu_si128((__m128i*) (out +  4), b);
+    _mm_storeu_si128((__m128i*) (out +  8), c);
+    _mm_storeu_si128((__m128i*) (out + 12), d);
+#else
     // The temporary variables make Chacha20 10% faster.
     u32 t0  = in[ 0];  u32 t1  = in[ 1];  u32 t2  = in[ 2];  u32 t3  = in[ 3];
     u32 t4  = in[ 4];  u32 t5  = in[ 5];  u32 t6  = in[ 6];  u32 t7  = in[ 7];
@@ -129,6 +185,7 @@ static void chacha20_rounds(u32 out[16], const u32 in[16])
     out[ 4] = t4;   out[ 5] = t5;   out[ 6] = t6;   out[ 7] = t7;
     out[ 8] = t8;   out[ 9] = t9;   out[10] = t10;  out[11] = t11;
     out[12] = t12;  out[13] = t13;  out[14] = t14;  out[15] = t15;
+#endif
 }
 
 static void chacha20_init_key(crypto_chacha_ctx *ctx, const u8 key[32])
@@ -250,6 +307,7 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
             ctx->pool_idx = 64;
         }
     }
+
     // Remaining input, byte by byte
     FOR (i, 0, remainder) {
         if (ctx->pool_idx == 64) {
