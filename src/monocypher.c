@@ -107,6 +107,7 @@ void crypto_wipe(void *secret, size_t size)
 /////////////////
 /// Chacha 20 ///
 /////////////////
+#ifdef __AVX2__
 // Vectorised rounds (AVX 2 only)
 #define COLUMNS_ROUND                             \
     a = _mm_add_epi32   (a, b);      /* add    */ \
@@ -133,15 +134,28 @@ void crypto_wipe(void *secret, size_t size)
     c = _mm_shuffle_epi32(c, C); \
     d = _mm_shuffle_epi32(d, D)
 
-#define AVX_ROUNDS {                                                    \
-        __m128i t;                                                      \
-        __m128i rotl16 =_mm_set_epi8(13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2); \
-        __m128i rotl8  =_mm_set_epi8(14,13,12,15,10,9,8,11,6,5,4,7,2,1,0,3); \
-        FOR (i, 0, 10) {                                                \
-            COLUMNS_ROUND;  ROTATE_ROWS(0x93, 0x39, 0x4e);              \
-            COLUMNS_ROUND;  ROTATE_ROWS(0x39, 0x93, 0x4e);              \
-        }                                                               \
+static void chacha20_rounds(u32 out[16], const u32 in[16])
+{
+    __m128i a = _mm_loadu_si128((__m128i*) (in +  0));
+    __m128i b = _mm_loadu_si128((__m128i*) (in +  4));
+    __m128i c = _mm_loadu_si128((__m128i*) (in +  8));
+    __m128i d = _mm_loadu_si128((__m128i*) (in + 12));
+
+    __m128i t;
+    __m128i rotl16 =_mm_set_epi8(13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2);
+    __m128i rotl8  =_mm_set_epi8(14,13,12,15,10,9,8,11,6,5,4,7,2,1,0,3);
+    FOR (i, 0, 10) {
+        COLUMNS_ROUND;  ROTATE_ROWS(0x93, 0x39, 0x4e);
+        COLUMNS_ROUND;  ROTATE_ROWS(0x39, 0x93, 0x4e);
     }
+
+    _mm_storeu_si128((__m128i*) (out +  0), a);
+    _mm_storeu_si128((__m128i*) (out +  4), b);
+    _mm_storeu_si128((__m128i*) (out +  8), c);
+    _mm_storeu_si128((__m128i*) (out + 12), d);
+}
+
+#else
 
 // Quarter rounds for portable code
 #define QUARTERROUND(a, b, c, d)          \
@@ -152,19 +166,6 @@ void crypto_wipe(void *secret, size_t size)
 
 static void chacha20_rounds(u32 out[16], const u32 in[16])
 {
-#ifdef __AVX2__
-    __m128i a = _mm_loadu_si128((__m128i*) (in +  0));
-    __m128i b = _mm_loadu_si128((__m128i*) (in +  4));
-    __m128i c = _mm_loadu_si128((__m128i*) (in +  8));
-    __m128i d = _mm_loadu_si128((__m128i*) (in + 12));
-
-    AVX_ROUNDS;
-
-    _mm_storeu_si128((__m128i*) (out +  0), a);
-    _mm_storeu_si128((__m128i*) (out +  4), b);
-    _mm_storeu_si128((__m128i*) (out +  8), c);
-    _mm_storeu_si128((__m128i*) (out + 12), d);
-#else
     // The temporary variables make Chacha20 10% faster.
     u32 t0  = in[ 0];  u32 t1  = in[ 1];  u32 t2  = in[ 2];  u32 t3  = in[ 3];
     u32 t4  = in[ 4];  u32 t5  = in[ 5];  u32 t6  = in[ 6];  u32 t7  = in[ 7];
@@ -185,8 +186,242 @@ static void chacha20_rounds(u32 out[16], const u32 in[16])
     out[ 4] = t4;   out[ 5] = t5;   out[ 6] = t6;   out[ 7] = t7;
     out[ 8] = t8;   out[ 9] = t9;   out[10] = t10;  out[11] = t11;
     out[12] = t12;  out[13] = t13;  out[14] = t14;  out[15] = t15;
-#endif
 }
+#endif
+
+#ifdef __AVX2__
+// Shuffles 8 blocks at a time. (unroll then vectorize)
+// This is over 4 times faster than vectorizing within a single block.
+static void chacha20_octo_rounds(crypto_chacha_ctx *ctx, u8* c, const u8 *m)
+{
+#define VEC8_ROT(A, IMM) _mm256_or_si256(_mm256_slli_epi32(A,    IMM),  \
+                                         _mm256_srli_epi32(A, 32-IMM))
+
+#define VEC8_QUARTERROUND(A, B, C, D)           \
+    x##A = _mm256_add_epi32   (x##A, x##B);     \
+    t##A = _mm256_xor_si256   (x##D, x##A);     \
+    x##D = _mm256_shuffle_epi8(t##A, rot16);    \
+    x##C = _mm256_add_epi32   (x##C, x##D);     \
+    t##C = _mm256_xor_si256   (x##B, x##C);     \
+    x##B = VEC8_ROT           (t##C, 12);       \
+    x##A = _mm256_add_epi32   (x##A, x##B);     \
+    t##A = _mm256_xor_si256   (x##D, x##A);     \
+    x##D = _mm256_shuffle_epi8(t##A, rot8);     \
+    x##C = _mm256_add_epi32   (x##C, x##D);     \
+    t##C = _mm256_xor_si256   (x##B, x##C);     \
+    x##B = VEC8_ROT           (t##C, 7)
+
+#define VEC8_LINE1(A, B, C, D)                                          \
+    x##A = _mm256_add_epi32(x##A, x##B);                                \
+    x##D = _mm256_shuffle_epi8(_mm256_xor_si256(x##D, x##A), rot16)
+#define VEC8_LINE2(A, B, C, D)                          \
+    x##C = _mm256_add_epi32(x##C, x##D);                \
+    x##B = VEC8_ROT(_mm256_xor_si256(x##B, x##C), 12)
+#define VEC8_LINE3(A, B, C, D)                                          \
+    x##A = _mm256_add_epi32(x##A, x##B);                                \
+    x##D = _mm256_shuffle_epi8(_mm256_xor_si256(x##D, x##A), rot8)
+#define VEC8_LINE4(A, B, C, D)                          \
+    x##C = _mm256_add_epi32(x##C, x##D);                \
+    x##B = VEC8_ROT(_mm256_xor_si256(x##B, x##C), 7)
+
+#define VEC8_ROUND(A1, B1, C1, D1, A2, B2, C2, D2,              \
+    A3, B3, C3, D3, A4, B4, C4, D4)                             \
+    VEC8_LINE1(A1, B1, C1, D1);  VEC8_LINE1(A2, B2, C2, D2);    \
+    VEC8_LINE1(A3, B3, C3, D3);  VEC8_LINE1(A4, B4, C4, D4);    \
+    VEC8_LINE2(A1, B1, C1, D1);  VEC8_LINE2(A2, B2, C2, D2);    \
+    VEC8_LINE2(A3, B3, C3, D3);  VEC8_LINE2(A4, B4, C4, D4);    \
+    VEC8_LINE3(A1, B1, C1, D1);  VEC8_LINE3(A2, B2, C2, D2);    \
+    VEC8_LINE3(A3, B3, C3, D3);  VEC8_LINE3(A4, B4, C4, D4);    \
+    VEC8_LINE4(A1, B1, C1, D1);  VEC8_LINE4(A2, B2, C2, D2);    \
+    VEC8_LINE4(A3, B3, C3, D3);  VEC8_LINE4(A4, B4, C4, D4)
+
+#define ONEQUAD_UNPACK(A, B, C, D)              \
+    x##A = _mm256_add_epi32(x##A, orig##A);     \
+    x##B = _mm256_add_epi32(x##B, orig##B);     \
+    x##C = _mm256_add_epi32(x##C, orig##C);     \
+    x##D = _mm256_add_epi32(x##D, orig##D);     \
+    t##A = _mm256_unpacklo_epi32(x##A, x##B);   \
+    t##B = _mm256_unpacklo_epi32(x##C, x##D);   \
+    t##C = _mm256_unpackhi_epi32(x##A, x##B);   \
+    t##D = _mm256_unpackhi_epi32(x##C, x##D);   \
+    x##A = _mm256_unpacklo_epi64(t##A, t##B);   \
+    x##B = _mm256_unpackhi_epi64(t##A, t##B);   \
+    x##C = _mm256_unpacklo_epi64(t##C, t##D);   \
+    x##D = _mm256_unpackhi_epi64(t##C, t##D)
+
+#define ONEOCTO_UNPACK(A, B, C, D, A2, B2, C2, D2)              \
+    ONEQUAD_UNPACK(A , B , C , D);                              \
+    ONEQUAD_UNPACK(A2, B2, C2, D2);                             \
+    t##A  = _mm256_permute2x128_si256(x##A, x##A2, 0x20);       \
+    t##A2 = _mm256_permute2x128_si256(x##A, x##A2, 0x31);       \
+    t##B  = _mm256_permute2x128_si256(x##B, x##B2, 0x20);       \
+    t##B2 = _mm256_permute2x128_si256(x##B, x##B2, 0x31);       \
+    t##C  = _mm256_permute2x128_si256(x##C, x##C2, 0x20);       \
+    t##C2 = _mm256_permute2x128_si256(x##C, x##C2, 0x31);       \
+    t##D  = _mm256_permute2x128_si256(x##D, x##D2, 0x20);       \
+    t##D2 = _mm256_permute2x128_si256(x##D, x##D2, 0x31)
+
+#define ONEOCTO_XOR(A, B, C, D, A2, B2, C2, D2)                         \
+    t##A  = _mm256_xor_si256(t##A ,_mm256_loadu_si256((__m256i*) (m+  0))); \
+    t##B  = _mm256_xor_si256(t##B ,_mm256_loadu_si256((__m256i*) (m+ 64))); \
+    t##C  = _mm256_xor_si256(t##C ,_mm256_loadu_si256((__m256i*) (m+128))); \
+    t##D  = _mm256_xor_si256(t##D ,_mm256_loadu_si256((__m256i*) (m+192))); \
+    t##A2 = _mm256_xor_si256(t##A2,_mm256_loadu_si256((__m256i*) (m+256))); \
+    t##B2 = _mm256_xor_si256(t##B2,_mm256_loadu_si256((__m256i*) (m+320))); \
+    t##C2 = _mm256_xor_si256(t##C2,_mm256_loadu_si256((__m256i*) (m+384))); \
+    t##D2 = _mm256_xor_si256(t##D2,_mm256_loadu_si256((__m256i*) (m+448)))
+
+#define ONEOCTO_STORE(A, B, C, D, A2, B2, C2, D2)       \
+    _mm256_storeu_si256((__m256i*) (c + 0), t##A);      \
+    _mm256_storeu_si256((__m256i*) (c + 64), t##B);     \
+    _mm256_storeu_si256((__m256i*) (c + 128), t##C);    \
+    _mm256_storeu_si256((__m256i*) (c + 192), t##D);    \
+    _mm256_storeu_si256((__m256i*) (c + 256), t##A2);   \
+    _mm256_storeu_si256((__m256i*) (c + 320), t##B2);   \
+    _mm256_storeu_si256((__m256i*) (c + 384), t##C2);   \
+    _mm256_storeu_si256((__m256i*) (c + 448), t##D2)
+
+    // constants for shuffling bytes (replacing multiple-of-8 rotates)
+    __m256i rot16 =
+        _mm256_set_epi8(13, 12, 15, 14, 9, 8, 11, 10, 5, 4, 7, 6, 1, 0, 3, 2,
+                        13, 12, 15, 14, 9, 8, 11, 10, 5, 4, 7, 6, 1, 0, 3, 2);
+    __m256i rot8 =
+        _mm256_set_epi8(14, 13, 12, 15, 10, 9, 8, 11, 6, 5, 4, 7, 2, 1, 0, 3,
+                        14, 13, 12, 15, 10, 9, 8, 11, 6, 5, 4, 7, 2, 1, 0, 3);
+
+    // the naive way seems as fast (if not a bit faster) than the vector way
+    uint32_t * const x = &ctx->input[0];
+    __m256i x0 =_mm256_set1_epi32(x[ 0]); __m256i x1 =_mm256_set1_epi32(x[ 1]);
+    __m256i x2 =_mm256_set1_epi32(x[ 2]); __m256i x3 =_mm256_set1_epi32(x[ 3]);
+    __m256i x4 =_mm256_set1_epi32(x[ 4]); __m256i x5 =_mm256_set1_epi32(x[ 5]);
+    __m256i x6 =_mm256_set1_epi32(x[ 6]); __m256i x7 =_mm256_set1_epi32(x[ 7]);
+    __m256i x8 =_mm256_set1_epi32(x[ 8]); __m256i x9 =_mm256_set1_epi32(x[ 9]);
+    __m256i x10=_mm256_set1_epi32(x[10]); __m256i x11=_mm256_set1_epi32(x[11]);
+    __m256i x12;                          __m256i x13; // Counter
+    __m256i x14=_mm256_set1_epi32(x[14]); __m256i x15=_mm256_set1_epi32(x[15]);
+
+    __m256i orig0  = x0;  __m256i orig1  = x1;
+    __m256i orig2  = x2;  __m256i orig3  = x3;
+    __m256i orig4  = x4;  __m256i orig5  = x5;
+    __m256i orig6  = x6;  __m256i orig7  = x7;
+    __m256i orig8  = x8;  __m256i orig9  = x9;
+    __m256i orig10 = x10; __m256i orig11 = x11;
+    __m256i orig12;       __m256i orig13;
+    __m256i orig14 = x14; __m256i orig15 = x15;
+    __m256i t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15;
+
+    x0  = orig0;  x1  = orig1;  x2  = orig2;  x3  = orig3;
+    x4  = orig4;  x5  = orig5;  x6  = orig6;  x7  = orig7;
+    x8  = orig8;  x9  = orig9;  x10 = orig10; x11 = orig11;
+    x14 = orig14; x15 = orig15;
+
+    {
+        // Load then update counter
+        u64 in1213 = ((uint64_t) x[12]) | (((uint64_t) x[13]) << 32);
+        x12 = x13 = _mm256_broadcastq_epi64(_mm_cvtsi64_si128(in1213));
+
+        const __m256i permute = _mm256_set_epi32(7, 6, 3, 2, 5, 4, 1, 0);
+        __m256i t12 = _mm256_add_epi64(_mm256_set_epi64x(3, 2, 1, 0), x12);
+        __m256i t13 = _mm256_add_epi64(_mm256_set_epi64x(7, 6, 5, 4), x13);
+        x12 = _mm256_unpacklo_epi32(t12, t13);
+        x13 = _mm256_unpackhi_epi32(t12, t13);
+        t12 = _mm256_unpacklo_epi32(x12, x13);
+        t13 = _mm256_unpackhi_epi32(x12, x13);
+        x12 = _mm256_permutevar8x32_epi32(t12, permute);
+        x13 = _mm256_permutevar8x32_epi32(t13, permute);
+
+        // Remember the counter for next time
+        orig12 = x12; orig13 = x13;
+
+        // Store the updated counter in the context
+        in1213 += 8;
+        x[12] = (u32) in1213;
+        x[13] = (u32)(in1213 >> 32);
+    }
+
+    FOR (i, 0, 10) {
+        VEC8_ROUND(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+        VEC8_ROUND(0, 5, 10, 15, 1, 6, 11, 12, 2, 7, 8, 13, 3, 4, 9, 14);
+    }
+
+/* #define ONEOCTO(A, B, C, D, A2, B2, C2, D2)     \ */
+/*     ONEOCTO_UNPACK(A, B, C, D, A2, B2, C2, D2); \ */
+/*     ONEOCTO_XOR(A, B, C, D, A2, B2, C2, D2);    \ */
+/*     ONEOCTO_STORE(A, B, C, D, A2, B2, C2, D2) */
+/* #define ONEOCTO_STREAM(A, B, C, D, A2, B2, C2, D2)      \ */
+/*     ONEOCTO_UNPACK(A, B, C, D, A2, B2, C2, D2);         \ */
+/*     ONEOCTO_STORE(A, B, C, D, A2, B2, C2, D2) */
+
+
+    // This one works better for whatever reason
+    ONEOCTO_UNPACK          (0, 1, 2, 3, 4, 5, 6, 7);
+    if (m != 0) {ONEOCTO_XOR(0, 1, 2, 3, 4, 5, 6, 7);    }
+    ONEOCTO_STORE           (0, 1, 2, 3, 4, 5, 6, 7);
+    if (m != 0) { m += 32; }
+    c += 32;
+    ONEOCTO_UNPACK           (8, 9, 10, 11, 12, 13, 14, 15);
+    if (m != 0) { ONEOCTO_XOR(8, 9, 10, 11, 12, 13, 14, 15);    }
+    ONEOCTO_STORE            (8, 9, 10, 11, 12, 13, 14, 15);
+    if (m != 0) { m -= 32; } // only needed in a loop
+    c -= 32; // only needed in a loop
+
+    /* // This one works better for whatever reason */
+    /* if (m == 0) { */
+    /*     ONEOCTO_UNPACK(0, 1, 2, 3, 4, 5, 6, 7); */
+    /*     ONEOCTO_STORE (0, 1, 2, 3, 4, 5, 6, 7); */
+    /* } else { */
+    /*     ONEOCTO_UNPACK(0, 1, 2, 3, 4, 5, 6, 7); */
+    /*     ONEOCTO_XOR   (0, 1, 2, 3, 4, 5, 6, 7); */
+    /*     ONEOCTO_STORE (0, 1, 2, 3, 4, 5, 6, 7); */
+    /*     m += 32; */
+    /* } */
+    /* c += 32; */
+    /* if (m == 0) { */
+    /*     ONEOCTO_UNPACK(8, 9, 10, 11, 12, 13, 14, 15); */
+    /*     ONEOCTO_STORE (8, 9, 10, 11, 12, 13, 14, 15); */
+    /* } else { */
+    /*     ONEOCTO_UNPACK(8, 9, 10, 11, 12, 13, 14, 15); */
+    /*     ONEOCTO_XOR   (8, 9, 10, 11, 12, 13, 14, 15); */
+    /*     ONEOCTO_STORE (8, 9, 10, 11, 12, 13, 14, 15); */
+    /*     m -= 32; // only needed in a loop */
+    /* } */
+    /* c -= 32; // only needed in a loop */
+
+
+    /* // this one is worse, but why? I hoisted the thing out of the loop! */
+    /* if (m == 0) { */
+    /*     ONEOCTO_STREAM(0, 1, 2, 3, 4, 5, 6, 7); */
+    /*     c += 32; */
+    /*     ONEOCTO_STREAM(8, 9, 10, 11, 12, 13, 14, 15); */
+    /*     c -= 32; // only needed in a loop */
+    /* } else { */
+    /*     ONEOCTO(0, 1, 2, 3, 4, 5, 6, 7); */
+    /*     m += 32; */
+    /*     c += 32; */
+    /*     ONEOCTO(8, 9, 10, 11, 12, 13, 14, 15); */
+    /*     m -= 32; // only needed in a loop */
+    /*     c -= 32; // only needed in a loop */
+    /* } */
+
+    c += 512; // only needed in a loop
+    m += 512; // only needed in a loop
+
+#undef ONEQUAD_UNPACK
+#undef ONEOCTO
+#undef VEC8_ROT
+#undef VEC8_QUARTERROUND
+#undef VEC8_QUARTERROUND_NAIVE
+#undef VEC8_QUARTERROUND_SHUFFLE
+#undef VEC8_QUARTERROUND_SHUFFLE2
+#undef VEC8_LINE1
+#undef VEC8_LINE2
+#undef VEC8_LINE3
+#undef VEC8_LINE4
+#undef VEC8_ROUND
+}
+#endif
+
+
 
 static void chacha20_init_key(crypto_chacha_ctx *ctx, const u8 key[32])
 {
@@ -286,8 +521,22 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
     }
 
     // Main processing by 64 byte chunks
-    size_t nb_blocks = text_size / 64;
-    size_t remainder = text_size % 64;
+    size_t nb_blocks      = text_size / 64;
+    size_t remainder      = text_size % 64;
+#ifdef __AVX2__
+    size_t nb_octo_blocks = nb_blocks / 8;
+    nb_blocks             = nb_blocks % 8;
+    FOR (i, 0, nb_octo_blocks) {
+        chacha20_octo_rounds(ctx, cipher_text, plain_text);
+        if (plain_text != 0) {
+            plain_text += 512;
+        }
+        cipher_text += 512;
+    }
+    if (nb_octo_blocks > 0) {
+        ctx->pool_idx = 64;
+    }
+#endif
     FOR (i, 0, nb_blocks) {
         chacha20_refill_pool(ctx);
         if (plain_text != 0) {
@@ -303,11 +552,11 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
             }
         }
         cipher_text += 64;
-        if (nb_blocks > 0) {
-            ctx->pool_idx = 64;
-        }
     }
 
+    if (nb_blocks > 0) {
+        ctx->pool_idx = 64;
+    }
     // Remaining input, byte by byte
     FOR (i, 0, remainder) {
         if (ctx->pool_idx == 64) {
