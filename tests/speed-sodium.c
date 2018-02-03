@@ -124,15 +124,15 @@ static u64 edDSA_check(void)
 int main()
 {
     SODIUM_INIT;
-    print("Chacha20         ",chacha20()     *MULT/DIV,"megabytes  per second");
-    print("Poly1305         ",poly1305()     *MULT/DIV,"megabytes  per second");
-    print("Auth'd encryption",authenticated()*MULT/DIV,"megabytes  per second");
-    print("Blake2b          ",blake2b()      *MULT/DIV,"megabytes  per second");
-    print("Sha512           ",sha512()       *MULT/DIV,"megabytes  per second");
-    print("Argon2i, 3 passes",argon2i()      *MULT/DIV,"megabytes  per second");
-    print("x25519           ",x25519()            /DIV,"exchanges  per second");
-    print("EdDSA(sign)      ",edDSA_sign()        /DIV,"signatures per second");
-    print("EdDSA(check)     ",edDSA_check()       /DIV,"checks     per second");
+    print("Chacha20         ",chacha20()     /DIV,"megabytes  per second");
+    print("Poly1305         ",poly1305()     /DIV,"megabytes  per second");
+    print("Auth'd encryption",authenticated()/DIV,"megabytes  per second");
+    print("Blake2b          ",blake2b()      /DIV,"megabytes  per second");
+    print("Sha512           ",sha512()       /DIV,"megabytes  per second");
+    print("Argon2i, 3 passes",argon2i()      /DIV,"megabytes  per second");
+    print("x25519           ",x25519()           ,"exchanges  per second");
+    print("EdDSA(sign)      ",edDSA_sign()       ,"signatures per second");
+    print("EdDSA(check)     ",edDSA_check()      ,"checks     per second");
     printf("\n");
     return 0;
 }

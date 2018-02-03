@@ -8,9 +8,9 @@ typedef struct timespec timespec;
 
 // TODO: provide a user defined buffer size
 #define KILOBYTE 1024
-#define MEGABYTE (1024 * KILOBYTE)
-#define SIZE     (50 * MEGABYTE)
-#define MULT     (SIZE / MEGABYTE)
+#define MEGABYTE 1024 * KILOBYTE
+#define SIZE     (256 * KILOBYTE)
+#define DIV      (MEGABYTE / SIZE)
 
 static timespec diff(timespec start, timespec end)
 {
@@ -35,9 +35,8 @@ static timespec min(timespec a, timespec b)
 
 static u64 speed(timespec duration)
 {
-#define DIV 1000 // avoid round errors
     static const u64 giga = 1000000000;
-    return DIV * giga / (duration.tv_nsec + duration.tv_sec * giga);
+    return giga / (duration.tv_nsec + duration.tv_sec * giga);
 }
 
 static void print(const char *name, u64 speed, const char *unit)
@@ -55,7 +54,7 @@ static void print(const char *name, u64 speed, const char *unit)
     duration.tv_nsec = -1;                      \
     duration.tv_sec  = 3600 * 24;               \
     duration.tv_nsec = 0;                       \
-    FOR (i, 0, 10) {                            \
+    FOR (i, 0, 500) {                           \
         TIMESTAMP(start);
 
 #define TIMING_END                              \
