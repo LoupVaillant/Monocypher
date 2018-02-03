@@ -264,10 +264,10 @@ static int p_chacha20(int use_input)
 {
 #undef INPUT_SIZE
 #undef C_MAX_SIZE
-#define INPUT_SIZE (CHACHA_BLOCK_SIZE * 4) // total input size
-#define C_MAX_SIZE (CHACHA_BLOCK_SIZE * 2) // maximum chunk size
+#define INPUT_SIZE (CHACHA_BLOCK_SIZE * 32) // total input size
+#define C_MAX_SIZE (CHACHA_BLOCK_SIZE * 16) // maximum chunk size
     int status = 0;
-    FOR (i, 0, 1000) {
+    FOR (i, 0, 10000) {
         size_t offset = 0;
         // outputs
         u8 output_chunk[INPUT_SIZE];
@@ -332,7 +332,7 @@ static int p_chacha20_set_ctr()
 {
 #define STREAM_SIZE (CHACHA_BLOCK_SIZE * CHACHA_NB_BLOCKS)
     int status = 0;
-    FOR (i, 0, 1000) {
+    FOR (i, 0, 10000) {
         u8 output_part[STREAM_SIZE    ];
         u8 output_all [STREAM_SIZE    ];
         u8 output_more[STREAM_SIZE * 2];
