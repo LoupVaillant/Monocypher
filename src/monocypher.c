@@ -192,7 +192,8 @@ static void chacha20_rounds(u32 out[16], const u32 in[16])
 #ifdef __AVX2__
 // Shuffles 8 blocks at a time. (unroll then vectorize)
 // This is over 4 times faster than vectorizing within a single block.
-static void chacha20_octo_rounds(crypto_chacha_ctx *ctx, u8* c, const u8 *m)
+static void chacha20_octo_rounds(crypto_chacha_ctx *ctx, u8* c, const u8 *m,
+                                 size_t nb_octo_blocks)
 {
 #define VEC8_ROT(A, IMM) _mm256_or_si256(_mm256_slli_epi32(A,    IMM),  \
                                          _mm256_srli_epi32(A, 32-IMM))
@@ -289,7 +290,6 @@ static void chacha20_octo_rounds(crypto_chacha_ctx *ctx, u8* c, const u8 *m)
         _mm256_set_epi8(14, 13, 12, 15, 10, 9, 8, 11, 6, 5, 4, 7, 2, 1, 0, 3,
                         14, 13, 12, 15, 10, 9, 8, 11, 6, 5, 4, 7, 2, 1, 0, 3);
 
-    // the naive way seems as fast (if not a bit faster) than the vector way
     uint32_t * const x = &ctx->input[0];
     __m256i x0 =_mm256_set1_epi32(x[ 0]); __m256i x1 =_mm256_set1_epi32(x[ 1]);
     __m256i x2 =_mm256_set1_epi32(x[ 2]); __m256i x3 =_mm256_set1_epi32(x[ 3]);
@@ -306,118 +306,50 @@ static void chacha20_octo_rounds(crypto_chacha_ctx *ctx, u8* c, const u8 *m)
     __m256i orig6  = x6;  __m256i orig7  = x7;
     __m256i orig8  = x8;  __m256i orig9  = x9;
     __m256i orig10 = x10; __m256i orig11 = x11;
-    __m256i orig12;       __m256i orig13;
+    __m256i orig12;       __m256i orig13; // don't touch the counter yet
     __m256i orig14 = x14; __m256i orig15 = x15;
     __m256i t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15;
 
-    x0  = orig0;  x1  = orig1;  x2  = orig2;  x3  = orig3;
-    x4  = orig4;  x5  = orig5;  x6  = orig6;  x7  = orig7;
-    x8  = orig8;  x9  = orig9;  x10 = orig10; x11 = orig11;
-    x14 = orig14; x15 = orig15;
+    const __m256i permute = _mm256_set_epi32(7, 6, 3, 2, 5, 4, 1, 0);
+    u64 in1213 = ((uint64_t) x[12]) | (((uint64_t) x[13]) << 32);
 
-    {
-        // Load then update counter
-        u64 in1213 = ((uint64_t) x[12]) | (((uint64_t) x[13]) << 32);
+    FOR (i, 0, nb_octo_blocks) {
+        // Reset vectorised blocks to their init state (except counter)
+        x0  = orig0;  x1  = orig1;  x2  = orig2;  x3  = orig3;
+        x4  = orig4;  x5  = orig5;  x6  = orig6;  x7  = orig7;
+        x8  = orig8;  x9  = orig9;  x10 = orig10; x11 = orig11;
+        x14 = orig14; x15 = orig15;
+
+        // load counter
         x12 = x13 = _mm256_broadcastq_epi64(_mm_cvtsi64_si128(in1213));
+        __m256i tmp12 = _mm256_add_epi64(_mm256_set_epi64x(3, 2, 1, 0), x12);
+        __m256i tmp13 = _mm256_add_epi64(_mm256_set_epi64x(7, 6, 5, 4), x13);
+        x12   = _mm256_unpacklo_epi32(tmp12, tmp13);
+        x13   = _mm256_unpackhi_epi32(tmp12, tmp13);
+        tmp12 = _mm256_unpacklo_epi32(x12, x13);
+        tmp13 = _mm256_unpackhi_epi32(x12, x13);
+        x12   = _mm256_permutevar8x32_epi32(tmp12, permute);
+        x13   = _mm256_permutevar8x32_epi32(tmp13, permute);
+        orig12 = x12;  orig13 = x13; // Remember counter for unpacking
+        in1213 += 8;                 // update counter
 
-        const __m256i permute = _mm256_set_epi32(7, 6, 3, 2, 5, 4, 1, 0);
-        __m256i t12 = _mm256_add_epi64(_mm256_set_epi64x(3, 2, 1, 0), x12);
-        __m256i t13 = _mm256_add_epi64(_mm256_set_epi64x(7, 6, 5, 4), x13);
-        x12 = _mm256_unpacklo_epi32(t12, t13);
-        x13 = _mm256_unpackhi_epi32(t12, t13);
-        t12 = _mm256_unpacklo_epi32(x12, x13);
-        t13 = _mm256_unpackhi_epi32(x12, x13);
-        x12 = _mm256_permutevar8x32_epi32(t12, permute);
-        x13 = _mm256_permutevar8x32_epi32(t13, permute);
+        // The rounds proper (column, then diagonals), 8 blocks at a time.
+        FOR (i, 0, 10) {
+            VEC8_ROUND(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+            VEC8_ROUND(0, 5, 10, 15, 1, 6, 11, 12, 2, 7, 8, 13, 3, 4, 9, 14);
+        }
 
-        // Remember the counter for next time
-        orig12 = x12; orig13 = x13;
-
-        // Store the updated counter in the context
-        in1213 += 8;
-        x[12] = (u32) in1213;
-        x[13] = (u32)(in1213 >> 32);
+        // De-interleave registers and store results
+        ONEOCTO_UNPACK           (0, 1, 2, 3, 4, 5, 6, 7);
+        if (m != 0) { ONEOCTO_XOR(0, 1, 2, 3, 4, 5, 6, 7); m += 32; }
+        ONEOCTO_STORE            (0, 1, 2, 3, 4, 5, 6, 7); c += 32;
+        ONEOCTO_UNPACK           (8, 9,10,11,12,13,14,15);
+        if (m != 0) { ONEOCTO_XOR(8, 9,10,11,12,13,14,15); m += 512-32; }
+        ONEOCTO_STORE            (8, 9,10,11,12,13,14,15); c += 512-32;
     }
-
-    FOR (i, 0, 10) {
-        VEC8_ROUND(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-        VEC8_ROUND(0, 5, 10, 15, 1, 6, 11, 12, 2, 7, 8, 13, 3, 4, 9, 14);
-    }
-
-/* #define ONEOCTO(A, B, C, D, A2, B2, C2, D2)     \ */
-/*     ONEOCTO_UNPACK(A, B, C, D, A2, B2, C2, D2); \ */
-/*     ONEOCTO_XOR(A, B, C, D, A2, B2, C2, D2);    \ */
-/*     ONEOCTO_STORE(A, B, C, D, A2, B2, C2, D2) */
-/* #define ONEOCTO_STREAM(A, B, C, D, A2, B2, C2, D2)      \ */
-/*     ONEOCTO_UNPACK(A, B, C, D, A2, B2, C2, D2);         \ */
-/*     ONEOCTO_STORE(A, B, C, D, A2, B2, C2, D2) */
-
-
-    // This one works better for whatever reason
-    ONEOCTO_UNPACK          (0, 1, 2, 3, 4, 5, 6, 7);
-    if (m != 0) {ONEOCTO_XOR(0, 1, 2, 3, 4, 5, 6, 7);    }
-    ONEOCTO_STORE           (0, 1, 2, 3, 4, 5, 6, 7);
-    if (m != 0) { m += 32; }
-    c += 32;
-    ONEOCTO_UNPACK           (8, 9, 10, 11, 12, 13, 14, 15);
-    if (m != 0) { ONEOCTO_XOR(8, 9, 10, 11, 12, 13, 14, 15);    }
-    ONEOCTO_STORE            (8, 9, 10, 11, 12, 13, 14, 15);
-    if (m != 0) { m -= 32; } // only needed in a loop
-    c -= 32; // only needed in a loop
-
-    /* // This one works better for whatever reason */
-    /* if (m == 0) { */
-    /*     ONEOCTO_UNPACK(0, 1, 2, 3, 4, 5, 6, 7); */
-    /*     ONEOCTO_STORE (0, 1, 2, 3, 4, 5, 6, 7); */
-    /* } else { */
-    /*     ONEOCTO_UNPACK(0, 1, 2, 3, 4, 5, 6, 7); */
-    /*     ONEOCTO_XOR   (0, 1, 2, 3, 4, 5, 6, 7); */
-    /*     ONEOCTO_STORE (0, 1, 2, 3, 4, 5, 6, 7); */
-    /*     m += 32; */
-    /* } */
-    /* c += 32; */
-    /* if (m == 0) { */
-    /*     ONEOCTO_UNPACK(8, 9, 10, 11, 12, 13, 14, 15); */
-    /*     ONEOCTO_STORE (8, 9, 10, 11, 12, 13, 14, 15); */
-    /* } else { */
-    /*     ONEOCTO_UNPACK(8, 9, 10, 11, 12, 13, 14, 15); */
-    /*     ONEOCTO_XOR   (8, 9, 10, 11, 12, 13, 14, 15); */
-    /*     ONEOCTO_STORE (8, 9, 10, 11, 12, 13, 14, 15); */
-    /*     m -= 32; // only needed in a loop */
-    /* } */
-    /* c -= 32; // only needed in a loop */
-
-
-    /* // this one is worse, but why? I hoisted the thing out of the loop! */
-    /* if (m == 0) { */
-    /*     ONEOCTO_STREAM(0, 1, 2, 3, 4, 5, 6, 7); */
-    /*     c += 32; */
-    /*     ONEOCTO_STREAM(8, 9, 10, 11, 12, 13, 14, 15); */
-    /*     c -= 32; // only needed in a loop */
-    /* } else { */
-    /*     ONEOCTO(0, 1, 2, 3, 4, 5, 6, 7); */
-    /*     m += 32; */
-    /*     c += 32; */
-    /*     ONEOCTO(8, 9, 10, 11, 12, 13, 14, 15); */
-    /*     m -= 32; // only needed in a loop */
-    /*     c -= 32; // only needed in a loop */
-    /* } */
-
-    c += 512; // only needed in a loop
-    m += 512; // only needed in a loop
-
-#undef ONEQUAD_UNPACK
-#undef ONEOCTO
-#undef VEC8_ROT
-#undef VEC8_QUARTERROUND
-#undef VEC8_QUARTERROUND_NAIVE
-#undef VEC8_QUARTERROUND_SHUFFLE
-#undef VEC8_QUARTERROUND_SHUFFLE2
-#undef VEC8_LINE1
-#undef VEC8_LINE2
-#undef VEC8_LINE3
-#undef VEC8_LINE4
-#undef VEC8_ROUND
+    // save counter to context
+    x[12] = (u32) in1213;
+    x[13] = (u32)(in1213 >> 32);
 }
 #endif
 
@@ -524,15 +456,14 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
     size_t nb_blocks      = text_size / 64;
     size_t remainder      = text_size % 64;
 #ifdef __AVX2__
+    // Process 8 blocks at a time (over 4 times faster than one by one)
     size_t nb_octo_blocks = nb_blocks / 8;
     nb_blocks             = nb_blocks % 8;
-    FOR (i, 0, nb_octo_blocks) {
-        chacha20_octo_rounds(ctx, cipher_text, plain_text);
-        if (plain_text != 0) {
-            plain_text += 512;
-        }
-        cipher_text += 512;
+    chacha20_octo_rounds(ctx, cipher_text, plain_text, nb_octo_blocks);
+    if (plain_text != 0) {
+        plain_text += 512 * nb_octo_blocks;
     }
+    cipher_text += 512 * nb_octo_blocks;
     if (nb_octo_blocks > 0) {
         ctx->pool_idx = 64;
     }
@@ -553,10 +484,10 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
         }
         cipher_text += 64;
     }
-
     if (nb_blocks > 0) {
         ctx->pool_idx = 64;
     }
+
     // Remaining input, byte by byte
     FOR (i, 0, remainder) {
         if (ctx->pool_idx == 64) {
