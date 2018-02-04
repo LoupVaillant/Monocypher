@@ -13,7 +13,7 @@ Designers
 Implementors
 ------------
 
-- **Chacha20:** Loup Vaillant, implemented from spec.
+- **Chacha20:** Loup Vaillant (portable C), Romain Dolbeau (AVX-2).
 - **Poly1305:** Loup Vaillant, implemented from spec.
 - **Blake2b:**  Loup Vaillant, implemented from spec.
 - **Argon2i:**  Loup Vaillant, implemented from spec.
