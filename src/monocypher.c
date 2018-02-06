@@ -1947,9 +1947,9 @@ int crypto_key_exchange(u8       shared_key[32],
 ////////////////////////////////
 void crypto_lock_init(crypto_lock_ctx *ctx, const u8 key[32], const u8 nonce[24])
 {
-    u8 auth_key[32];
+    u8 auth_key[64];
     crypto_chacha20_x_init(&(ctx->chacha), key, nonce);
-    crypto_chacha20_stream(&(ctx->chacha), auth_key, 32);
+    crypto_chacha20_stream(&(ctx->chacha), auth_key, 64);
     crypto_poly1305_init  (&(ctx->poly  ), auth_key);
     WIPE_BUFFER(auth_key);
 }
