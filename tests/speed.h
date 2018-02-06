@@ -41,7 +41,7 @@ static u64 speed(timespec duration)
 
 static void print(const char *name, u64 speed, const char *unit)
 {
-    printf("%s: %5" PRIu64 " %s\n", name, speed, unit);
+    printf("%s: %5" PRIu64 " %s per second\n", name, speed, unit);
 }
 
 #define TIMESTAMP(t)                            \
@@ -54,7 +54,7 @@ static void print(const char *name, u64 speed, const char *unit)
     duration.tv_nsec = -1;                      \
     duration.tv_sec  = 3600 * 24;               \
     duration.tv_nsec = 0;                       \
-    FOR (i, 0, 500) {                           \
+    FOR (_i__, 0, 500) {                        \
         TIMESTAMP(start);
 
 #define TIMING_END                              \
