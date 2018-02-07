@@ -1,10 +1,18 @@
-Monocypher
-----------
+Experimental Speed Fork of Monocypher
+-------------------------------------
 
-Monocypher is an easy to use, easy to deploy, auditable crypto library
-inspired by [libsodium][] and [TweetNaCl][], written in portable C.
+This branch is an experimental fork of Monocypher, with a different goal
+in mind: raw speed on modern x86_64 processors.  Forget portability and
+ease of deployment, we're in it for the speed only.
 
-It means to eat Libsodium's lunch.
+Oh, and it's not nearly as well tested as the mainline, nor is it as
+testable.  Don't use it in production unless you can afford an audit.
+
+The main purpose of this branch is to prove to prospective users that if
+they really *really* need that stupid amount of performance (like they
+have server farms the size of Google's or something), they will be able
+to get it.  Though at that scale, I'd advise them to reach for FPGA or
+even ASIC implementations.
 
 [Official site.](https://monocypher.org/)  
 [Official releases.](https://monocypher.org/download/)
@@ -29,13 +37,9 @@ script.  This requires mandoc.
 Installation
 ------------
 
-The easiest way to use Monocypher is to include `src/monocypher.h` and
-`src/monocypher.c` directly into your project.  They compile as C99,
-C11, C++98, C++11, C++14, and C++17.
-
-Alternatively, you can run `make`, then grab `lib/libmonocypher.a` or
-`lib/libmonocypher.so`.  If you're running a UNIX system, you can even
-install Monocypher (you need to be root):
+Run `make`, then grab `lib/libmonocypher.a` or `lib/libmonocypher.so`.
+If you're running a UNIX system, you can even install Monocypher (you
+need to be root):
 
     $ make install
 
@@ -97,22 +101,8 @@ You can also check code coverage:
 
 ### Serious auditing
 
-The code may be analysed more formally with [Frama-c][] and the
-[TIS interpreter][TIS].  To analyse the code with Frama-c, run:
-
-    $ tests/formal-analysis.sh
-    $ tests/frama-c.sh
-
-This will have Frama-c parse, and analyse the code, then launch a GUI.
-You must have Frama-c installed.  See `frama-c.sh` for the recommended
-settings.  To run the code under the TIS interpreter, run
-
-    $ tests/formal-analysis.sh
-    $ cd tests/formal-analysis
-    $ tis-interpreter.sh *.c
-
-(Note: `tis-interpreter.sh` is part of TIS.  If it is not in your
-path, adjust the command accordingly.)
+Forget it.  This is not portable C, you won't be able to use [Frama-c][]
+nor the [TIS interpreter][TIS].
 
 [Frama-c]:http://frama-c.com/
 [TIS]: http://trust-in-soft.com/tis-interpreter/
@@ -135,32 +125,12 @@ There's a similar benchmark for libsodium:
 
     $ make speed-sodium
 
-Customisation
--------------
-
-For simplicity, compactness, and performance reasons, Monocypher
-signatures default to EdDSA with curve25519 and Blake2b.  This is
-different from the more mainstream Ed25519, which uses SHA-512
-instead.
-
-If you need Ed25519 compatibility, you must do the following:
-
-- Compile Monocypher.c with option -DED25519_SHA512.
-- Link the final program with a suitable SHA-512 implementation.  You
-  can use the `sha512.c` and `sha512.h` files provided in
-  `src/optional`.
-
-Note that even though the default hash (Blake2b) is not "standard",
-you can still upgrade to faster implementations if you really need to.
-The Donna implementations of ed25519 for instance can use a custom
-hash —one test does just that.
-
 
 Contributor notes
 -----------------
 
-If you just cloned the GitHub repository, you will miss a couple files
-that ship with the tarball releases:
+Since you picked this up from the GitHub repository, you will miss a
+couple files that usually ship with the tarball releases:
 
 - The `test/vectors.h` header.  Generating it requires libsodium. Go
   to `test/gen/`, then run `make`.
