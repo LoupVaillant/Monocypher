@@ -137,35 +137,34 @@ crypto_poly1305_final(&ctx, mac);
 .Sh STANDARDS
 These functions implement Poly1305, described in RFC 7539.
 .Sh SECURITY CONSIDERATIONS
-.Ss User error
 Poly1305 is difficult to use correctly.
 Do not use it unless you are absolutely sure what you are doing.
 Use authenticated encryption instead; see
 .Xr crypto_lock 3monocypher .
-If you are absolutely certain you do not want encryption, refer to
+If you are certain you do not want encryption, refer to
 .Xr crypto_blake2b 3monocypher
 on how to use Blake2b to generate message authentication codes.
-.Pp
-If you still want to use Poly1305, keep in mind that it is very easy to
-make mistakes that destroy all security.
-The requirements for the
-.Fa key
-are stringent:
-it must be secret, shared, and
-.Sy unique .
-The attacker must not be able to guess the key;
-it must be shared with the recipient to allow verification;
-and it must be used
-.Sy only once .
-If it is ever reused, the attacker can easily recover it and then forge
-arbitrary messages.
-.Pp
-Session keys cannot be used for this.
-They are shared and secret, but would be reused when sending multiple
-messages.
-Random numbers cannot be used either as there is no reasonable way to
-share them with the recipient without also revealing them to the
+.Ss Authentication key requirements
+Poly1305 is a
+.Em one time
+authenticator.
+This puts rather stringent constraints on the authentication key:
+.Bl -bullet
+.It
+Any given key must be used only once.
+Using the same key for two different messages reveals it to the
 attacker.
+Do not use the session key, or it will void all security.
+.It
+Authentication keys must be random, and independent from each other.
+Do not use non-random nonces.
+Do not use related keys.
+Use fresh, unpredictable, uniformly distributed random numbers.
+.It
+The key must be transmitted to the recipient without revealing it to the
+attacker.
+Somehow.
+.El
 .Pp
 The only practical source for the authentication key is a chunk of the
 encryption stream used to encrypt the message.
