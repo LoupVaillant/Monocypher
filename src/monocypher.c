@@ -1323,10 +1323,9 @@ int crypto_x25519(u8       raw_shared_secret[32],
     fe_mul(x2, x2, z2);
     fe_tobytes(raw_shared_secret, x2);
 
-    WIPE_BUFFER(x1);
+    WIPE_BUFFER(x1);  WIPE_BUFFER(e );
     WIPE_BUFFER(x2);  WIPE_BUFFER(z2);
     WIPE_BUFFER(x3);  WIPE_BUFFER(z3);
-    WIPE_BUFFER(e );
 
     // Returns -1 if the input is all zero
     // (happens with some malicious public keys)
@@ -1479,10 +1478,10 @@ static void ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
     fe_mul(p->X, x1, t2);    fe_mul(p->Y, y1, t1);    fe_mul(p->Z, y1, t2);
     fe_mul(p->T, x1, t1);
 
-    WIPE_BUFFER(x1);  WIPE_BUFFER(y1);  WIPE_BUFFER(z1);
-    WIPE_BUFFER(x2);                    WIPE_BUFFER(z2);
-    WIPE_BUFFER(x3);                    WIPE_BUFFER(z3);
-    WIPE_BUFFER(t1);  WIPE_BUFFER(t2);  WIPE_BUFFER(t3);  WIPE_BUFFER(t4);
+    WIPE_BUFFER(t1);  WIPE_BUFFER(x1);  WIPE_BUFFER(z1);  WIPE_BUFFER(y1);
+    WIPE_BUFFER(t2);  WIPE_BUFFER(x2);  WIPE_BUFFER(z2);
+    WIPE_BUFFER(t3);  WIPE_BUFFER(x3);  WIPE_BUFFER(z3);
+    WIPE_BUFFER(t4);
 }
 
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
