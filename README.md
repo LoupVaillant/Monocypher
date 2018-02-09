@@ -2,9 +2,8 @@ Monocypher
 ----------
 
 Monocypher is an easy to use, easy to deploy, auditable crypto library
-inspired by [libsodium][] and [TweetNaCl][], written in portable C.
-
-It means to eat Libsodium's lunch.
+written in portable C.  It approches the size of [TweetNaCl][] and the
+speed of [libsodium][].
 
 [Official site.](https://monocypher.org/)  
 [Official releases.](https://monocypher.org/download/)
