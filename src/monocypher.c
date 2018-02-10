@@ -820,8 +820,8 @@ static void gidx_refresh(gidx_ctx *ctx)
 
     // Shuffle the block thus: ctx->b = G((G(ctx->b, zero)), zero)
     // (G "square" function), to get cheap pseudo-random numbers.
-    unary_g(&(ctx->b));
-    unary_g(&(ctx->b));
+    unary_g(&ctx->b);
+    unary_g(&ctx->b);
 }
 
 static void gidx_init(gidx_ctx *ctx,
@@ -966,7 +966,7 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
             }
         }
     }
-    wipe_block(&(ctx.b));
+    wipe_block(&ctx.b);
     wipe_block(&tmp);
     // hash the very last block with H' into the output hash
     u8 final_block[1024];
@@ -1577,20 +1577,20 @@ void crypto_sign_init_first_pass(crypto_sign_ctx *ctx,
     // An actual random number would work just fine, and would save us
     // the trouble of hashing the message twice.  If we did that
     // however, the user could fuck it up and reuse the nonce.
-    HASH_INIT  (&(ctx->hash));
-    HASH_UPDATE(&(ctx->hash), prefix , 32);
+    HASH_INIT  (&ctx->hash);
+    HASH_UPDATE(&ctx->hash, prefix , 32);
 }
 
 void crypto_sign_update(crypto_sign_ctx *ctx, const u8 *msg, size_t msg_size)
 {
-    HASH_UPDATE(&(ctx->hash), msg, msg_size);
+    HASH_UPDATE(&ctx->hash, msg, msg_size);
 }
 
 void crypto_sign_init_second_pass(crypto_sign_ctx *ctx)
 {
     u8 *r        = ctx->buf + 32;
     u8 *half_sig = ctx->buf + 64;
-    HASH_FINAL(&(ctx->hash), r);
+    HASH_FINAL(&ctx->hash, r);
     reduce(r);
 
     // first half of the signature = "random" nonce times basepoint
@@ -1611,7 +1611,7 @@ void crypto_sign_final(crypto_sign_ctx *ctx, u8 signature[64])
     u8 *r        = ctx->buf + 32;
     u8 *half_sig = ctx->buf + 64;
     u8 h_ram[64];
-    HASH_FINAL(&(ctx->hash), h_ram);
+    HASH_FINAL(&ctx->hash, h_ram);
     reduce(h_ram);  // reduce the hash modulo L
 
     i64 s[64]; // s = r + h_ram * a
@@ -1651,14 +1651,14 @@ void crypto_check_init(crypto_check_ctx *ctx,
 {
     FOR (i, 0, 64) { ctx->sig[i] = signature [i]; }
     FOR (i, 0, 32) { ctx->pk [i] = public_key[i]; }
-    HASH_INIT  (&(ctx->hash));
-    HASH_UPDATE(&(ctx->hash), signature , 32);
-    HASH_UPDATE(&(ctx->hash), public_key, 32);
+    HASH_INIT  (&ctx->hash);
+    HASH_UPDATE(&ctx->hash, signature , 32);
+    HASH_UPDATE(&ctx->hash, public_key, 32);
 }
 
 void crypto_check_update(crypto_check_ctx *ctx, const u8 *msg, size_t msg_size)
 {
-    HASH_UPDATE(&(ctx->hash), msg , msg_size);
+    HASH_UPDATE(&ctx->hash, msg , msg_size);
 }
 
 int crypto_check_final(crypto_check_ctx *ctx)
@@ -1668,7 +1668,7 @@ int crypto_check_final(crypto_check_ctx *ctx)
     if (ge_frombytes_neg(&A, ctx->pk)) {       // -A
         return -1;
     }
-    HASH_FINAL(&(ctx->hash), h_ram);
+    HASH_FINAL(&ctx->hash, h_ram);
     reduce(h_ram);
     ge_scalarmult(&p, &A, h_ram);              // p    = -A*h_ram
     ge_scalarmult_base(&sB, ctx->sig + 32);
@@ -1711,7 +1711,7 @@ static void lock_ad_padding(crypto_lock_ctx *ctx)
     static const u8 zero[15] = {0};
     if (ctx->ad_phase) {
         ctx->ad_phase = 0;
-        crypto_poly1305_update(&(ctx->poly), zero, -ctx->ad_size & 15);
+        crypto_poly1305_update(&ctx->poly, zero, -ctx->ad_size & 15);
     }
 }
 
@@ -1721,15 +1721,15 @@ void crypto_lock_init(crypto_lock_ctx *ctx, const u8 key[32], const u8 nonce[24]
     ctx->ad_phase     = 1;
     ctx->ad_size      = 0;
     ctx->message_size = 0;
-    crypto_chacha20_x_init(&(ctx->chacha), key, nonce);
-    crypto_chacha20_stream(&(ctx->chacha), auth_key, 64);
-    crypto_poly1305_init  (&(ctx->poly  ), auth_key);
+    crypto_chacha20_x_init(&ctx->chacha, key, nonce);
+    crypto_chacha20_stream(&ctx->chacha, auth_key, 64);
+    crypto_poly1305_init  (&ctx->poly  , auth_key);
     WIPE_BUFFER(auth_key);
 }
 
 void crypto_lock_auth_ad(crypto_lock_ctx *ctx, const u8 *msg, size_t msg_size)
 {
-    crypto_poly1305_update(&(ctx->poly), msg, msg_size);
+    crypto_poly1305_update(&ctx->poly, msg, msg_size);
     ctx->ad_size += msg_size;
 }
 
@@ -1738,13 +1738,13 @@ void crypto_lock_auth_message(crypto_lock_ctx *ctx,
 {
     lock_ad_padding(ctx);
     ctx->message_size += text_size;
-    crypto_poly1305_update(&(ctx->poly), cipher_text, text_size);
+    crypto_poly1305_update(&ctx->poly, cipher_text, text_size);
 }
 
 void crypto_lock_update(crypto_lock_ctx *ctx, u8 *cipher_text,
                         const u8 *plain_text, size_t text_size)
 {
-    crypto_chacha20_encrypt(&(ctx->chacha), cipher_text, plain_text, text_size);
+    crypto_chacha20_encrypt(&ctx->chacha, cipher_text, plain_text, text_size);
     crypto_lock_auth_message(ctx, cipher_text, text_size);
 }
 
@@ -1755,9 +1755,9 @@ void crypto_lock_final(crypto_lock_ctx *ctx, u8 mac[16])
     u8 sizes[16];
     store64_le(sizes + 0, ctx->ad_size);
     store64_le(sizes + 8, ctx->message_size);
-    crypto_poly1305_update(&(ctx->poly), zero, -ctx->message_size & 15);
-    crypto_poly1305_update(&(ctx->poly), sizes, 16);
-    crypto_poly1305_final (&(ctx->poly), mac);
+    crypto_poly1305_update(&ctx->poly, zero, -ctx->message_size & 15);
+    crypto_poly1305_update(&ctx->poly, sizes, 16);
+    crypto_poly1305_final (&ctx->poly, mac);
     WIPE_CTX(ctx);
 }
 
@@ -1765,7 +1765,7 @@ void crypto_unlock_update(crypto_lock_ctx *ctx, u8 *plain_text,
                           const u8 *cipher_text, size_t text_size)
 {
     crypto_unlock_auth_message(ctx, cipher_text, text_size);
-    crypto_chacha20_encrypt(&(ctx->chacha), plain_text, cipher_text, text_size);
+    crypto_chacha20_encrypt(&ctx->chacha, plain_text, cipher_text, text_size);
 }
 
 int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
