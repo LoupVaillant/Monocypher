@@ -146,8 +146,8 @@ static void chacha20_init_key(crypto_chacha_ctx *ctx, const u8 key[32])
 
 static u8 chacha20_pool_byte(crypto_chacha_ctx *ctx)
 {
-    u32 pool_word = ctx->pool[ctx->pool_idx / 4];
-    u8  pool_byte = pool_word >> (8*(ctx->pool_idx % 4));
+    u32 pool_word = ctx->pool[ctx->pool_idx >> 2];
+    u8  pool_byte = pool_word >> (8*(ctx->pool_idx & 3));
     ctx->pool_idx++;
     return pool_byte;
 }
@@ -216,7 +216,7 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                              size_t             text_size)
 {
     // Align ourselves with a block
-    while (ctx->pool_idx % 64 != 0 && text_size > 0) {
+    while ((ctx->pool_idx & 63) != 0 && text_size > 0) {
         u8 stream = chacha20_pool_byte(ctx);
         u8 plain  = 0;
         if (plain_text != 0) {
@@ -229,8 +229,8 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
     }
 
     // Main processing by 64 byte chunks
-    size_t nb_blocks = text_size / 64;
-    size_t remainder = text_size % 64;
+    size_t nb_blocks = text_size >> 6;
+    size_t remainder = text_size & 63;
     FOR (i, 0, nb_blocks) {
         chacha20_refill_pool(ctx);
         if (plain_text != 0) {
@@ -337,8 +337,8 @@ static void poly_clear_c(crypto_poly1305_ctx *ctx)
 
 static void poly_take_input(crypto_poly1305_ctx *ctx, u8 input)
 {
-    size_t word = ctx->c_idx / 4;
-    size_t byte = ctx->c_idx % 4;
+    size_t word = ctx->c_idx >> 2;
+    size_t byte = ctx->c_idx & 3;
     ctx->c[word] |= (u32)input << (byte * 8);
     ctx->c_idx++;
 }
@@ -362,7 +362,7 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const u8 *message, size_t message_size)
 {
     // Align ourselves with a block
-    while (ctx->c_idx % 16 != 0 && message_size > 0) {
+    while ((ctx->c_idx & 15) != 0 && message_size > 0) {
         poly_take_input(ctx, *message);
         message++;
         message_size--;
@@ -372,8 +372,8 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
         poly_clear_c(ctx);
     }
     // Process the input block by block
-    size_t nb_blocks = message_size / 16;
-    size_t remainder = message_size % 16;
+    size_t nb_blocks = message_size >> 4;
+    size_t remainder = message_size & 15;
     FOR (i, 0, nb_blocks) {
         ctx->c[0] = load32_le(message +  0);
         ctx->c[1] = load32_le(message +  4);
@@ -456,8 +456,8 @@ static void blake2b_incr(crypto_blake2b_ctx *ctx)
 
 static void blake2b_set_input(crypto_blake2b_ctx *ctx, u8 input)
 {
-    size_t word = ctx->input_idx / 8;
-    size_t byte = ctx->input_idx % 8;
+    size_t word = ctx->input_idx >> 3;
+    size_t byte = ctx->input_idx & 7;
     ctx->input[word] |= (u64)input << (byte * 8);
     ctx->input_idx++;
 }
@@ -573,15 +573,15 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const u8 *message, size_t message_size)
 {
     // Align ourselves with blocks
-    while (ctx->input_idx % 128 != 0 && message_size > 0) {
+    while ((ctx->input_idx & 127) != 0 && message_size > 0) {
         blake2b_set_input(ctx, *message);
         message++;
         message_size--;
     }
 
     // Process the input one block at a time
-    size_t nb_blocks = message_size / 128;
-    size_t remainder = message_size % 128;
+    size_t nb_blocks = message_size >> 7;
+    size_t remainder = message_size & 127;
     if (nb_blocks > 0) {
         // first block
         blake2b_end_block(ctx);
@@ -610,12 +610,12 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
 {
     blake2b_incr(ctx);         // update the input offset
     blake2b_compress(ctx, -1); // compress the last block
-    size_t nb_words  = ctx->hash_size / 8;
+    size_t nb_words  = ctx->hash_size >> 3;
     FOR (i, 0, nb_words) {
         store64_le(hash + i*8, ctx->hash[i]);
     }
     FOR (i, nb_words * 8, ctx->hash_size) {
-        hash[i] = (ctx->hash[i / 8] >> (8 * (i % 8))) & 0xff;
+        hash[i] = (ctx->hash[i >> 3] >> (8 * (i & 7))) & 0xff;
     }
     WIPE_CTX(ctx);
 }
@@ -698,7 +698,7 @@ static void extended_hash(u8       *digest, u32 digest_size,
     if (digest_size > 64) {
         // the conversion to u64 avoids integer overflow on
         // ludicrously big hash sizes.
-        u32 r   = (((u64)digest_size + 31) / 32) - 2;
+        u32 r   = (((u64)digest_size + 31) >> 5) - 2;
         u32 i   =  1;
         u32 in  =  0;
         u32 out = 32;
@@ -849,11 +849,11 @@ static void gidx_init(gidx_ctx *ctx,
 static u32 gidx_next(gidx_ctx *ctx)
 {
     // lazily creates the offset block we need
-    if (ctx->offset % 128 == 0) {
+    if ((ctx->offset & 127) == 0) {
         ctx->ctr++;
         gidx_refresh(ctx);
     }
-    u32 index  = ctx->offset % 128; // save index  for current call
+    u32 index  = ctx->offset & 127; // save index  for current call
     u32 offset = ctx->offset;       // save offset for current call
     ctx->offset++;                  // update offset for next call
 
@@ -864,14 +864,14 @@ static u32 gidx_next(gidx_ctx *ctx)
     //          blocks in this segment.  THE SPEC SUGGESTS OTHERWISE.
     //          I CONFORM TO THE REFERENCE IMPLEMENTATION.
     int first_pass  = ctx->pass_number == 0;
-    u32 slice_size  = ctx->nb_blocks / 4;
+    u32 slice_size  = ctx->nb_blocks >> 2;
     u32 nb_segments = first_pass ? ctx->slice_number : 3;
     u32 area_size   = nb_segments * slice_size + offset - 1;
 
     // Computes the starting position of the reference area.
     // CONTRARY TO WHAT THE SPEC SUGGESTS, IT STARTS AT THE
     // NEXT SEGMENT, NOT THE NEXT BLOCK.
-    u32 next_slice = ((ctx->slice_number + 1) % 4) * slice_size;
+    u32 next_slice = ((ctx->slice_number + 1) & 3) * slice_size;
     u32 start_pos  = first_pass ? 0 : next_slice;
 
     // Generate offset from J1 (no need for J2, there's only one lane)
@@ -935,8 +935,8 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
     }
 
     // Actual number of blocks
-    nb_blocks -= nb_blocks % 4; // round down to 4 p (p == 1 thread)
-    const u32 segment_size = nb_blocks / 4;
+    nb_blocks -= nb_blocks & 3; // round down to 4 p (p == 1 thread)
+    const u32 segment_size = nb_blocks >> 2;
 
     // fill (then re-fill) the rest of the blocks
     block tmp;
@@ -1275,7 +1275,7 @@ static void x25519_ladder(const fe x1, fe x2, fe z2, fe x3, fe z3,
     fe t0, t1;
     for (int pos = 254; pos >= 0; --pos) {
         // constant time conditional swap before ladder step
-        int b = (scalar[pos / 8] >> (pos & 7)) & 1;
+        int b = (scalar[pos >> 3] >> (pos & 7)) & 1;
         swap ^= b; // xor trick avoids swapping at the end of the loop
         fe_cswap(x2, x3, swap);
         fe_cswap(z2, z3, swap);
