@@ -31,6 +31,9 @@ typedef struct {
 typedef struct {
     crypto_chacha_ctx   chacha;
     crypto_poly1305_ctx poly;
+    uint64_t            ad_size;
+    uint64_t            message_size;
+    int                 ad_phase;
 } crypto_lock_ctx;
 #define crypto_unlock_ctx crypto_lock_ctx
 
@@ -113,7 +116,11 @@ int crypto_aead_unlock(uint8_t       *plain_text,
 void crypto_lock_init(crypto_lock_ctx *ctx,
                       const uint8_t    key[32],
                       const uint8_t    nonce[24]);
-#define crypto_lock_aead_auth crypto_lock_auth
+void crypto_lock_auth_ad(crypto_lock_ctx *ctx,
+                         const uint8_t   *message,
+                         size_t           message_size);
+void crypto_lock_auth_message(crypto_lock_ctx *ctx,
+                              const uint8_t *cipher_text, size_t text_size);
 void crypto_lock_update(crypto_lock_ctx *ctx,
                         uint8_t         *cipher_text,
                         const uint8_t   *plain_text,
@@ -121,8 +128,9 @@ void crypto_lock_update(crypto_lock_ctx *ctx,
 void crypto_lock_final(crypto_lock_ctx *ctx, uint8_t mac[16]);
 
 // Incremental interface (decryption)
-#define crypto_unlock_init      crypto_lock_init
-#define crypto_unlock_aead_auth crypto_lock_auth
+#define crypto_unlock_init         crypto_lock_init
+#define crypto_unlock_auth_ad      crypto_lock_auth_ad
+#define crypto_unlock_auth_message crypto_lock_auth_message
 void crypto_unlock_update(crypto_lock_ctx *ctx,
                           uint8_t         *plain_text,
                           const uint8_t   *cipher_text,
@@ -270,16 +278,5 @@ void crypto_x25519_public_key(uint8_t       public_key[32],
 int crypto_x25519(uint8_t       raw_shared_secret[32],
                   const uint8_t your_secret_key  [32],
                   const uint8_t their_public_key [32]);
-
-
-// Building block for authenticated encryption
-// -------------------------------------------
-void crypto_lock_encrypt(crypto_lock_ctx *ctx,
-                         uint8_t         *cipher_text,
-                         const uint8_t   *plain_text,
-                         size_t           text_size);
-void crypto_lock_auth(crypto_lock_ctx *ctx,
-                      const uint8_t   *message,
-                      size_t           message_size);
 
 #endif // MONOCYPHER_H

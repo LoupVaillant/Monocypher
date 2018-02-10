@@ -255,23 +255,43 @@ crypto_wipe(key, 32);
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement the XChacha20 (encryption) and Poly1305
-(MAC) primitives.
-Chacha20 and Poly1305 are described in RFC 7539.
+These functions implement RFC 7539, with XChacha20 instead of Chacha20.
 XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
-.Sh IMPLEMENTATION DETAILS
-.Fn crypto_aead_lock
-and
-.Fn crypto_aead_unlock
-do not authenticate the length themselves to make them compatible with
-.Fn crypto_lock
-and
-.Fn crypto_unlock
-when the size of the additional data is zero.
-This also simplifies the implementation.
 .Pp
-This rarely causes problems in practice, because most of the time, the
-length of the additional data is either fixed or self-contained, and
-thus outside of attacker control.
+.Fn crypto_aead_lock
+is equivalent to the following:
+.Bd -literal -offset indent
+void crypto_aead_lock(uint8_t mac[16], uint8_t *cipher_text,
+                      const uint8_t  key[32],
+                      const uint8_t  nonce[24],
+                      const uint8_t *ad        , size_t ad_size,
+                      const uint8_t *plain_text, size_t text_size)
+{
+    u8 auth_key[64]; /* only the first 32 bytes are used */
+    crypto_chacha_ctx ctx_e;
+    crypto_chacha20_x_init (&ctx_e, key, nonce);
+    crypto_chacha20_stream (&ctx_e, auth_key, 64);
+    crypto_chacha20_encrypt(&ctx_e, cipher_text,
+                            plain_text, text_size);
+
+    static const u8 zero [15] = {0};
+    u8              sizes[16];
+    size_t   ad_zero =   -ad_size & 15;
+    size_t text_zero = -text_size & 15;
+    store64_le(sizes    ,   ad_size);
+    store64_le(sizes + 8, text_size);
+
+    crypto_poly1305_ctx ctx;
+    crypto_poly1305_init  (&ctx, auth_key);
+    crypto_poly1305_update(&ctx, ad         ,   ad_size);
+    crypto_poly1305_update(&ctx, zero       ,   ad_zero);
+    crypto_poly1305_update(&ctx, cipher_text, text_size);
+    crypto_poly1305_update(&ctx, zero       , text_zero);
+    crypto_poly1305_update(&ctx, sizes      ,        16);
+    crypto_poly1305_final (&ctx, mac);
+}
+.Ed
+.Pp
+(Real code would also wipe the relevant buffers.)

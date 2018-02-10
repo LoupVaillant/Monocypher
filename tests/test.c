@@ -116,6 +116,17 @@ static void poly1305(const vector in[], vector *out)
     crypto_poly1305(out->buf, msg->buf, msg->size, key->buf);
 }
 
+static void aead_ietf(const vector in[], vector *out)
+{
+    const vector *key   = in;
+    const vector *nonce = in + 1;
+    const vector *ad    = in + 2;
+    const vector *text  = in + 3;
+    crypto_aead_lock(out ->buf, out->buf + 16, key->buf, nonce->buf,
+                     ad->buf, ad->size, text->buf, text->size);
+}
+
+
 static void blake2b(const vector in[], vector *out)
 {
     const vector *msg = in;
@@ -675,12 +686,12 @@ static int p_lock_incremental()
         crypto_aead_lock(mac1, cipher1, key, nonce,
                          ad, ad_size, plain, text_size);
         crypto_lock_ctx ctx;
-        crypto_lock_init     (&ctx, key, nonce);
-        crypto_lock_aead_auth(&ctx, ad1, ad_size1); // just to show ad also have
-        crypto_lock_aead_auth(&ctx, ad2, ad_size2); // an incremental interface
-        crypto_lock_update   (&ctx, cipher2             , plain1, text_size1);
-        crypto_lock_update   (&ctx, cipher2 + text_size1, plain2, text_size2);
-        crypto_lock_final    (&ctx, mac2);
+        crypto_lock_init   (&ctx, key, nonce);
+        crypto_lock_auth_ad(&ctx, ad1, ad_size1); // just to show ad also have
+        crypto_lock_auth_ad(&ctx, ad2, ad_size2); // an incremental interface
+        crypto_lock_update (&ctx, cipher2             , plain1, text_size1);
+        crypto_lock_update (&ctx, cipher2 + text_size1, plain2, text_size2);
+        crypto_lock_final  (&ctx, mac2);
         status |= memcmp(mac1   , mac2   , 16       );
         status |= memcmp(cipher1, cipher2, text_size);
 
@@ -689,29 +700,60 @@ static int p_lock_incremental()
         u8 re_plain2[256];
         status |= crypto_aead_unlock(re_plain1, key, nonce, mac1,
                                      ad, ad_size, cipher1, text_size);
-        crypto_unlock_init     (&ctx, key, nonce);
-        crypto_unlock_aead_auth(&ctx, ad, ad_size);
-        crypto_unlock_update   (&ctx, re_plain2, cipher2, text_size);
+        crypto_unlock_init   (&ctx, key, nonce);
+        crypto_unlock_auth_ad(&ctx, ad, ad_size);
+        crypto_unlock_update (&ctx, re_plain2, cipher2, text_size);
         status |= crypto_unlock_final(&ctx, mac2);
         status |= memcmp(mac1 , mac2     , 16       );
         status |= memcmp(plain, re_plain1, text_size);
         status |= memcmp(plain, re_plain2, text_size);
 
         // Test authentication without decryption
-        crypto_lock_init     (&ctx, key, nonce);
-        crypto_lock_aead_auth(&ctx, ad     , ad_size  );
-        crypto_lock_aead_auth(&ctx, cipher2, text_size);
+        crypto_unlock_init        (&ctx, key, nonce);
+        crypto_unlock_auth_ad     (&ctx, ad     , ad_size  );
+        crypto_unlock_auth_message(&ctx, cipher2, text_size);
         status |= crypto_unlock_final(&ctx, mac2);
         // The same, except we're supposed to reject forgeries
         if (text_size > 0) {
             cipher2[0]++; // forgery attempt
-            crypto_lock_init     (&ctx, key, nonce);
-            crypto_lock_aead_auth(&ctx, ad     , ad_size  );
-            crypto_lock_aead_auth(&ctx, cipher2, text_size);
+            crypto_unlock_init        (&ctx, key, nonce);
+            crypto_unlock_auth_ad     (&ctx, ad     , ad_size  );
+            crypto_unlock_auth_message(&ctx, cipher2, text_size);
             status |= !crypto_unlock_final(&ctx, mac2);
         }
     }
     printf("%s: aead (incremental)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
+// Only additionnal data
+static int p_auth()
+{
+    int status = 0;
+    FOR (i, 0, 128) {
+        u8 key      [ 32];  p_random(key      , 32);
+        u8 nonce    [ 24];  p_random(nonce    , 24);
+        u8 ad       [128];  p_random(ad       ,  i);
+        u8 mac1[16];
+        u8 mac2[16];
+        // roundtrip
+        {
+            crypto_lock_ctx ctx;
+            crypto_lock_init   (&ctx, key, nonce);
+            crypto_lock_auth_ad(&ctx, ad, i);
+            crypto_lock_final  (&ctx, mac1);
+            crypto_aead_lock(mac2, 0, key, nonce, ad, i, 0, 0);
+            status |= memcmp(mac1, mac2, 16);
+        }
+        {
+            crypto_unlock_ctx ctx;
+            crypto_unlock_init   (&ctx, key, nonce);
+            crypto_unlock_auth_ad(&ctx, ad, i);
+            status |= crypto_unlock_final(&ctx, mac1);
+            status |= crypto_aead_unlock(0, key, nonce, mac1, ad, i, 0, 0);
+        }
+    }
+    printf("%s: aead (authentication)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -723,6 +765,7 @@ int main(void)
     status |= TEST(chacha20    , 4);
     status |= TEST(xchacha20   , 4);
     status |= TEST(poly1305    , 2);
+    status |= TEST(aead_ietf   , 4);
     status |= TEST(blake2b     , 2);
     status |= TEST(sha512      , 1);
     status |= TEST(argon2i     , 4);
@@ -752,6 +795,7 @@ int main(void)
     status |= p_eddsa_overlap();
     status |= p_aead();
     status |= p_lock_incremental();
+    status |= p_auth();
 
     printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
     return status;

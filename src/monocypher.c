@@ -1706,44 +1706,66 @@ int crypto_key_exchange(u8       shared_key[32],
 ////////////////////////////////
 /// Authenticated encryption ///
 ////////////////////////////////
+static void lock_ad_padding(crypto_lock_ctx *ctx)
+{
+    static const u8 zero[15] = {0};
+    if (ctx->ad_phase) {
+        ctx->ad_phase = 0;
+        crypto_poly1305_update(&(ctx->poly), zero, -ctx->ad_size & 15);
+    }
+}
+
 void crypto_lock_init(crypto_lock_ctx *ctx, const u8 key[32], const u8 nonce[24])
 {
-    u8 auth_key[32];
+    u8 auth_key[64]; // "Wasting" the whole Chacha block is faster
+    ctx->ad_phase     = 1;
+    ctx->ad_size      = 0;
+    ctx->message_size = 0;
     crypto_chacha20_x_init(&(ctx->chacha), key, nonce);
-    crypto_chacha20_stream(&(ctx->chacha), auth_key, 32);
+    crypto_chacha20_stream(&(ctx->chacha), auth_key, 64);
     crypto_poly1305_init  (&(ctx->poly  ), auth_key);
     WIPE_BUFFER(auth_key);
 }
 
-void crypto_lock_encrypt(crypto_lock_ctx *ctx, u8 *cipher_text,
-                         const u8 *plain_text, size_t text_size)
-{
-    crypto_chacha20_encrypt(&(ctx->chacha), cipher_text, plain_text, text_size);
-}
-
-void crypto_lock_auth(crypto_lock_ctx *ctx, const u8 *msg, size_t msg_size)
+void crypto_lock_auth_ad(crypto_lock_ctx *ctx, const u8 *msg, size_t msg_size)
 {
     crypto_poly1305_update(&(ctx->poly), msg, msg_size);
+    ctx->ad_size += msg_size;
+}
+
+void crypto_lock_auth_message(crypto_lock_ctx *ctx,
+                              const u8 *cipher_text, size_t text_size)
+{
+    lock_ad_padding(ctx);
+    ctx->message_size += text_size;
+    crypto_poly1305_update(&(ctx->poly), cipher_text, text_size);
 }
 
 void crypto_lock_update(crypto_lock_ctx *ctx, u8 *cipher_text,
                         const u8 *plain_text, size_t text_size)
 {
-    crypto_lock_encrypt(ctx, cipher_text, plain_text, text_size);
-    crypto_lock_auth   (ctx, cipher_text, text_size);
+    crypto_chacha20_encrypt(&(ctx->chacha), cipher_text, plain_text, text_size);
+    crypto_lock_auth_message(ctx, cipher_text, text_size);
 }
 
 void crypto_lock_final(crypto_lock_ctx *ctx, u8 mac[16])
 {
-    crypto_poly1305_final(&(ctx->poly), mac);
+    lock_ad_padding(ctx);
+    static const u8 zero[15] = {0};
+    u8 sizes[16];
+    store64_le(sizes + 0, ctx->ad_size);
+    store64_le(sizes + 8, ctx->message_size);
+    crypto_poly1305_update(&(ctx->poly), zero, -ctx->message_size & 15);
+    crypto_poly1305_update(&(ctx->poly), sizes, 16);
+    crypto_poly1305_final (&(ctx->poly), mac);
     WIPE_CTX(ctx);
 }
 
 void crypto_unlock_update(crypto_lock_ctx *ctx, u8 *plain_text,
                           const u8 *cipher_text, size_t text_size)
 {
-    crypto_lock_auth   (ctx, cipher_text, text_size);
-    crypto_lock_encrypt(ctx, plain_text, cipher_text, text_size);
+    crypto_unlock_auth_message(ctx, cipher_text, text_size);
+    crypto_chacha20_encrypt(&(ctx->chacha), plain_text, cipher_text, text_size);
 }
 
 int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
@@ -1763,11 +1785,10 @@ void crypto_aead_lock(u8        mac[16],
                       const u8 *plain_text, size_t text_size)
 {
     crypto_lock_ctx ctx;
-    crypto_lock_init  (&ctx, key, nonce);
-    // authenticate additional data first, to allow overlapping buffers
-    crypto_lock_auth  (&ctx, ad, ad_size);
-    crypto_lock_update(&ctx, cipher_text, plain_text, text_size);
-    crypto_lock_final (&ctx, mac);
+    crypto_lock_init   (&ctx, key, nonce);
+    crypto_lock_auth_ad(&ctx, ad, ad_size);
+    crypto_lock_update (&ctx, cipher_text, plain_text, text_size);
+    crypto_lock_final  (&ctx, mac);
 }
 
 int crypto_aead_unlock(u8       *plain_text,
@@ -1777,10 +1798,10 @@ int crypto_aead_unlock(u8       *plain_text,
                        const u8 *ad         , size_t ad_size,
                        const u8 *cipher_text, size_t text_size)
 {
-    crypto_lock_ctx ctx;
-    crypto_lock_init(&ctx, key, nonce);
-    crypto_lock_auth(&ctx, ad, ad_size);
-    crypto_lock_auth(&ctx, cipher_text, text_size);
+    crypto_unlock_ctx ctx;
+    crypto_unlock_init        (&ctx, key, nonce);
+    crypto_unlock_auth_ad     (&ctx, ad, ad_size);
+    crypto_unlock_auth_message(&ctx, cipher_text, text_size);
     crypto_chacha_ctx chacha_ctx = ctx.chacha; // avoid the wiping...
     if (crypto_unlock_final(&ctx, mac)) {      // ...that occurs here
         WIPE_CTX(&chacha_ctx);

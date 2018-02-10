@@ -3,15 +3,15 @@
 .Os
 .Sh NAME
 .Nm crypto_lock_init ,
-.Nm crypto_lock_aead_auth ,
+.Nm crypto_lock_auth_ad ,
+.Nm crypto_lock_auth_message ,
 .Nm crypto_lock_update ,
 .Nm crypto_lock_final ,
 .Nm crypto_unlock_init ,
-.Nm crypto_unlock_aead_auth ,
+.Nm crypto_unlock_auth_ad ,
+.Nm crypto_unlock_auth_message ,
 .Nm crypto_unlock_update ,
-.Nm crypto_unlock_final ,
-.Nm crypto_lock_auth ,
-.Nm crypto_lock_encrypt
+.Nm crypto_unlock_final
 .Nd incremental authenticated encryption with additional data
 .Sh SYNOPSIS
 .In monocypher.h
@@ -22,10 +22,16 @@
 .Fa "const uint8_t nonce[24]"
 .Fc
 .Ft void
-.Fo crypto_lock_aead_auth
+.Fo crypto_lock_auth_ad
 .Fa "crypto_lock_ctx *ctx"
 .Fa "const uint8_t *ad"
 .Fa "size_t ad_size"
+.Fc
+.Ft void
+.Fo crypto_lock_auth_message
+.Fa "crypto_lock_ctx *ctx"
+.Fa "const uint8_t *plain_text"
+.Fa "size_t text_size"
 .Fc
 .Ft void
 .Fo crypto_lock_update
@@ -46,10 +52,16 @@
 .Fa "const uint8_t nonce[24]"
 .Fc
 .Ft void
-.Fo crypto_unlock_aead_auth
+.Fo crypto_unlock_auth_ad
 .Fa "crypto_unlock_ctx *ctx"
 .Fa "const uint8_t *ad"
 .Fa "size_t ad_size"
+.Fc
+.Ft void
+.Fo crypto_unlock_auth_message
+.Fa "crypto_unlock_ctx *ctx"
+.Fa "const uint8_t *plain_text"
+.Fa "size_t text_size"
 .Fc
 .Ft void
 .Fo crypto_unlock_update
@@ -62,19 +74,6 @@
 .Fo crypto_unlock_final
 .Fa "crypto_unlock_ctx *ctx"
 .Fa "const uint8_t mac[16]"
-.Fc
-.Ft void
-.Fo crypto_lock_auth
-.Fa "crypto_lock_ctx *ctx"
-.Fa "const uint8_t *ad"
-.Fa "size_t ad_size"
-.Fc
-.Ft void
-.Fo crypto_lock_encrypt
-.Fa "crypto_lock_ctx *ctx"
-.Fa "uint8_t *cipher_text"
-.Fa "const uint8_t *plain_text"
-.Fa "size_t text_size"
 .Fc
 .Sh DESCRIPTION
 These functions are variants of
@@ -98,7 +97,7 @@ Initialise a context with
 .Fn crypto_lock_init .
 .It
 Authenticate additional data, if any, with
-.Fn crypto_lock_aead_auth .
+.Fn crypto_lock_auth_ad .
 .It
 Encrypt and authenticate some data with
 .Fn crypto_lock_update .
@@ -114,7 +113,7 @@ Initialise a context with
 .Fn crypto_unlock_init .
 .It
 Verify additional data, if any, with
-.Fn crypto_unlock_aead_auth .
+.Fn crypto_unlock_auth_ad .
 .It
 Decrypt and verify some data with
 .Fn crypto_unlock_update .
@@ -122,27 +121,13 @@ Decrypt and verify some data with
 Verify the MAC with
 .Fn crypto_unlock_final .
 .El
-.Pp
-.Fn crypto_lock_encrypt
-encrypts or decrypts data
-.Em without authenticating it .
-It is meant as a building block.
-Used with
-.Fn crypto_lock_auth ,
-it enables various AEAD constructions.
-Most users do not need either of them.
-Prefer
-.Fn crypto_lock_update
-and
-.Fn crypto_unlock_update
-instead.
 .Sh RETURN VALUES
 .Fn crypto_lock_init ,
 .Fn crypto_unlock_init ,
-.Fn crypto_lock_auth ,
-.Fn crypto_lock_encrypt ,
-.Fn crypto_lock_aead_auth ,
-.Fn crypto_unlock_aead_auth ,
+.Fn crypto_lock_auth_ad ,
+.Fn crypto_unlock_auth_ad ,
+.Fn crypto_lock_auth_message ,
+.Fn crypto_unlock_auth_message ,
 .Fn crypto_lock_update ,
 .Fn crypto_unlock_update ,
 and
@@ -173,7 +158,7 @@ crypto_wipe(key, 32);
 
 /* Authenticate additional data */
 for (size_t i = 0; i < 500; i += 100) {
-    crypto_lock_aead_auth(&ctx, ad + i, 100);
+    crypto_lock_auth_ad(&ctx, ad + i, 100);
 }
 
 /* Encrypt message */
@@ -204,7 +189,7 @@ crypto_wipe(key, 32);
 
 /* Verify additional data */
 for (size_t i = 0; i < 500; i += 100) {
-    crypto_unlock_aead_auth(&ctx, ad + i, 100);
+    crypto_unlock_auth_ad(&ctx, ad + i, 100);
 }
 
 /* Decrypt message */
@@ -221,6 +206,38 @@ if (crypto_unlock_final(&ctx, mac)) {
 
 /* Wipe the secret message if it is no longer needed */
 crypto_wipe(plain_text, 500);
+.Ed
+.Pp
+To authenticate the above without decrypting it:
+.Bd -literal -offset indent
+const uint8_t key        [ 32]; /* Session key              */
+const uint8_t nonce      [ 32]; /* Unique per session key   */
+const uint8_t mac        [ 16]; /* Transmitted MAC          */
+const uint8_t ad         [500]; /* Optional additional data */
+const uint8_t cipher_text[500]; /* Encrypted message        */
+
+/* Set up initial context */
+crypto_unlock_ctx ctx;
+crypto_unlock_init(&ctx, key, nonce);
+/* Wipe the key if it is no longer needed */
+crypto_wipe(key, 32);
+
+/* Verify additional data */
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_unlock_auth_ad(&ctx, ad + i, 100);
+}
+
+/* Verify message */
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_unlock_auth_message(&ctx, cipher_text + i, 100);
+}
+
+/* Check the MAC */
+if (crypto_unlock_final(&ctx, mac)) {
+    /* Corrupted message */
+} else {
+    /* Genuine message   */
+}
 .Ed
 .Pp
 In-place encryption without additional data:
@@ -253,9 +270,7 @@ crypto_lock_final(&ctx, mac);
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement the XChacha20 (encryption) and Poly1305
-(MAC) primitives.
-Chacha20 and Poly1305 are described in RFC 7539.
+These functions implement RFC 7539, with XChacha20 instead of Chacha20.
 XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
@@ -283,9 +298,9 @@ is an alias to
 is an alias to
 .Fn crypto_lock_init .
 .It
-.Fn crypto_lock_aead_auth
+.Fn crypto_lock_auth_ad
 and
-.Fn crypto_unlock_aead_auth
+.Fn crypto_unlock_auth_ad
 are aliases to
 .Fn crypto_lock_auth .
 .El
@@ -294,4 +309,7 @@ The incremental interface is roughly three times slower than the direct
 interface at identifying corrupted messages.
 This is because the incremental interface works in a single pass and has
 to interleave decryption and verification.
-Users who expect a high corruption rate may want to avoid it.
+Users who expect a high corruption rate may want to perform a first
+pass with
+.Fn crypto_unlock_auth_message
+before decrypting the message.
