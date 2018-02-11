@@ -57,14 +57,12 @@ uninstall:
 	rm -f $(MAN_DIR)/*.3monocypher
 
 check: test
-test: test.out
-	./test.out
-
-speed: speed.out
-	./speed.out
-
-speed-sodium: speed-sodium.out
-	./speed-sodium.out
+test           : test.out
+speed          : speed.out
+speed-sodium   : speed-sodium.out
+speed-tweetnacl: speed-tweetnacl.out
+test speed speed-sodium speed-tweetnacl:
+	./$<
 
 # Monocypher libraries
 lib/libmonocypher.a: lib/monocypher.o
@@ -80,10 +78,11 @@ lib/monocypher.o lib/sha512.o:
 
 # Test & speed libraries
 $TEST_COMMON=tests/utils.h src/monocypher.h src/optional/sha512.h
-lib/test.o        : tests/test.c         $(TEST_COMMON) tests/vectors.h
-lib/speed.o       : tests/speed.c        $(TEST_COMMON) tests/speed.h
-lib/speed-sodium.o: tests/speed-sodium.c $(TEST_COMMON) tests/speed.h
-lib/utils.o lib/test.o lib/speed.o lib/speed-sodium.o:
+lib/test.o           : tests/test.c            $(TEST_COMMON) tests/vectors.h
+lib/speed.o          : tests/speed.c           $(TEST_COMMON) tests/speed.h
+lib/speed-sodium.o   : tests/speed-sodium.c    $(TEST_COMMON) tests/speed.h
+lib/speed-tweetnacl.o: tests/speed-tweetnacl.c $(TEST_COMMON) tests/speed.h
+lib/utils.o lib/test.o lib/speed.o lib/speed-sodium.o lib/speed-tweetnacl.o:
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ $<
 
@@ -93,9 +92,13 @@ speed.out: lib/speed.o lib/monocypher.o lib/sha512.o
 test.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
 speed-sodium.out: lib/speed-sodium.o
-	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^ \
-            $$(pkg-config --cflags libsodium)           \
+	$(CC) $(CFLAGS) -o $@ $^              \
+            $$(pkg-config --cflags libsodium) \
             $$(pkg-config --libs   libsodium)
+lib/tweetnacl.o: tests/tweetnacl.c tests/tweetnacl.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+speed-tweetnacl.out: lib/speed-tweetnacl.o lib/tweetnacl.o
+	$(CC) $(CFLAGS) -o $@ $^
 
 tests/vectors.h:
 	@echo ""
