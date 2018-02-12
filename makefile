@@ -21,7 +21,7 @@ install: library src/monocypher.h install-doc
 	mkdir -p $(DESTDIR)/$(PREFIX)/include
 	mkdir -p $(DESTDIR)/$(PREFIX)/lib
 	mkdir -p $(PKGCONFIG)
-	cp lib/libmonocypher.a lib/libmonocypher.so $(DESTDIR)/$(PREFIX)/lib
+	cp lib/libmonocypher.a lib/libmonocypher.so* $(DESTDIR)/$(PREFIX)/lib
 	cp src/monocypher.h $(DESTDIR)/$(PREFIX)/include
 	@echo "Creating $(PKGCONFIG)/monocypher.pc"
 	@echo "prefix=/$(PREFIX)"                > $(PKGCONFIG)/monocypher.pc
@@ -43,7 +43,7 @@ install-doc:
 
 library: static-library dynamic-library
 static-library : lib/libmonocypher.a
-dynamic-library: lib/libmonocypher.so
+dynamic-library: lib/libmonocypher.so lib/libmonocypher.so.2
 
 clean:
 	rm -rf lib/
@@ -51,7 +51,7 @@ clean:
 
 uninstall:
 	rm -f $(DESTDIR)/$(PREFIX)/lib/libmonocypher.a
-	rm -f $(DESTDIR)/$(PREFIX)/lib/libmonocypher.so
+	rm -f $(DESTDIR)/$(PREFIX)/lib/libmonocypher.so*
 	rm -f $(DESTDIR)/$(PREFIX)/include/monocypher.h
 	rm -f $(PKGCONFIG)/monocypher.pc
 	rm -f $(MAN_DIR)/*.3monocypher
@@ -67,7 +67,10 @@ test speed speed-sodium speed-tweetnacl:
 # Monocypher libraries
 lib/libmonocypher.a: lib/monocypher.o
 	ar cr $@ $^
-lib/libmonocypher.so: lib/monocypher.o
+lib/libmonocypher.so: lib/libmonocypher.so.2
+	@mkdir -p $(@D)
+	ln -s $$(basename $<) $@
+lib/libmonocypher.so.2: lib/monocypher.o
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -shared -o $@ $^
 lib/sha512.o    : src/optional/sha512.c src/optional/sha512.o
