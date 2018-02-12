@@ -60,8 +60,6 @@ wipes a buffer.
 It is meant to erase secrets when they are no longer needed, to reduce
 the chances of leaks.
 .Sh SEE ALSO
-.Xr crypto_aead_lock 3monocypher ,
-.Xr crypto_aead_unlock 3monocypher ,
 .Xr crypto_argon2i 3monocypher ,
 .Xr crypto_argon2i_general 3monocypher ,
 .Xr crypto_blake2b 3monocypher ,
@@ -82,6 +80,7 @@ the chances of leaks.
 .Xr crypto_check_update 3monocypher ,
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock 3monocypher ,
+.Xr crypto_lock_aead 3monocypher ,
 .Xr crypto_lock_auth_ad 3monocypher ,
 .Xr crypto_lock_auth_message 3monocypher ,
 .Xr crypto_lock_final 3monocypher ,
@@ -98,6 +97,7 @@ the chances of leaks.
 .Xr crypto_sign_public_key 3monocypher ,
 .Xr crypto_sign_update 3monocypher ,
 .Xr crypto_unlock 3monocypher ,
+.Xr crypto_unlock_aead 3monocypher ,
 .Xr crypto_unlock_auth_ad 3monocypher ,
 .Xr crypto_unlock_auth_message 3monocypher ,
 .Xr crypto_unlock_final 3monocypher ,

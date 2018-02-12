@@ -2,8 +2,8 @@
 .Dt CRYPTO_LOCK 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_aead_lock ,
-.Nm crypto_aead_unlock ,
+.Nm crypto_lock_aead ,
+.Nm crypto_unlock_aead ,
 .Nm crypto_lock ,
 .Nm crypto_unlock
 .Nd authenticated encryption with additional data
@@ -28,7 +28,7 @@
 .Fa "size_t text_size"
 .Fc
 .Ft void
-.Fo crypto_aead_lock
+.Fo crypto_lock_aead
 .Fa "uint8_t mac[16]"
 .Fa "uint8_t *cipher_text"
 .Fa "const uint8_t key[32]"
@@ -39,7 +39,7 @@
 .Fa "size_t text_size"
 .Fc
 .Ft int
-.Fo crypto_aead_unlock
+.Fo crypto_unlock_aead
 .Fa "uint8_t *plain_text"
 .Fa "const uint8_t key[32]"
 .Fa "const uint8_t nonce[24]"
@@ -122,9 +122,9 @@ returns -1 immediately.
 Otherwise, it decrypts the message, then returns zero.
 .Em Always check the return value .
 .Pp
-.Fn crypto_aead_lock
+.Fn crypto_lock_aead
 and
-.Fn crypto_aead_unlock
+.Fn crypto_unlock_aead
 are variants of
 .Fn crypto_lock
 and
@@ -168,12 +168,12 @@ An incremental interface is available; see
 .Sh RETURN VALUES
 .Fn crypto_lock
 and
-.Fn crypto_aead_lock
+.Fn crypto_lock_aead
 return nothing.
 They cannot fail.
 .Fn crypto_unlock
 and
-.Fn crypto_aead_unlock
+.Fn crypto_unlock_aead
 return 0 on success or -1 if the message was corrupted (i.e.
 .Fa mac
 mismatched the combination of
@@ -260,10 +260,10 @@ XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
 .Pp
-.Fn crypto_aead_lock
+.Fn crypto_lock_aead
 is equivalent to the following:
 .Bd -literal -offset indent
-void crypto_aead_lock(uint8_t mac[16], uint8_t *cipher_text,
+void crypto_lock_aead(uint8_t mac[16], uint8_t *cipher_text,
                       const uint8_t  key[32],
                       const uint8_t  nonce[24],
                       const uint8_t *ad        , size_t ad_size,

@@ -166,7 +166,7 @@ Must be zero if there is no key.
 Additional data.
 This is additional data that goes into the hash, similar to the
 authenticated encryption with authenticated data (AEAD) construction in
-.Xr crypto_aead_lock 3monocypher .
+.Xr crypto_lock_aead 3monocypher .
 This most likely has no practical application but is exposed for the
 sake of completeness.
 This parameter may be

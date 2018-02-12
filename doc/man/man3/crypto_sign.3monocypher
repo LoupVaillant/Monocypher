@@ -84,7 +84,7 @@ rarely secret.
 If the message needs to be secret, use
 .Xr crypto_key_exchange 3monocypher
 and
-.Xr crypto_aead_lock 3monocypher
+.Xr crypto_lock_aead 3monocypher
 instead.
 .Pp
 An incremental interface is available; see

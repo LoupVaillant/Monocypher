@@ -99,13 +99,13 @@ int crypto_unlock(uint8_t       *plain_text,
                   const uint8_t *cipher_text, size_t text_size);
 
 // Direct interface with additional data
-void crypto_aead_lock(uint8_t        mac[16],
+void crypto_lock_aead(uint8_t        mac[16],
                       uint8_t       *cipher_text,
                       const uint8_t  key[32],
                       const uint8_t  nonce[24],
                       const uint8_t *ad        , size_t ad_size,
                       const uint8_t *plain_text, size_t text_size);
-int crypto_aead_unlock(uint8_t       *plain_text,
+int crypto_unlock_aead(uint8_t       *plain_text,
                        const uint8_t  key[32],
                        const uint8_t  nonce[24],
                        const uint8_t  mac[16],

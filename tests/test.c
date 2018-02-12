@@ -122,7 +122,7 @@ static void aead_ietf(const vector in[], vector *out)
     const vector *nonce = in + 1;
     const vector *ad    = in + 2;
     const vector *text  = in + 3;
-    crypto_aead_lock(out ->buf, out->buf + 16, key->buf, nonce->buf,
+    crypto_lock_aead(out ->buf, out->buf + 16, key->buf, nonce->buf,
                      ad->buf, ad->size, text->buf, text->size);
 }
 
@@ -636,11 +636,11 @@ static int p_aead()
         u8 box[24], box2[24];
         u8 out[8];
         // AEAD roundtrip
-        crypto_aead_lock(box, box+16, key, nonce, ad, 4, plaintext, 8);
-        status |= crypto_aead_unlock(out, key, nonce, box, ad, 4, box+16, 8);
+        crypto_lock_aead(box, box+16, key, nonce, ad, 4, plaintext, 8);
+        status |= crypto_unlock_aead(out, key, nonce, box, ad, 4, box+16, 8);
         status |= memcmp(plaintext, out, 8);
         box[0]++;
-        status |= !crypto_aead_unlock(out, key, nonce, box, ad, 4, box+16, 8);
+        status |= !crypto_unlock_aead(out, key, nonce, box, ad, 4, box+16, 8);
 
         // Authenticated roundtrip (easy interface)
         // Make and accept message
@@ -654,7 +654,7 @@ static int p_aead()
         box[0]--; // undo forgery
 
         // Same result for both interfaces
-        crypto_aead_lock(box2, box2 + 16, key, nonce, 0, 0, plaintext, 8);
+        crypto_lock_aead(box2, box2 + 16, key, nonce, 0, 0, plaintext, 8);
         status |= memcmp(box, box2, 24);
     }
     printf("%s: aead\n", status != 0 ? "FAILED" : "OK");
@@ -683,7 +683,7 @@ static int p_lock_incremental()
 
         u8 mac1[16], cipher1[256];
         u8 mac2[16], cipher2[256];
-        crypto_aead_lock(mac1, cipher1, key, nonce,
+        crypto_lock_aead(mac1, cipher1, key, nonce,
                          ad, ad_size, plain, text_size);
         crypto_lock_ctx ctx;
         crypto_lock_init   (&ctx, key, nonce);
@@ -698,7 +698,7 @@ static int p_lock_incremental()
         // Now test the round trip.
         u8 re_plain1[256];
         u8 re_plain2[256];
-        status |= crypto_aead_unlock(re_plain1, key, nonce, mac1,
+        status |= crypto_unlock_aead(re_plain1, key, nonce, mac1,
                                      ad, ad_size, cipher1, text_size);
         crypto_unlock_init   (&ctx, key, nonce);
         crypto_unlock_auth_ad(&ctx, ad, ad_size);
@@ -742,7 +742,7 @@ static int p_auth()
             crypto_lock_init   (&ctx, key, nonce);
             crypto_lock_auth_ad(&ctx, ad, i);
             crypto_lock_final  (&ctx, mac1);
-            crypto_aead_lock(mac2, 0, key, nonce, ad, i, 0, 0);
+            crypto_lock_aead(mac2, 0, key, nonce, ad, i, 0, 0);
             status |= memcmp(mac1, mac2, 16);
         }
         {
@@ -750,7 +750,7 @@ static int p_auth()
             crypto_unlock_init   (&ctx, key, nonce);
             crypto_unlock_auth_ad(&ctx, ad, i);
             status |= crypto_unlock_final(&ctx, mac1);
-            status |= crypto_aead_unlock(0, key, nonce, mac1, ad, i, 0, 0);
+            status |= crypto_unlock_aead(0, key, nonce, mac1, ad, i, 0, 0);
         }
     }
     printf("%s: aead (authentication)\n", status != 0 ? "FAILED" : "OK");

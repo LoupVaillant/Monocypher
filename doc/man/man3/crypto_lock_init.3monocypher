@@ -79,9 +79,9 @@
 These functions are variants of
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_unlock 3monocypher ,
-.Xr crypto_aead_lock 3monocypher
+.Xr crypto_lock_aead 3monocypher
 and
-.Xr crypto_aead_unlock 3monocypher .
+.Xr crypto_unlock_aead 3monocypher .
 Prefer those simpler functions if possible.
 .Pp
 This incremental interface can be used to encrypt and decrypt messages
@@ -262,11 +262,11 @@ for (size_t i = 0; i < 500; i += 100) {
 crypto_lock_final(&ctx, mac);
 .Ed
 .Sh SEE ALSO
-.Xr crypto_aead_lock 3monocypher ,
-.Xr crypto_aead_unlock 3monocypher ,
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock 3monocypher ,
+.Xr crypto_lock_aead 3monocypher ,
 .Xr crypto_unlock 3monocypher ,
+.Xr crypto_unlock_aead 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS

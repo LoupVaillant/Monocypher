@@ -184,7 +184,7 @@ use the
 .Em rest
 of the stream to encrypt your message.
 This is the approach used by
-.Xr crypto_aead_lock 3monocypher .
+.Xr crypto_lock_aead 3monocypher .
 .Ss Protection against side channels
 Use
 .Xr crypto_verify16 3monocypher

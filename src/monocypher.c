@@ -1777,7 +1777,7 @@ int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
     return mismatch;
 }
 
-void crypto_aead_lock(u8        mac[16],
+void crypto_lock_aead(u8        mac[16],
                       u8       *cipher_text,
                       const u8  key[32],
                       const u8  nonce[24],
@@ -1791,7 +1791,7 @@ void crypto_aead_lock(u8        mac[16],
     crypto_lock_final  (&ctx, mac);
 }
 
-int crypto_aead_unlock(u8       *plain_text,
+int crypto_unlock_aead(u8       *plain_text,
                        const u8  key[32],
                        const u8  nonce[24],
                        const u8  mac[16],
@@ -1818,7 +1818,7 @@ void crypto_lock(u8        mac[16],
                  const u8  nonce[24],
                  const u8 *plain_text, size_t text_size)
 {
-    crypto_aead_lock(mac, cipher_text, key, nonce, 0, 0, plain_text, text_size);
+    crypto_lock_aead(mac, cipher_text, key, nonce, 0, 0, plain_text, text_size);
 }
 
 int crypto_unlock(u8       *plain_text,
@@ -1827,6 +1827,6 @@ int crypto_unlock(u8       *plain_text,
                   const u8  mac[16],
                   const u8 *cipher_text, size_t text_size)
 {
-    return crypto_aead_unlock(plain_text, key, nonce, mac, 0, 0,
+    return crypto_unlock_aead(plain_text, key, nonce, mac, 0, 0,
                               cipher_text, text_size);
 }
