@@ -234,10 +234,10 @@ crypto_wipe(key, 32);
 .Pp
 In-place decryption:
 .Bd -literal -offset indent
-const uint8_t  key  [32];  /* Same as the above       */
-const uint8_t  nonce[24];  /* Same as the above       */
-const uint8_t  mac  [16];  /* Reived from the network */
-uint8_t        text [500]; /* Message to decrypt      */
+const uint8_t  key  [32];  /* Same as the above         */
+const uint8_t  nonce[24];  /* Same as the above         */
+const uint8_t  mac  [16];  /* Received from the network */
+uint8_t        text [500]; /* Message to decrypt        */
 if (crypto_unlock(text, key, nonce, mac, text, 500)) {
     /* The message is corrupted.
      * Wipe key if it is no longer needed,
@@ -260,38 +260,40 @@ XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
 .Pp
-.Fn crypto_lock_aead
-is equivalent to the following:
-.Bd -literal -offset indent
-void crypto_lock_aead(uint8_t mac[16], uint8_t *cipher_text,
-                      const uint8_t  key[32],
-                      const uint8_t  nonce[24],
-                      const uint8_t *ad        , size_t ad_size,
-                      const uint8_t *plain_text, size_t text_size)
-{
-    u8 auth_key[64]; /* only the first 32 bytes are used */
-    crypto_chacha_ctx ctx_e;
-    crypto_chacha20_x_init (&ctx_e, key, nonce);
-    crypto_chacha20_stream (&ctx_e, auth_key, 64);
-    crypto_chacha20_encrypt(&ctx_e, cipher_text,
-                            plain_text, text_size);
-
-    static const u8 zero [15] = {0};
-    u8              sizes[16];
-    size_t   ad_zero =   -ad_size & 15;
-    size_t text_zero = -text_size & 15;
-    store64_le(sizes    ,   ad_size);
-    store64_le(sizes + 8, text_size);
-
-    crypto_poly1305_ctx ctx;
-    crypto_poly1305_init  (&ctx, auth_key);
-    crypto_poly1305_update(&ctx, ad         ,   ad_size);
-    crypto_poly1305_update(&ctx, zero       ,   ad_zero);
-    crypto_poly1305_update(&ctx, cipher_text, text_size);
-    crypto_poly1305_update(&ctx, zero       , text_zero);
-    crypto_poly1305_update(&ctx, sizes      ,        16);
-    crypto_poly1305_final (&ctx, mac);
-}
-.Ed
-.Pp
-(Real code would also wipe the relevant buffers.)
+Authenticated encryption is equivalent to the following:
+.Bl -bullet
+.It
+Generate an XChacha20 random stream as long as the message, plus 64
+bytes.
+The parameters are the session key and the message nonce.
+.It
+Use the first 32 bytes of the stream as the authentication key.
+.It
+Discard the next 32 bytes of the stream.
+.It
+Xor the rest of the stream (starting at byte 64) with the message to
+encrypt it.
+.It
+Encode the length of the additional data and the encrypted message as 64
+bits little endian unsigned integers.
+.It
+Pad the additional data with zeroes, up to the next multiple of 16
+bytes.
+Padding length ranges from 0 to 15 bytes.
+.It
+Pad the encrypted message with zeroes, up to the next multiple of 16
+bytes.
+Padding length ranges from 0 to 15 bytes.
+.It
+Concatenate the padded additional data, the padded encrypted message,
+the encoded length of the additional data, and the encoded length of the
+encrypted message, in that order.
+Authenticate the result with Poly1305, with the authentication key
+generated above.
+This will produce a 16 byte message authentication code.
+.It
+The nonce, encrypted message, and message authentication code can now be
+sent or archived.
+Recovering the message and assessing its integrity will require the
+session key.
+.El
