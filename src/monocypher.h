@@ -267,9 +267,6 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const uint8_t *message, size_t message_size);
 void crypto_poly1305_final (crypto_poly1305_ctx *ctx, uint8_t mac[16]);
 
-// Deprecated name
-#define crypto_poly1305_auth crypto_poly1305
-
 
 // X-25519
 // -------
