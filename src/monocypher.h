@@ -207,7 +207,7 @@ void crypto_sign_init_first_pass(crypto_sign_ctx *ctx,
 void crypto_sign_update(crypto_sign_ctx *ctx,
                         const uint8_t *message, size_t message_size);
 void crypto_sign_init_second_pass(crypto_sign_ctx *ctx);
-// crypto_sign_update()
+// use crypto_sign_update() again.
 void crypto_sign_final(crypto_sign_ctx *ctx, uint8_t signature[64]);
 
 // Incremental interface for verification (1 pass)
