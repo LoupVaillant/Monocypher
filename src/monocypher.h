@@ -131,11 +131,11 @@ void crypto_lock_final(crypto_lock_ctx *ctx, uint8_t mac[16]);
 #define crypto_unlock_init         crypto_lock_init
 #define crypto_unlock_auth_ad      crypto_lock_auth_ad
 #define crypto_unlock_auth_message crypto_lock_auth_message
-void crypto_unlock_update(crypto_lock_ctx *ctx,
-                          uint8_t         *plain_text,
-                          const uint8_t   *cipher_text,
-                          size_t           text_size);
-int crypto_unlock_final(crypto_lock_ctx *ctx, const uint8_t mac[16]);
+void crypto_unlock_update(crypto_unlock_ctx *ctx,
+                          uint8_t           *plain_text,
+                          const uint8_t     *cipher_text,
+                          size_t             text_size);
+int crypto_unlock_final(crypto_unlock_ctx *ctx, const uint8_t mac[16]);
 
 
 // General purpose hash (Blake2b)
