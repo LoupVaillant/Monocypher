@@ -2,7 +2,7 @@ Monocypher
 ----------
 
 Monocypher is an easy to use, easy to deploy, auditable crypto library
-written in portable C.  It approches the size of [TweetNaCl][] and the
+written in portable C.  It approaches the size of [TweetNaCl][] and the
 speed of [Libsodium][].
 
 [Official site.](https://monocypher.org/)  
@@ -69,28 +69,10 @@ somewhere.
 
 *Do not* use Monocypher without running those tests at least once.
 
+The same test suite can be run under clang sanitisers and valgrind, and
+be checked for code coverage:
 
-### More serious testing
-
-You can run the test suite under clang sanitizers or valgrind:
-
-    $ make clean
-    $ make test CC="clang -std=c99" CFLAGS="-fsanitize=address"
-
-    $ make clean
-    $ make test CC="clang -std=c99" CFLAGS="-fsanitize=memory"
-
-    $ make clean
-    $ make test CC="clang -std=c99" CFLAGS="-fsanitize=undefined"
-
-    $ make clean
-    $ make test.out
-    $ valgrind ./test.out
-
-You can also check code coverage:
-
-    $ make clean
-    $ make test CC="clang -std=c99" CFLAGS="-fprofile-instr-generate -fcoverage-mapping"
+    $ tests/test.sh
     $ tests/coverage.sh
 
 
@@ -134,6 +116,13 @@ There are similar benchmarks for Libsodium and TweetNaCl:
 
     $ make speed-sodium
     $ make speed-tweetnacl
+
+You can also adjust the optimisation options for Monocypher and
+TweetNaCl (the default is `-O3 march=native`):
+
+    $ make speed           CFLAGS="-O2"
+    $ make speed-tweetnacl CFLAGS="-O2"
+
 
 Customisation
 -------------
