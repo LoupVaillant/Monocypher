@@ -101,11 +101,11 @@ void crypto_wipe(void *secret, size_t size)
 /////////////////
 /// Chacha 20 ///
 /////////////////
-#define QUARTERROUND(a, b, c, d)          \
-    a += b;  d ^= a;  d = rotl32(d, 16);  \
-    c += d;  b ^= c;  b = rotl32(b, 12);  \
-    a += b;  d ^= a;  d = rotl32(d,  8);  \
-    c += d;  b ^= c;  b = rotl32(b,  7)
+#define QUARTERROUND(a, b, c, d)     \
+    a += b;  d = rotl32(d ^ a, 16);  \
+    c += d;  b = rotl32(b ^ c, 12);  \
+    a += b;  d = rotl32(d ^ a,  8);  \
+    c += d;  b = rotl32(b ^ c,  7)
 
 static void chacha20_rounds(u32 out[16], const u32 in[16])
 {
