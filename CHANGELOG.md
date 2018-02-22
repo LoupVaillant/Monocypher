@@ -1,5 +1,7 @@
 2.0.0
 -----
+2018/02/14
+
 - Changed the authenticated encryption format.  It now conforms to
   RFC 7539, with one exception: it uses XChacha20 initialisation instead
   of the IETF version of Chacha20.  This new format conforms to
@@ -16,6 +18,8 @@ boundaries.  The API changes increase consistency.
 
 1.1.0
 -----
+2018/02/06
+
 - Rewrote the manual into proper man pages.
 - Added incremental interfaces for authenticated encryption and
   signatures.
@@ -24,6 +28,8 @@ boundaries.  The API changes increase consistency.
 
 1.0.1
 -----
+2017/07/23
+
 - Optimised the loading and unloading code of the symmetric crypto
   (Blake2b, sha512, Chacha20, and Poly1305).
 - Fused self contained tests together for easier analysis with Frama-C
@@ -31,6 +37,8 @@ boundaries.  The API changes increase consistency.
 
 1.0
 ---
+2017/07/18
+
 - Renamed `crypto_chacha20_Xinit` to `crypto_chacha20_x_init`, for
   consistency reasons (snake case everywhere).
 - Fixed signed integer overflow detected by UBSan.
@@ -39,6 +47,8 @@ boundaries.  The API changes increase consistency.
 
 0.8
 ---
+2017/07/06
+
 - Added about a hundred lines of code to improve performance of public
   key cryptography.  Diffie-Hellman is now 20% faster than before.
   (The effects are less pronounces for EdDSA).
@@ -47,6 +57,8 @@ boundaries.  The API changes increase consistency.
 
 0.7
 ---
+2017/06/07
+
 - Slightly changed the authenticated encryption API.  Functions are
   now all in "detached" mode.  The reason is better support for
   authenticated encryption _without_ additional data.
@@ -59,11 +71,15 @@ boundaries.  The API changes increase consistency.
 
 0.6
 ---
+2017/03/17
+
 - Fixed incorrect poly1305 output on empty messages.  (Found by Mike
   Pechkin.)
 
 0.5
 ---
+2017/03/10
+
 - Fixed many undefined behaviours in curve25519, that occur whenever
   we perform a left shift on a signed negative integer.  It doesn't
   affect the generated code, but you never know.  (Found with Frama-C
@@ -78,6 +94,8 @@ section 6.5.7(§4) of the C11 standard.
 
 0.4
 ---
+2017/03/09
+
 - Fixed critical bug causing Argon2i to fail whenever it uses more
   than 512 blocks.  It was reading uninitialised memory, and the
   results were incorrect.  (Found by Mike Pechkin.)
@@ -88,6 +106,8 @@ section 6.5.7(§4) of the C11 standard.
 
 0.3
 ---
+2017/02/27
+
 - Got the invariants of poly1305 right, put them in the comments.
   There was no bug, but that was lucky (turned out the IETF test
   vectors were designed to trigger the bugs I was afraid of).
@@ -97,9 +117,15 @@ section 6.5.7(§4) of the C11 standard.
 
 0.2
 ---
+????/??/??
+
 - Public interface significantly reworked. Removed redundant, hard to
   mess up constructions.
 - Added AEAD.
 - Sped up curve25519 by a factor of more than 6 (switched to ref10
   arithmetic)
 - Added various test vectors, completed the consistency tests.
+
+0.1
+---
+2016/??/??
