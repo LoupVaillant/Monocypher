@@ -520,7 +520,7 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 
 static void blake2b_reset_input(crypto_blake2b_ctx *ctx)
 {
-    FOR(i, 0, 16) {
+    FOR (i, 0, 16) {
         ctx->input[i] = 0;
     }
     ctx->input_idx = 0;
@@ -1516,15 +1516,15 @@ static void modL(u8 *r, i64 x[64])
         x[i] = 0;
     }
     i64 carry = 0;
-    FOR(i, 0, 32) {
+    FOR (i, 0, 32) {
         x[i] += carry - (x[31] >> 4) * L[i];
         carry = x[i] >> 8;
         x[i] &= 255;
     }
-    FOR(i, 0, 32) {
+    FOR (i, 0, 32) {
         x[i] -= carry * L[i];
     }
-    FOR(i, 0, 32) {
+    FOR (i, 0, 32) {
         x[i+1] += x[i] >> 8;
         r[i  ]  = x[i] & 255;
     }
@@ -1534,7 +1534,7 @@ static void modL(u8 *r, i64 x[64])
 static void reduce(u8 r[64])
 {
     i64 x[64];
-    FOR(i, 0, 64) {
+    FOR (i, 0, 64) {
         x[i] = (u64) r[i];
         r[i] = 0;
     }
