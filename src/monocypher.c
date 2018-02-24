@@ -236,15 +236,16 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
         if (plain_text != 0) {
             FOR (j, 0, 16) {
                 u32 plain = load32_le(plain_text);
-                store32_le(cipher_text + j * 4, ctx->pool[j] ^ plain);
-                plain_text += 4;
+                store32_le(cipher_text, ctx->pool[j] ^ plain);
+                plain_text  += 4;
+                cipher_text += 4;
             }
         } else {
             FOR (j, 0, 16) {
-                store32_le(cipher_text + j * 4, ctx->pool[j]);
+                store32_le(cipher_text, ctx->pool[j]);
+                cipher_text += 4;
             }
         }
-        cipher_text += 64;
         ctx->pool_idx = 64;
     }
 
