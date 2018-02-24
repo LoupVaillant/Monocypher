@@ -246,10 +246,9 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
             }
         }
         cipher_text += 64;
-        if (nb_blocks > 0) {
-            ctx->pool_idx = 64;
-        }
+        ctx->pool_idx = 64;
     }
+
     // Remaining input, byte by byte
     FOR (i, 0, remainder) {
         if (ctx->pool_idx == 64) {
