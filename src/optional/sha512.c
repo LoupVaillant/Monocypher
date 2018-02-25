@@ -2,6 +2,7 @@
 
 #define FOR(i, min, max) for (size_t i = min; i < max; i++)
 #define WIPE_CTX(ctx)    crypto_wipe(ctx   , sizeof(*(ctx)))
+#define MIN(a, b)       ((a) <= (b) ? (a) : (b))
 typedef uint8_t u8;
 typedef uint64_t u64;
 
@@ -124,6 +125,16 @@ static void sha512_end_block(crypto_sha512_ctx *ctx)
     }
 }
 
+static void sha512_update(crypto_sha512_ctx *ctx,
+                          const u8 *message, size_t message_size)
+{
+    FOR (i, 0, message_size) {
+        sha512_set_input(ctx, message[i]);
+        ctx->input_idx++;
+        sha512_end_block(ctx);
+    }
+}
+
 void crypto_sha512_init(crypto_sha512_ctx *ctx)
 {
     ctx->hash[0] = 0x6a09e667f3bcc908;
@@ -142,31 +153,25 @@ void crypto_sha512_init(crypto_sha512_ctx *ctx)
 void crypto_sha512_update(crypto_sha512_ctx *ctx,
                           const u8 *message, size_t message_size)
 {
-    // Align ourselves with 8 byte words
-    while (ctx->input_idx % 8 != 0 && message_size > 0) {
-        sha512_set_input(ctx, *message);
-        ctx->input_idx++;
-        message++;
-        message_size--;
-    }
-    sha512_end_block(ctx);
+    // Align ourselves with block boundaries
+    size_t align = MIN(-ctx->input_idx & 127, message_size);
+    sha512_update(ctx, message, align);
+    message      += align;
+    message_size -= align;
 
-    // Main processing by 8 byte chunks (much faster)
-    size_t nb_words  = message_size / 8;
-    size_t remainder = message_size % 8;
-    FOR (i, 0, nb_words) {
-        ctx->input[ctx->input_idx / 8] = load64_be(message);
-        message        += 8;
-        ctx->input_idx += 8;
+    // Process the message block by block
+    FOR (i, 0, message_size / 128) { // number of blocks
+        FOR (j, 0, 16) {
+            ctx->input[j] = load64_be(message + j*8);
+        }
+        message        += 128;
+        ctx->input_idx += 128;
         sha512_end_block(ctx);
     }
+    message_size &= 127;
 
-    // Remaining processing byte by byte
-    FOR (i, 0, remainder) {
-        sha512_set_input(ctx, *message);
-        message++;
-        ctx->input_idx++;
-    }
+    // remaining bytes
+    sha512_update(ctx, message, message_size);
 }
 
 void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 hash[64])

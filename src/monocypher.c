@@ -29,6 +29,8 @@ typedef int32_t  i32;
 typedef int64_t  i64;
 typedef uint64_t u64;
 
+#define MIN(a, b) ((a) <= (b) ? (a) : (b))
+
 static u32 load24_le(const u8 s[3])
 {
     return (u32)s[0]
@@ -184,6 +186,25 @@ void crypto_chacha20_H(u8 out[32], const u8 key[32], const u8 in[16])
     WIPE_BUFFER(buffer);
 }
 
+static void chacha20_encrypt(crypto_chacha_ctx *ctx,
+                             u8                *cipher_text,
+                             const u8          *plain_text,
+                             size_t             text_size)
+{
+    FOR (i, 0, text_size) {
+        if (ctx->pool_idx == 64) {
+            chacha20_refill_pool(ctx);
+        }
+        u8 plain = 0;
+        if (plain_text != 0) {
+            plain = *plain_text;
+            plain_text++;
+        }
+        *cipher_text = chacha20_pool_byte(ctx) ^ plain;
+        cipher_text++;
+    }
+}
+
 void crypto_chacha20_init(crypto_chacha_ctx *ctx,
                           const u8           key[32],
                           const u8           nonce[8])
@@ -215,23 +236,17 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                              const u8          *plain_text,
                              size_t             text_size)
 {
-    // Align ourselves with a block
-    while ((ctx->pool_idx & 63) != 0 && text_size > 0) {
-        u8 stream = chacha20_pool_byte(ctx);
-        u8 plain  = 0;
-        if (plain_text != 0) {
-            plain = *plain_text;
-            plain_text++;
-        }
-        *cipher_text = stream ^ plain;
-        text_size--;
-        cipher_text++;
+    // Align ourselves with block boundaries
+    size_t align = MIN(-ctx->pool_idx & 63, text_size);
+    chacha20_encrypt(ctx, cipher_text, plain_text, align);
+    if (plain_text != 0) {
+        plain_text += align;
     }
+    cipher_text += align;
+    text_size   -= align;
 
-    // Main processing by 64 byte chunks
-    size_t nb_blocks = text_size >> 6;
-    size_t remainder = text_size & 63;
-    FOR (i, 0, nb_blocks) {
+    // Process the message block by block
+    FOR (i, 0, text_size >> 6) {  // number of blocks
         chacha20_refill_pool(ctx);
         if (plain_text != 0) {
             FOR (j, 0, 16) {
@@ -248,20 +263,10 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
         }
         ctx->pool_idx = 64;
     }
+    text_size &= 63;
 
-    // Remaining input, byte by byte
-    FOR (i, 0, remainder) {
-        if (ctx->pool_idx == 64) {
-            chacha20_refill_pool(ctx);
-        }
-        u8 plain = 0;
-        if (plain_text != 0) {
-            plain = *plain_text;
-            plain_text++;
-        }
-        *cipher_text = chacha20_pool_byte(ctx) ^ plain;
-        cipher_text++;
-    }
+    // remaining bytes
+    chacha20_encrypt(ctx, cipher_text, plain_text, text_size);
 }
 
 void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
@@ -342,6 +347,18 @@ static void poly_take_input(crypto_poly1305_ctx *ctx, u8 input)
     ctx->c_idx++;
 }
 
+static void poly_update(crypto_poly1305_ctx *ctx,
+                        const u8 *message, size_t message_size)
+{
+    FOR (i, 0, message_size) {
+        poly_take_input(ctx, message[i]);
+        if (ctx->c_idx == 16) {
+            poly_block(ctx);
+            poly_clear_c(ctx);
+        }
+    }
+}
+
 void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 {
     // Initial hash is zero
@@ -360,19 +377,14 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const u8 *message, size_t message_size)
 {
-    // Align ourselves with a block
-    while ((ctx->c_idx & 15) != 0 && message_size > 0) {
-        poly_take_input(ctx, *message);
-        message++;
-        message_size--;
-    }
-    if (ctx->c_idx == 16) {
-        poly_block(ctx);
-        poly_clear_c(ctx);
-    }
-    // Process the input block by block
+    // Align ourselves with block boundaries
+    size_t align = MIN(-ctx->c_idx & 15, message_size);
+    poly_update(ctx, message, align);
+    message      += align;
+    message_size -= align;
+
+    // Process the message block by block
     size_t nb_blocks = message_size >> 4;
-    size_t remainder = message_size & 15;
     FOR (i, 0, nb_blocks) {
         ctx->c[0] = load32_le(message +  0);
         ctx->c[1] = load32_le(message +  4);
@@ -384,11 +396,10 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
     if (nb_blocks > 0) {
         poly_clear_c(ctx);
     }
+    message_size &= 15;
 
-    // Input the remaining bytes
-    FOR (i, 0, remainder) {
-        poly_take_input(ctx, message[i]);
-    }
+    // remaining bytes
+    poly_update(ctx, message, message_size);
 }
 
 void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
@@ -453,14 +464,6 @@ static void blake2b_incr(crypto_blake2b_ctx *ctx)
     }
 }
 
-static void blake2b_set_input(crypto_blake2b_ctx *ctx, u8 input)
-{
-    size_t word = ctx->input_idx >> 3;
-    size_t byte = ctx->input_idx & 7;
-    ctx->input[word] |= (u64)input << (byte * 8);
-    ctx->input_idx++;
-}
-
 static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 {
     static const u8 sigma[12][16] = {
@@ -518,12 +521,12 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
     ctx->hash[7] ^= v7 ^ v15;
 }
 
-static void blake2b_reset_input(crypto_blake2b_ctx *ctx)
+static void blake2b_set_input(crypto_blake2b_ctx *ctx, u8 input, size_t index)
 {
-    FOR (i, 0, 16) {
-        ctx->input[i] = 0;
-    }
-    ctx->input_idx = 0;
+    size_t word = index >> 3;
+    size_t byte = index & 7;
+    ctx->input[word] &= ~((u64)0xff  << (byte << 3));
+    ctx->input[word] |=   (u64)input << (byte << 3);
 }
 
 static void blake2b_end_block(crypto_blake2b_ctx *ctx)
@@ -531,14 +534,17 @@ static void blake2b_end_block(crypto_blake2b_ctx *ctx)
     if (ctx->input_idx == 128) {  // If buffer is full,
         blake2b_incr(ctx);        // update the input offset
         blake2b_compress(ctx, 0); // and compress the (not last) block
-        blake2b_reset_input(ctx);
+        ctx->input_idx = 0;
     }
 }
 
-static void blake2b_fill_block(crypto_blake2b_ctx *ctx, const u8 message[128])
+static void blake2b_update(crypto_blake2b_ctx *ctx,
+                           const u8 *message, size_t message_size)
 {
-    FOR (j, 0, 16) {
-        ctx->input[j] = load64_le(message + j*8);
+    FOR (i, 0, message_size) {
+        blake2b_end_block(ctx);
+        blake2b_set_input(ctx, message[i], ctx->input_idx);
+        ctx->input_idx++;
     }
 }
 
@@ -554,12 +560,15 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
     ctx->input_offset[0] = 0;         // begining of the input, no offset
     ctx->input_offset[1] = 0;         // begining of the input, no offset
     ctx->hash_size       = hash_size; // remember the hash size we want
-    blake2b_reset_input(ctx);         // clear the input buffer
+    ctx->input_idx       = 0;
 
-    // if there is a key, the first block is that key
+    // if there is a key, the first block is that key (padded with zeroes)
     if (key_size > 0) {
-        crypto_blake2b_update(ctx, key, key_size);
-        ctx->input_idx = 128;
+        u8 padded_key[128] = {0};
+        FOR (i, 0, key_size) {
+            padded_key[i] = key[i];
+        }
+        crypto_blake2b_update(ctx, padded_key, 128);
     }
 }
 
@@ -571,42 +580,33 @@ void crypto_blake2b_init(crypto_blake2b_ctx *ctx)
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const u8 *message, size_t message_size)
 {
-    // Align ourselves with blocks
-    while ((ctx->input_idx & 127) != 0 && message_size > 0) {
-        blake2b_set_input(ctx, *message);
-        message++;
-        message_size--;
-    }
+    // Align ourselves with block boundaries
+    size_t align = MIN(-ctx->input_idx & 127, message_size);
+    blake2b_update(ctx, message, align);
+    message      += align;
+    message_size -= align;
 
-    // Process the input one block at a time
-    size_t nb_blocks = message_size >> 7;
-    size_t remainder = message_size & 127;
-    if (nb_blocks > 0) {
-        // first block
+    // Process the message block by block
+    FOR (i, 0, message_size >> 7) { // number of blocks
         blake2b_end_block(ctx);
-        blake2b_fill_block(ctx, message);
+        FOR (j, 0, 16) {
+            ctx->input[j] = load64_le(message + j*8);
+        }
         message += 128;
         ctx->input_idx = 128;
-        // subsequent blocks
-        FOR (i, 0, nb_blocks - 1) {
-            blake2b_incr(ctx);
-            blake2b_compress(ctx, 0);
-            blake2b_fill_block(ctx, message);
-            message += 128;
-        }
     }
+    message_size &= 127;
 
-    // Load the remainder
-    if (remainder != 0) {
-        blake2b_end_block(ctx);
-    }
-    FOR (i, 0, remainder) {
-        blake2b_set_input(ctx, message[i]);
-    }
+    // remaining bytes
+    blake2b_update(ctx, message, message_size);
 }
 
 void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
 {
+    // Pad the end of the block with zeroes
+    FOR (i, ctx->input_idx, 128) {
+        blake2b_set_input(ctx, 0, i);
+    }
     blake2b_incr(ctx);         // update the input offset
     blake2b_compress(ctx, -1); // compress the last block
     size_t nb_words  = ctx->hash_size >> 3;
@@ -651,8 +651,6 @@ static void wipe_block(block *b)
     }
 }
 
-static u32 min(u32 a, u32 b) { return a <= b ? a : b; }
-
 // updates a blake2 hash with a 32 bit word, little endian.
 static void blake_update_32(crypto_blake2b_ctx *ctx, u32 input)
 {
@@ -688,7 +686,7 @@ static void extended_hash(u8       *digest, u32 digest_size,
                           const u8 *input , u32 input_size)
 {
     crypto_blake2b_ctx ctx;
-    crypto_blake2b_general_init(&ctx, min(digest_size, 64), 0, 0);
+    crypto_blake2b_general_init(&ctx, MIN(digest_size, 64), 0, 0);
     blake_update_32            (&ctx, digest_size);
     crypto_blake2b_update      (&ctx, input, input_size);
     crypto_blake2b_final       (&ctx, digest);
