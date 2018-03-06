@@ -282,11 +282,11 @@ void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
 
 // h = (h + c) * r
 // preconditions:
-//   ctx->h <= 7_ffffffff_ffffffff_ffffffff_ffffffff
+//   ctx->h <= 4_ffffffff_ffffffff_ffffffff_ffffffff
 //   ctx->c <= 1_ffffffff_ffffffff_ffffffff_ffffffff
 //   ctx->r <=   0ffffffc_0ffffffc_0ffffffc_0fffffff
 // Postcondition:
-//   ctx->h <= 4_87ffffe4_8fffffe2_97ffffe0_9ffffffa
+//   ctx->h <= 4_ffffffff_ffffffff_ffffffff_ffffffff
 static void poly_block(crypto_poly1305_ctx *ctx)
 {
     // s = h + c, without carry propagation
@@ -294,7 +294,7 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     const u64 s1 = ctx->h[1] + (u64)ctx->c[1]; // s1 <= 1_fffffffe
     const u64 s2 = ctx->h[2] + (u64)ctx->c[2]; // s2 <= 1_fffffffe
     const u64 s3 = ctx->h[3] + (u64)ctx->c[3]; // s3 <= 1_fffffffe
-    const u64 s4 = ctx->h[4] + (u64)ctx->c[4]; // s4 <=   00000004
+    const u64 s4 = ctx->h[4] + (u64)ctx->c[4]; // s4 <=          5
 
     // Local all the things!
     const u32 r0 = ctx->r[0];       // r0  <= 0fffffff
@@ -311,10 +311,10 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     const u64 x1 = s0*r1 + s1*r0  + s2*rr3 + s3*rr2 + s4*rr1;//<=8fffffe20ffffff6
     const u64 x2 = s0*r2 + s1*r1  + s2*r0  + s3*rr3 + s4*rr2;//<=87ffffe417fffff4
     const u64 x3 = s0*r3 + s1*r2  + s2*r1  + s3*r0  + s4*rr3;//<=7fffffe61ffffff2
-    const u32 x4 = s4 * (r0 & 3); // ...recover 2 bits       //<=0000000000000018
+    const u32 x4 = s4 * (r0 & 3); // ...recover 2 bits       //<=               f
 
     // partial reduction modulo 2^130 - 5
-    const u32 u5 = x4 + (x3 >> 32); // u5 <= 7ffffffe
+    const u32 u5 = x4 + (x3 >> 32); // u5 <= 7ffffff5
     const u64 u0 = (u5 >>  2) * 5 + (x0 & 0xffffffff);
     const u64 u1 = (u0 >> 32)     + (x1 & 0xffffffff) + (x0 >> 32);
     const u64 u2 = (u1 >> 32)     + (x2 & 0xffffffff) + (x1 >> 32);
@@ -322,7 +322,7 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     const u64 u4 = (u3 >> 32)     + (u5 & 3);
 
     // Update the hash
-    ctx->h[0] = u0 & 0xffffffff; // u0 <= 1_9ffffffa
+    ctx->h[0] = u0 & 0xffffffff; // u0 <= 1_9ffffff0
     ctx->h[1] = u1 & 0xffffffff; // u1 <= 1_97ffffe0
     ctx->h[2] = u2 & 0xffffffff; // u2 <= 1_8fffffe2
     ctx->h[3] = u3 & 0xffffffff; // u3 <= 1_87ffffe4
@@ -416,20 +416,23 @@ void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
 
     // check if we should subtract 2^130-5 by performing the
     // corresponding carry propagation.
-    u64 u = 5;
-    u += ctx->h[0];  u >>= 32;
-    u += ctx->h[1];  u >>= 32;
-    u += ctx->h[2];  u >>= 32;
-    u += ctx->h[3];  u >>= 32;
-    u += ctx->h[4];  u >>=  2;
-    // now u indicates how many times we should subtract 2^130-5 (0 or 1)
+    const u64 u0 = (u64)5     + ctx->h[0]; // <= 1_00000004
+    const u64 u1 = (u0 >> 32) + ctx->h[1]; // <= 1_00000000
+    const u64 u2 = (u1 >> 32) + ctx->h[2]; // <= 1_00000000
+    const u64 u3 = (u2 >> 32) + ctx->h[3]; // <= 1_00000000
+    const u64 u4 = (u3 >> 32) + ctx->h[4]; // <=          5
+    // u4 indicates how many times we should subtract 2^130-5 (0 or 1)
 
-    // store h + pad, minus 2^130-5 if u tells us to.
-    u *= 5;
-    u += (i64)(ctx->h[0]) + ctx->pad[0];  store32_le(mac     , u);  u >>= 32;
-    u += (i64)(ctx->h[1]) + ctx->pad[1];  store32_le(mac +  4, u);  u >>= 32;
-    u += (i64)(ctx->h[2]) + ctx->pad[2];  store32_le(mac +  8, u);  u >>= 32;
-    u += (i64)(ctx->h[3]) + ctx->pad[3];  store32_le(mac + 12, u);
+    // h + pad, minus 2^130-5 if u4 exceeds 3
+    const u64 uu0 = (u4 >> 2) * 5 + ctx->h[0] + ctx->pad[0]; // <= 2_00000003
+    const u64 uu1 = (uu0 >> 32)   + ctx->h[1] + ctx->pad[1]; // <= 2_00000000
+    const u64 uu2 = (uu1 >> 32)   + ctx->h[2] + ctx->pad[2]; // <= 2_00000000
+    const u64 uu3 = (uu2 >> 32)   + ctx->h[3] + ctx->pad[3]; // <= 2_00000000
+
+    store32_le(mac     , uu0);
+    store32_le(mac +  4, uu1);
+    store32_le(mac +  8, uu2);
+    store32_le(mac + 12, uu3);
 
     WIPE_CTX(ctx);
 }
