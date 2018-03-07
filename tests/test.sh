@@ -8,4 +8,6 @@ make clean;  make test CC="clang -std=c99" CFLAGS="-g -fsanitize=memory"
 make clean;  make test CC="clang -std=c99" CFLAGS="-g -fsanitize=undefined"
 make clean;  make test.out;  valgrind ./test.out
 
+echo
 echo "All sanitisers passed!"
+echo
