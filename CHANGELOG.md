@@ -1,3 +1,11 @@
+2.0.1
+-----
+2018/03/07
+
+- Followed a systematic pattern for the loading code of symmetric
+  crypto.  It is now easier to review.
+- Tweaked Poly1305 code to make it easier to prove correct.
+
 2.0.0
 -----
 2018/02/14
