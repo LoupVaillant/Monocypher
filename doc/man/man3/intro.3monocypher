@@ -169,7 +169,7 @@ functions, such as
 .Xr crypto_verify16 3monocypher ,
 .Xr crypto_verify32 3monocypher ,
 or
-.Xr crypto_verify32 3monocypher .
+.Xr crypto_verify64 3monocypher .
 Do not use standard comparison functions.
 They tend to stop as soon as a difference is spotted.
 In many cases, this enables attackers to recover the secrets and
