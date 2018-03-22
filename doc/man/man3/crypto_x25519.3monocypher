@@ -92,7 +92,7 @@ This function implements X25519, described in RFC 7748.
 If either of the long term secret keys leaks, it may compromise
 .Em all past messages .
 This can be avoided by using protocols that provide forward secrecy,
-such as the Double Ratchet Algorithm.
+such as the X3DH key agreement protocol.
 .Sh IMPLEMENTATION DETAILS
 The most significant bit of the public key is systematically ignored.
 It is not needed because every public key should be smaller than

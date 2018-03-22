@@ -95,7 +95,7 @@ uses HChacha20 as well.
 If either of the long term secret keys leaks, it may compromise
 .Em all past messages .
 This can be avoided by using protocols that provide forward secrecy,
-such as the Double Ratchet Algorithm.
+such as the X3DH key agreement protocol.
 .Sh IMPLEMENTATION DETAILS
 .Fn crypto_key_exchange_public_key
 is an alias to
