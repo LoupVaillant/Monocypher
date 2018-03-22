@@ -629,6 +629,40 @@ static int p_eddsa_overlap()
     return status;
 }
 
+static int p_eddsa_incremental()
+{
+    int status = 0;
+    u8 message[MESSAGE_SIZE];  p_random(message, 32);
+    FOR (i, 0, MESSAGE_SIZE) {
+        RANDOM_INPUT(message, MESSAGE_SIZE);
+        RANDOM_INPUT(sk, 32);
+        u8 pk      [32];  crypto_sign_public_key(pk, sk);
+        u8 sig_mono[64];  crypto_sign(sig_mono, sk, pk, message, MESSAGE_SIZE);
+        u8 sig_incr[64];
+        {
+            crypto_sign_ctx ctx;
+            crypto_sign_init_first_pass (&ctx, sk, pk);
+            crypto_sign_update          (&ctx, message    , i);
+            crypto_sign_update          (&ctx, message + i, MESSAGE_SIZE - i);
+            crypto_sign_init_second_pass(&ctx);
+            crypto_sign_update          (&ctx, message    , i);
+            crypto_sign_update          (&ctx, message + i, MESSAGE_SIZE - i);
+            crypto_sign_final           (&ctx, sig_incr);
+        }
+        status |= memcmp(sig_mono, sig_incr, 64);
+        status |= crypto_check(sig_mono, pk, message, MESSAGE_SIZE);
+        {
+            crypto_check_ctx ctx;
+            crypto_check_init  (&ctx, sig_incr, pk);
+            crypto_check_update(&ctx, message    , i);
+            crypto_check_update(&ctx, message + i, MESSAGE_SIZE - i);
+            status |= crypto_check_final(&ctx);
+        }
+    }
+    printf("%s: EdDSA (incremental)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 static int p_aead()
 {
     int status = 0;
@@ -797,6 +831,7 @@ int main(void)
     status |= p_eddsa_roundtrip();
     status |= p_eddsa_random();
     status |= p_eddsa_overlap();
+    status |= p_eddsa_incremental();
     status |= p_aead();
     status |= p_lock_incremental();
     status |= p_auth();
