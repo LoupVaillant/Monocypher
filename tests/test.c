@@ -147,12 +147,16 @@ static void argon2i(const vector in[], vector *out)
     u64 nb_iterations = load64_le(in[1].buf);
     const vector *password = in + 2;
     const vector *salt     = in + 3;
+    const vector *key      = in + 4;
+    const vector *ad       = in + 5;
 
     void *work_area = alloc(nb_blocks * 1024);
-    crypto_argon2i(out->buf, out->size,
-                   work_area, nb_blocks, nb_iterations,
-                   password->buf, password->size,
-                   salt    ->buf, salt    ->size);
+    crypto_argon2i_general(out->buf, out->size,
+                           work_area, nb_blocks, nb_iterations,
+                           password->buf, password->size,
+                           salt    ->buf, salt    ->size,
+                           key     ->buf, key     ->size,
+                           ad      ->buf, ad      ->size);
     free(work_area);
 }
 
@@ -768,7 +772,7 @@ int main(void)
     status |= TEST(aead_ietf   , 4);
     status |= TEST(blake2b     , 2);
     status |= TEST(sha512      , 1);
-    status |= TEST(argon2i     , 4);
+    status |= TEST(argon2i     , 6);
     status |= TEST(x25519      , 2);
     status |= TEST(key_exchange, 2);
     status |= TEST(edDSA       , 3);

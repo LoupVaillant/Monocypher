@@ -58,7 +58,7 @@ xchacha20.all.vec   : xchacha20.vec
 aead_ietf.all.vec   : aead_ietf.vec
 blake2b.all.vec     : blake2b.vec
 sha512.all.vec      : sha512.vec
-argon2i.all.vec     : argon2i.vec
+argon2i.all.vec     : argon2i.vec   ../vectors/argon2i
 edDSA.all.vec       : edDSA.vec
 key_exchange.all.vec:               ../vectors/key_exchange
 $(VEC2):
