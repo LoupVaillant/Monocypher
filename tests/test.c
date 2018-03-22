@@ -275,15 +275,12 @@ static int p_verify64(){ return p_verify(64, crypto_verify64); }
 
 // Tests that encrypting in chunks yields the same result than
 // encrypting all at once.
-static int p_chacha20(int use_input)
+static int p_chacha20()
 {
 #undef INPUT_SIZE
-#undef C_MAX_SIZE
 #define INPUT_SIZE (CHACHA_BLOCK_SIZE * 4) // total input size
-#define C_MAX_SIZE (CHACHA_BLOCK_SIZE * 2) // maximum chunk size
     int status = 0;
-    FOR (i, 0, 1000) {
-        size_t offset = 0;
+    FOR (i, 0, INPUT_SIZE) {
         // outputs
         u8 output_chunk[INPUT_SIZE];
         u8 output_whole[INPUT_SIZE];
@@ -295,33 +292,25 @@ static int p_chacha20(int use_input)
         // Encrypt in chunks
         crypto_chacha_ctx ctx;
         crypto_chacha20_init(&ctx, key, nonce);
-        while (1) {
-            size_t chunk_size = rand64() % C_MAX_SIZE;
-            if (offset + chunk_size > INPUT_SIZE) { break; }
-            u8 *out = output_chunk + offset;
-            u8 *in  = input        + offset;
-            if (use_input) {
-                crypto_chacha20_encrypt(&ctx, out, in, chunk_size);
-            } else {
-                crypto_chacha20_stream(&ctx, out, chunk_size);
-            }
-            offset += chunk_size;
-        }
+        crypto_chacha20_encrypt(&ctx, output_chunk  , input  , i);
+        crypto_chacha20_encrypt(&ctx, output_chunk+i, input+i, INPUT_SIZE-i);
         // Encrypt all at once
         crypto_chacha20_init(&ctx, key, nonce);
-        if (use_input) {
-            crypto_chacha20_encrypt(&ctx, output_whole, input, offset);
-        } else {
-            crypto_chacha20_stream(&ctx, output_whole, offset);
-        }
-        // Compare the results (must be the same)
-        status |= memcmp(output_chunk, output_whole, offset);
+        crypto_chacha20_encrypt(&ctx, output_whole, input, INPUT_SIZE);
+        // Compare
+        status |= memcmp(output_chunk, output_whole, INPUT_SIZE);
+
+        // Stream in chunks
+        crypto_chacha20_init(&ctx, key, nonce);
+        crypto_chacha20_stream(&ctx, output_chunk    , i);
+        crypto_chacha20_stream(&ctx, output_chunk + i, INPUT_SIZE - i);
+        // Stream all at once
+        crypto_chacha20_init(&ctx, key, nonce);
+        crypto_chacha20_stream(&ctx, output_whole, INPUT_SIZE);
+        // Compare
+        status |= memcmp(output_chunk, output_whole, INPUT_SIZE);
     }
-    if (use_input) {
-        printf("%s: Chacha20\n", status != 0 ? "FAILED" : "OK");
-    } else {
-        printf("%s: Chacha20 (stream)\n", status != 0 ? "FAILED" : "OK");
-    }
+    printf("%s: Chacha20 (incremental)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -385,12 +374,9 @@ static int p_chacha20_set_ctr()
 static int p_poly1305()
 {
 #undef INPUT_SIZE
-#undef C_MAX_SIZE
 #define INPUT_SIZE (POLY1305_BLOCK_SIZE * 4) // total input size
-#define C_MAX_SIZE (POLY1305_BLOCK_SIZE * 2) // maximum chunk size
     int status = 0;
-    FOR (i, 0, 1000) {
-        size_t offset = 0;
+    FOR (i, 0, INPUT_SIZE) {
         // outputs
         u8 mac_chunk[16];
         u8 mac_whole[16];
@@ -401,21 +387,17 @@ static int p_poly1305()
         // Authenticate bit by bit
         crypto_poly1305_ctx ctx;
         crypto_poly1305_init(&ctx, key);
-        while (1) {
-            size_t chunk_size = rand64() % C_MAX_SIZE;
-            if (offset + chunk_size > INPUT_SIZE) { break; }
-            crypto_poly1305_update(&ctx, input + offset, chunk_size);
-            offset += chunk_size;
-        }
+        crypto_poly1305_update(&ctx, input    , i);
+        crypto_poly1305_update(&ctx, input + i, INPUT_SIZE - i);
         crypto_poly1305_final(&ctx, mac_chunk);
 
         // Authenticate all at once
-        crypto_poly1305(mac_whole, input, offset, key);
+        crypto_poly1305(mac_whole, input, INPUT_SIZE, key);
 
         // Compare the results (must be the same)
         status |= memcmp(mac_chunk, mac_whole, 16);
     }
-    printf("%s: Poly1305\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: Poly1305 (incremental)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -444,12 +426,9 @@ static int p_poly1305_overlap()
 static int p_blake2b()
 {
 #undef INPUT_SIZE
-#undef C_MAX_SIZE
 #define INPUT_SIZE (BLAKE2B_BLOCK_SIZE * 4) // total input size
-#define C_MAX_SIZE (BLAKE2B_BLOCK_SIZE * 2) // maximum chunk size
     int status = 0;
-    FOR (i, 0, 1000) {
-        size_t offset = 0;
+    FOR (i, 0, INPUT_SIZE) {
         // outputs
         u8 hash_chunk[64];
         u8 hash_whole[64];
@@ -459,21 +438,17 @@ static int p_blake2b()
         // Authenticate bit by bit
         crypto_blake2b_ctx ctx;
         crypto_blake2b_init(&ctx);
-        while (1) {
-            size_t chunk_size = rand64() % C_MAX_SIZE;
-            if (offset + chunk_size > INPUT_SIZE) { break; }
-            crypto_blake2b_update(&ctx, input + offset, chunk_size);
-            offset += chunk_size;
-        }
+        crypto_blake2b_update(&ctx, input    , i);
+        crypto_blake2b_update(&ctx, input + i, INPUT_SIZE - i);
         crypto_blake2b_final(&ctx, hash_chunk);
 
         // Authenticate all at once
-        crypto_blake2b(hash_whole, input, offset);
+        crypto_blake2b(hash_whole, input, INPUT_SIZE);
 
         // Compare the results (must be the same)
         status |= memcmp(hash_chunk, hash_whole, 64);
     }
-    printf("%s: Blake2b\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: Blake2b (incremental)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -499,12 +474,9 @@ static int p_blake2b_overlap()
 static int p_sha512()
 {
 #undef INPUT_SIZE
-#undef C_MAX_SIZE
 #define INPUT_SIZE (SHA_512_BLOCK_SIZE * 4) // total input size
-#define C_MAX_SIZE (SHA_512_BLOCK_SIZE * 2) // maximum chunk size
     int status = 0;
-    FOR (i, 0, 1000) {
-        size_t offset = 0;
+    FOR (i, 0, INPUT_SIZE) {
         // outputs
         u8 hash_chunk[64];
         u8 hash_whole[64];
@@ -514,21 +486,17 @@ static int p_sha512()
         // Authenticate bit by bit
         crypto_sha512_ctx ctx;
         crypto_sha512_init(&ctx);
-        while (1) {
-            size_t chunk_size = rand64() % C_MAX_SIZE;
-            if (offset + chunk_size > INPUT_SIZE) { break; }
-            crypto_sha512_update(&ctx, input + offset, chunk_size);
-            offset += chunk_size;
-        }
+        crypto_sha512_update(&ctx, input    , i);
+        crypto_sha512_update(&ctx, input + i, INPUT_SIZE - i);
         crypto_sha512_final(&ctx, hash_chunk);
 
         // Authenticate all at once
-        crypto_sha512(hash_whole, input, offset);
+        crypto_sha512(hash_whole, input, INPUT_SIZE);
 
         // Compare the results (must be the same)
         status |= memcmp(hash_chunk, hash_whole, 64);
     }
-    printf("%s: Sha512\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: Sha512 (incremental)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -608,7 +576,7 @@ static int p_eddsa_roundtrip()
         u8 signature[64];  crypto_sign(signature, sk, pk, message, MESSAGE_SIZE);
         status |= crypto_check(signature, pk, message, MESSAGE_SIZE);
     }
-    printf("%s: EdDSA roundtrip\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: EdDSA (roundtrip)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -624,7 +592,7 @@ static int p_eddsa_random()
         RANDOM_INPUT(signature , 64);
         status |= ~crypto_check(signature, pk, message, MESSAGE_SIZE);
     }
-    printf("%s: EdDSA random\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: EdDSA (random)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -713,7 +681,7 @@ static int p_aead()
         crypto_lock_aead(box2, box2 + 16, key, nonce, 0, 0, plaintext, 8);
         status |= memcmp(box, box2, 24);
     }
-    printf("%s: aead\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: aead (roundtrip)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -835,8 +803,7 @@ int main(void)
     status |= p_verify16();
     status |= p_verify32();
     status |= p_verify64();
-    status |= p_chacha20(1);
-    status |= p_chacha20(0);
+    status |= p_chacha20();
     status |= p_chacha20_same_ptr();
     status |= p_chacha20_set_ctr();
     status |= p_poly1305();
