@@ -571,7 +571,7 @@ static int p_argon2i_overlap()
 {
     int status = 0;
     FOR (i, 0, 128) {
-        RANDOM_INPUT(work_area, 1024 * 8);
+        u8 *work_area = (u8*)alloc(1024 * 8);  p_random(work_area, 1024 * 8);
         u32 pass_offset = rand64() % 128;
         u32 salt_offset = rand64() % 128;
         u32 key_offset  = rand64() % 128;
