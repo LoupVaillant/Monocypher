@@ -30,8 +30,8 @@ void test(size_t nb_blocks, size_t hash_size, size_t nb_iterations)
 int main(void)
 {
     SODIUM_INIT;
-    FOR (nb_blocks    ,  8, 1024) { test(nb_blocks, 32       , 3            ); }
-    FOR (hash_size    , 16,  256) { test(8        , hash_size, 3            ); }
-    FOR (nb_iterations,  3,   10) { test(8        , 32       , nb_iterations); }
+    FOR (nb_blocks    , 384, 640) { test(nb_blocks, 32       , 3            ); }
+    FOR (hash_size    ,  16, 256) { test(8        , hash_size, 3            ); }
+    FOR (nb_iterations,   3,  10) { test(8        , 32       , nb_iterations); }
     return 0;
 }

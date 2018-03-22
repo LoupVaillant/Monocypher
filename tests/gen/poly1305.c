@@ -3,8 +3,8 @@
 
 void test(size_t size)
 {
-    RANDOM_INPUT(key,  32);
-    RANDOM_INPUT(in , 256);
+    RANDOM_INPUT(key, 32);
+    RANDOM_INPUT(in , 32);
     u8 tag[ 16];
 
     crypto_onetimeauth(tag, in, size, key);
@@ -18,6 +18,6 @@ void test(size_t size)
 int main(void)
 {
     SODIUM_INIT;
-    FOR (size, 0, 256) { test(size); }
+    FOR (size, 0, 32) { test(size); }
     return 0;
 }
