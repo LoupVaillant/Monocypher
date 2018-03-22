@@ -549,6 +549,24 @@ static int p_sha512_overlap()
     return status;
 }
 
+static int p_argon2i_easy()
+{
+    int status = 0;
+    FOR (i, 0, 128) {
+        RANDOM_INPUT(password , 32);
+        RANDOM_INPUT(salt     , 16);
+        u8 *work_area = (u8*)alloc(1024 * 8);
+        u8 hash_general[32];
+        u8 hash_easy   [32];
+        crypto_argon2i_general(hash_general, 32, work_area, 8, 1,
+                               password, 32, salt, 16, 0, 0, 0, 0);
+        crypto_argon2i(hash_easy, 32, work_area, 8, 1, password, 32, salt, 16);
+        status |= memcmp(hash_general, hash_easy, 32);
+   }
+    printf("%s: Argon2i (easy interface)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 static int p_argon2i_overlap()
 {
     int status = 0;
@@ -827,6 +845,7 @@ int main(void)
     status |= p_blake2b_overlap();
     status |= p_sha512();
     status |= p_sha512_overlap();
+    status |= p_argon2i_easy();
     status |= p_argon2i_overlap();
     status |= p_eddsa_roundtrip();
     status |= p_eddsa_random();
