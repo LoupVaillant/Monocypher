@@ -1,8 +1,9 @@
 #include "sha512.h"
 
-#define FOR(i, min, max) for (size_t i = min; i < max; i++)
-#define WIPE_CTX(ctx)    crypto_wipe(ctx   , sizeof(*(ctx)))
-#define MIN(a, b)       ((a) <= (b) ? (a) : (b))
+#define FOR(i, min, max)     for (size_t i = min; i < max; i++)
+#define WIPE_CTX(ctx)        crypto_wipe(ctx   , sizeof(*(ctx)))
+#define MIN(a, b)            ((a) <= (b) ? (a) : (b))
+#define ALIGN(x, block_size) ((~(x) + 1) & ((block_size) - 1))
 typedef uint8_t u8;
 typedef uint64_t u64;
 
@@ -154,7 +155,7 @@ void crypto_sha512_update(crypto_sha512_ctx *ctx,
                           const u8 *message, size_t message_size)
 {
     // Align ourselves with block boundaries
-    size_t align = MIN(-ctx->input_idx & 127, message_size);
+    size_t align = MIN(ALIGN(ctx->input_idx, 128), message_size);
     sha512_update(ctx, message, align);
     message      += align;
     message_size -= align;

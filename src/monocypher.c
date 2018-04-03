@@ -20,16 +20,16 @@
 #define HASH_UPDATE COMBINE2(HASH, _update)
 #define HASH_FINAL  COMBINE2(HASH, _final)
 
-#define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
-#define WIPE_CTX(ctx)       crypto_wipe(ctx   , sizeof(*(ctx)))
-#define WIPE_BUFFER(buffer) crypto_wipe(buffer, sizeof(buffer))
+#define FOR(i, start, end)   for (size_t (i) = (start); (i) < (end); (i)++)
+#define WIPE_CTX(ctx)        crypto_wipe(ctx   , sizeof(*(ctx)))
+#define WIPE_BUFFER(buffer)  crypto_wipe(buffer, sizeof(buffer))
+#define MIN(a, b)            ((a) <= (b) ? (a) : (b))
+#define ALIGN(x, block_size) ((~(x) + 1) & ((block_size) - 1))
 typedef uint8_t  u8;
 typedef uint32_t u32;
 typedef int32_t  i32;
 typedef int64_t  i64;
 typedef uint64_t u64;
-
-#define MIN(a, b) ((a) <= (b) ? (a) : (b))
 
 static u32 load24_le(const u8 s[3])
 {
@@ -237,7 +237,7 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                              size_t             text_size)
 {
     // Align ourselves with block boundaries
-    size_t align = MIN(-ctx->pool_idx & 63, text_size);
+    size_t align = MIN(ALIGN(ctx->pool_idx, 64), text_size);
     chacha20_encrypt(ctx, cipher_text, plain_text, align);
     if (plain_text != 0) {
         plain_text += align;
@@ -378,7 +378,7 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const u8 *message, size_t message_size)
 {
     // Align ourselves with block boundaries
-    size_t align = MIN(-ctx->c_idx & 15, message_size);
+    size_t align = MIN(ALIGN(ctx->c_idx, 16), message_size);
     poly_update(ctx, message, align);
     message      += align;
     message_size -= align;
@@ -584,7 +584,7 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const u8 *message, size_t message_size)
 {
     // Align ourselves with block boundaries
-    size_t align = MIN(-ctx->input_idx & 127, message_size);
+    size_t align = MIN(ALIGN(ctx->input_idx, 128), message_size);
     blake2b_update(ctx, message, align);
     message      += align;
     message_size -= align;
@@ -1712,7 +1712,7 @@ static void lock_ad_padding(crypto_lock_ctx *ctx)
     static const u8 zero[15] = {0};
     if (ctx->ad_phase) {
         ctx->ad_phase = 0;
-        crypto_poly1305_update(&ctx->poly, zero, -ctx->ad_size & 15);
+        crypto_poly1305_update(&ctx->poly, zero, ALIGN(ctx->ad_size, 16));
     }
 }
 
@@ -1756,7 +1756,7 @@ void crypto_lock_final(crypto_lock_ctx *ctx, u8 mac[16])
     u8 sizes[16];
     store64_le(sizes + 0, ctx->ad_size);
     store64_le(sizes + 8, ctx->message_size);
-    crypto_poly1305_update(&ctx->poly, zero, -ctx->message_size & 15);
+    crypto_poly1305_update(&ctx->poly, zero, ALIGN(ctx->message_size, 16));
     crypto_poly1305_update(&ctx->poly, sizes, 16);
     crypto_poly1305_final (&ctx->poly, mac);
     WIPE_CTX(ctx);
