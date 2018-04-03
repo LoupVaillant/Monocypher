@@ -61,7 +61,7 @@ static void store32_le(u8 out[4], u32 in)
 
 static void store64_le(u8 out[8], u64 in)
 {
-    store32_le(out    , in      );
+    store32_le(out    , (u32)in );
     store32_le(out + 4, in >> 32);
 }
 
@@ -294,7 +294,7 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     const u64 s1 = ctx->h[1] + (u64)ctx->c[1]; // s1 <= 1_fffffffe
     const u64 s2 = ctx->h[2] + (u64)ctx->c[2]; // s2 <= 1_fffffffe
     const u64 s3 = ctx->h[3] + (u64)ctx->c[3]; // s3 <= 1_fffffffe
-    const u64 s4 = ctx->h[4] + (u64)ctx->c[4]; // s4 <=          5
+    const u32 s4 = ctx->h[4] +      ctx->c[4]; // s4 <=          5
 
     // Local all the things!
     const u32 r0 = ctx->r[0];       // r0  <= 0fffffff
@@ -326,7 +326,7 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     ctx->h[1] = u1 & 0xffffffff; // u1 <= 1_97ffffe0
     ctx->h[2] = u2 & 0xffffffff; // u2 <= 1_8fffffe2
     ctx->h[3] = u3 & 0xffffffff; // u3 <= 1_87ffffe4
-    ctx->h[4] = u4;              // u4 <=          4
+    ctx->h[4] = (u32)u4;         // u4 <=          4
 }
 
 // (re-)initializes the input counter and input buffer
@@ -429,10 +429,10 @@ void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
     const u64 uu2 = (uu1 >> 32)   + ctx->h[2] + ctx->pad[2]; // <= 2_00000000
     const u64 uu3 = (uu2 >> 32)   + ctx->h[3] + ctx->pad[3]; // <= 2_00000000
 
-    store32_le(mac     , uu0);
-    store32_le(mac +  4, uu1);
-    store32_le(mac +  8, uu2);
-    store32_le(mac + 12, uu3);
+    store32_le(mac     , (u32)uu0);
+    store32_le(mac +  4, (u32)uu1);
+    store32_le(mac +  8, (u32)uu2);
+    store32_le(mac + 12, (u32)uu3);
 
     WIPE_CTX(ctx);
 }
@@ -945,19 +945,20 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
         int first_pass = pass_number == 0;
 
         FOR (segment, 0, 4) {
-            gidx_init(&ctx, pass_number, segment, nb_blocks, nb_iterations);
+            gidx_init(&ctx, (u32)pass_number, (u32)segment,
+                      nb_blocks, nb_iterations);
 
             // On the first segment of the first pass,
             // blocks 0 and 1 are already filled.
             // We use the offset to skip them.
             u32 start_offset  = first_pass && segment == 0 ? 2 : 0;
-            u32 segment_start = segment * segment_size + start_offset;
-            u32 segment_end   = (segment + 1) * segment_size;
+            u32 segment_start = (u32)segment * segment_size + start_offset;
+            u32 segment_end   = ((u32)segment + 1) * segment_size;
             FOR (current_block, segment_start, segment_end) {
                 u32 reference_block = gidx_next(&ctx);
                 u32 previous_block  = current_block == 0
                                     ? nb_blocks - 1
-                                    : current_block - 1;
+                                    : (u32)current_block - 1;
                 block *c = blocks + current_block;
                 block *p = blocks + previous_block;
                 block *r = blocks + reference_block;
@@ -1034,8 +1035,8 @@ static void fe_cswap(fe f, fe g, int b)
     c4 = (t4 + (i64) (1<<25)) >> 26; t5 += c4;      t4 -= c4 * (1 << 26); \
     c6 = (t6 + (i64) (1<<25)) >> 26; t7 += c6;      t6 -= c6 * (1 << 26); \
     c8 = (t8 + (i64) (1<<25)) >> 26; t9 += c8;      t8 -= c8 * (1 << 26); \
-    h[0] = t0;  h[1] = t1;  h[2] = t2;  h[3] = t3;  h[4] = t4;          \
-    h[5] = t5;  h[6] = t6;  h[7] = t7;  h[8] = t8;  h[9] = t9
+    h[0]=(i32)t0;  h[1]=(i32)t1;  h[2]=(i32)t2;  h[3]=(i32)t3;  h[4]=(i32)t4; \
+    h[5]=(i32)t5;  h[6]=(i32)t6;  h[7]=(i32)t7;  h[8]=(i32)t8;  h[9]=(i32)t9
 
 static void fe_frombytes(fe h, const u8 s[32])
 {
@@ -1112,8 +1113,8 @@ static void fe_mul(fe h, const fe f, const fe g)
     c8 = (h8 + (i64) (1<<25)) >> 26; h9 += c8;      h8 -= c8 * (1 << 26); \
     c9 = (h9 + (i64) (1<<24)) >> 25; h0 += c9 * 19; h9 -= c9 * (1 << 25); \
     c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 * (1 << 26); \
-    h[0] = h0;  h[1] = h1;  h[2] = h2;  h[3] = h3;  h[4] = h4;            \
-    h[5] = h5;  h[6] = h6;  h[7] = h7;  h[8] = h8;  h[9] = h9;            \
+    h[0]=(i32)h0;  h[1]=(i32)h1;  h[2]=(i32)h2;  h[3]=(i32)h3;  h[4]=(i32)h4; \
+    h[5]=(i32)h5;  h[6]=(i32)h6;  h[7]=(i32)h7;  h[8]=(i32)h8;  h[9]=(i32)h9; \
 
     CARRY;
 }
