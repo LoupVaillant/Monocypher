@@ -222,6 +222,7 @@ void crypto_chacha20_x_init(crypto_chacha_ctx *ctx,
     u8 derived_key[32];
     crypto_chacha20_H(derived_key, key, nonce);
     crypto_chacha20_init(ctx, derived_key, nonce + 16);
+    WIPE_BUFFER(derived_key);
 }
 
 void crypto_chacha20_set_ctr(crypto_chacha_ctx *ctx, u64 ctr)
@@ -567,11 +568,9 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
 
     // if there is a key, the first block is that key (padded with zeroes)
     if (key_size > 0) {
-        u8 padded_key[128] = {0};
-        FOR (i, 0, key_size) {
-            padded_key[i] = key[i];
-        }
-        crypto_blake2b_update(ctx, padded_key, 128);
+        static const u8 zero[128] = {0};
+        crypto_blake2b_update(ctx, key ,       key_size);
+        crypto_blake2b_update(ctx, zero, 128 - key_size);
     }
 }
 
@@ -1368,6 +1367,7 @@ static void ge_tobytes(u8 s[32], const ge *h)
     fe_tobytes(s, y);
     s[31] ^= fe_isnegative(x) << 7;
 
+    WIPE_BUFFER(recip);
     WIPE_BUFFER(x);
     WIPE_BUFFER(y);
 }
@@ -1453,7 +1453,7 @@ static void ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
                           33312638, 25456129, 14121551, 54921728,  3972023 };
 
     // convert q to montgomery format
-    fe x1, y1, z1, x2, z2, x3, z3, t1, t2, t3, t4;
+    fe x1, x2, x3, y1, z1, z2, z3, t1, t2, t3, t4;
     fe_sub(z1, q->Z, q->Y);  fe_mul(z1, z1, q->X);  fe_invert(z1, z1);
     fe_add(t1, q->Z, q->Y);
     fe_mul(x1, q->X, t1  );  fe_mul(x1, x1, z1);
@@ -1530,7 +1530,6 @@ static void modL(u8 *r, i64 x[64])
         x[i+1] += x[i] >> 8;
         r[i  ]  = x[i] & 255;
     }
-    crypto_wipe(x, 64 * sizeof(i64));
 }
 
 static void reduce(u8 r[64])
@@ -1598,6 +1597,7 @@ void crypto_sign_init_second_pass(crypto_sign_ctx *ctx)
     ge R;
     ge_scalarmult_base(&R, r);
     ge_tobytes(half_sig, &R);
+    WIPE_CTX(&R);
 
     // Hash R, the public key, and the message together.
     // It cannot be done in parallel with the first hash.
@@ -1753,7 +1753,7 @@ void crypto_lock_final(crypto_lock_ctx *ctx, u8 mac[16])
 {
     lock_ad_padding(ctx);
     static const u8 zero[15] = {0};
-    u8 sizes[16];
+    u8 sizes[16]; // Not secret, not wiped
     store64_le(sizes + 0, ctx->ad_size);
     store64_le(sizes + 8, ctx->message_size);
     crypto_poly1305_update(&ctx->poly, zero, ALIGN(ctx->message_size, 16));
