@@ -31,6 +31,8 @@ typedef int32_t  i32;
 typedef int64_t  i64;
 typedef uint64_t u64;
 
+static const u8 zero[128] = {0};
+
 static u32 load24_le(const u8 s[3])
 {
     return (u32)s[0]
@@ -88,7 +90,6 @@ int crypto_verify64(const u8 a[64], const u8 b[64]){ return neq0(x64(a, b)); }
 
 static int zerocmp32(const u8 p[32])
 {
-    u8 zero[32] = {0};
     return crypto_verify32(p, zero);
 }
 
@@ -568,7 +569,6 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
 
     // if there is a key, the first block is that key (padded with zeroes)
     if (key_size > 0) {
-        static const u8 zero[128] = {0};
         crypto_blake2b_update(ctx, key ,       key_size);
         crypto_blake2b_update(ctx, zero, 128 - key_size);
     }
@@ -1695,7 +1695,6 @@ int crypto_key_exchange(u8       shared_key[32],
                         const u8 your_secret_key [32],
                         const u8 their_public_key[32])
 {
-    static const u8 zero[16] = {0};
     u8 raw_shared_secret[32];
     int status = crypto_x25519(raw_shared_secret,
                                your_secret_key, their_public_key);
@@ -1709,7 +1708,6 @@ int crypto_key_exchange(u8       shared_key[32],
 ////////////////////////////////
 static void lock_ad_padding(crypto_lock_ctx *ctx)
 {
-    static const u8 zero[15] = {0};
     if (ctx->ad_phase) {
         ctx->ad_phase = 0;
         crypto_poly1305_update(&ctx->poly, zero, ALIGN(ctx->ad_size, 16));
@@ -1752,7 +1750,6 @@ void crypto_lock_update(crypto_lock_ctx *ctx, u8 *cipher_text,
 void crypto_lock_final(crypto_lock_ctx *ctx, u8 mac[16])
 {
     lock_ad_padding(ctx);
-    static const u8 zero[15] = {0};
     u8 sizes[16]; // Not secret, not wiped
     store64_le(sizes + 0, ctx->ad_size);
     store64_le(sizes + 8, ctx->message_size);
