@@ -155,6 +155,7 @@ specifies a 64-byte hash and no key.
 This is considered a good default.
 .Sh RETURN VALUES
 These functions return nothing.
+They cannot fail.
 .Sh EXAMPLES
 Hashing a message all at once:
 .Bd -literal -offset indent
