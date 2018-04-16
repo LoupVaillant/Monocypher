@@ -96,6 +96,11 @@ Must be between 0 and 64.
 The message to hash.
 May overlap with
 .Fa hash .
+May be
+.Dv NULL
+if
+.Fa message_size
+is 0.
 .It Fa message_size
 Length of
 .Fa message ,
