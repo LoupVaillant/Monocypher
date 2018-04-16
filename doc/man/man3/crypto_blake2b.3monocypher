@@ -210,7 +210,7 @@ crypto_blake2b_final(&ctx, hash);
 .Sh STANDARDS
 These functions implement BLAKE2b.
 .Sh CAVEATS
-Monocypher does not perform any input verification.
+Monocypher does not perform any input validation.
 Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .
