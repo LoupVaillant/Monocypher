@@ -54,7 +54,7 @@ These functions are variants of
 .Xr crypto_sign 3monocypher
 and
 .Xr crypto_check 3monocypher .
-Prefer those more simple functions if possible.
+Prefer those simpler functions if possible.
 .Pp
 The arguments are the same as those described in
 .Xr crypto_sign 3monocypher .
