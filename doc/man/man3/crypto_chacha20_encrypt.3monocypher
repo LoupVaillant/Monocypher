@@ -176,8 +176,7 @@ Resuming the encryption will use the stream at the block
 .Ql ctr \(mu 64 ) .
 This can be used to encrypt (or decrypt) part of a long message, or to
 implement some AEAD constructions such as the one described in RFC
-7539 (not implemented in Monocypher because of its complexity and
-limitations).
+7539.
 Be careful when using this not to accidentally reuse parts of the
 random stream as that would destroy confidentiality.
 .Sh RETURN VALUES
