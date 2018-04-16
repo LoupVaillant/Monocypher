@@ -7,7 +7,7 @@
 .Nm crypto_chacha20_x_init ,
 .Nm crypto_chacha20_stream ,
 .Nm crypto_chacha20_set_ctr
-.Nd Chacha20 encryption
+.Nd Chacha20 and XChacha20 encryption
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
