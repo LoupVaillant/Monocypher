@@ -102,7 +102,6 @@ Update with
 .It
 Signature verification with
 .Fn crypto_check_final .
-This also wipes the context.
 .El
 .Sh RETURN VALUES
 .Fn crypto_sign_init_first_pass ,

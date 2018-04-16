@@ -1676,6 +1676,7 @@ int crypto_check_final(crypto_check_ctx *ctx)
     ge_add(&diff, &p, &sB);                    // diff = s - A*h_ram
     ge_tobytes(R_check, &diff);
     return crypto_verify32(ctx->sig, R_check); // R == s - A*h_ram ? OK : fail
+    // No secret, no wipe
 }
 
 int crypto_check(const u8  signature[64],
