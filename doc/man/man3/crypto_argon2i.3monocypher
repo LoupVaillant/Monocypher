@@ -181,7 +181,8 @@ in bytes.
 Must be zero if there is no additional data.
 .El
 .Sh RETURN VALUES
-This function returns nothing.
+These functions return nothing.
+They cannot fail.
 .Sh EXAMPLES
 This example shows how to hash a password with the recommended baseline
 parameters:
@@ -210,7 +211,7 @@ free(work_area);
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-This function implements Argon2i.
+These functions implement Argon2i.
 An RFC draft is being maintained.
 .Sh CAVEATS
 Any deviation from the specified input and output length ranges results
