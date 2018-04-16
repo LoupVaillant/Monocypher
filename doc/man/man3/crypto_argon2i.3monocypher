@@ -14,9 +14,9 @@
 .Fa "uint32_t nb_blocks"
 .Fa "uint32_t nb_iterations"
 .Fa "const uint8_t *password"
-.Fa "const uint32_t password_size"
+.Fa "uint32_t password_size"
 .Fa "const uint8_t *salt"
-.Fa "const uint32_t salt_size"
+.Fa "uint32_t salt_size"
 .Fc
 .Ft void
 .Fo crypto_argon2i_general
@@ -26,13 +26,13 @@
 .Fa "uint32_t nb_blocks"
 .Fa "uint32_t nb_iterations"
 .Fa "const uint8_t *password"
-.Fa "const uint32_t password_size"
+.Fa "uint32_t password_size"
 .Fa "const uint8_t *salt"
-.Fa "const uint32_t salt_size"
+.Fa "uint32_t salt_size"
 .Fa "const uint8_t *key"
-.Fa "const uint32_t key_size"
+.Fa "uint32_t key_size"
 .Fa "const uint8_t *ad"
-.Fa "const uint32_t ad_size"
+.Fa "uint32_t ad_size"
 .Fc
 .Sh DESCRIPTION
 Argon2i is a resource intensive password key derivation scheme
