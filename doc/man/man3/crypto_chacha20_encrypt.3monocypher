@@ -77,7 +77,8 @@ will then contain the raw Chacha20 stream.
 The encrypted message.
 .It Fa text_size
 Length of both
-.Fa plain_text and
+.Fa plain_text
+and
 .Fa cipher_text ,
 in bytes.
 .It Fa stream
