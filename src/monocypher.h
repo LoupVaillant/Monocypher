@@ -48,6 +48,7 @@ typedef struct {
 
 // Signatures (EdDSA)
 #ifdef ED25519_SHA512
+#include "sha512.h"
 typedef crypto_sha512_ctx crypto_hash_ctx;
 #else
 typedef crypto_blake2b_ctx crypto_hash_ctx;
