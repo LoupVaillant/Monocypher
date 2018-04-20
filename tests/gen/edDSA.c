@@ -1,4 +1,3 @@
-#include <sodium.h>
 #include "utils.h"
 #include "ed25519.h"
 
@@ -19,7 +18,6 @@ void test(size_t msg_size)
 
 int main(void)
 {
-    SODIUM_INIT;
     FOR (msg_size, 0, 256) { test(msg_size); }
     return 0;
 }
