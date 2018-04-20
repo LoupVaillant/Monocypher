@@ -527,7 +527,7 @@ static int p_argon2i_easy()
     FOR (i, 0, 128) {
         RANDOM_INPUT(password , 32);
         RANDOM_INPUT(salt     , 16);
-        u8 *work_area = (u8*)alloc(1024 * 8);
+        RANDOM_INPUT(work_area, 1024 * 8);
         u8 hash_general[32];
         u8 hash_easy   [32];
         crypto_argon2i_general(hash_general, 32, work_area, 8, 1,
@@ -543,7 +543,7 @@ static int p_argon2i_overlap()
 {
     int status = 0;
     FOR (i, 0, 128) {
-        u8 *work_area = (u8*)alloc(1024 * 8);  p_random(work_area, 1024 * 8);
+        RANDOM_INPUT(work_area, 1024 * 8);
         u32 pass_offset = rand64() % 128;
         u32 salt_offset = rand64() % 128;
         u32 key_offset  = rand64() % 128;
