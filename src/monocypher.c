@@ -8,7 +8,6 @@
 // option for full ed25519 compatibility. To use with SHA-512, compile
 // with option -DED25519_SHA512 and provide the "sha512" header.
 #ifdef ED25519_SHA512
-    #include "sha512.h"
     #define HASH crypto_sha512
 #else
     #define HASH crypto_blake2b
