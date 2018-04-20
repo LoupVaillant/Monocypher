@@ -194,6 +194,10 @@ static void edDSA(const vector in[], vector *out)
     }
 }
 
+#ifdef ED25519_SHA512
+static void (*ed_25519)(const vector[], vector*) = edDSA;
+#endif
+
 static void iterate_x25519(u8 k[32], u8 u[32])
 {
     u8 tmp[32];
@@ -795,7 +799,11 @@ int main(void)
     status |= TEST(argon2i     , 6);
     status |= TEST(x25519      , 2);
     status |= TEST(key_exchange, 2);
+#ifdef ED25519_SHA512
+    status |= TEST(ed_25519    , 3);
+#else
     status |= TEST(edDSA       , 3);
+#endif
     status |= test_x25519();
 
     printf("\nProperty based tests");

@@ -7,7 +7,7 @@ HASH   =
 .PHONY: all clean
 
 VEC     = chacha20.vec xchacha20.vec aead_ietf.vec poly1305.vec blake2b.vec \
-          sha512.vec   argon2i.vec   edDSA.vec     x25519.vec
+          sha512.vec   argon2i.vec   edDSA.vec     ed_25519.vec x25519.vec
 VEC2    = $(patsubst %.vec, %.all.vec, $(VEC)) key_exchange.all.vec
 HEADERS = $(patsubst %.all.vec, %.h.vec, $(VEC2))
 VECTORS = ../vectors.h
@@ -60,6 +60,7 @@ blake2b.all.vec     : blake2b.vec
 sha512.all.vec      : sha512.vec
 argon2i.all.vec     : argon2i.vec   ../vectors/argon2i
 edDSA.all.vec       : edDSA.vec
+ed_25519.all.vec    : ed_25519.vec
 key_exchange.all.vec:               ../vectors/key_exchange
 $(VEC2):
 	mkdir -p $(@D)
