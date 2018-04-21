@@ -235,3 +235,11 @@ to disk regardless of swap policy, as well as virtual machine snapshots.
 Erasing secrets with
 .Xr crypto_wipe 3monocypher
 is often the only way to mitigate these dangers.
+.Ss Undefined behaviour
+Monocypher is a C library.
+C is notoriously unsafe.
+Using Monocypher incorrectly can trigger undefined behaviour.
+This can lead to data corruption, data theft, or even arbitrary code
+execution.
+.Pp
+Consider binding to a safe language if possible.
