@@ -29,7 +29,7 @@ clean:
             -I ../../src/optional \
             $$(pkg-config --cflags libsodium)
 
-%.out: %.o monocypher.o ed25519.o
+%.out: %.o ed25519.o
 	$(CC) $(CFLAGS) -o $@ $^ \
             $$(pkg-config --libs libsodium)
 
@@ -42,11 +42,6 @@ ed25519.o: ../ed25519-donna/ed25519.c  $(wildcard ../ed25519-donna/*.h)
             -DED25519_TEST          \
             -DED25519_NO_INLINE_ASM \
             -DED25519_FORCE_32BIT
-
-monocypher.o: ../../src/monocypher.c      ../../src/monocypher.h
-m_sha512.o  : ../../src/optional/sha512.c ../../src/optional/sha512.h
-monocypher.o m_sha512.o:
-	$(CC) $(CFLAGS) -c $< -I ../../src -I ../../src/optional
 
 vector_to_header.out: ../vector_to_header.c
 	$(CC) $(CFLAGS) $< -o $@
