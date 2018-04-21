@@ -58,7 +58,6 @@ process are not known to be trustworthy, check the return value.
 .Pp
 .Fn crypto_key_exchange_public_key
 returns nothing.
-It cannot fail.
 .Sh EXAMPLES
 Generate a public key from a randomly generated secret key:
 .Bd -literal -offset indent

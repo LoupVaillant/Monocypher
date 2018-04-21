@@ -133,7 +133,6 @@ Verify the MAC with
 and
 .Fn crypto_lock_final
 return nothing.
-They cannot fail.
 .Pp
 .Fn crypto_unlock_final
 returns 0 on success or -1 if the message was corrupted.

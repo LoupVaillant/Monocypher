@@ -161,7 +161,6 @@ An incremental interface is available; see
 and
 .Fn crypto_lock_aead
 return nothing.
-They cannot fail.
 .Fn crypto_unlock
 and
 .Fn crypto_unlock_aead

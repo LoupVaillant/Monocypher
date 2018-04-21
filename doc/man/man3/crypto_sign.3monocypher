@@ -94,7 +94,6 @@ An incremental interface is available; see
 and
 .Fn crypto_sign
 return nothing.
-They cannot fail.
 .Pp
 .Fn crypto_check
 returns 0 for legitimate messages and -1 for forgeries.

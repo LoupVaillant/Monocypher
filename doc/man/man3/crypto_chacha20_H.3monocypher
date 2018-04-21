@@ -39,7 +39,6 @@ X25519 shared secrets have enough entropy.
 .El
 .Sh RETURN VALUES
 This function returns nothing.
-It cannot fail.
 .Sh EXAMPLES
 Simple hash:
 .Bd -literal -offset indent

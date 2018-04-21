@@ -181,7 +181,6 @@ Be careful when using this not to accidentally reuse parts of the
 random stream as that would destroy confidentiality.
 .Sh RETURN VALUES
 These functions return nothing.
-They cannot fail.
 .Sh EXAMPLES
 Simple encryption:
 .Bd -literal -offset indent

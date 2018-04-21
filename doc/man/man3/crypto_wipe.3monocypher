@@ -50,6 +50,5 @@ Refer to
 for instructions on how to lock down memory on common operating systems.
 .Sh RETURN VALUES
 This function returns nothing.
-It cannot fail.
 .Sh SEE ALSO
 .Xr intro 3monocypher

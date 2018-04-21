@@ -85,7 +85,6 @@ Once the message is entirely processed,
 yields the message authentication code.
 .Sh RETURN VALUES
 These functions return nothing.
-They cannot fail.
 .Sh EXAMPLES
 To authenticate a message:
 .Bd -literal -offset indent
