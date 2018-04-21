@@ -523,11 +523,11 @@ static int p_sha512_overlap()
 
 static int p_argon2i_easy()
 {
-    int status = 0;
+    int   status    = 0;
+    void *work_area = alloc(8 * 1024);
     FOR (i, 0, 128) {
         RANDOM_INPUT(password , 32);
         RANDOM_INPUT(salt     , 16);
-        RANDOM_INPUT(work_area, 1024 * 8);
         u8 hash_general[32];
         u8 hash_easy   [32];
         crypto_argon2i_general(hash_general, 32, work_area, 8, 1,
@@ -535,20 +535,22 @@ static int p_argon2i_easy()
         crypto_argon2i(hash_easy, 32, work_area, 8, 1, password, 32, salt, 16);
         status |= memcmp(hash_general, hash_easy, 32);
    }
+    free(work_area);
     printf("%s: Argon2i (easy interface)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
 static int p_argon2i_overlap()
 {
-    int status = 0;
+    int status          = 0;
+    u8 *work_area       = (u8*)alloc(8 * 1024);
+    u8 *clean_work_area = (u8*)alloc(8 * 1024);
     FOR (i, 0, 128) {
-        RANDOM_INPUT(work_area, 1024 * 8);
+        p_random(work_area, 8 * 1024);
         u32 pass_offset = rand64() % 128;
         u32 salt_offset = rand64() % 128;
         u32 key_offset  = rand64() % 128;
         u32 ad_offset   = rand64() % 128;
-        u8 clean_work_area[1024 * 8];
         u8 hash1[32];
         u8 hash2[32];
         u8 pass [16];  FOR (i, 0, 16) { pass[i] = work_area[i + pass_offset]; }
@@ -565,6 +567,8 @@ static int p_argon2i_overlap()
                                work_area +   ad_offset, 32);
         status |= memcmp(hash1, hash2, 32);
     }
+    free(work_area);
+    free(clean_work_area);
     printf("%s: Argon2i (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
