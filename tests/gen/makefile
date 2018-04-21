@@ -1,8 +1,5 @@
-CC=gcc -std=c99
-
+CC     = gcc -std=c99
 CFLAGS = -pedantic -Wall -Wextra
-HASH   =
-#HASH=-DED25519_SHA512
 
 .PHONY: all clean
 
@@ -37,7 +34,6 @@ ed25519.o: ../ed25519-donna/ed25519.c  $(wildcard ../ed25519-donna/*.h)
 	$(CC) $(CFLAGS) -c $<       \
             -I ../../src            \
             -I ../../src/optional   \
-            $(HASH)                 \
             -DED25519_CUSTOMHASH    \
             -DED25519_TEST          \
             -DED25519_NO_INLINE_ASM \
