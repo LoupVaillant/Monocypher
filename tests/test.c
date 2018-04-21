@@ -289,9 +289,9 @@ static int p_chacha20()
         u8 output_chunk[INPUT_SIZE];
         u8 output_whole[INPUT_SIZE];
         // inputs
-        u8 input       [INPUT_SIZE];  p_random(input, INPUT_SIZE);
-        u8 key         [32];          p_random(key  , 32);
-        u8 nonce       [8];           p_random(nonce, 8);
+        RANDOM_INPUT(input, INPUT_SIZE);
+        RANDOM_INPUT(key  , 32);
+        RANDOM_INPUT(nonce, 8);
 
         // Encrypt in chunks
         crypto_chacha_ctx ctx;
@@ -322,10 +322,10 @@ static int p_chacha20()
 static int p_chacha20_same_ptr()
 {
     int status = 0;
-    u8 input       [INPUT_SIZE];  p_random(input, INPUT_SIZE);
-    u8 key         [32];          p_random(key  , 32);
-    u8 nonce       [8];           p_random(nonce, 8);
-    u8 output      [INPUT_SIZE];
+    u8  output[INPUT_SIZE];
+    RANDOM_INPUT(input, INPUT_SIZE);
+    RANDOM_INPUT(key  , 32);
+    RANDOM_INPUT(nonce, 8);
     crypto_chacha_ctx ctx;
     crypto_chacha20_init   (&ctx, key, nonce);
     crypto_chacha20_encrypt(&ctx, output, input, INPUT_SIZE);
@@ -344,8 +344,8 @@ static int p_chacha20_set_ctr()
         u8 output_part[STREAM_SIZE    ];
         u8 output_all [STREAM_SIZE    ];
         u8 output_more[STREAM_SIZE * 2];
-        u8 key        [32];          p_random(key  , 32);
-        u8 nonce      [8];           p_random(nonce, 8 );
+        RANDOM_INPUT(key  , 32);
+        RANDOM_INPUT(nonce, 8);
         u64 ctr      = rand64() % CHACHA_NB_BLOCKS;
         size_t limit = ctr * CHACHA_BLOCK_SIZE;
         // Encrypt all at once
@@ -385,8 +385,8 @@ static int p_poly1305()
         u8 mac_chunk[16];
         u8 mac_whole[16];
         // inputs
-        u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
-        u8 key  [32];          p_random(key  , 32);
+        RANDOM_INPUT(input, INPUT_SIZE);
+        RANDOM_INPUT(key  , 32);
 
         // Authenticate bit by bit
         crypto_poly1305_ctx ctx;
@@ -412,8 +412,8 @@ static int p_poly1305_overlap()
 #define INPUT_SIZE (POLY1305_BLOCK_SIZE + (2 * 16)) // total input size
     int status = 0;
     FOR (i, 0, POLY1305_BLOCK_SIZE + 16) {
-        u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
-        u8 key  [32];          p_random(key  , 32);
+        RANDOM_INPUT(input, INPUT_SIZE);
+        RANDOM_INPUT(key  , 32);
         u8 mac  [16];
         crypto_poly1305(mac    , input + 16, POLY1305_BLOCK_SIZE, key);
         crypto_poly1305(input+i, input + 16, POLY1305_BLOCK_SIZE, key);
@@ -437,7 +437,7 @@ static int p_blake2b()
         u8 hash_chunk[64];
         u8 hash_whole[64];
         // inputs
-        u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
+        RANDOM_INPUT(input, INPUT_SIZE);
 
         // Authenticate bit by bit
         crypto_blake2b_ctx ctx;
@@ -463,8 +463,8 @@ static int p_blake2b_overlap()
 #define INPUT_SIZE (BLAKE2B_BLOCK_SIZE + (2 * 64)) // total input size
     int status = 0;
     FOR (i, 0, BLAKE2B_BLOCK_SIZE + 64) {
-        u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
         u8 hash [64];
+        RANDOM_INPUT(input, INPUT_SIZE);
         crypto_blake2b(hash   , input + 64, BLAKE2B_BLOCK_SIZE);
         crypto_blake2b(input+i, input + 64, BLAKE2B_BLOCK_SIZE);
         status |= memcmp(hash, input + i, 64);
@@ -485,7 +485,7 @@ static int p_sha512()
         u8 hash_chunk[64];
         u8 hash_whole[64];
         // inputs
-        u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
+        RANDOM_INPUT(input, INPUT_SIZE);
 
         // Authenticate bit by bit
         crypto_sha512_ctx ctx;
@@ -511,8 +511,8 @@ static int p_sha512_overlap()
 #define INPUT_SIZE (SHA_512_BLOCK_SIZE + (2 * 64)) // total input size
     int status = 0;
     FOR (i, 0, SHA_512_BLOCK_SIZE + 64) {
-        u8 input[INPUT_SIZE];  p_random(input, INPUT_SIZE);
         u8 hash [64];
+        RANDOM_INPUT(input, INPUT_SIZE);
         crypto_sha512(hash   , input + 64, SHA_512_BLOCK_SIZE);
         crypto_sha512(input+i, input + 64, SHA_512_BLOCK_SIZE);
         status |= memcmp(hash, input + i, 64);
@@ -594,7 +594,7 @@ static int p_eddsa_roundtrip()
 static int p_eddsa_random()
 {
     int status = 0;
-    u8 message[MESSAGE_SIZE];  p_random(message, 32);
+    RANDOM_INPUT(message, MESSAGE_SIZE);
     FOR (i, 0, 1000) {
         RANDOM_INPUT(pk, 32);
         RANDOM_INPUT(signature , 64);
@@ -626,7 +626,6 @@ static int p_eddsa_overlap()
 static int p_eddsa_incremental()
 {
     int status = 0;
-    u8 message[MESSAGE_SIZE];  p_random(message, 32);
     FOR (i, 0, MESSAGE_SIZE) {
         RANDOM_INPUT(message, MESSAGE_SIZE);
         RANDOM_INPUT(sk, 32);
@@ -661,10 +660,10 @@ static int p_aead()
 {
     int status = 0;
     FOR (i, 0, 1000) {
-        u8 key      [32];  p_random(key      , 32);
-        u8 nonce    [24];  p_random(nonce    , 24);
-        u8 ad       [ 4];  p_random(ad       ,  4);
-        u8 plaintext[ 8];  p_random(plaintext,  8);
+        RANDOM_INPUT(key      , 32);
+        RANDOM_INPUT(nonce    , 24);
+        RANDOM_INPUT(ad       ,  4);
+        RANDOM_INPUT(plaintext,  8);
         u8 box[24], box2[24];
         u8 out[8];
         // AEAD roundtrip
@@ -763,9 +762,9 @@ static int p_auth()
 {
     int status = 0;
     FOR (i, 0, 128) {
-        u8 key      [ 32];  p_random(key      , 32);
-        u8 nonce    [ 24];  p_random(nonce    , 24);
-        u8 ad       [128];  p_random(ad       ,  i);
+        RANDOM_INPUT(key   ,  32);
+        RANDOM_INPUT(nonce ,  24);
+        RANDOM_INPUT(ad    , 128);
         u8 mac1[16];
         u8 mac2[16];
         // roundtrip

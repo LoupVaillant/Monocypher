@@ -4,10 +4,10 @@
 
 static u64 salsa20(void)
 {
-    static u8  in   [SIZE];  p_random(in   , SIZE);
-    static u8  key  [  32];  p_random(key  ,   32);
-    static u8  nonce[   8];  p_random(nonce,    8);
-    static u8  out  [SIZE];
+    u8 out[SIZE];
+    RANDOM_INPUT(in   , SIZE);
+    RANDOM_INPUT(key  ,   32);
+    RANDOM_INPUT(nonce,    8);
 
     TIMING_START {
         crypto_stream_salsa20_xor(out, in, SIZE, nonce, key);
@@ -17,9 +17,9 @@ static u64 salsa20(void)
 
 static u64 poly1305(void)
 {
-    static u8  in [SIZE];  p_random(in   , SIZE);
-    static u8  key[  32];  p_random(key  ,   32);
-    static u8  out[  16];
+    u8 out[16];
+    RANDOM_INPUT(in , SIZE);
+    RANDOM_INPUT(key,   32);
 
     TIMING_START {
         crypto_onetimeauth(out, in, SIZE, key);
@@ -29,10 +29,10 @@ static u64 poly1305(void)
 
 static u64 authenticated(void)
 {
-    static u8  in   [SIZE + 32];  p_random(in   , SIZE);
-    static u8  key  [       32];  p_random(key  ,   32);
-    static u8  nonce[        8];  p_random(nonce,    8);
-    static u8  out  [SIZE + 32];
+    u8 out[SIZE + 32];
+    RANDOM_INPUT(in   , SIZE + 32);
+    RANDOM_INPUT(key  ,        32);
+    RANDOM_INPUT(nonce,         8);
 
     TIMING_START {
         crypto_secretbox(out, in, SIZE + 32, nonce, key);
@@ -42,8 +42,8 @@ static u64 authenticated(void)
 
 static u64 sha512(void)
 {
-    static u8 in  [SIZE];  p_random(in , SIZE);
-    static u8 hash[  64];
+    u8 hash[64];
+    RANDOM_INPUT(in, SIZE);
 
     TIMING_START {
         crypto_hash(hash, in, SIZE);
@@ -66,10 +66,9 @@ static u64 edDSA_sign(void)
 {
     u8 sk        [ 64];
     u8 pk        [ 32];
-    u8 message   [ 64];  p_random(message, 64);
     u8 signed_msg[128];
     unsigned long long sig_size;
-
+    RANDOM_INPUT(message, 64);
     crypto_sign_keypair(pk, sk);
 
     TIMING_START {
@@ -85,12 +84,11 @@ static u64 edDSA_check(void)
 {
     u8 sk        [ 64];
     u8 pk        [ 32];
-    u8 message   [ 64];  p_random(message, 64);
     u8 signed_msg[128];
     u8 out_msg   [128];
     unsigned long long sig_size;
     unsigned long long msg_size;
-
+    RANDOM_INPUT(message, 64);
     crypto_sign_keypair(pk, sk);
     crypto_sign(signed_msg, &sig_size, message, 64, sk);
 

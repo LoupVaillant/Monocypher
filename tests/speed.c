@@ -5,10 +5,10 @@
 
 static u64 chacha20(void)
 {
-    static u8  in   [SIZE];  p_random(in   , SIZE);
-    static u8  key  [  32];  p_random(key  ,   32);
-    static u8  nonce[   8];  p_random(nonce,    8);
-    static u8  out  [SIZE];
+    u8 out[SIZE];
+    RANDOM_INPUT(in   , SIZE);
+    RANDOM_INPUT(key  ,   32);
+    RANDOM_INPUT(nonce,    8);
 
     TIMING_START {
         crypto_chacha_ctx ctx;
@@ -20,9 +20,9 @@ static u64 chacha20(void)
 
 static u64 poly1305(void)
 {
-    static u8  in [SIZE];  p_random(in   , SIZE);
-    static u8  key[  32];  p_random(key  ,   32);
-    static u8  out[  16];
+    u8 out[16];
+    RANDOM_INPUT(in , SIZE);
+    RANDOM_INPUT(key,   32);
 
     TIMING_START {
         crypto_poly1305(out, in, SIZE, key);
@@ -32,11 +32,11 @@ static u64 poly1305(void)
 
 static u64 authenticated(void)
 {
-    static u8  in   [SIZE];  p_random(in   , SIZE);
-    static u8  key  [  32];  p_random(key  ,   32);
-    static u8  nonce[   8];  p_random(nonce,    8);
-    static u8  out  [SIZE];
-    static u8  mac  [  16];
+    u8 out[SIZE];
+    u8 mac[  16];
+    RANDOM_INPUT(in   , SIZE);
+    RANDOM_INPUT(key  ,   32);
+    RANDOM_INPUT(nonce,    8);
 
     TIMING_START {
         crypto_lock(mac, out, key, nonce, in, SIZE);
@@ -46,9 +46,9 @@ static u64 authenticated(void)
 
 static u64 blake2b(void)
 {
-    static u8 in  [SIZE];  p_random(in , SIZE);
-    static u8 key [  32];  p_random(key,   32);
-    static u8 hash[  64];
+    u8 hash[64];
+    RANDOM_INPUT(in , SIZE);
+    RANDOM_INPUT(key,   32);
 
     TIMING_START {
         crypto_blake2b_general(hash, 64, key, 32, in, SIZE);
@@ -58,8 +58,8 @@ static u64 blake2b(void)
 
 static u64 sha512(void)
 {
-    static u8 in  [SIZE];  p_random(in , SIZE);
-    static u8 hash[  64];
+    u8 hash[64];
+    RANDOM_INPUT(in, SIZE);
 
     TIMING_START {
         crypto_sha512(hash, in, SIZE);
@@ -69,11 +69,11 @@ static u64 sha512(void)
 
 static u64 argon2i(void)
 {
-    size_t    nb_blocks = SIZE / 1024;
-    static u8 work_area[SIZE];
-    static u8 password [  16];  p_random(password, 16);
-    static u8 salt     [  16];  p_random(salt    , 16);
-    static u8 hash     [  32];
+    u64    work_area[SIZE / 8];
+    u8     hash     [32];
+    size_t nb_blocks = SIZE / 1024;
+    RANDOM_INPUT(password,  16);
+    RANDOM_INPUT(salt    ,  16);
 
     TIMING_START {
         crypto_argon2i(hash, 32, work_area, nb_blocks, 3,
@@ -97,10 +97,11 @@ static u64 x25519(void)
 
 static u64 edDSA_sign(void)
 {
-    u8 sk       [32];  p_random(sk, 32);
-    u8 pk       [32];  crypto_sign_public_key(pk, sk);
-    u8 message  [64];  p_random(message, 64);
+    u8 pk       [32];
     u8 signature[64];
+    RANDOM_INPUT(sk     , 32);
+    RANDOM_INPUT(message, 64);
+    crypto_sign_public_key(pk, sk);
 
     TIMING_START {
         crypto_sign(signature, sk, pk, message, 64);
@@ -110,11 +111,11 @@ static u64 edDSA_sign(void)
 
 static u64 edDSA_check(void)
 {
-    u8 sk       [32];  p_random(sk, 32);
-    u8 pk       [32];  crypto_sign_public_key(pk, sk);
-    u8 message  [64];  p_random(message, 64);
+    u8 pk       [32];
     u8 signature[64];
-
+    RANDOM_INPUT(sk     , 32);
+    RANDOM_INPUT(message, 64);
+    crypto_sign_public_key(pk, sk);
     crypto_sign(signature, sk, pk, message, 64);
 
     TIMING_START {

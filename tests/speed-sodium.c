@@ -3,10 +3,10 @@
 
 static u64 chacha20(void)
 {
-    static u8  in   [SIZE];  p_random(in   , SIZE);
-    static u8  key  [  32];  p_random(key  ,   32);
-    static u8  nonce[   8];  p_random(nonce,    8);
-    static u8  out  [SIZE];
+    u8 out[SIZE];
+    RANDOM_INPUT(in   , SIZE);
+    RANDOM_INPUT(key  ,   32);
+    RANDOM_INPUT(nonce,    8);
 
     TIMING_START {
         crypto_stream_chacha20_xor(out, in, SIZE, nonce, key);
@@ -16,9 +16,9 @@ static u64 chacha20(void)
 
 static u64 poly1305(void)
 {
-    static u8  in [SIZE];  p_random(in   , SIZE);
-    static u8  key[  32];  p_random(key  ,   32);
-    static u8  out[  16];
+    u8 out[16];
+    RANDOM_INPUT(in , SIZE);
+    RANDOM_INPUT(key,   32);
 
     TIMING_START {
         crypto_onetimeauth(out, in, SIZE, key);
@@ -28,11 +28,12 @@ static u64 poly1305(void)
 
 static u64 authenticated(void)
 {
-    static u8  in   [SIZE];  p_random(in   , SIZE);
-    static u8  key  [  32];  p_random(key  ,   32);
-    static u8  nonce[   8];  p_random(nonce,    8);
-    static u8  out  [SIZE];
-    static u8  mac  [crypto_aead_xchacha20poly1305_ietf_ABYTES];
+    u8 out[SIZE];
+    u8 mac[crypto_aead_xchacha20poly1305_ietf_ABYTES];
+    RANDOM_INPUT(in   , SIZE);
+    RANDOM_INPUT(key  ,   32);
+    RANDOM_INPUT(nonce,    8);
+
     TIMING_START {
         crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
             out, mac, 0, in, SIZE, 0, 0, 0, nonce, key);
@@ -42,9 +43,9 @@ static u64 authenticated(void)
 
 static u64 blake2b(void)
 {
-    static u8 in  [SIZE];  p_random(in , SIZE);
-    static u8 key [  32];  p_random(key,   32);
-    static u8 hash[  64];
+    u8 hash[64];
+    RANDOM_INPUT(in , SIZE);
+    RANDOM_INPUT(key,   32);
 
     TIMING_START {
         crypto_generichash(hash, 64, in, SIZE, key, 32);
@@ -54,8 +55,8 @@ static u64 blake2b(void)
 
 static u64 sha512(void)
 {
-    static u8 in  [SIZE];  p_random(in , SIZE);
-    static u8 hash[  64];
+    u8 hash[64];
+    RANDOM_INPUT(in, SIZE);
 
     TIMING_START {
         crypto_hash_sha512(hash, in, SIZE);
@@ -65,9 +66,9 @@ static u64 sha512(void)
 
 static u64 argon2i(void)
 {
-    static u8 password [  16];  p_random(password, 16);
-    static u8 salt     [  16];  p_random(salt    , 16);
-    static u8 hash     [  32];
+    u8 hash [32];
+    RANDOM_INPUT(password,  16);
+    RANDOM_INPUT(salt    ,  16);
 
     TIMING_START {
         if (crypto_pwhash(hash, 32, (char*)password, 16, salt,
@@ -93,10 +94,11 @@ static u64 x25519(void)
 
 static u64 edDSA_sign(void)
 {
-    u8 sk       [64];  p_random(sk, 32);
-    u8 pk       [32];  crypto_sign_keypair(pk, sk);
-    u8 message  [64];  p_random(message, 64);
+    u8 sk       [64];
+    u8 pk       [32];
     u8 signature[64];
+    RANDOM_INPUT(message, 64);
+    crypto_sign_keypair(pk, sk);
 
     TIMING_START {
         crypto_sign_detached(signature, 0, message, 64, sk);
@@ -106,11 +108,11 @@ static u64 edDSA_sign(void)
 
 static u64 edDSA_check(void)
 {
-    u8 sk       [64];  p_random(sk, 32);
-    u8 pk       [32];  crypto_sign_keypair(pk, sk);
-    u8 message  [64];  p_random(message, 64);
+    u8 sk       [64];
+    u8 pk       [32];
     u8 signature[64];
-
+    RANDOM_INPUT(message, 64);
+    crypto_sign_keypair(pk, sk);
     crypto_sign_detached(signature, 0, message, 64, sk);
 
     TIMING_START {
