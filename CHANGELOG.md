@@ -1,3 +1,14 @@
+2.0.2
+-----
+2018/04/23
+
+- Corrected a couple failures to wipe secret buffers.
+- Corrected a bug that prevented compilation in Ed25519 mode.
+- Adjusted the number of test vectors in the test suite.
+- Improved tests for incremental interfaces.
+- Replaced the GNU all permissive licence by a public domain dedication
+  (Creative Commons CC-0).  The BSD licence remains as a fallback.
+
 2.0.1
 -----
 2018/03/07
