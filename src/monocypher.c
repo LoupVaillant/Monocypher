@@ -364,10 +364,10 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 {
     // Initial hash is zero
     FOR (i, 0, 5) {
-        ctx->h [i] = 0;
+        ctx->h[i] = 0;
     }
     // add 2^130 to every input block
-    ctx->c  [4] = 1;
+    ctx->c[4] = 1;
     poly_clear_c(ctx);
     // load r and pad (r has some of its bits cleared)
     FOR (i, 0, 1) { ctx->r  [0] = load32_le(key           ) & 0x0fffffff; }
@@ -610,7 +610,7 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
     }
     blake2b_incr(ctx);         // update the input offset
     blake2b_compress(ctx, -1); // compress the last block
-    size_t nb_words  = ctx->hash_size >> 3;
+    size_t nb_words = ctx->hash_size >> 3;
     FOR (i, 0, nb_words) {
         store64_le(hash + i*8, ctx->hash[i]);
     }
