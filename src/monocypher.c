@@ -691,7 +691,6 @@ static void extended_hash(u8       *digest, u32 digest_size,
     blake_update_32            (&ctx, digest_size);
     crypto_blake2b_update      (&ctx, input, input_size);
     crypto_blake2b_final       (&ctx, digest);
-    WIPE_CTX(&ctx);
 
     if (digest_size > 64) {
         // the conversion to u64 avoids integer overflow on
