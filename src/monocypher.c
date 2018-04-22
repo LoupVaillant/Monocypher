@@ -914,7 +914,7 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
 
         // fill first 2 blocks
         block tmp_block;
-        u8 hash_area[1024];
+        u8    hash_area[1024];
         store32_le(initial_hash + 64, 0); // first  additional word
         store32_le(initial_hash + 68, 0); // second additional word
         extended_hash(hash_area, 1024, initial_hash, 72);
@@ -970,9 +970,9 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
     u8 final_block[1024];
     store_block(final_block, blocks + (nb_blocks - 1));
     extended_hash(hash, hash_size, final_block, 1024);
-
-    // wipe final block and work area
     WIPE_BUFFER(final_block);
+
+    // wipe work area
     volatile u64 *p = (u64*)work_area;
     FOR (i, 0, 128 * nb_blocks) {
         p[i] = 0;
