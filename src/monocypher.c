@@ -81,8 +81,8 @@ static u64 x16(const u8 a[16], const u8 b[16])
     return (load64_le(a + 0) ^ load64_le(b + 0))
         |  (load64_le(a + 8) ^ load64_le(b + 8));
 }
-static u64 x32(const u8 a[16],const u8 b[16]){return x16(a,b) | x16(a+16, b+16);}
-static u64 x64(const u8 a[64],const u8 b[64]){return x32(a,b) | x32(a+32, b+32);}
+static u64 x32(const u8 a[16],const u8 b[16]){return x16(a,b)| x16(a+16, b+16);}
+static u64 x64(const u8 a[64],const u8 b[64]){return x32(a,b)| x32(a+32, b+32);}
 int crypto_verify16(const u8 a[16], const u8 b[16]){ return neq0(x16(a, b)); }
 int crypto_verify32(const u8 a[32], const u8 b[32]){ return neq0(x32(a, b)); }
 int crypto_verify64(const u8 a[64], const u8 b[64]){ return neq0(x64(a, b)); }
@@ -308,11 +308,11 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     const u32 rr3 = (r3 >> 2) + r3; // rr3 <= 13fffffb // rr1 == (r3 >> 2) * 5
 
     // (h + c) * r, without carry propagation
-    const u64 x0 = s0*r0 + s1*rr3 + s2*rr2 + s3*rr1 + s4*rr0;//<=97ffffe007fffff8
-    const u64 x1 = s0*r1 + s1*r0  + s2*rr3 + s3*rr2 + s4*rr1;//<=8fffffe20ffffff6
-    const u64 x2 = s0*r2 + s1*r1  + s2*r0  + s3*rr3 + s4*rr2;//<=87ffffe417fffff4
-    const u64 x3 = s0*r3 + s1*r2  + s2*r1  + s3*r0  + s4*rr3;//<=7fffffe61ffffff2
-    const u32 x4 = s4 * (r0 & 3); // ...recover 2 bits       //<=               f
+    const u64 x0 = s0*r0 + s1*rr3 + s2*rr2 + s3*rr1 +s4*rr0;//<=97ffffe007fffff8
+    const u64 x1 = s0*r1 + s1*r0  + s2*rr3 + s3*rr2 +s4*rr1;//<=8fffffe20ffffff6
+    const u64 x2 = s0*r2 + s1*r1  + s2*r0  + s3*rr3 +s4*rr2;//<=87ffffe417fffff4
+    const u64 x3 = s0*r3 + s1*r2  + s2*r1  + s3*r0  +s4*rr3;//<=7fffffe61ffffff2
+    const u32 x4 = s4 * (r0 & 3); // ...recover 2 bits      //<=               f
 
     // partial reduction modulo 2^130 - 5
     const u32 u5 = x4 + (x3 >> 32); // u5 <= 7ffffff5
@@ -675,8 +675,8 @@ static void store_block(u8 bytes[1024], const block *b)
     }
 }
 
-static void copy_block(block *o,const block*in){FOR(i,0,128) o->a[i] = in->a[i];}
-static void  xor_block(block *o,const block*in){FOR(i,0,128) o->a[i]^= in->a[i];}
+static void copy_block(block *o,const block*in){FOR(i,0,128)o->a[i] = in->a[i];}
+static void  xor_block(block *o,const block*in){FOR(i,0,128)o->a[i]^= in->a[i];}
 
 // Hash with a virtually unlimited digest size.
 // Doesn't extract more entropy than the base hash function.
@@ -1505,7 +1505,7 @@ static void modL(u8 *r, i64 x[64])
     static const  u64 L[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
                                 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10 };
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10};
     for (unsigned i = 63; i >= 32; i--) {
         i64 carry = 0;
         FOR (j, i-32, i-12) {
@@ -1714,7 +1714,8 @@ static void lock_ad_padding(crypto_lock_ctx *ctx)
     }
 }
 
-void crypto_lock_init(crypto_lock_ctx *ctx, const u8 key[32], const u8 nonce[24])
+void crypto_lock_init(crypto_lock_ctx *ctx,
+                      const u8 key[32], const u8 nonce[24])
 {
     u8 auth_key[64]; // "Wasting" the whole Chacha block is faster
     ctx->ad_phase     = 1;
