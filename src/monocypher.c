@@ -1381,7 +1381,7 @@ static int ge_frombytes_neg(ge *h, const u8 s[32])
         -32595792, -7943725, 9377950, 3500415, 12389472,
         -272473, -25146209, -2005654, 326686, 11406482
     } ;
-    fe u, v, v3, vxx, check;
+    fe u, v, v3, vxx, check; // no secret, no wipe
     fe_frombytes(h->Y, s);
     fe_1(h->Z);
     fe_sq(u, h->Y);            // y^2
