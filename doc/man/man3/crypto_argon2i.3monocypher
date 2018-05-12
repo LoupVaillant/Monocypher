@@ -57,7 +57,7 @@ The output hash.
 Length of
 .Fa hash ,
 in bytes.
-This argument should be set to 16, 32 or 64 for compatibility with the
+This argument should be set to 32 or 64 for compatibility with the
 .Fn crypto_verify*
 constant time comparison functions.
 .It Fa work_area
