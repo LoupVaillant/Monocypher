@@ -527,10 +527,15 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 
 static void blake2b_set_input(crypto_blake2b_ctx *ctx, u8 input, size_t index)
 {
+    if (index == 0) {
+        FOR (i, 0, 16) {
+            ctx->input[i] = 0;
+        }
+    }
     size_t word = index >> 3;
     size_t byte = index & 7;
-    ctx->input[word] &= ~((u64)0xff  << (byte << 3));
-    ctx->input[word] |=   (u64)input << (byte << 3);
+    ctx->input[word] |= (u64)input << (byte << 3);
+
 }
 
 static void blake2b_end_block(crypto_blake2b_ctx *ctx)
