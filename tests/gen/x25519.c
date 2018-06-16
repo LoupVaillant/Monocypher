@@ -27,6 +27,6 @@ void test()
 int main(void)
 {
     SODIUM_INIT;
-    FOR (i, 0, 100) { test(); }
+    FOR (i, 0, 50) { test(); }
     return 0;
 }

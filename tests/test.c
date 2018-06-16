@@ -340,20 +340,19 @@ static int p_chacha20_set_ctr()
 {
 #define STREAM_SIZE (CHACHA_BLOCK_SIZE * CHACHA_NB_BLOCKS)
     int status = 0;
-    FOR (i, 0, 1000) {
+    FOR (i, 0, CHACHA_NB_BLOCKS) {
         u8 output_part[STREAM_SIZE    ];
         u8 output_all [STREAM_SIZE    ];
         u8 output_more[STREAM_SIZE * 2];
         RANDOM_INPUT(key  , 32);
         RANDOM_INPUT(nonce, 8);
-        u64 ctr      = rand64() % CHACHA_NB_BLOCKS;
-        size_t limit = ctr * CHACHA_BLOCK_SIZE;
+        size_t limit = i * CHACHA_BLOCK_SIZE;
         // Encrypt all at once
         crypto_chacha_ctx ctx;
         crypto_chacha20_init(&ctx, key, nonce);
         crypto_chacha20_stream(&ctx, output_all, STREAM_SIZE);
         // Encrypt second part
-        crypto_chacha20_set_ctr(&ctx, ctr);
+        crypto_chacha20_set_ctr(&ctx, i);
         crypto_chacha20_stream(&ctx, output_part + limit, STREAM_SIZE - limit);
         // Encrypt first part
         crypto_chacha20_set_ctr(&ctx, 0);
@@ -362,7 +361,7 @@ static int p_chacha20_set_ctr()
         status |= memcmp(output_part, output_all, STREAM_SIZE);
 
         // Encrypt before the begining
-        crypto_chacha20_set_ctr(&ctx, -ctr);
+        crypto_chacha20_set_ctr(&ctx, -i);
         crypto_chacha20_stream(&ctx,
                                output_more + STREAM_SIZE - limit,
                                STREAM_SIZE + limit);
@@ -430,7 +429,7 @@ static int p_poly1305_overlap()
 static int p_blake2b()
 {
 #undef INPUT_SIZE
-#define INPUT_SIZE (BLAKE2B_BLOCK_SIZE * 4) // total input size
+#define INPUT_SIZE (BLAKE2B_BLOCK_SIZE * 4 - 32) // total input size
     int status = 0;
     FOR (i, 0, INPUT_SIZE) {
         // outputs
@@ -478,7 +477,7 @@ static int p_blake2b_overlap()
 static int p_sha512()
 {
 #undef INPUT_SIZE
-#define INPUT_SIZE (SHA_512_BLOCK_SIZE * 4) // total input size
+#define INPUT_SIZE (SHA_512_BLOCK_SIZE * 4 - 32) // total input size
     int status = 0;
     FOR (i, 0, INPUT_SIZE) {
         // outputs
@@ -525,16 +524,14 @@ static int p_argon2i_easy()
 {
     int   status    = 0;
     void *work_area = alloc(8 * 1024);
-    FOR (i, 0, 128) {
-        RANDOM_INPUT(password , 32);
-        RANDOM_INPUT(salt     , 16);
-        u8 hash_general[32];
-        u8 hash_easy   [32];
-        crypto_argon2i_general(hash_general, 32, work_area, 8, 1,
-                               password, 32, salt, 16, 0, 0, 0, 0);
-        crypto_argon2i(hash_easy, 32, work_area, 8, 1, password, 32, salt, 16);
-        status |= memcmp(hash_general, hash_easy, 32);
-   }
+    RANDOM_INPUT(password , 32);
+    RANDOM_INPUT(salt     , 16);
+    u8 hash_general[32];
+    u8 hash_easy   [32];
+    crypto_argon2i_general(hash_general, 32, work_area, 8, 1,
+                           password, 32, salt, 16, 0, 0, 0, 0);
+    crypto_argon2i(hash_easy, 32, work_area, 8, 1, password, 32, salt, 16);
+    status |= memcmp(hash_general, hash_easy, 32);
     free(work_area);
     printf("%s: Argon2i (easy interface)\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -545,12 +542,12 @@ static int p_argon2i_overlap()
     int status          = 0;
     u8 *work_area       = (u8*)alloc(8 * 1024);
     u8 *clean_work_area = (u8*)alloc(8 * 1024);
-    FOR (i, 0, 128) {
+    FOR (i, 0, 10) {
         p_random(work_area, 8 * 1024);
-        u32 pass_offset = rand64() % 128;
-        u32 salt_offset = rand64() % 128;
-        u32 key_offset  = rand64() % 128;
-        u32 ad_offset   = rand64() % 128;
+        u32 pass_offset = rand64() % 64;
+        u32 salt_offset = rand64() % 64;
+        u32 key_offset  = rand64() % 64;
+        u32 ad_offset   = rand64() % 64;
         u8 hash1[32];
         u8 hash2[32];
         u8 pass [16];  FOR (i, 0, 16) { pass[i] = work_area[i + pass_offset]; }
@@ -575,14 +572,14 @@ static int p_argon2i_overlap()
 
 static int p_eddsa_roundtrip()
 {
-#define MESSAGE_SIZE 32
+#define MESSAGE_SIZE 30
     int status = 0;
-    FOR (i, 0, 1000) {
+    FOR (i, 0, MESSAGE_SIZE) {
         RANDOM_INPUT(message, MESSAGE_SIZE);
         RANDOM_INPUT(sk, 32);
-        u8 pk       [32];  crypto_sign_public_key(pk, sk);
-        u8 signature[64];  crypto_sign(signature, sk, pk, message, MESSAGE_SIZE);
-        status |= crypto_check(signature, pk, message, MESSAGE_SIZE);
+        u8 pk       [32]; crypto_sign_public_key(pk, sk);
+        u8 signature[64]; crypto_sign(signature, sk, pk, message, i);
+        status |= crypto_check(signature, pk, message, i);
     }
     printf("%s: EdDSA (roundtrip)\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -594,11 +591,11 @@ static int p_eddsa_roundtrip()
 static int p_eddsa_random()
 {
     int status = 0;
-    RANDOM_INPUT(message, MESSAGE_SIZE);
-    FOR (i, 0, 1000) {
+    FOR (i, 0, 100) {
+        RANDOM_INPUT(message, i);
         RANDOM_INPUT(pk, 32);
         RANDOM_INPUT(signature , 64);
-        status |= ~crypto_check(signature, pk, message, MESSAGE_SIZE);
+        status |= ~crypto_check(signature, pk, message, i);
     }
     printf("%s: EdDSA (random)\n", status != 0 ? "FAILED" : "OK");
     return status;
