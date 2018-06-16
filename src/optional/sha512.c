@@ -95,17 +95,14 @@ static void sha512_compress(crypto_sha512_ctx *ctx)
 
 static void sha512_set_input(crypto_sha512_ctx *ctx, u8 input)
 {
+    if (ctx->input_idx == 0) {
+        FOR (i, 0, 16) {
+            ctx->input[i] = 0;
+        }
+    }
     size_t word = ctx->input_idx / 8;
     size_t byte = ctx->input_idx % 8;
     ctx->input[word] |= (u64)input << (8 * (7 - byte));
-}
-
-static void sha512_reset_input(crypto_sha512_ctx *ctx)
-{
-    FOR(i, 0, 16) {
-        ctx->input[i] = 0;
-    }
-    ctx->input_idx = 0;
 }
 
 // increment a 128-bit "word".
@@ -122,7 +119,7 @@ static void sha512_end_block(crypto_sha512_ctx *ctx)
     if (ctx->input_idx == 128) {
         sha512_incr(ctx->input_size, 1024); // size is in bits
         sha512_compress(ctx);
-        sha512_reset_input(ctx);
+        ctx->input_idx = 0;
     }
 }
 
@@ -148,7 +145,7 @@ void crypto_sha512_init(crypto_sha512_ctx *ctx)
     ctx->hash[7] = 0x5be0cd19137e2179;
     ctx->input_size[0] = 0;
     ctx->input_size[1] = 0;
-    sha512_reset_input(ctx);
+    ctx->input_idx = 0;
 }
 
 void crypto_sha512_update(crypto_sha512_ctx *ctx,
@@ -183,7 +180,9 @@ void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 hash[64])
     // compress penultimate block (if any)
     if (ctx->input_idx > 111) {
         sha512_compress(ctx);
-        sha512_reset_input(ctx);
+        FOR(i, 0, 14) {
+            ctx->input[i] = 0;
+        }
     }
     // compress last block
     ctx->input[14] = ctx->input_size[0];
