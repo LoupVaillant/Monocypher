@@ -247,8 +247,8 @@ static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
     int status = 0;
     u8 a[64]; // size <= 64
     u8 b[64]; // size <= 64
-    FOR (i, 0, 256) {
-        FOR (j, 0, 256) {
+    FOR (i, 0, 2) {
+        FOR (j, 0, 2) {
             // Set every byte to the chosen value, then compare
             FOR (k, 0, size) {
                 a[k] = i;
