@@ -262,8 +262,8 @@ static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
                     a[l] = 0;
                     b[l] = 0;
                 }
-                a[k] = i; a[k + size/2] = i;
-                b[k] = j; b[k + size/2] = j;
+                a[k] = i; a[k + size/2 - 1] = i;
+                b[k] = j; b[k + size/2 - 1] = j;
                 int cmp = compare(a, b);
                 status |= (i == j ? cmp : ~cmp);
             }
