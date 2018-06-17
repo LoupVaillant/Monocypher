@@ -89,8 +89,7 @@ You must have Frama-c installed.  See `frama-c.sh` for the recommended
 settings.  To run the code under the TIS interpreter, run
 
     $ tests/formal-analysis.sh
-    $ cd tests/formal-analysis
-    $ tis-interpreter.sh *.c
+    $ tis-interpreter.sh tests/formal-analysis/*.c
 
 (Note: `tis-interpreter.sh` is part of TIS.  If it is not in your
 path, adjust the command accordingly.)
