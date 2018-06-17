@@ -9,7 +9,8 @@
 *.sav
 *.profraw
 *.profdata
-tests/formal-analysis*
+tests/formal-analysis/*
+tests/formal-analysis
 lib*
 .git*
 tarball_ignore

@@ -9,6 +9,7 @@
 *.sav
 *.profraw
 *.profdata
-tests/formal-analysis*
+tests/formal-analysis/*
+tests/formal-analysis
 doc/html/*.html
 tests/vectors.h
