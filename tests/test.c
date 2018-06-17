@@ -592,10 +592,10 @@ static int p_eddsa_random()
 {
     int status = 0;
     FOR (i, 0, 100) {
-        RANDOM_INPUT(message, i);
+        RANDOM_INPUT(message, MESSAGE_SIZE);
         RANDOM_INPUT(pk, 32);
         RANDOM_INPUT(signature , 64);
-        status |= ~crypto_check(signature, pk, message, i);
+        status |= ~crypto_check(signature, pk, message, MESSAGE_SIZE);
     }
     printf("%s: EdDSA (random)\n", status != 0 ? "FAILED" : "OK");
     return status;
