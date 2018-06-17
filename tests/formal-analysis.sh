@@ -1,6 +1,6 @@
 #! /bin/sh
 
-mkdir -p formal-analysis
+mkdir -p tests/formal-analysis
 cp src/monocypher.c      \
    src/monocypher.h      \
    src/optional/sha512.h \
