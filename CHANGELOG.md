@@ -2,6 +2,7 @@
 2.0.3
 -----
 2018/06/16
+
 - Corrected undefined behaviour in Blake2b
 - Improved the test suite (faster, better coverage)
 
