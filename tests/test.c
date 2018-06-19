@@ -20,6 +20,12 @@
 
 static void* alloc(size_t size)
 {
+    if (size == 0) {
+        // Some systems refuse to allocate zero bytes.
+        // So we don't.  Instead, we just return a non-sensical pointer.
+        // It shouldn't be dereferenced anyway.
+        return NULL;
+    }
     void *buf = malloc(size);
     if (buf == NULL) {
         fprintf(stderr, "Allocation failed: 0x%zx bytes\n", size);
