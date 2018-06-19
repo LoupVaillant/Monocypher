@@ -361,7 +361,7 @@ static int p_chacha20_set_ctr()
         status |= memcmp(output_part, output_all, STREAM_SIZE);
 
         // Encrypt before the begining
-        crypto_chacha20_set_ctr(&ctx, -i);
+        crypto_chacha20_set_ctr(&ctx, -(u64)i);
         crypto_chacha20_stream(&ctx,
                                output_more + STREAM_SIZE - limit,
                                STREAM_SIZE + limit);
