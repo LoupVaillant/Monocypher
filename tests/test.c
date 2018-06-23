@@ -176,6 +176,11 @@ static void x25519(const vector in[], vector *out)
     if (!not_zero && !report) printf("FAILURE: x25519 failed to report zero\n");
 }
 
+static void x25519_pk(const vector in[], vector *out)
+{
+    crypto_x25519_public_key(out->buf, in->buf);
+}
+
 static void key_exchange(const vector in[], vector *out)
 {
     const vector *secret_key = in;
@@ -198,6 +203,11 @@ static void edDSA(const vector in[], vector *out)
         printf("FAILURE: reconstructing public key"
                " yields different signature\n");
     }
+}
+
+static void edDSA_pk(const vector in[], vector *out)
+{
+    crypto_sign_public_key(out->buf, in->buf);
 }
 
 #ifdef ED25519_SHA512
@@ -804,11 +814,13 @@ int main(void)
     status |= TEST(sha512      , 1);
     status |= TEST(argon2i     , 6);
     status |= TEST(x25519      , 2);
+    status |= TEST(x25519_pk   , 1);
     status |= TEST(key_exchange, 2);
 #ifdef ED25519_SHA512
     status |= TEST(ed_25519    , 3);
 #else
     status |= TEST(edDSA       , 3);
+    status |= TEST(edDSA_pk    , 1);
 #endif
     status |= test_x25519();
 
