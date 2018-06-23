@@ -1063,7 +1063,6 @@ static void fe_mul_small(fe h, const fe f, i32 g)
     FE_CARRY;
 }
 static void fe_mul121666(fe h, const fe f) { fe_mul_small(h, f, 121666); }
-static void fe_mul973324(fe h, const fe f) { fe_mul_small(h, f, 973324); }
 
 static void fe_mul(fe h, const fe f, const fe g)
 {
@@ -1360,6 +1359,14 @@ static void ge_from_xy(ge *p, const fe x, const fe y)
     fe_mul(p->T, x, y);
 }
 
+static void ge_cswap(ge *p, ge *q, int b)
+{
+    fe_cswap(p->X, q->X, b);
+    fe_cswap(p->Y, q->Y, b);
+    fe_cswap(p->Z, q->Z, b);
+    fe_cswap(p->T, q->T, b);
+}
+
 static void ge_tobytes(u8 s[32], const ge *h)
 {
     fe recip, x, y;
@@ -1419,12 +1426,13 @@ static int ge_frombytes_neg(ge *h, const u8 s[32])
     return 0;
 }
 
+static const fe D2 = { // - 2 * 121665 / 121666
+    0x2b2f159, 0x1a6e509, 0x22add7a, 0x0d4141d, 0x0038052,
+    0x0f3d130, 0x3407977, 0x19ce331, 0x1c56dff, 0x0901b67
+};
+
 static void ge_add(ge *s, const ge *p, const ge *q)
 {
-    static const fe D2 = { // - 2 * 121665 / 121666
-        0x2b2f159, 0x1a6e509, 0x22add7a, 0x0d4141d, 0x0038052,
-        0x0f3d130, 0x3407977, 0x19ce331, 0x1c56dff, 0x0901b67
-    };
     fe a, b, c, d, e, f, g, h;
     //  A = (Y1-X1) * (Y2-X2)
     //  B = (Y1+X1) * (Y2+X2)
@@ -1440,50 +1448,53 @@ static void ge_add(ge *s, const ge *p, const ge *q)
     fe_mul(s->Y, g, h);  //  Y3 = G * H
     fe_mul(s->Z, f, g);  //  Z3 = F * G
     fe_mul(s->T, e, h);  //  T3 = E * H
-    // not wiping, because ge_add is not used to add secrets.
+
+    WIPE_BUFFER(a);  WIPE_BUFFER(b);  WIPE_BUFFER(c);  WIPE_BUFFER(d);
+    WIPE_BUFFER(e);  WIPE_BUFFER(f);  WIPE_BUFFER(g);  WIPE_BUFFER(h);
 }
 
-// Performing the scalar multiplication directly in Twisted Edwards
-// space woud be simpler, but also slower.  So we do it in Montgomery
-// space instead.  The sign of the Y coordinate however gets lost in
-// translation, so we use a dirty trick to recover it.
+// could use ge_add() for this, but this is slightly faster
+static void ge_double(ge *s, const ge *p)
+{
+    fe a, b, c, d, e, f, g, h;
+    fe_sub(a, p->Y, p->X);  fe_sq(a, a);      //  A = (Y1-X1)^2
+    fe_add(b, p->X, p->Y);  fe_sq(b, b);      //  B = (Y1+X1)^2
+    fe_sq (c, p->T);        fe_mul(c, c, D2); //  C = T1^2 * k
+    fe_sq (d, p->Z);        fe_add(d, d, d);  //  D = Z1^2 * 2
+    fe_sub(e, b, a);                          //  E  = B - A
+    fe_sub(f, d, c);                          //  F  = D - C
+    fe_add(g, d, c);                          //  G  = D + C
+    fe_add(h, b, a);                          //  H  = B + A
+    fe_mul(s->X, e, f);                       //  X3 = E * F
+    fe_mul(s->Y, g, h);                       //  Y3 = G * H
+    fe_mul(s->Z, f, g);                       //  Z3 = F * G
+    fe_mul(s->T, e, h);                       //  T3 = E * H
+
+    WIPE_BUFFER(a);  WIPE_BUFFER(b);  WIPE_BUFFER(c);  WIPE_BUFFER(d);
+    WIPE_BUFFER(e);  WIPE_BUFFER(f);  WIPE_BUFFER(g);  WIPE_BUFFER(h);
+}
+
 static void ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
 {
-    // sqrt(-486664)
-    static const fe K = { 54885894, 25242303, 55597453,  9067496, 51808079,
-                          33312638, 25456129, 14121551, 54921728,  3972023 };
+    // Simple Montgomery ladder, with straight double and add.
+    ge t;
+    fe_0(p->X);  fe_copy(t.X, q->X);
+    fe_1(p->Y);  fe_copy(t.Y, q->Y);
+    fe_1(p->Z);  fe_copy(t.Z, q->Z);
+    fe_0(p->T);  fe_copy(t.T, q->T);
+    int swap = 0;
+    for (int i = 255; i >= 0; i--) {
+        int b = (scalar[i/8] >> (i & 7)) & 1;
+        swap ^= b;  // xor trick avoids unnecessary swaps
+        ge_cswap(p, &t, swap);
+        swap = b;
+        ge_add(&t, &t, p);
+        ge_double(p, p);
+    }
+    // one last swap makes up for the xor trick
+    ge_cswap(p, &t, swap);
 
-    // convert q to montgomery format
-    fe x1, y1, z1, x2, z2, x3, z3, t1, t2, t3, t4;
-    fe_sub(z1, q->Z, q->Y);  fe_mul(z1, z1, q->X);  fe_invert(z1, z1);
-    fe_add(t1, q->Z, q->Y);
-    fe_mul(x1, q->X, t1  );  fe_mul(x1, x1, z1);
-    fe_mul(y1, q->Z, t1  );  fe_mul(y1, y1, z1);  fe_mul(y1, K, y1);
-    fe_1(z1); // implied in the ladder, needed to convert back.
-
-    // montgomery scalarmult
-    x25519_ladder(x1, x2, z2, x3, z3, scalar);
-
-    // Recover the y coordinate (Katsuyuki Okeya & Kouichi Sakurai, 2001)
-    // Note the shameless reuse of x1: (x1, y1, z1) will correspond to
-    // what was originally (x2, z2).
-    fe_mul(t1, x1, z2);    fe_add(t2, x2, t1);    fe_sub(t3, x2, t1);
-    fe_sq (t3, t3);        fe_mul(t3, t3, x3);    fe_mul973324(t1, z2);
-    fe_add(t2, t2, t1);    fe_mul(t4, x1, x2);    fe_add(t4, t4, z2);
-    fe_mul(t2, t2, t4);    fe_mul(t1, t1, z2);    fe_sub(t2, t2, t1);
-    fe_mul(t2, t2, z3);    fe_add(t1, y1, y1);    fe_mul(t1, t1, z2);
-    fe_mul(t1, t1, z3);    fe_mul(x1, t1, x2);    fe_sub(y1, t2, t3);
-    fe_mul(z1, t1, z2);
-
-    // convert back to twisted edwards
-    fe_sub(t1  , x1, z1);    fe_add(t2  , x1, z1);    fe_mul(x1  , K , x1);
-    fe_mul(p->X, x1, t2);    fe_mul(p->Y, y1, t1);    fe_mul(p->Z, y1, t2);
-    fe_mul(p->T, x1, t1);
-
-    WIPE_BUFFER(x1);  WIPE_BUFFER(y1);  WIPE_BUFFER(z1);
-    WIPE_BUFFER(x2);                    WIPE_BUFFER(z2);
-    WIPE_BUFFER(x3);                    WIPE_BUFFER(z3);
-    WIPE_BUFFER(t1);  WIPE_BUFFER(t2);  WIPE_BUFFER(t3);  WIPE_BUFFER(t4);
+    WIPE_CTX(&t);
 }
 
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
