@@ -578,8 +578,8 @@ static int p_eddsa_roundtrip()
         // reject forgeries
         u8 zero   [64] = {0};
         u8 forgery[64]; FOR (i, 0, 64) { forgery[i] = signature[i] + 1; }
-        status |= !crypto_check(zero   , pk, message, i);
-        status |= !crypto_check(forgery, pk, message, i);
+        status |= !crypto_check(zero   , pk, message, MESSAGE_SIZE);
+        status |= !crypto_check(forgery, pk, message, MESSAGE_SIZE);
     }
     printf("%s: EdDSA roundtrip\n", status != 0 ? "FAILED" : "OK");
     return status;
