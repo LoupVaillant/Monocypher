@@ -1,3 +1,13 @@
+2.0.4
+-----
+2018/06/24
+
+- Corrected a critical vulnerability in EdDSA, where crypto_check() was
+  accepting invalid signatures.  (Found by Mike Pechkin.)  The current
+  fix removes a buggy optimisation, effectively halving the performance
+  of EdDSA.
+- The test suite no longer tries to allocate zero bytes (some platforms
+  fail such an allocation).
 
 2.0.3
 -----
