@@ -6,7 +6,7 @@ PKGCONFIG=$(DESTDIR)/$(PREFIX)/lib/pkgconfig
 MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
 
 # override with x.y.z when making a proper tarball
-TARBALL_VERSION=master
+TARBALL_VERSION=$$(cat VERSION.md)
 # avoids changing the current directory while we archive it
 TARBALL_DIR=..
 
@@ -30,7 +30,7 @@ install: library src/monocypher.h install-doc
 	@echo 'includedir=$${prefix}/include'   >> $(PKGCONFIG)/monocypher.pc
 	@echo ''                                >> $(PKGCONFIG)/monocypher.pc
 	@echo 'Name: monocypher'                >> $(PKGCONFIG)/monocypher.pc
-	@echo 'Version: 1.1.0'                  >> $(PKGCONFIG)/monocypher.pc
+	@echo 'Version:' $$(cat VERSION.md)     >> $(PKGCONFIG)/monocypher.pc
 	@echo 'Description: Easy to use, easy to deploy crypto library' \
                                                 >> $(PKGCONFIG)/monocypher.pc
 	@echo ''                                >> $(PKGCONFIG)/monocypher.pc
