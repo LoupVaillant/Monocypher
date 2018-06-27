@@ -37,7 +37,7 @@ If the attacker attempts a forgery, one does not want to reveal
 .Dq your MAC is wrong, Em and it took 384 microseconds to tell .
 If the next attempt takes 462 microseconds instead, it tells the
 attacker they just guessed a few bytes correctly.
-That way, an attacker can derive the correct MAC, and sucessfully
+That way, an attacker can derive the correct MAC, and successfully
 forge a message.
 This has lead to practical attacks in the past.
 .Pp
