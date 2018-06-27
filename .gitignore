@@ -11,5 +11,7 @@
 *.profdata
 tests/formal-analysis/*
 tests/formal-analysis
+*.tar.gz
+monocypher-*
 doc/html/*.html
 tests/vectors.h

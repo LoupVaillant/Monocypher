@@ -5,10 +5,8 @@ PREFIX=usr/local
 PKGCONFIG=$(DESTDIR)/$(PREFIX)/lib/pkgconfig
 MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
 
-# override with x.y.z when making a proper tarball
 TARBALL_VERSION=$$(cat VERSION.md)
-# avoids changing the current directory while we archive it
-TARBALL_DIR=..
+TARBALL_DIR=.
 
 .PHONY: all library static-library dynamic-library \
         install install-doc                        \
@@ -122,6 +120,7 @@ tests/vectors.h:
 
 tarball: tests/vectors.h
 	doc/man2html.sh
+	touch     $(TARBALL_DIR)/monocypher-$(TARBALL_VERSION).tar.gz
 	tar -czvf $(TARBALL_DIR)/monocypher-$(TARBALL_VERSION).tar.gz \
             -X tarball_ignore                                         \
-            --transform='flags=r;s|^.|monocypher-$(TARBALL_VERSION)|' .
+            --transform='flags=r;s|^.|monocypher-'$(TARBALL_VERSION)'|' .

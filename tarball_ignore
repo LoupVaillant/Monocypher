@@ -11,6 +11,7 @@
 *.profdata
 tests/formal-analysis/*
 tests/formal-analysis
-lib*
+*.tar.gz
+monocypher-*
+lib/*
 .git*
-tarball_ignore
