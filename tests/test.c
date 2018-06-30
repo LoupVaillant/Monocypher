@@ -219,6 +219,19 @@ static void edDSA_pk(const vector in[], vector *out)
 
 #ifdef ED25519_SHA512
 static void (*ed_25519)(const vector[], vector*) = edDSA;
+
+static void ed_25519_check(const vector in[], vector *out)
+{
+    const vector *public_k = in;
+    const vector *msg      = in + 1;
+    const vector *sig      = in + 2;
+    int corrupt = crypto_check(sig->buf, public_k->buf, msg->buf, msg->size);
+    out->buf[0] = corrupt;
+    print_vector(sig->buf     , sig->size);
+    print_vector(public_k->buf, public_k->size);
+    print_vector(msg->buf     , msg->size);
+    printf(corrupt ? "!\n" : ".\n");
+}
 #endif
 
 static void iterate_x25519(u8 k[32], u8 u[32])
@@ -819,21 +832,22 @@ int main(void)
     int status = 0;
     printf("\nTest against vectors");
     printf("\n--------------------\n");
-    status |= TEST(chacha20    , 4);
-    status |= TEST(xchacha20   , 4);
-    status |= TEST(poly1305    , 2);
-    status |= TEST(aead_ietf   , 4);
-    status |= TEST(blake2b     , 2);
-    status |= TEST(sha512      , 1);
-    status |= TEST(argon2i     , 6);
-    status |= TEST(x25519      , 2);
-    status |= TEST(x25519_pk   , 1);
-    status |= TEST(key_exchange, 2);
+    status |= TEST(chacha20      , 4);
+    status |= TEST(xchacha20     , 4);
+    status |= TEST(poly1305      , 2);
+    status |= TEST(aead_ietf     , 4);
+    status |= TEST(blake2b       , 2);
+    status |= TEST(sha512        , 1);
+    status |= TEST(argon2i       , 6);
+    status |= TEST(x25519        , 2);
+    status |= TEST(x25519_pk     , 1);
+    status |= TEST(key_exchange  , 2);
 #ifdef ED25519_SHA512
-    status |= TEST(ed_25519    , 3);
+    status |= TEST(ed_25519      , 3);
+    status |= TEST(ed_25519_check, 3);
 #else
-    status |= TEST(edDSA       , 3);
-    status |= TEST(edDSA_pk    , 1);
+    status |= TEST(edDSA         , 3);
+    status |= TEST(edDSA_pk      , 1);
 #endif
     status |= test_x25519();
 
