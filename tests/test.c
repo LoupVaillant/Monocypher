@@ -225,12 +225,7 @@ static void ed_25519_check(const vector in[], vector *out)
     const vector *public_k = in;
     const vector *msg      = in + 1;
     const vector *sig      = in + 2;
-    int corrupt = crypto_check(sig->buf, public_k->buf, msg->buf, msg->size);
-    out->buf[0] = corrupt;
-    print_vector(sig->buf     , sig->size);
-    print_vector(public_k->buf, public_k->size);
-    print_vector(msg->buf     , msg->size);
-    printf(corrupt ? "!\n" : ".\n");
+    out->buf[0] = crypto_check(sig->buf, public_k->buf, msg->buf, msg->size);
 }
 #endif
 
