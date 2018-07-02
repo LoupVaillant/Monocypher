@@ -139,6 +139,16 @@ These functions implement EdDSA with Curve25519 and Blake2b.
 This is the same as Ed25519, with Blake2b instead of SHA-512.
 Ed25519 is described in RFC 7748.
 .Sh SECURITY CONSIDERATIONS
+.Ss Signature malleability
+EdDSA signatures are not unique like cryptographic hashes.
+For any given public key and message, there are many possible valid
+signatures.
+Some of them require knowledge of the private key.
+Others only require knowledge of an existing signature.
+Observing a valid signature only proves that someone with knowledge of
+the private key signed the document at some point.
+Do not rely on any other security property.
+.Ss Fault injection
 Fault injection (also known as glitching) may be used to manipulate the
 resulting signature and recover the secret key in some cases.
 This requires hardware access.
