@@ -34,13 +34,6 @@ static void* alloc(size_t size)
     return buf;
 }
 
-static void dealloc(void *ptr)
-{
-    if (ptr != 0) {
-        free(ptr);
-    }
-}
-
 typedef struct {
     u8     *buf;
     size_t  size;
@@ -80,11 +73,11 @@ static int test(void (*f)(const vector[], vector*),
         if (out.size != 0) {
             status |= memcmp(out.buf, expected.buf, out.size);
         }
-        dealloc(out.buf);
+        free(out.buf);
         idx += nb_inputs + 1;
         nb_tests++;
     }
-    dealloc(in);
+    free(in);
     printf("%s %4d tests: %s\n",
            status != 0 ? "FAILED" : "OK", nb_tests, name);
     return status;
@@ -170,7 +163,7 @@ static void argon2i(const vector in[], vector *out)
                            salt    ->buf, salt    ->size,
                            key     ->buf, key     ->size,
                            ad      ->buf, ad      ->size);
-    dealloc(work_area);
+    free(work_area);
 }
 
 static void x25519(const vector in[], vector *out)
@@ -563,7 +556,7 @@ static int p_argon2i_easy()
                            password, 32, salt, 16, 0, 0, 0, 0);
     crypto_argon2i(hash_easy, 32, work_area, 8, 1, password, 32, salt, 16);
     status |= memcmp(hash_general, hash_easy, 32);
-    dealloc(work_area);
+    free(work_area);
     printf("%s: Argon2i (easy interface)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
@@ -595,8 +588,8 @@ static int p_argon2i_overlap()
                                work_area +   ad_offset, 32);
         status |= memcmp(hash1, hash2, 32);
     }
-    dealloc(work_area);
-    dealloc(clean_work_area);
+    free(work_area);
+    free(clean_work_area);
     printf("%s: Argon2i (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
