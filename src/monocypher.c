@@ -1065,6 +1065,7 @@ static void fe_mul_small(fe h, const fe f, i32 g)
     FE_CARRY;
 }
 static void fe_mul121666(fe h, const fe f) { fe_mul_small(h, f, 121666); }
+static void fe_mul973324(fe h, const fe f) { fe_mul_small(h, f, 973324); }
 
 static void fe_mul(fe h, const fe f, const fe g)
 {
@@ -1501,18 +1502,39 @@ static void ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
 
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
-    // Calls the general ge_scalarmult() with the base point.
-    // Other implementations use a precomputed table, but it
-    // takes way too much code.
-    static const fe X = {
-        0x325d51a, 0x18b5823, 0x0f6592a, 0x104a92d, 0x1a4b31d,
-        0x1d6dc5c, 0x27118fe, 0x07fd814, 0x13cd6e5, 0x085a4db};
-    static const fe Y = {
-        0x2666658, 0x1999999, 0x0cccccc, 0x1333333, 0x1999999,
-        0x0666666, 0x3333333, 0x0cccccc, 0x2666666, 0x1999999};
-    ge base_point;
-    ge_from_xy(&base_point, X, Y);
-    ge_scalarmult(p, &base_point, scalar);
+    // Base point in montgomery space (both coordinates).
+    // y1 and z1 are needed after the ladder.
+    fe x1 = {9};
+    fe y1 = {0x1312c27, 0xff8e9760, 0xffc9bac3, 0x00c941d, 0x1b70aca,
+             0x0b72eb3, 0x009169c4, 0xff2963fc, 0x1e475f8, 0xff7d4799 };
+    fe z1 = {1};
+    fe x2, x3, z2, z3, t1, t2, t3, t4;
+
+    // montgomery scalarmult
+    x25519_ladder(x1, x2, z2, x3, z3, scalar);
+
+    // Recover the y coordinate (Katsuyuki Okeya & Kouichi Sakurai, 2001)
+    // Note the shameless reuse of x1: (x1, y1, z1) will correspond to
+    // what was originally (x2, z2).
+    fe_mul(t1, x1, z2);    fe_add(t2, x2, t1);    fe_sub(t3, x2, t1);
+    fe_sq (t3, t3);        fe_mul(t3, t3, x3);    fe_mul973324(t1, z2);
+    fe_add(t2, t2, t1);    fe_mul(t4, x1, x2);    fe_add(t4, t4, z2);
+    fe_mul(t2, t2, t4);    fe_mul(t1, t1, z2);    fe_sub(t2, t2, t1);
+    fe_mul(t2, t2, z3);    fe_add(t1, y1, y1);    fe_mul(t1, t1, z2);
+    fe_mul(t1, t1, z3);    fe_mul(x1, t1, x2);    fe_sub(y1, t2, t3);
+    fe_mul(z1, t1, z2);
+
+    // Conversion back to twisted edwards space
+    static const fe K = { 54885894, 25242303, 55597453,  9067496, 51808079,
+                          33312638, 25456129, 14121551, 54921728,  3972023 };
+    fe_sub(t1  , x1, z1);    fe_add(t2  , x1, z1);    fe_mul(x1  , K , x1);
+    fe_mul(p->X, x1, t2);    fe_mul(p->Y, y1, t1);    fe_mul(p->Z, y1, t2);
+    fe_mul(p->T, x1, t1);
+
+    WIPE_BUFFER(t1);  WIPE_BUFFER(x1);  WIPE_BUFFER(z1);  WIPE_BUFFER(y1);
+    WIPE_BUFFER(t2);  WIPE_BUFFER(x2);  WIPE_BUFFER(z2);
+    WIPE_BUFFER(t3);  WIPE_BUFFER(x3);  WIPE_BUFFER(z3);
+    WIPE_BUFFER(t4);
 }
 
 // Variable time! P, sP, and sB must not be secret!
