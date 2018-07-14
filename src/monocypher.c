@@ -1383,7 +1383,7 @@ static void ge_tobytes(u8 s[32], const ge *h)
 }
 
 // Variable time! s must not be secret!
-static int ge_frombytes_neg(ge *h, const u8 s[32])
+static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
 {
     static const fe d = {
         -10913610, 13857413, -15372611, 6949391, 114729,
@@ -1513,6 +1513,25 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
     ge base_point;
     ge_from_xy(&base_point, X, Y);
     ge_scalarmult(p, &base_point, scalar);
+}
+
+// Variable time! P, sP, and sB must not be secret!
+static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
+                                         u8 p[32], u8 b[32])
+{
+    // base point;
+    static const fe X = {
+        0x325d51a, 0x18b5823, 0x0f6592a, 0x104a92d, 0x1a4b31d,
+        0x1d6dc5c, 0x27118fe, 0x07fd814, 0x13cd6e5, 0x085a4db};
+    static const fe Y = {
+        0x2666658, 0x1999999, 0x0cccccc, 0x1333333, 0x1999999,
+        0x0666666, 0x3333333, 0x0cccccc, 0x2666666, 0x1999999};
+    ge B;
+    ge_from_xy(&B, X, Y);
+    ge pP, bB;
+    ge_scalarmult(&pP,  P, p);
+    ge_scalarmult(&bB, &B, b);
+    ge_add(sum, &pP, &bB);
 }
 
 static void modL(u8 *r, i64 x[64])
@@ -1678,18 +1697,18 @@ void crypto_check_update(crypto_check_ctx *ctx, const u8 *msg, size_t msg_size)
 
 int crypto_check_final(crypto_check_ctx *ctx)
 {
-    ge p, sB, diff, A;
+    ge diff, A;
     u8 h_ram[64], R_check[32];
-    if (ge_frombytes_neg(&A, ctx->pk)) {       // -A
+    u8 *s = ctx->sig + 32;                       // s
+    u8 *R = ctx->sig;                            // R
+    if (ge_frombytes_neg_vartime(&A, ctx->pk)) { // -A
         return -1;
     }
     HASH_FINAL(&ctx->hash, h_ram);
     reduce(h_ram);
-    ge_scalarmult(&p, &A, h_ram);              // p    = -A*h_ram
-    ge_scalarmult_base(&sB, ctx->sig + 32);
-    ge_add(&diff, &p, &sB);                    // diff = s - A*h_ram
-    ge_tobytes(R_check, &diff);
-    return crypto_verify32(ctx->sig, R_check); // R == s - A*h_ram ? OK : fail
+    ge_double_scalarmult_vartime(&diff, &A, h_ram, s);
+    ge_tobytes(R_check, &diff);                  // R_check = s*B - h_ram*A
+    return crypto_verify32(R, R_check);          // R == R_check ? OK : fail
     // No secret, no wipe
 }
 
