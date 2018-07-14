@@ -1361,14 +1361,6 @@ static void ge_from_xy(ge *p, const fe x, const fe y)
     fe_mul(p->T, x, y);
 }
 
-static void ge_cswap(ge *p, ge *q, int b)
-{
-    fe_cswap(p->X, q->X, b);
-    fe_cswap(p->Y, q->Y, b);
-    fe_cswap(p->Z, q->Z, b);
-    fe_cswap(p->T, q->T, b);
-}
-
 static void ge_tobytes(u8 s[32], const ge *h)
 {
     fe recip, x, y;
@@ -1452,8 +1444,7 @@ static void ge_add(ge *s, const ge *p, const ge *q)
     fe_mul(s->Z, f, g);  //  Z3 = F * G
     fe_mul(s->T, e, h);  //  T3 = E * H
 
-    WIPE_BUFFER(a);  WIPE_BUFFER(b);  WIPE_BUFFER(c);  WIPE_BUFFER(d);
-    WIPE_BUFFER(e);  WIPE_BUFFER(f);  WIPE_BUFFER(g);  WIPE_BUFFER(h);
+    // Never used to process secrets. No need to wipe
 }
 
 // could use ge_add() for this, but this is slightly faster
@@ -1473,31 +1464,21 @@ static void ge_double(ge *s, const ge *p)
     fe_mul(s->Z, f, g);                       //  Z3 = F * G
     fe_mul(s->T, e, h);                       //  T3 = E * H
 
-    WIPE_BUFFER(a);  WIPE_BUFFER(b);  WIPE_BUFFER(c);  WIPE_BUFFER(d);
-    WIPE_BUFFER(e);  WIPE_BUFFER(f);  WIPE_BUFFER(g);  WIPE_BUFFER(h);
+    // Never used to process secrets. No need to wipe
 }
 
-static void ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
+static void ge_scalarmult_vartime(ge *p, const ge *q, const u8 scalar[32])
 {
-    // Simple Montgomery ladder, with straight double and add.
-    ge t;
-    fe_0(p->X);  fe_copy(t.X, q->X);
-    fe_1(p->Y);  fe_copy(t.Y, q->Y);
-    fe_1(p->Z);  fe_copy(t.Z, q->Z);
-    fe_0(p->T);  fe_copy(t.T, q->T);
-    int swap = 0;
-    for (int i = 255; i >= 0; i--) {
-        int b = (scalar[i/8] >> (i & 7)) & 1;
-        swap ^= b;  // xor trick avoids unnecessary swaps
-        ge_cswap(p, &t, swap);
-        swap = b;
-        ge_add(&t, &t, p);
-        ge_double(p, p);
-    }
-    // one last swap makes up for the xor trick
-    ge_cswap(p, &t, swap);
+    // p starts at zero
+    fe_0(p->X);  fe_1(p->Y);  fe_1(p->Z);  fe_0(p->T);
 
-    WIPE_CTX(&t);
+    // Simple double and add ladder
+    for (int i = 255; i >= 0; i--) {
+        ge_double(p, p);
+        if ((scalar[i/8] >> (i & 7)) & 1) {
+            ge_add(p, p, q);
+        }
+    }
 }
 
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
@@ -1551,8 +1532,8 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     ge B;
     ge_from_xy(&B, X, Y);
     ge pP, bB;
-    ge_scalarmult(&pP,  P, p);
-    ge_scalarmult(&bB, &B, b);
+    ge_scalarmult_vartime(&pP,  P, p);
+    ge_scalarmult_vartime(&bB, &B, b);
     ge_add(sum, &pP, &bB);
 }
 
