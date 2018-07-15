@@ -1355,7 +1355,8 @@ void crypto_x25519_public_key(u8       public_key[32],
 // Point in a twisted Edwards curve,
 // in extended projective coordinates.
 // x = X/Z, y = Y/Z, T = XY/Z
-typedef struct { fe X; fe Y; fe Z; fe T; } ge;
+typedef struct { fe X;  fe Y;  fe Z; fe T;  } ge;
+typedef struct { fe Yp; fe Ym; fe Z; fe T2; } ge_cached;
 
 static void ge_from_xy(ge *p, const fe x, const fe y)
 {
@@ -1427,31 +1428,34 @@ static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
     return 0;
 }
 
-static void ge_add(ge *s, const ge *p, const ge *q)
+static void ge_cache(ge_cached *c, const ge *p)
 {
     static const fe D2 = { // - 2 * 121665 / 121666
         0x2b2f159, 0x1a6e509, 0x22add7a, 0x0d4141d, 0x0038052,
         0x0f3d130, 0x3407977, 0x19ce331, 0x1c56dff, 0x0901b67
     };
-    fe a, b, c, d, e, f, g, h;
-    //  A = (Y1-X1) * (Y2-X2)
-    //  B = (Y1+X1) * (Y2+X2)
-    fe_sub(a, p->Y, p->X);  fe_sub(h, q->Y, q->X);  fe_mul(a, a, h);
-    fe_add(b, p->X, p->Y);  fe_add(h, q->X, q->Y);  fe_mul(b, b, h);
-    fe_mul(c, p->T, q->T);  fe_mul(c, c, D2  );  //  C = T1 * k * T2
-    fe_add(d, p->Z, p->Z);  fe_mul(d, d, q->Z);  //  D = Z1 * 2 * Z2
-    fe_sub(e, b, a);     //  E  = B - A
-    fe_sub(f, d, c);     //  F  = D - C
-    fe_add(g, d, c);     //  G  = D + C
-    fe_add(h, b, a);     //  H  = B + A
-    fe_mul(s->X, e, f);  //  X3 = E * F
-    fe_mul(s->Y, g, h);  //  Y3 = G * H
-    fe_mul(s->Z, f, g);  //  Z3 = F * G
-    fe_mul(s->T, e, h);  //  T3 = E * H
+    fe_add (c->Yp, p->Y, p->X);
+    fe_sub (c->Ym, p->Y, p->X);
+    fe_copy(c->Z , p->Z      );
+    fe_mul (c->T2, p->T, D2  );
+}
+
+static void ge_add(ge *s, const ge *p, const ge_cached *q)
+{
+    i32 *x3 = s->X;  const i32 *x1 = p->X;  const i32 *Yp = q->Yp;
+    i32 *y3 = s->Y;  const i32 *y1 = p->Y;  const i32 *Ym = q->Ym;
+    i32 *z3 = s->Z;  const i32 *z1 = p->Z;  const i32 *Z  = q->Z ;
+    i32 *t3 = s->T;  const i32 *t1 = p->T;  const i32 *T2 = q->T2;
+    fe x2, y2, z2, t2; // intermediate point x=X/Z, y=Y/T
+    fe a, b, c, d;     // temporaries
+    fe_sub(a , y1, x1);  fe_mul(a , a , Ym);  fe_add(b , x1, y1);
+    fe_mul(b , b , Yp);  fe_mul(c , t1, T2);  fe_add(d , z1, z1);
+    fe_mul(d , d , Z );  fe_sub(x2, b , a );  fe_sub(z2, d , c );
+    fe_add(y2, d , c );  fe_add(t2, b , a );  fe_mul(x3, x2, z2);
+    fe_mul(y3, t2, y2);  fe_mul(z3, y2, z2);  fe_mul(t3, x2, t2);
     // Never used to process secrets. No need to wipe
 }
 
-// could use ge_add() for this, but this is slightly faster
 static void ge_double(ge *s, const ge *p)
 {
     i32 *x3 = s->X;  const i32 *x1 = p->X;
@@ -1518,6 +1522,11 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     ge B;
     ge_from_xy(&B, X, Y);
 
+    // cached points for addition
+    ge_cached cB, cP;
+    ge_cache(&cB, &B);
+    ge_cache(&cP,  P);
+
     // sum starts at zero
     fe_0(sum->X);
     fe_1(sum->Y);
@@ -1528,10 +1537,10 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     for (int i = 255; i >= 0; i--) {
         ge_double(sum, sum);
         if ((p[i/8] >> (i & 7)) & 1) {
-            ge_add(sum, sum, P);
+            ge_add(sum, sum, &cP);
         }
         if ((b[i/8] >> (i & 7)) & 1) {
-            ge_add(sum, sum, &B);
+            ge_add(sum, sum, &cB);
         }
     }
 }
