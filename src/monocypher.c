@@ -1155,6 +1155,12 @@ static void fe_sq(fe h, const fe f)
     CARRY;
 }
 
+static void fe_sq2(fe h, const fe f)
+{
+    fe_sq(h, f);
+    fe_mul_small(h, h, 2);
+}
+
 // This could be simplified, but it would be slower
 static void fe_invert(fe out, const fe z)
 {
@@ -1421,13 +1427,12 @@ static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
     return 0;
 }
 
-static const fe D2 = { // - 2 * 121665 / 121666
-    0x2b2f159, 0x1a6e509, 0x22add7a, 0x0d4141d, 0x0038052,
-    0x0f3d130, 0x3407977, 0x19ce331, 0x1c56dff, 0x0901b67
-};
-
 static void ge_add(ge *s, const ge *p, const ge *q)
 {
+    static const fe D2 = { // - 2 * 121665 / 121666
+        0x2b2f159, 0x1a6e509, 0x22add7a, 0x0d4141d, 0x0038052,
+        0x0f3d130, 0x3407977, 0x19ce331, 0x1c56dff, 0x0901b67
+    };
     fe a, b, c, d, e, f, g, h;
     //  A = (Y1-X1) * (Y2-X2)
     //  B = (Y1+X1) * (Y2+X2)
@@ -1443,27 +1448,22 @@ static void ge_add(ge *s, const ge *p, const ge *q)
     fe_mul(s->Y, g, h);  //  Y3 = G * H
     fe_mul(s->Z, f, g);  //  Z3 = F * G
     fe_mul(s->T, e, h);  //  T3 = E * H
-
     // Never used to process secrets. No need to wipe
 }
 
 // could use ge_add() for this, but this is slightly faster
 static void ge_double(ge *s, const ge *p)
 {
-    fe a, b, c, d, e, f, g, h;
-    fe_sub(a, p->Y, p->X);  fe_sq(a, a);      //  A = (Y1-X1)^2
-    fe_add(b, p->X, p->Y);  fe_sq(b, b);      //  B = (Y1+X1)^2
-    fe_sq (c, p->T);        fe_mul(c, c, D2); //  C = T1^2 * k
-    fe_sq (d, p->Z);        fe_add(d, d, d);  //  D = Z1^2 * 2
-    fe_sub(e, b, a);                          //  E  = B - A
-    fe_sub(f, d, c);                          //  F  = D - C
-    fe_add(g, d, c);                          //  G  = D + C
-    fe_add(h, b, a);                          //  H  = B + A
-    fe_mul(s->X, e, f);                       //  X3 = E * F
-    fe_mul(s->Y, g, h);                       //  Y3 = G * H
-    fe_mul(s->Z, f, g);                       //  Z3 = F * G
-    fe_mul(s->T, e, h);                       //  T3 = E * H
-
+    i32 *x3 = s->X;  const i32 *x1 = p->X;
+    i32 *y3 = s->Y;  const i32 *y1 = p->Y;
+    i32 *z3 = s->Z;  const i32 *z1 = p->Z;
+    i32 *t3 = s->T;
+    fe x2, y2, z2, t2; // intermediate point x=X/Z, y=Y/T
+    fe_sq (x2, x1);      fe_sq (y2, y1);      fe_sq2(z2, z1);
+    fe_add(t2, x1, y1);  fe_sq (t3, t2);      fe_add(t2, y2, x2);
+    fe_sub(y2, y2, x2);  fe_sub(x2, t3, t2);  fe_sub(z2, z2, y2);
+    fe_mul(x3, x2, z2);  fe_mul(y3, t2, y2);  fe_mul(z3, y2, z2);
+    fe_mul(t3, x2, t2);
     // Never used to process secrets. No need to wipe
 }
 
