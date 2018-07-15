@@ -1471,43 +1471,6 @@ static void ge_double(ge *s, const ge *p)
     // Never used to process secrets. No need to wipe
 }
 
-static void ge_scalarmult_base(ge *p, const u8 scalar[32])
-{
-    // Base point in montgomery space (both coordinates).
-    // y1 and z1 are needed after the ladder.
-    fe x1 = {9};
-    fe y1 = {0x1312c27, 0xff8e9760, 0xffc9bac3, 0x00c941d, 0x1b70aca,
-             0x0b72eb3, 0x009169c4, 0xff2963fc, 0x1e475f8, 0xff7d4799 };
-    fe z1 = {1};
-    fe x2, x3, z2, z3, t1, t2, t3, t4;
-
-    // montgomery scalarmult
-    x25519_ladder(x1, x2, z2, x3, z3, scalar);
-
-    // Recover the y coordinate (Katsuyuki Okeya & Kouichi Sakurai, 2001)
-    // Note the shameless reuse of x1: (x1, y1, z1) will correspond to
-    // what was originally (x2, z2).
-    fe_mul(t1, x1, z2);  fe_add(t2, x2, t1);  fe_sub(t3, x2, t1);
-    fe_sq (t3, t3);      fe_mul(t3, t3, x3);  fe_mul973324(t1, z2);
-    fe_add(t2, t2, t1);  fe_mul(t4, x1, x2);  fe_add(t4, t4, z2);
-    fe_mul(t2, t2, t4);  fe_mul(t1, t1, z2);  fe_sub(t2, t2, t1);
-    fe_mul(t2, t2, z3);  fe_add(t1, y1, y1);  fe_mul(t1, t1, z2);
-    fe_mul(t1, t1, z3);  fe_mul(x1, t1, x2);  fe_sub(y1, t2, t3);
-    fe_mul(z1, t1, z2);
-
-    // Conversion back to twisted edwards space
-    static const fe K = { 54885894, 25242303, 55597453,  9067496, 51808079,
-                          33312638, 25456129, 14121551, 54921728,  3972023 };
-    fe_sub(t1  , x1, z1);  fe_add(t2  , x1, z1);  fe_mul(x1  , K , x1);
-    fe_mul(p->X, x1, t2);  fe_mul(p->Y, y1, t1);  fe_mul(p->Z, y1, t2);
-    fe_mul(p->T, x1, t1);
-
-    WIPE_BUFFER(t1);  WIPE_BUFFER(x1);  WIPE_BUFFER(z1);  WIPE_BUFFER(y1);
-    WIPE_BUFFER(t2);  WIPE_BUFFER(x2);  WIPE_BUFFER(z2);
-    WIPE_BUFFER(t3);  WIPE_BUFFER(x3);  WIPE_BUFFER(z3);
-    WIPE_BUFFER(t4);
-}
-
 // Variable time! P, sP, and sB must not be secret!
 static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
                                          u8 p[32], u8 b[32])
@@ -1543,6 +1506,43 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
             ge_add(sum, sum, &cB);
         }
     }
+}
+
+static void ge_scalarmult_base(ge *p, const u8 scalar[32])
+{
+    // Base point in montgomery space (both coordinates).
+    // y1 and z1 are needed after the ladder.
+    fe x1 = {9};
+    fe y1 = {0x1312c27, 0xff8e9760, 0xffc9bac3, 0x00c941d, 0x1b70aca,
+             0x0b72eb3, 0x009169c4, 0xff2963fc, 0x1e475f8, 0xff7d4799 };
+    fe z1 = {1};
+    fe x2, x3, z2, z3, t1, t2, t3, t4;
+
+    // montgomery scalarmult
+    x25519_ladder(x1, x2, z2, x3, z3, scalar);
+
+    // Recover the y coordinate (Katsuyuki Okeya & Kouichi Sakurai, 2001)
+    // Note the shameless reuse of x1: (x1, y1, z1) will correspond to
+    // what was originally (x2, z2).
+    fe_mul(t1, x1, z2);  fe_add(t2, x2, t1);  fe_sub(t3, x2, t1);
+    fe_sq (t3, t3);      fe_mul(t3, t3, x3);  fe_mul973324(t1, z2);
+    fe_add(t2, t2, t1);  fe_mul(t4, x1, x2);  fe_add(t4, t4, z2);
+    fe_mul(t2, t2, t4);  fe_mul(t1, t1, z2);  fe_sub(t2, t2, t1);
+    fe_mul(t2, t2, z3);  fe_add(t1, y1, y1);  fe_mul(t1, t1, z2);
+    fe_mul(t1, t1, z3);  fe_mul(x1, t1, x2);  fe_sub(y1, t2, t3);
+    fe_mul(z1, t1, z2);
+
+    // Conversion back to twisted edwards space
+    static const fe K = { 54885894, 25242303, 55597453,  9067496, 51808079,
+                          33312638, 25456129, 14121551, 54921728,  3972023 };
+    fe_sub(t1  , x1, z1);  fe_add(t2  , x1, z1);  fe_mul(x1  , K , x1);
+    fe_mul(p->X, x1, t2);  fe_mul(p->Y, y1, t1);  fe_mul(p->Z, y1, t2);
+    fe_mul(p->T, x1, t1);
+
+    WIPE_BUFFER(t1);  WIPE_BUFFER(x1);  WIPE_BUFFER(z1);  WIPE_BUFFER(y1);
+    WIPE_BUFFER(t2);  WIPE_BUFFER(x2);  WIPE_BUFFER(z2);
+    WIPE_BUFFER(t3);  WIPE_BUFFER(x3);  WIPE_BUFFER(z3);
+    WIPE_BUFFER(t4);
 }
 
 static void modL(u8 *r, i64 x[64])
