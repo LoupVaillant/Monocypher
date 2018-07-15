@@ -1487,19 +1487,19 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
     // Recover the y coordinate (Katsuyuki Okeya & Kouichi Sakurai, 2001)
     // Note the shameless reuse of x1: (x1, y1, z1) will correspond to
     // what was originally (x2, z2).
-    fe_mul(t1, x1, z2);    fe_add(t2, x2, t1);    fe_sub(t3, x2, t1);
-    fe_sq (t3, t3);        fe_mul(t3, t3, x3);    fe_mul973324(t1, z2);
-    fe_add(t2, t2, t1);    fe_mul(t4, x1, x2);    fe_add(t4, t4, z2);
-    fe_mul(t2, t2, t4);    fe_mul(t1, t1, z2);    fe_sub(t2, t2, t1);
-    fe_mul(t2, t2, z3);    fe_add(t1, y1, y1);    fe_mul(t1, t1, z2);
-    fe_mul(t1, t1, z3);    fe_mul(x1, t1, x2);    fe_sub(y1, t2, t3);
+    fe_mul(t1, x1, z2);  fe_add(t2, x2, t1);  fe_sub(t3, x2, t1);
+    fe_sq (t3, t3);      fe_mul(t3, t3, x3);  fe_mul973324(t1, z2);
+    fe_add(t2, t2, t1);  fe_mul(t4, x1, x2);  fe_add(t4, t4, z2);
+    fe_mul(t2, t2, t4);  fe_mul(t1, t1, z2);  fe_sub(t2, t2, t1);
+    fe_mul(t2, t2, z3);  fe_add(t1, y1, y1);  fe_mul(t1, t1, z2);
+    fe_mul(t1, t1, z3);  fe_mul(x1, t1, x2);  fe_sub(y1, t2, t3);
     fe_mul(z1, t1, z2);
 
     // Conversion back to twisted edwards space
     static const fe K = { 54885894, 25242303, 55597453,  9067496, 51808079,
                           33312638, 25456129, 14121551, 54921728,  3972023 };
-    fe_sub(t1  , x1, z1);    fe_add(t2  , x1, z1);    fe_mul(x1  , K , x1);
-    fe_mul(p->X, x1, t2);    fe_mul(p->Y, y1, t1);    fe_mul(p->Z, y1, t2);
+    fe_sub(t1  , x1, z1);  fe_add(t2  , x1, z1);  fe_mul(x1  , K , x1);
+    fe_mul(p->X, x1, t2);  fe_mul(p->Y, y1, t1);  fe_mul(p->Z, y1, t2);
     fe_mul(p->T, x1, t1);
 
     WIPE_BUFFER(t1);  WIPE_BUFFER(x1);  WIPE_BUFFER(z1);  WIPE_BUFFER(y1);
