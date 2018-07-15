@@ -1467,20 +1467,6 @@ static void ge_double(ge *s, const ge *p)
     // Never used to process secrets. No need to wipe
 }
 
-static void ge_scalarmult_vartime(ge *p, const ge *q, const u8 scalar[32])
-{
-    // p starts at zero
-    fe_0(p->X);  fe_1(p->Y);  fe_1(p->Z);  fe_0(p->T);
-
-    // Simple double and add ladder
-    for (int i = 255; i >= 0; i--) {
-        ge_double(p, p);
-        if ((scalar[i/8] >> (i & 7)) & 1) {
-            ge_add(p, p, q);
-        }
-    }
-}
-
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
     // Base point in montgomery space (both coordinates).
@@ -1531,10 +1517,23 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
         0x0666666, 0x3333333, 0x0cccccc, 0x2666666, 0x1999999};
     ge B;
     ge_from_xy(&B, X, Y);
-    ge pP, bB;
-    ge_scalarmult_vartime(&pP,  P, p);
-    ge_scalarmult_vartime(&bB, &B, b);
-    ge_add(sum, &pP, &bB);
+
+    // sum starts at zero
+    fe_0(sum->X);
+    fe_1(sum->Y);
+    fe_1(sum->Z);
+    fe_0(sum->T);
+
+    // Merged double and add ladder
+    for (int i = 255; i >= 0; i--) {
+        ge_double(sum, sum);
+        if ((p[i/8] >> (i & 7)) & 1) {
+            ge_add(sum, sum, P);
+        }
+        if ((b[i/8] >> (i & 7)) & 1) {
+            ge_add(sum, sum, &B);
+        }
+    }
 }
 
 static void modL(u8 *r, i64 x[64])
