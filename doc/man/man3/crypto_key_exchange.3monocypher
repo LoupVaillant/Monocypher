@@ -1,4 +1,4 @@
-.Dd December 28, 2017
+.Dd July 17, 2018
 .Dt CRYPTO_KEY_EXCHANGE 3MONOCYPHER
 .Os
 .Sh NAME
@@ -53,8 +53,20 @@ with
 Some public keys force the shared key to a known constant.
 .Fn crypto_key_exchange
 returns -1 if it detects such a public key, otherwise it returns 0.
-This never happens with legitimate public keys, but if the ones you
-process are not known to be trustworthy, check the return value.
+This happens with some illegitimate public keys.
+.Pp
+.Sy The return value has been deprecated .
+.Fn crypto_key_exchange
+will return
+.Vt void
+starting with the next major release of Monocypher.
+Some poorly designed protocols require to test for
+.Dq contributory
+behaviour, which ensures that no untrusted party forces the shared
+secret to a known constant.
+Protocols should instead be designed in such a way that no such check
+is necessary, namely by authenticating the other party or exchanging
+keys over a trusted channel.
 .Pp
 .Fn crypto_key_exchange_public_key
 returns nothing.
