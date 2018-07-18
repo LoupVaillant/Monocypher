@@ -1272,6 +1272,8 @@ static void trim_scalar(u8 s[32])
     s[31] |= 64;
 }
 
+static int scalar_bit(const u8 s[32], int i) { return (s[i>>3] >> (i&7)) & 1; }
+
 static void x25519_ladder(const fe x1, fe x2, fe z2, fe x3, fe z3,
                           const u8 scalar[32])
 {
@@ -1284,7 +1286,7 @@ static void x25519_ladder(const fe x1, fe x2, fe z2, fe x3, fe z3,
     fe t0, t1;
     for (int pos = 254; pos >= 0; --pos) {
         // constant time conditional swap before ladder step
-        int b = (scalar[pos >> 3] >> (pos & 7)) & 1;
+        int b = scalar_bit(scalar, pos);
         swap ^= b; // xor trick avoids swapping at the end of the loop
         fe_cswap(x2, x3, swap);
         fe_cswap(z2, z3, swap);
@@ -1499,12 +1501,8 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     // Merged double and add ladder
     for (int i = 255; i >= 0; i--) {
         ge_double(sum, sum);
-        if ((p[i/8] >> (i & 7)) & 1) {
-            ge_add(sum, sum, &cP);
-        }
-        if ((b[i/8] >> (i & 7)) & 1) {
-            ge_add(sum, sum, &cB);
-        }
+        if (scalar_bit(p, i)) { ge_add(sum, sum, &cP); }
+        if (scalar_bit(b, i)) { ge_add(sum, sum, &cB); }
     }
 }
 
