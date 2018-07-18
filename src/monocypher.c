@@ -24,6 +24,7 @@
 #define WIPE_BUFFER(buffer)  crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)            ((a) <= (b) ? (a) : (b))
 #define ALIGN(x, block_size) ((~(x) + 1) & ((block_size) - 1))
+typedef int8_t   i8;
 typedef uint8_t  u8;
 typedef uint32_t u32;
 typedef int32_t  i32;
@@ -1473,6 +1474,44 @@ static void ge_double(ge *s, const ge *p)
     // Never used to process secrets. No need to wipe
 }
 
+// Compute lookup indices for unsigned sliding windows
+static void slide(i8 adds[256], const u8 scalar[32])
+{
+    FOR (i, 0, 256) {
+        adds[i] = -1;
+    }
+    int i = 0;
+    while (i < 253) {
+        if (scalar_bit(scalar, i) != 0) {
+            adds[i] = scalar_bit(scalar, i+1)
+                |     scalar_bit(scalar, i+2) << 1
+                |     scalar_bit(scalar, i+3) << 2;
+            i += 3;
+        }
+        i++;
+    }
+    // Skip last zeroes
+    while (i < 256 && scalar_bit(scalar, i) == 0) {
+        i++;
+    }
+    // last lookup (if any)
+    if (i < 256) {
+        adds[i] = scalar[31] >> (i - 247);;
+    }
+}
+
+// Look up table for sliding windows
+static void ge_precompute(ge_cached lut[8], const ge *P1)
+{
+    ge P2, tmp;
+    ge_double(&P2, P1);
+    ge_cache(&lut[0], P1);
+    FOR (i, 0, 7) {
+        ge_add(&tmp, &P2, &lut[i]);
+        ge_cache(&lut[i+1], &tmp);
+    }
+}
+
 // Variable time! P, sP, and sB must not be secret!
 static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
                                          u8 p[32], u8 b[32])
@@ -1488,9 +1527,10 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     ge_from_xy(&B, X, Y);
 
     // cached points for addition
-    ge_cached cB, cP;
-    ge_cache(&cB, &B);
-    ge_cache(&cP,  P);
+    ge_cached cP[8];  ge_precompute(cP,  P);
+    ge_cached cB[8];  ge_precompute(cB, &B);
+    i8 p_adds[256];   slide(p_adds, p);
+    i8 b_adds[256];   slide(b_adds, b);
 
     // sum starts at zero
     fe_0(sum->X);
@@ -1501,8 +1541,8 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     // Merged double and add ladder
     for (int i = 255; i >= 0; i--) {
         ge_double(sum, sum);
-        if (scalar_bit(p, i)) { ge_add(sum, sum, &cP); }
-        if (scalar_bit(b, i)) { ge_add(sum, sum, &cB); }
+        if (p_adds[i] != -1) { ge_add(sum, sum, &cP[p_adds[i]]); }
+        if (b_adds[i] != -1) { ge_add(sum, sum, &cB[b_adds[i]]); }
     }
 }
 
