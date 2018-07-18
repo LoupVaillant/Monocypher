@@ -57,7 +57,8 @@ The public key of the other party.
 .El
 .Sh RETURN VALUES
 Some public keys force the shared key to a known constant.
-This function returns -1 if it detects such a public key, otherwise it
+.Fn crypto_x225519
+returns -1 if it detects such a public key, otherwise it
 returns 0.
 This never happens with legitimate public keys.
 .Pp
