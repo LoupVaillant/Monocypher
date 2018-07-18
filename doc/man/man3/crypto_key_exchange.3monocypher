@@ -53,7 +53,7 @@ with
 Some public keys force the shared key to a known constant.
 .Fn crypto_key_exchange
 returns -1 if it detects such a public key, otherwise it returns 0.
-This happens with some illegitimate public keys.
+This never happens with legitimate public keys.
 .Pp
 .Sy The return value has been deprecated .
 .Fn crypto_key_exchange
@@ -88,10 +88,7 @@ key and their secret key.)
 const uint8_t their_pk  [32]; /* Their public key   */
 const uint8_t your_sk   [32]; /* Your secret key    */
 uint8_t       shared_key[32]; /* Shared session key */
-if (crypto_key_exchange(shared_key, your_sk, their_pk) != 0) {
-    /* Their public key is malicious. */
-    /* The exchange must be aborted.  */
-}
+crypto_key_exchange(shared_key, your_sk, their_pk);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(your_sk, 32);
 .Ed

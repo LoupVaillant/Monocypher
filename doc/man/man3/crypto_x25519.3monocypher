@@ -84,10 +84,7 @@ key.
 const uint8_t their_pk     [32]; /* Their public key          */
 const uint8_t your_sk      [32]; /* Your secret key           */
 uint8_t       shared_secret[32]; /* Shared secret (NOT a key) */
-if (crypto_x25519(shared_secret, your_sk, their_pk) != 0) {
-    /* Their public key is malicious. */
-    /* The exchange must be aborted.  */
-}
+crypto_x25519(shared_secret, your_sk, their_pk;
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(your_sk, 32);
 
