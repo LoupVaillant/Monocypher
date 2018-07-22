@@ -1187,7 +1187,7 @@ static void fe_invert(fe out, const fe z)
 }
 
 // This could be simplified, but it would be slower
-void fe_pow22523(fe out, const fe z)
+static void fe_pow22523(fe out, const fe z)
 {
     fe t0, t1, t2;
     fe_sq(t0, z);
