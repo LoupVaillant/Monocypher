@@ -1471,7 +1471,8 @@ static void ge_add(ge *s, const ge *p, const ge_cached *q)
     fe_mul(d , d , Z );  fe_sub(x2, b , a );  fe_sub(z2, d , c );
     fe_add(y2, d , c );  fe_add(t2, b , a );  fe_mul(x3, x2, z2);
     fe_mul(y3, t2, y2);  fe_mul(z3, y2, z2);  fe_mul(t3, x2, t2);
-    // Never used to process secrets. No need to wipe
+    WIPE_BUFFER(x2);  WIPE_BUFFER(y2);  WIPE_BUFFER(z2);  WIPE_BUFFER(t2);
+    WIPE_BUFFER( a);  WIPE_BUFFER( b);  WIPE_BUFFER( c);  WIPE_BUFFER( d);
 }
 
 static void ge_double(ge *s, const ge *p)
@@ -1486,7 +1487,7 @@ static void ge_double(ge *s, const ge *p)
     fe_sub(y2, y2, x2);  fe_sub(x2, t3, t2);  fe_sub(z2, z2, y2);
     fe_mul(x3, x2, z2);  fe_mul(y3, t2, y2);  fe_mul(z3, y2, z2);
     fe_mul(t3, x2, t2);
-    // Never used to process secrets. No need to wipe
+    WIPE_BUFFER(x2);  WIPE_BUFFER(y2);  WIPE_BUFFER(z2);  WIPE_BUFFER(t2);
 }
 
 // Compute lookup indices for unsigned sliding windows
@@ -1527,20 +1528,34 @@ static void ge_precompute(ge_cached lut[8], const ge *P1)
     }
 }
 
-// base point;
-static const fe X = {
-    0x325d51a, 0x18b5823, 0x0f6592a, 0x104a92d, 0x1a4b31d,
-    0x1d6dc5c, 0x27118fe, 0x07fd814, 0x13cd6e5, 0x085a4db};
-static const fe Y = {
-    0x2666658, 0x1999999, 0x0cccccc, 0x1333333, 0x1999999,
-    0x0666666, 0x3333333, 0x0cccccc, 0x2666666, 0x1999999};
+static const fe base_comb [8] = {
+    {0x325d51a, 0x18b5823, 0x0f6592a, 0x104a92d, 0x1a4b31d,
+     0x1d6dc5c, 0x27118fe, 0x07fd814, 0x13cd6e5, 0x085a4db},
+    {0x2666658, 0x1999999, 0x0cccccc, 0x1333333, 0x1999999,
+     0x0666666, 0x3333333, 0x0cccccc, 0x2666666, 0x1999999},
+
+    {0x0eda202, 0x0dae3fd, 0x2bd67c1, 0x1f6a8d1, 0x001e36d,
+     0x0a08a96, 0x1b067da, 0x13aba89, 0x08bf2df, 0x1888af6},
+    {0x2e45313, 0x1be95e0, 0x160d1e3, 0x045d481, 0x15042d8,
+     0x01b7c4f, 0x1ed7693, 0x004bbad, 0x02ea4ed, 0x00c96ed},
+
+    {0x0b7e824, 0x011eb98, 0x07cbf90, 0x04e1739, 0x2639a17,
+     0x14e29a0, 0x29cc270, 0x06592a5, 0x3f3c45f, 0x1309ebf},
+    {0x3f5a66b, 0x0af4452, 0x093cb77, 0x0f28d26, 0x24342f8,
+     0x0c29c3a, 0x08f5b13, 0x10fb2be, 0x26526dc, 0x17cb267},
+
+    {0x3dad28d, 0x0b59131, 0x3a4db6f, 0x10dc0eb, 0x1ea777b,
+     0x07e177d, 0x2821b8e, 0x1cf85b1, 0x1e38185, 0x06f1ebc},
+    {0x0314833, 0x0bd9640, 0x0e1f95e, 0x09318d9, 0x07409f8,
+     0x15dc049, 0x377c3bc, 0x1e5ef4b, 0x1855661, 0x1876427},
+};
 
 // Variable time! P, sP, and sB must not be secret!
 static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
                                          u8 p[32], u8 b[32])
 {
     ge B;
-    ge_from_xy(&B, X, Y);
+    ge_from_xy(&B, base_comb[0], base_comb[1]);
 
     // cached points for addition
     ge_cached cP[8];  ge_precompute(cP,  P);
@@ -1559,33 +1574,35 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
 
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
-    ge B;
-    ge_from_xy(&B, X, Y);
-    ge_zero(p);
-
-    // cached points for addition
-    ge_cached cB[16];
-    ge_cache(&cB[0], p);
-    FOR (i, 1, 16) {
-        ge tmp;
-        ge_add(&tmp, &B, &cB[i-1]);
-        ge_cache(&cB[i], &tmp);
-    }
+    // Expand the comb into a proper look up table
+    ge        comb [16];
+    ge_cached ccomb[16];
+    ge_zero   (comb + 0);                             ge_cache(ccomb+0, comb+0);
+    ge_from_xy(comb + 1, base_comb[0], base_comb[1]); ge_cache(ccomb+1, comb+1);
+    ge_from_xy(comb + 2, base_comb[2], base_comb[3]); ge_cache(ccomb+2, comb+2);
+    ge_from_xy(comb + 4, base_comb[4], base_comb[5]); ge_cache(ccomb+4, comb+4);
+    ge_from_xy(comb + 8, base_comb[6], base_comb[7]); ge_cache(ccomb+8, comb+8);
+    FOR (i, 3,  4) {ge_add(comb+i,comb+i-2,ccomb+2); ge_cache(ccomb+i,comb+i);}
+    FOR (i, 5,  8) {ge_add(comb+i,comb+i-4,ccomb+4); ge_cache(ccomb+i,comb+i);}
+    FOR (i, 9, 16) {ge_add(comb+i,comb+i-8,ccomb+8); ge_cache(ccomb+i,comb+i);}
 
     // Double and add ladder
     ge_cached tmp;
+    ge_zero(p);
     for (int i = 63; i >= 0; i--) {
-        ge_double(p, p);  ge_double(p, p);
-        ge_double(p, p);  ge_double(p, p);
-        fe_1(tmp.Ym);     fe_1(tmp.Yp);
-        fe_1(tmp.Z );     fe_0(tmp.T2);
-        u8 nibble = (scalar[i/2] >> ((i%2)*4)) & 0xf;
+        ge_double(p, p);
+        fe_1(tmp.Ym);  fe_1(tmp.Yp);
+        fe_1(tmp.Z );  fe_0(tmp.T2);
+        u8 nibble = scalar_bit(scalar, i)
+            |      (scalar_bit(scalar, i +  64) << 1)
+            |      (scalar_bit(scalar, i + 128) << 2)
+            |      (scalar_bit(scalar, i + 192) << 3);
         FOR (i, 1, 16) {
             i32 select = (1 & (((i ^ nibble) - 1) >> 8)) - 1;
-            fe_ccopy(tmp.Ym, cB[i].Ym, select);
-            fe_ccopy(tmp.Yp, cB[i].Yp, select);
-            fe_ccopy(tmp.Z , cB[i].Z , select);
-            fe_ccopy(tmp.T2, cB[i].T2, select);
+            fe_ccopy(tmp.Ym, ccomb[i].Ym, select);
+            fe_ccopy(tmp.Yp, ccomb[i].Yp, select);
+            fe_ccopy(tmp.Z , ccomb[i].Z , select);
+            fe_ccopy(tmp.T2, ccomb[i].T2, select);
         }
         ge_add(p, p, &tmp);
     }
