@@ -1026,6 +1026,14 @@ static void fe_cswap(fe f, fe g, int b)
     }
 }
 
+static void fe_ccopy(fe f, const fe g, i32 b)
+{
+    FOR (i, 0, 10) {
+        i32 x = (f[i] ^ g[i]) & ~(u32)b;
+        f[i] = f[i] ^ x;
+    }
+}
+
 #define FE_CARRY                                                        \
     i64 c0, c1, c2, c3, c4, c5, c6, c7, c8, c9;                         \
     c9 = (t9 + (i64) (1<<24)) >> 25; t0 += c9 * 19; t9 -= c9 * (1 << 25); \
@@ -1066,7 +1074,6 @@ static void fe_mul_small(fe h, const fe f, i32 g)
     FE_CARRY;
 }
 static void fe_mul121666(fe h, const fe f) { fe_mul_small(h, f, 121666); }
-static void fe_mul973324(fe h, const fe f) { fe_mul_small(h, f, 973324); }
 
 static void fe_mul(fe h, const fe f, const fe g)
 {
@@ -1361,6 +1368,14 @@ void crypto_x25519_public_key(u8       public_key[32],
 typedef struct { fe X;  fe Y;  fe Z; fe T;  } ge;
 typedef struct { fe Yp; fe Ym; fe Z; fe T2; } ge_cached;
 
+static void ge_zero(ge *p)
+{
+    fe_0(p->X);
+    fe_1(p->Y);
+    fe_1(p->Z);
+    fe_0(p->T);
+}
+
 static void ge_from_xy(ge *p, const fe x, const fe y)
 {
     FOR (i, 0, 10) {
@@ -1512,17 +1527,18 @@ static void ge_precompute(ge_cached lut[8], const ge *P1)
     }
 }
 
+// base point;
+static const fe X = {
+    0x325d51a, 0x18b5823, 0x0f6592a, 0x104a92d, 0x1a4b31d,
+    0x1d6dc5c, 0x27118fe, 0x07fd814, 0x13cd6e5, 0x085a4db};
+static const fe Y = {
+    0x2666658, 0x1999999, 0x0cccccc, 0x1333333, 0x1999999,
+    0x0666666, 0x3333333, 0x0cccccc, 0x2666666, 0x1999999};
+
 // Variable time! P, sP, and sB must not be secret!
 static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
                                          u8 p[32], u8 b[32])
 {
-    // base point;
-    static const fe X = {
-        0x325d51a, 0x18b5823, 0x0f6592a, 0x104a92d, 0x1a4b31d,
-        0x1d6dc5c, 0x27118fe, 0x07fd814, 0x13cd6e5, 0x085a4db};
-    static const fe Y = {
-        0x2666658, 0x1999999, 0x0cccccc, 0x1333333, 0x1999999,
-        0x0666666, 0x3333333, 0x0cccccc, 0x2666666, 0x1999999};
     ge B;
     ge_from_xy(&B, X, Y);
 
@@ -1532,13 +1548,8 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     i8 p_adds[256];   slide(p_adds, p);
     i8 b_adds[256];   slide(b_adds, b);
 
-    // sum starts at zero
-    fe_0(sum->X);
-    fe_1(sum->Y);
-    fe_1(sum->Z);
-    fe_0(sum->T);
-
     // Merged double and add ladder
+    ge_zero(sum);
     for (int i = 255; i >= 0; i--) {
         ge_double(sum, sum);
         if (p_adds[i] != -1) { ge_add(sum, sum, &cP[p_adds[i]]); }
@@ -1548,39 +1559,37 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
 
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
-    // Base point in montgomery space (both coordinates).
-    // y1 and z1 are needed after the ladder.
-    fe x1 = {9};
-    fe y1 = {0x1312c27, 0xff8e9760, 0xffc9bac3, 0x00c941d, 0x1b70aca,
-             0x0b72eb3, 0x009169c4, 0xff2963fc, 0x1e475f8, 0xff7d4799 };
-    fe z1 = {1};
-    fe x2, x3, z2, z3, t1, t2, t3, t4;
+    ge B;
+    ge_from_xy(&B, X, Y);
+    ge_zero(p);
 
-    // montgomery scalarmult
-    x25519_ladder(x1, x2, z2, x3, z3, scalar);
+    // cached points for addition
+    ge_cached cB[16];
+    ge_cache(&cB[0], p);
+    FOR (i, 1, 16) {
+        ge tmp;
+        ge_add(&tmp, &B, &cB[i-1]);
+        ge_cache(&cB[i], &tmp);
+    }
 
-    // Recover the y coordinate (Katsuyuki Okeya & Kouichi Sakurai, 2001)
-    // Note the shameless reuse of x1: (x1, y1, z1) will correspond to
-    // what was originally (x2, z2).
-    fe_mul(t1, x1, z2);  fe_add(t2, x2, t1);  fe_sub(t3, x2, t1);
-    fe_sq (t3, t3);      fe_mul(t3, t3, x3);  fe_mul973324(t1, z2);
-    fe_add(t2, t2, t1);  fe_mul(t4, x1, x2);  fe_add(t4, t4, z2);
-    fe_mul(t2, t2, t4);  fe_mul(t1, t1, z2);  fe_sub(t2, t2, t1);
-    fe_mul(t2, t2, z3);  fe_add(t1, y1, y1);  fe_mul(t1, t1, z2);
-    fe_mul(t1, t1, z3);  fe_mul(x1, t1, x2);  fe_sub(y1, t2, t3);
-    fe_mul(z1, t1, z2);
-
-    // Conversion back to twisted edwards space
-    static const fe K = { 54885894, 25242303, 55597453,  9067496, 51808079,
-                          33312638, 25456129, 14121551, 54921728,  3972023 };
-    fe_sub(t1  , x1, z1);  fe_add(t2  , x1, z1);  fe_mul(x1  , K , x1);
-    fe_mul(p->X, x1, t2);  fe_mul(p->Y, y1, t1);  fe_mul(p->Z, y1, t2);
-    fe_mul(p->T, x1, t1);
-
-    WIPE_BUFFER(t1);  WIPE_BUFFER(x1);  WIPE_BUFFER(z1);  WIPE_BUFFER(y1);
-    WIPE_BUFFER(t2);  WIPE_BUFFER(x2);  WIPE_BUFFER(z2);
-    WIPE_BUFFER(t3);  WIPE_BUFFER(x3);  WIPE_BUFFER(z3);
-    WIPE_BUFFER(t4);
+    // Double and add ladder
+    ge_cached tmp;
+    for (int i = 63; i >= 0; i--) {
+        ge_double(p, p);  ge_double(p, p);
+        ge_double(p, p);  ge_double(p, p);
+        fe_1(tmp.Ym);     fe_1(tmp.Yp);
+        fe_1(tmp.Z );     fe_0(tmp.T2);
+        u8 nibble = (scalar[i/2] >> ((i%2)*4)) & 0xf;
+        FOR (i, 1, 16) {
+            i32 select = (1 & (((i ^ nibble) - 1) >> 8)) - 1;
+            fe_ccopy(tmp.Ym, cB[i].Ym, select);
+            fe_ccopy(tmp.Yp, cB[i].Yp, select);
+            fe_ccopy(tmp.Z , cB[i].Z , select);
+            fe_ccopy(tmp.T2, cB[i].T2, select);
+        }
+        ge_add(p, p, &tmp);
+    }
+    WIPE_CTX(&tmp);
 }
 
 static void modL(u8 *r, i64 x[64])
