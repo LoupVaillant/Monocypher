@@ -1460,19 +1460,27 @@ static void ge_cache(ge_cached *c, const ge *p)
 
 static void ge_add(ge *s, const ge *p, const ge_cached *q)
 {
-    i32 *x3 = s->X;  const i32 *x1 = p->X;  const i32 *Yp = q->Yp;
-    i32 *y3 = s->Y;  const i32 *y1 = p->Y;  const i32 *Ym = q->Ym;
-    i32 *z3 = s->Z;  const i32 *z1 = p->Z;  const i32 *Z  = q->Z ;
-    i32 *t3 = s->T;  const i32 *t1 = p->T;  const i32 *T2 = q->T2;
-    fe x2, y2, z2, t2; // intermediate point x=X/Z, y=Y/T
-    fe a, b, c, d;     // temporaries
-    fe_sub(a , y1, x1);  fe_mul(a , a , Ym);  fe_add(b , x1, y1);
-    fe_mul(b , b , Yp);  fe_mul(c , t1, T2);  fe_add(d , z1, z1);
-    fe_mul(d , d , Z );  fe_sub(x2, b , a );  fe_sub(z2, d , c );
-    fe_add(y2, d , c );  fe_add(t2, b , a );  fe_mul(x3, x2, z2);
-    fe_mul(y3, t2, y2);  fe_mul(z3, y2, z2);  fe_mul(t3, x2, t2);
-    WIPE_BUFFER(x2);  WIPE_BUFFER(y2);  WIPE_BUFFER(z2);  WIPE_BUFFER(t2);
-    WIPE_BUFFER( a);  WIPE_BUFFER( b);  WIPE_BUFFER( c);  WIPE_BUFFER( d);
+    fe a, b;
+    fe_add(a   , p->Y, p->X );
+    fe_sub(b   , p->Y, p->X );
+    fe_mul(a   , a   , q->Yp);
+    fe_mul(b   , b   , q->Ym);
+    fe_add(s->Y, a   , b    );
+    fe_sub(s->X, a   , b    );
+
+    fe_add(s->Z, p->Z, p->Z);
+    fe_mul(s->Z, s->Z, q->Z );
+    fe_mul(s->T, p->T, q->T2);
+    fe_add(a   , s->Z, s->T);
+    fe_sub(b   , s->Z, s->T);
+
+    fe_mul(s->T, s->X, s->Y);
+    fe_mul(s->X, s->X, b   );
+    fe_mul(s->Y, s->Y, a   );
+    fe_mul(s->Z, a   , b   );
+
+    WIPE_BUFFER( a);
+    WIPE_BUFFER( b);
 }
 
 static void ge_double(ge *s, const ge *p)
