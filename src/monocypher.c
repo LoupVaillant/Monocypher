@@ -1485,17 +1485,22 @@ static void ge_add(ge *s, const ge *p, const ge_cached *q)
 
 static void ge_double(ge *s, const ge *p)
 {
-    i32 *x3 = s->X;  const i32 *x1 = p->X;
-    i32 *y3 = s->Y;  const i32 *y1 = p->Y;
-    i32 *z3 = s->Z;  const i32 *z1 = p->Z;
-    i32 *t3 = s->T;
-    fe x2, y2, z2, t2; // intermediate point x=X/Z, y=Y/T
-    fe_sq (x2, x1);      fe_sq (y2, y1);      fe_sq2(z2, z1);
-    fe_add(t2, x1, y1);  fe_sq (t3, t2);      fe_add(t2, y2, x2);
-    fe_sub(y2, y2, x2);  fe_sub(x2, t3, t2);  fe_sub(z2, z2, y2);
-    fe_mul(x3, x2, z2);  fe_mul(y3, t2, y2);  fe_mul(z3, y2, z2);
-    fe_mul(t3, x2, t2);
-    WIPE_BUFFER(x2);  WIPE_BUFFER(y2);  WIPE_BUFFER(z2);  WIPE_BUFFER(t2);
+    ge q; // intermediate point x=X/Z, y=Y/T
+    fe_sq (q.X , p->X);
+    fe_sq (q.Y , p->Y);
+    fe_sq2(q.Z , p->Z);
+    fe_add(q.T , p->X, p->Y);
+    fe_sq (s->T, q.T);
+    fe_add(q.T , q.Y , q.X);
+    fe_sub(q.Y , q.Y , q.X);
+    fe_sub(q.X , s->T, q.T);
+    fe_sub(q.Z , q.Z , q.Y);
+
+    fe_mul(s->X, q.X , q.Z);
+    fe_mul(s->Y, q.T , q.Y);
+    fe_mul(s->Z, q.Y , q.Z);
+    fe_mul(s->T, q.X , q.T);
+    WIPE_CTX(&q);
 }
 
 // Compute lookup indices for unsigned sliding windows
