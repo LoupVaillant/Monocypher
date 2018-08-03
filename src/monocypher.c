@@ -1282,19 +1282,32 @@ static void trim_scalar(u8 s[32])
 
 static int scalar_bit(const u8 s[32], int i) { return (s[i>>3] >> (i&7)) & 1; }
 
-static void x25519_ladder(const fe x1, fe x2, fe z2, fe x3, fe z3,
-                          const u8 scalar[32])
+int crypto_x25519(u8       raw_shared_secret[32],
+                  const u8 your_secret_key  [32],
+                  const u8 their_public_key [32])
 {
+    // computes the scalar product
+    fe x1;
+    fe_frombytes(x1, their_public_key);
+
+    // restrict the possible scalar values
+    u8 e[32];
+    FOR (i, 0, 32) {
+        e[i] = your_secret_key[i];
+    }
+    trim_scalar(e);
+
+    // computes the actual scalar product (the result is in x2 and z2)
+    fe x2, z2, x3, z3, t0, t1;
     // Montgomery ladder
     // In projective coordinates, to avoid divisons: x = X / Z
     // We don't care about the y coordinate, it's only 1 bit of information
     fe_1(x2);        fe_0(z2); // "zero" point
     fe_copy(x3, x1); fe_1(z3); // "one"  point
     int swap = 0;
-    fe t0, t1;
     for (int pos = 254; pos >= 0; --pos) {
         // constant time conditional swap before ladder step
-        int b = scalar_bit(scalar, pos);
+        int b = scalar_bit(e, pos);
         swap ^= b; // xor trick avoids swapping at the end of the loop
         fe_cswap(x2, x3, swap);
         fe_cswap(z2, z3, swap);
@@ -1314,29 +1327,6 @@ static void x25519_ladder(const fe x1, fe x2, fe z2, fe x3, fe z3,
     fe_cswap(x2, x3, swap);
     fe_cswap(z2, z3, swap);
 
-    WIPE_BUFFER(t0);
-    WIPE_BUFFER(t1);
-}
-
-int crypto_x25519(u8       raw_shared_secret[32],
-                  const u8 your_secret_key  [32],
-                  const u8 their_public_key [32])
-{
-    // computes the scalar product
-    fe x1;
-    fe_frombytes(x1, their_public_key);
-
-    // restrict the possible scalar values
-    u8 e[32];
-    FOR (i, 0, 32) {
-        e[i] = your_secret_key[i];
-    }
-    trim_scalar(e);
-
-    // computes the actual scalar product (the result is in x2 and z2)
-    fe x2, z2, x3, z3;
-    x25519_ladder(x1, x2, z2, x3, z3, e);
-
     // normalises the coordinates: x == X / Z
     fe_invert(z2, z2);
     fe_mul(x2, x2, z2);
@@ -1345,8 +1335,9 @@ int crypto_x25519(u8       raw_shared_secret[32],
     WIPE_BUFFER(x1);  WIPE_BUFFER(e );
     WIPE_BUFFER(x2);  WIPE_BUFFER(z2);
     WIPE_BUFFER(x3);  WIPE_BUFFER(z3);
+    WIPE_BUFFER(t0);  WIPE_BUFFER(t1);
 
-    // Returns -1 if the input is all zero
+    // Returns -1 if the output is all zero
     // (happens with some malicious public keys)
     return -1 - zerocmp32(raw_shared_secret);
 }
