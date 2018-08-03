@@ -1460,7 +1460,7 @@ static void ge_cache(ge_cached *c, const ge *p)
 
 static void ge_add(ge *s, const ge *p, const ge_cached *q)
 {
-    fe a, b;
+    fe a, b; // not used to process secrets, no need to wipe
     fe_add(a   , p->Y, p->X );
     fe_sub(b   , p->Y, p->X );
     fe_mul(a   , a   , q->Yp);
@@ -1468,39 +1468,54 @@ static void ge_add(ge *s, const ge *p, const ge_cached *q)
     fe_add(s->Y, a   , b    );
     fe_sub(s->X, a   , b    );
 
-    fe_add(s->Z, p->Z, p->Z);
+    fe_add(s->Z, p->Z, p->Z );
     fe_mul(s->Z, s->Z, q->Z );
     fe_mul(s->T, p->T, q->T2);
-    fe_add(a   , s->Z, s->T);
-    fe_sub(b   , s->Z, s->T);
+    fe_add(a   , s->Z, s->T );
+    fe_sub(b   , s->Z, s->T );
 
     fe_mul(s->T, s->X, s->Y);
     fe_mul(s->X, s->X, b   );
     fe_mul(s->Y, s->Y, a   );
     fe_mul(s->Z, a   , b   );
-
-    WIPE_BUFFER( a);
-    WIPE_BUFFER( b);
 }
 
-static void ge_double(ge *s, const ge *p)
+static void ge_madd(ge *s, const ge *p, const ge_cached *q, fe a, fe b)
 {
-    ge q; // intermediate point x=X/Z, y=Y/T
-    fe_sq (q.X , p->X);
-    fe_sq (q.Y , p->Y);
-    fe_sq2(q.Z , p->Z);
-    fe_add(q.T , p->X, p->Y);
-    fe_sq (s->T, q.T);
-    fe_add(q.T , q.Y , q.X);
-    fe_sub(q.Y , q.Y , q.X);
-    fe_sub(q.X , s->T, q.T);
-    fe_sub(q.Z , q.Z , q.Y);
+    fe_add(a   , p->Y, p->X );
+    fe_sub(b   , p->Y, p->X );
+    fe_mul(a   , a   , q->Yp);
+    fe_mul(b   , b   , q->Ym);
+    fe_add(s->Y, a   , b    );
+    fe_sub(s->X, a   , b    );
 
-    fe_mul(s->X, q.X , q.Z);
-    fe_mul(s->Y, q.T , q.Y);
-    fe_mul(s->Z, q.Y , q.Z);
-    fe_mul(s->T, q.X , q.T);
-    WIPE_CTX(&q);
+    fe_add(s->Z, p->Z, p->Z );
+    fe_mul(s->T, p->T, q->T2);
+    fe_add(a   , s->Z, s->T );
+    fe_sub(b   , s->Z, s->T );
+
+    fe_mul(s->T, s->X, s->Y);
+    fe_mul(s->X, s->X, b   );
+    fe_mul(s->Y, s->Y, a   );
+    fe_mul(s->Z, a   , b   );
+}
+
+static void ge_double(ge *s, const ge *p, ge *q)
+{
+    fe_sq (q->X, p->X);
+    fe_sq (q->Y, p->Y);
+    fe_sq2(q->Z, p->Z);
+    fe_add(q->T, p->X, p->Y);
+    fe_sq (s->T, q->T);
+    fe_add(q->T, q->Y, q->X);
+    fe_sub(q->Y, q->Y, q->X);
+    fe_sub(q->X, s->T, q->T);
+    fe_sub(q->Z, q->Z, q->Y);
+
+    fe_mul(s->X, q->X , q->Z);
+    fe_mul(s->Y, q->T , q->Y);
+    fe_mul(s->Z, q->Y , q->Z);
+    fe_mul(s->T, q->X , q->T);
 }
 
 // Compute lookup indices for unsigned sliding windows
@@ -1533,7 +1548,7 @@ static void slide(i8 adds[256], const u8 scalar[32])
 static void ge_precompute(ge_cached lut[8], const ge *P1)
 {
     ge P2, tmp;
-    ge_double(&P2, P1);
+    ge_double(&P2, P1, &tmp);
     ge_cache(&lut[0], P1);
     FOR (i, 0, 7) {
         ge_add(&tmp, &P2, &lut[i]);
@@ -1639,7 +1654,7 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     // Merged double and add ladder
     ge_zero(sum);
     for (int i = 255; i >= 0; i--) {
-        ge_double(sum, sum);
+        ge_double(sum, sum, &B); // B is no longer used, we can overwrite it
         if (p_adds[i] != -1) { ge_add(sum, sum, &cP[p_adds[i]]); }
         if (b_adds[i] != -1) { ge_add(sum, sum, &cB[b_adds[i]]); }
     }
@@ -1657,9 +1672,11 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 
     // Double and add ladder
     ge_cached tmp;
+    fe a, b; // temporaries for addition
+    ge dbl;  // temporary for doublings
     ge_zero(p);
     for (int i = 63; i >= 0; i--) {
-        ge_double(p, p);
+        ge_double(p, p, &dbl);
         fe_1(tmp.Ym);  fe_1(tmp.Yp);
         fe_1(tmp.Z );  fe_0(tmp.T2);
         u8 nibble = scalar_bit(scalar, i)
@@ -1672,9 +1689,12 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
             fe_ccopy(tmp.Yp, ccomb[i].Yp, select);
             fe_ccopy(tmp.T2, ccomb[i].T2, select);
         }
-        ge_add(p, p, &tmp);
+        ge_madd(p, p, &tmp, a, b);
     }
     WIPE_CTX(&tmp);
+    WIPE_CTX(&dbl);
+    WIPE_BUFFER(a);
+    WIPE_BUFFER(b);
 }
 
 static void modL(u8 *r, i64 x[64])
