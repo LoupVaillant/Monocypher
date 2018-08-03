@@ -33,13 +33,6 @@ typedef uint64_t u64;
 
 static const u8 zero[128] = {0};
 
-static u32 load24_le(const u8 s[3])
-{
-    return (u32)s[0]
-        | ((u32)s[1] <<  8)
-        | ((u32)s[2] << 16);
-}
-
 static u32 load32_le(const u8 s[4])
 {
     return (u32)s[0]
@@ -1034,34 +1027,18 @@ static void fe_ccopy(fe f, const fe g, i32 b)
     }
 }
 
-#define FE_CARRY                                                        \
-    i64 c0, c1, c2, c3, c4, c5, c6, c7, c8, c9;                         \
-    c9 = (t9 + (i64) (1<<24)) >> 25; t0 += c9 * 19; t9 -= c9 * (1 << 25); \
-    c1 = (t1 + (i64) (1<<24)) >> 25; t2 += c1;      t1 -= c1 * (1 << 25); \
-    c3 = (t3 + (i64) (1<<24)) >> 25; t4 += c3;      t3 -= c3 * (1 << 25); \
-    c5 = (t5 + (i64) (1<<24)) >> 25; t6 += c5;      t5 -= c5 * (1 << 25); \
-    c7 = (t7 + (i64) (1<<24)) >> 25; t8 += c7;      t7 -= c7 * (1 << 25); \
-    c0 = (t0 + (i64) (1<<25)) >> 26; t1 += c0;      t0 -= c0 * (1 << 26); \
-    c2 = (t2 + (i64) (1<<25)) >> 26; t3 += c2;      t2 -= c2 * (1 << 26); \
-    c4 = (t4 + (i64) (1<<25)) >> 26; t5 += c4;      t4 -= c4 * (1 << 26); \
-    c6 = (t6 + (i64) (1<<25)) >> 26; t7 += c6;      t6 -= c6 * (1 << 26); \
-    c8 = (t8 + (i64) (1<<25)) >> 26; t9 += c8;      t8 -= c8 * (1 << 26); \
-    h[0]=(i32)t0;  h[1]=(i32)t1;  h[2]=(i32)t2;  h[3]=(i32)t3;  h[4]=(i32)t4; \
-    h[5]=(i32)t5;  h[6]=(i32)t6;  h[7]=(i32)t7;  h[8]=(i32)t8;  h[9]=(i32)t9
-
 static void fe_frombytes(fe h, const u8 s[32])
 {
-    i64 t0 =  load32_le(s);
-    i64 t1 =  load24_le(s +  4) << 6;
-    i64 t2 =  load24_le(s +  7) << 5;
-    i64 t3 =  load24_le(s + 10) << 3;
-    i64 t4 =  load24_le(s + 13) << 2;
-    i64 t5 =  load32_le(s + 16);
-    i64 t6 =  load24_le(s + 20) << 7;
-    i64 t7 =  load24_le(s + 23) << 5;
-    i64 t8 =  load24_le(s + 26) << 4;
-    i64 t9 = (load24_le(s + 29) & 8388607) << 2;
-    FE_CARRY;
+    h[0]= load32_le(s     )      & 0x3ffffff;
+    h[1]= load32_le(s +  3) >> 2 & 0x1ffffff;
+    h[2]= load32_le(s +  6) >> 3 & 0x3ffffff;
+    h[3]= load32_le(s +  9) >> 5 & 0x1ffffff;
+    h[4]= load32_le(s + 12) >> 6 & 0x3ffffff;
+    h[5]= load32_le(s + 16)      & 0x1ffffff;
+    h[6]= load32_le(s + 19) >> 1 & 0x3ffffff;
+    h[7]= load32_le(s + 22) >> 3 & 0x1ffffff;
+    h[8]= load32_le(s + 25) >> 4 & 0x3ffffff;
+    h[9]= load32_le(s + 28) >> 6 & 0x1ffffff;
 }
 
 static void fe_mul_small(fe h, const fe f, i32 g)
@@ -1071,7 +1048,20 @@ static void fe_mul_small(fe h, const fe f, i32 g)
     i64 t4 = f[4] * (i64) g;  i64 t5 = f[5] * (i64) g;
     i64 t6 = f[6] * (i64) g;  i64 t7 = f[7] * (i64) g;
     i64 t8 = f[8] * (i64) g;  i64 t9 = f[9] * (i64) g;
-    FE_CARRY;
+
+    i64 c0, c1, c2, c3, c4, c5, c6, c7, c8, c9;
+    c9 = (t9 + (i64) (1<<24)) >> 25; t0 += c9 * 19; t9 -= c9 * (1 << 25);
+    c1 = (t1 + (i64) (1<<24)) >> 25; t2 += c1;      t1 -= c1 * (1 << 25);
+    c3 = (t3 + (i64) (1<<24)) >> 25; t4 += c3;      t3 -= c3 * (1 << 25);
+    c5 = (t5 + (i64) (1<<24)) >> 25; t6 += c5;      t5 -= c5 * (1 << 25);
+    c7 = (t7 + (i64) (1<<24)) >> 25; t8 += c7;      t7 -= c7 * (1 << 25);
+    c0 = (t0 + (i64) (1<<25)) >> 26; t1 += c0;      t0 -= c0 * (1 << 26);
+    c2 = (t2 + (i64) (1<<25)) >> 26; t3 += c2;      t2 -= c2 * (1 << 26);
+    c4 = (t4 + (i64) (1<<25)) >> 26; t5 += c4;      t4 -= c4 * (1 << 26);
+    c6 = (t6 + (i64) (1<<25)) >> 26; t7 += c6;      t6 -= c6 * (1 << 26);
+    c8 = (t8 + (i64) (1<<25)) >> 26; t9 += c8;      t8 -= c8 * (1 << 26);
+    h[0]=(i32)t0;  h[1]=(i32)t1;  h[2]=(i32)t2;  h[3]=(i32)t3;  h[4]=(i32)t4;
+    h[5]=(i32)t5;  h[6]=(i32)t6;  h[7]=(i32)t7;  h[8]=(i32)t8;  h[9]=(i32)t9;
 }
 static void fe_mul121666(fe h, const fe f) { fe_mul_small(h, f, 121666); }
 
