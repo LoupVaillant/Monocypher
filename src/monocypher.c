@@ -1687,28 +1687,32 @@ static const fe comb_T2[16] = {
      -11927760, 24989997, -5464220, -26196392, -5839453},
 };
 
+#define LOOKUP_ADD(i)                                     \
+    fe_1(yp);                                             \
+    fe_1(ym);                                             \
+    fe_0(t2);                                             \
+    u8 nibble = scalar_bit(scalar, i)                     \
+        |      (scalar_bit(scalar, i +  64) << 1)         \
+        |      (scalar_bit(scalar, i + 128) << 2)         \
+        |      (scalar_bit(scalar, i + 192) << 3);        \
+    FOR (j, 1, 16) {                                      \
+        i32 select = (1 & (((j ^ nibble) - 1) >> 8)) - 1; \
+        fe_ccopy(yp, comb_Yp[j], select);                 \
+        fe_ccopy(ym, comb_Ym[j], select);                 \
+        fe_ccopy(t2, comb_T2[j], select);                 \
+    }                                                     \
+    ge_madd(p, p, yp, ym, t2, a, b)
+
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
     // Double and add ladder
     fe yp, ym, t2, a, b; // temporaries for addition
     ge dbl;              // temporary for doublings
     ge_zero(p);
-    for (int i = 63; i >= 0; i--) {
+    LOOKUP_ADD(63);
+    for (int i = 62; i >= 0; i--) {
         ge_double(p, p, &dbl);
-        fe_1(yp);
-        fe_1(ym);
-        fe_0(t2);
-        u8 nibble = scalar_bit(scalar, i)
-            |      (scalar_bit(scalar, i +  64) << 1)
-            |      (scalar_bit(scalar, i + 128) << 2)
-            |      (scalar_bit(scalar, i + 192) << 3);
-        FOR (i, 1, 16) {
-            i32 select = (1 & (((i ^ nibble) - 1) >> 8)) - 1;
-            fe_ccopy(yp, comb_Yp[i], select);
-            fe_ccopy(ym, comb_Ym[i], select);
-            fe_ccopy(t2, comb_T2[i], select);
-        }
-        ge_madd(p, p, yp, ym, t2, a, b);
+        LOOKUP_ADD(i);
     }
     WIPE_CTX(&dbl);
     WIPE_BUFFER(ym);  WIPE_BUFFER(yp);  WIPE_BUFFER(t2);
