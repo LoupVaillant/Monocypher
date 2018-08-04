@@ -1565,12 +1565,24 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     i8 p_adds[256];   slide(p_adds, p);
     i8 b_adds[256];   slide(b_adds, b);
 
+    // Avoid the first doublings
+    int i = 255;
+    while (i >= 0          &&
+           p_adds[i] == -1 &&
+           b_adds[i] == -1) {
+        i--;
+    }
+
     // Merged double and add ladder
     ge_zero(sum);
-    for (int i = 255; i >= 0; i--) {
+    if (p_adds[i] != -1) { ge_add(sum, sum, &cP[p_adds[i]]); }
+    if (b_adds[i] != -1) { ge_add(sum, sum, &cB[b_adds[i]]); }
+    i--;
+    while (i >= 0) {
         ge_double(sum, sum, &B); // B is no longer used, we can overwrite it
         if (p_adds[i] != -1) { ge_add(sum, sum, &cP[p_adds[i]]); }
         if (b_adds[i] != -1) { ge_add(sum, sum, &cB[b_adds[i]]); }
+        i--;
     }
 }
 
