@@ -930,8 +930,57 @@ void crypto_argon2(u8 *hash, u32 hash_size, void *work_area,
 //  Originally taken from SUPERCOP's ref10 implementation.
 //  A bit bigger than TweetNaCl, over 4 times faster.
 
-// field element
-typedef i32 fe[10];
+#include <assert.h>
+
+// field element  (with a sentinel at f[10])
+typedef i32 fe[11];
+
+static i32 abs_val(i32 a)
+{
+    return a < 0 ? -a : a;
+}
+
+static void strict_check(const fe f)
+{
+    // The sentinel must never exceed 1
+    assert(f[10] >= 0); // that one should be impossible
+    assert(f[10] <= 1);
+
+    // No addition has been performed
+    FOR (i, 0, 5) {
+        assert(abs_val(f[i*2  ]) < 1.1 * ((i32)1<<25));
+        assert(abs_val(f[i*2+1]) < 1.1 * ((i32)1<<24));
+    }
+}
+
+static void check(const fe f)
+{
+    // The sentinel must never exceed 3
+    assert(f[10] >= 0); // that one should be impossible
+    assert(f[10] <= 3);
+
+    // No addition has been performed
+    if (f[10] <= 1) {  // 0 means the same as 1
+        FOR (i, 0, 5) {
+            assert(abs_val(f[i*2  ]) < 1.1 * ((i32)1<<25));
+            assert(abs_val(f[i*2+1]) < 1.1 * ((i32)1<<24));
+        }
+    }
+    // One adition has been performed
+    if (f[10] == 2) {
+        FOR (i, 0, 5) {
+            assert(abs_val(f[i*2  ]) < 1.1 * ((i32)1<<26));
+            assert(abs_val(f[i*2+1]) < 1.1 * ((i32)1<<25));
+        }
+    }
+    // Two aditions have been performed
+    if (f[10] == 3) {
+        FOR (i, 0, 5) {
+            assert(abs_val(f[i*2  ]) < 1.65 * ((i32)1<<26));
+            assert(abs_val(f[i*2+1]) < 1.65 * ((i32)1<<25));
+        }
+    }
+}
 
 // field constants
 //
@@ -942,6 +991,8 @@ typedef i32 fe[10];
 // lop_x, lop_y: low order point in Edwards coordinates
 // ufactor     : -sqrt(-1) * 2
 // A2          : 486662^2  (A squared)
+//
+// The sentinel of a constant is 1 (tight constraints)
 static const fe fe_one  = {1};
 static const fe sqrtm1  = {
 	-32595792, -7943725, 9377950, 3500415, 12389472,
@@ -971,31 +1022,72 @@ static const fe A2      = {
 	12721188, 3529, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
-static void fe_0(fe h) {           ZERO(h  , 10); }
-static void fe_1(fe h) { h[0] = 1; ZERO(h+1,  9); }
+static void fe_0(fe h) {           ZERO(h  , 10);  h[10] = 0; }
+static void fe_1(fe h) { h[0] = 1; ZERO(h+1,  9);  h[10] = 1; }
 
-static void fe_copy(fe h,const fe f           ){FOR(i,0,10) h[i] =  f[i];      }
-static void fe_neg (fe h,const fe f           ){FOR(i,0,10) h[i] = -f[i];      }
-static void fe_add (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] + g[i];}
-static void fe_sub (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] - g[i];}
+static void fe_copy(fe h,const fe f)
+{
+    check(f);
+    FOR(i,0,10) h[i] = f[i];
+    h[10] = f[10];
+    check(h);
+}
+static void fe_neg (fe h,const fe f)
+{
+    check(f);
+    FOR(i,0,10) h[i] = -f[i];
+    h[10] = f[10];
+    check(h);
+}
+static void fe_add (fe h,const fe f,const fe g)
+{
+    check(f);
+    check(g);
+    FOR(i,0,10) h[i] = f[i] + g[i];
+    i32 cf = MAX(1, f[10]);
+    i32 cg = MAX(1, g[10]);
+    h[10] = cf + cg;
+    check(h);
+}
+static void fe_sub (fe h,const fe f,const fe g)
+{
+    check(f);
+    check(g);
+    FOR(i,0,10) h[i] = f[i] - g[i];
+    i32 cf = MAX(1, f[10]);
+    i32 cg = MAX(1, g[10]);
+    h[10] = cf + cg;
+    check(h);
+}
 
 static void fe_cswap(fe f, fe g, int b)
 {
+	check(f);
+	check(g);
 	i32 mask = -b; // -1 = 0xffffffff
 	FOR (i, 0, 10) {
 		i32 x = (f[i] ^ g[i]) & mask;
 		f[i] = f[i] ^ x;
 		g[i] = g[i] ^ x;
 	}
+	i32 c = MAX(f[10], g[10]);
+	f[10] = c;
+	g[10] = c;
+	check(f);
+	check(g);
 }
 
 static void fe_ccopy(fe f, const fe g, int b)
 {
+	check(f);
+	check(g);
 	i32 mask = -b; // -1 = 0xffffffff
 	FOR (i, 0, 10) {
 		i32 x = (f[i] ^ g[i]) & mask;
 		f[i] = f[i] ^ x;
 	}
+	f[10] = MAX(f[10], g[10]);
+	check(f);
 }
 
 
@@ -1132,7 +1224,7 @@ static void fe_ccopy(fe f, const fe g, int b)
 // which means ignoring 2 bits instead.
 static void fe_frombytes_mask(fe h, const u8 s[32], unsigned nb_mask)
 {
-	u32 mask = 0xffffff >> nb_mask;
+	i32 mask = 0xffffff >> nb_mask;
 	i64 t0 =  load32_le(s);                    // t0 < 2^32
 	i64 t1 =  load24_le(s +  4) << 6;          // t1 < 2^30
 	i64 t2 =  load24_le(s +  7) << 5;          // t2 < 2^29
@@ -1144,6 +1236,8 @@ static void fe_frombytes_mask(fe h, const u8 s[32], unsigned nb_mask)
 	i64 t8 =  load24_le(s + 26) << 4;          // t8 < 2^28
 	i64 t9 = (load24_le(s + 29) & mask) << 2;  // t9 < 2^25
 	FE_CARRY;                                  // Carry precondition OK
+	h[10] = 1;
+	check(h);
 }
 
 static void fe_frombytes(fe h, const u8 s[32])
@@ -1165,6 +1259,8 @@ static void fe_frombytes(fe h, const u8 s[32])
 //   Or just remove 19 and chop off any excess bit.
 static void fe_tobytes(u8 s[32], const fe h)
 {
+	strict_check(h);
+
 	i32 t[10];
 	COPY(t, h, 10);
 	i32 q = (19 * t[9] + (((i32) 1) << 24)) >> 25;
@@ -1209,6 +1305,7 @@ static void fe_tobytes(u8 s[32], const fe h)
 //   |g1|, |g3|, |g5|, |g7|, |g9|  <  1.65 * 2^25
 static void fe_mul_small(fe h, const fe f, i32 g)
 {
+	check(f);
 	i64 t0 = f[0] * (i64) g;  i64 t1 = f[1] * (i64) g;
 	i64 t2 = f[2] * (i64) g;  i64 t3 = f[3] * (i64) g;
 	i64 t4 = f[4] * (i64) g;  i64 t5 = f[5] * (i64) g;
@@ -1218,6 +1315,8 @@ static void fe_mul_small(fe h, const fe f, i32 g)
 	// |t1|, |t3|, |t5|, |t7|, |t9|  <  1.65 * 2^25 * 2^31  < 2^57
 
 	FE_CARRY; // Carry precondition OK
+	h[10] = 1;
+	check(h);
 }
 
 // Precondition
@@ -1229,6 +1328,8 @@ static void fe_mul_small(fe h, const fe f, i32 g)
 //   |g1|, |g3|, |g5|, |g7|, |g9|  <  1.65 * 2^25
 static void fe_mul(fe h, const fe f, const fe g)
 {
+	check(f);
+	check(g);
 	// Everything is unrolled and put in temporary variables.
 	// We could roll the loop, but that would make curve25519 twice as slow.
 	i32 f0 = f[0]; i32 f1 = f[1]; i32 f2 = f[2]; i32 f3 = f[3]; i32 f4 = f[4];
@@ -1275,6 +1376,8 @@ static void fe_mul(fe h, const fe f, const fe g)
 	// t9 < 0.03 * 2^61
 
 	FE_CARRY; // Everything below 2^62, Carry precondition OK
+	h[10] = 1;
+	check(h);
 }
 
 // Precondition
@@ -1285,6 +1388,7 @@ static void fe_mul(fe h, const fe f, const fe g)
 // Note: we could use fe_mul() for this, but this is significantly faster
 static void fe_sq(fe h, const fe f)
 {
+	check(f);
 	i32 f0 = f[0]; i32 f1 = f[1]; i32 f2 = f[2]; i32 f3 = f[3]; i32 f4 = f[4];
 	i32 f5 = f[5]; i32 f6 = f[6]; i32 f7 = f[7]; i32 f8 = f[8]; i32 f9 = f[9];
 	i32 f0_2  = f0*2;   i32 f1_2  = f1*2;   i32 f2_2  = f2*2;   i32 f3_2 = f3*2;
@@ -1327,6 +1431,8 @@ static void fe_sq(fe h, const fe f)
 	// t9 < 0.03 * 2^61
 
 	FE_CARRY;
+	h[10] = 1;
+	check(h);
 }
 
 //  Parity check.  Returns 0 if even, 1 if odd

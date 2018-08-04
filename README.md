@@ -1,4 +1,13 @@
-[![TrustInSoft CI](https://ci.trust-in-soft.com/projects/LoupVaillant/Monocypher.svg?branch=master)](https://ci.trust-in-soft.com/projects/LoupVaillant/Monocypher)
+TEST ONLY
+=========
+
+This branch is meant to test carry propagation for public key
+cryptography.  It does not work in constant time, do not use in
+production.
+
+It works by instrumenting fundamental field arithmetic operations, and
+asserts that we never add or subtract too many times before performing
+carry propagation.
 
 [![Github Actions CI](https://github.com/LoupVaillant/Monocypher/actions/workflows/ci.yml/badge.svg)](https://github.com/LoupVaillant/Monocypher/actions/workflows/ci.yml)
 
