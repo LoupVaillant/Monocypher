@@ -1367,16 +1367,6 @@ static void ge_zero(ge *p)
     fe_0(p->T);
 }
 
-static void ge_from_xy(ge *p, const fe x, const fe y)
-{
-    FOR (i, 0, 10) {
-        p->X[i] = x[i];
-        p->Y[i] = y[i];
-    }
-    fe_1  (p->Z);
-    fe_mul(p->T, x, y);
-}
-
 static void ge_tobytes(u8 s[32], const ge *h)
 {
     fe recip, x, y;
@@ -1557,7 +1547,10 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     static const fe Y = { -26843541, -6710886, 13421773, -13421773, 26843546,
                           6710886, -13421773, 13421773, -26843546, -6710886 };
     ge B;
-    ge_from_xy(&B, X, Y);
+    fe_copy(B.X, X);
+    fe_copy(B.Y, Y);
+    fe_1   (B.Z);
+    fe_mul (B.T, X, Y);
 
     // cached points for addition
     ge_cached cP[8];  ge_precompute(cP,  P);
