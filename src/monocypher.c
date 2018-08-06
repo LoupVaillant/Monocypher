@@ -1353,6 +1353,48 @@ void crypto_x25519_public_key(u8       public_key[32],
 /// Ed25519 ///
 ///////////////
 
+static void modL(u8 *r, i64 x[64])
+{
+    static const  u64 L[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
+                                0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10};
+    for (unsigned i = 63; i >= 32; i--) {
+        i64 carry = 0;
+        FOR (j, i-32, i-12) {
+            x[j] += carry - 16 * x[i] * L[j - (i - 32)];
+            carry = (x[j] + 128) >> 8;
+            x[j] -= carry * (1 << 8);
+        }
+        x[i-12] += carry;
+        x[i] = 0;
+    }
+    i64 carry = 0;
+    FOR (i, 0, 32) {
+        x[i] += carry - (x[31] >> 4) * L[i];
+        carry = x[i] >> 8;
+        x[i] &= 255;
+    }
+    FOR (i, 0, 32) {
+        x[i] -= carry * L[i];
+    }
+    FOR (i, 0, 32) {
+        x[i+1] += x[i] >> 8;
+        r[i  ]  = x[i] & 255;
+    }
+}
+
+static void reduce(u8 r[64])
+{
+    i64 x[64];
+    FOR (i, 0, 64) {
+        x[i] = (u64) r[i];
+        r[i] = 0;
+    }
+    modL(r, x);
+    WIPE_BUFFER(x);
+}
+
 // Point in a twisted Edwards curve,
 // in extended projective coordinates.
 // x = X/Z, y = Y/Z, T = XY/Z
@@ -1708,48 +1750,6 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
     WIPE_CTX(&dbl);
     WIPE_BUFFER(ym);  WIPE_BUFFER(yp);  WIPE_BUFFER(t2);
     WIPE_BUFFER(a );  WIPE_BUFFER(b );
-}
-
-static void modL(u8 *r, i64 x[64])
-{
-    static const  u64 L[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-                                0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10};
-    for (unsigned i = 63; i >= 32; i--) {
-        i64 carry = 0;
-        FOR (j, i-32, i-12) {
-            x[j] += carry - 16 * x[i] * L[j - (i - 32)];
-            carry = (x[j] + 128) >> 8;
-            x[j] -= carry * (1 << 8);
-        }
-        x[i-12] += carry;
-        x[i] = 0;
-    }
-    i64 carry = 0;
-    FOR (i, 0, 32) {
-        x[i] += carry - (x[31] >> 4) * L[i];
-        carry = x[i] >> 8;
-        x[i] &= 255;
-    }
-    FOR (i, 0, 32) {
-        x[i] -= carry * L[i];
-    }
-    FOR (i, 0, 32) {
-        x[i+1] += x[i] >> 8;
-        r[i  ]  = x[i] & 255;
-    }
-}
-
-static void reduce(u8 r[64])
-{
-    i64 x[64];
-    FOR (i, 0, 64) {
-        x[i] = (u64) r[i];
-        r[i] = 0;
-    }
-    modL(r, x);
-    WIPE_BUFFER(x);
 }
 
 void crypto_sign_public_key(u8       public_key[32],
