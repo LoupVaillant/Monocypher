@@ -1828,8 +1828,74 @@ static const fe comb_T2_even[16] = {
      -10311215, -22053106, 13854464, 30623892, 16371753},
 };
 
+// Little utility to make sure I don't screw up subtraction
+static void ge_msub(ge *s, const ge *p, const fe yp, const fe ym, const fe t2,
+                    fe a, fe b)
+{
+    fe nt2;
+    fe_neg(nt2, t2);
+    ge_madd(s, p, ym, yp, nt2, a, b);
+}
+#include <stdio.h>
+
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
+    // Transform the scalar into all bit set form
+    // Method 1: (scalar + 2^255 - 1) * (1/2)
+    static const u8 half_mod_L[32] = {
+        0xf7, 0xe9, 0x7a, 0x2e, 0x8d, 0x31, 0x09, 0x2c,
+        0x6b, 0xce, 0x7b, 0x51, 0xef, 0x7c, 0x6f, 0x0a,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08,
+    };
+    static const u8 ones[32] = {
+        255, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 255, 255, 255, 255, 127, // only over 255 bits
+    };
+    i64 s[64] = {0};
+    FOR (i,  0, 32) {
+        FOR (j, 0, 32) {
+            s[i+j] += half_mod_L[i] * ((u64) scalar[j] + ones[j]);
+        }
+    }
+    u8 s_scalar[32]; // for each bit: 1 means 1, 0 means -1
+    modL(s_scalar, s);
+
+    // Transform the scalar into all bit set form
+    // Method 2: ((2^255 - 1) * (1/2)) +  (scalar * (1/2))
+    static const u8 half_ones[32] = {
+        0x42, 0x9a, 0xa3, 0xba, 0x23, 0xa5, 0xbf, 0xcb,
+        0x11, 0x5b, 0x9d, 0xc5, 0x74, 0x95, 0xf3, 0xb6,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07,
+    };
+    i64 ss[64];
+    FOR (i,  0, 32) { ss[i] = (u64) half_ones[i]; }
+    FOR (i, 32, 64) { ss[i] = 0;                  }
+    FOR (i,  0, 32) {
+        FOR (j, 0, 32) {
+            ss[i+j] += half_mod_L[i] * (u64) scalar[j];
+        }
+    }
+    u8 ss_scalar[32]; // for each bit: 1 means 1, 0 means -1
+    modL(ss_scalar, s);
+
+    // Result of method 1: s_scalar
+    // Result of method 2: ss_scalar
+
+    // Uncomment those print statements to print the scalar. in various forms
+    // Note that s_scalar and ss_scalar have the same value. The whole thing
+    // looks correct.
+
+    /* printf("0x"); FOR (i, 0, 32) printf("%02x", half_mod_L[31-i]); printf("\n"); */
+    /* printf("0x"); FOR (i, 0, 32) printf("%02x", ones      [31-i]); printf("\n"); */
+    /* printf("0x"); FOR (i, 0, 32) printf("%02x", scalar    [31-i]); printf("\n"); */
+    /* printf("0x"); FOR (i, 0, 32) printf("%02x", s_scalar  [31-i]); printf("\n"); */
+    /* printf("0x"); FOR (i, 0, 32) printf("%02x", ss_scalar [31-i]); printf("\n"); */
+    /* printf("\n"); */
+
     // Double and add ladder
     fe yp, ym, t2, a, b; // temporaries for addition
     ge dbl;              // temporary for doublings
@@ -1841,32 +1907,62 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
         fe_1(yp);
         fe_1(ym);
         fe_0(t2);
+
+        // Experimental method (signed comb). The one that doesn't work.
+        // Yet I don't see any room for error there:
+        // - I'm using the same tables         as the method that works
+        // - I'm using the same look up method as the method that works
+        // - I'm using the same subtraction    as the method that works
+        // - The s_scalar is unproven, but still looks correct
+        // - I don't see how the teeth could be incorrect.
+        // - I don't see how my index could be incorrect.
+        // - I don't see how the add/sub choice could be incorrect.
+        // I have no idea what I'm missing.
+        /*
+        i8 teeth = (scalar_bit(s_scalar, i      ) *  2 -  1)
+            +      (scalar_bit(s_scalar, i +  51) *  4 -  2)
+            +      (scalar_bit(s_scalar, i + 102) *  8 -  4)
+            +      (scalar_bit(s_scalar, i + 153) * 16 -  8)
+            +      (scalar_bit(s_scalar, i + 204) * 32 - 16);
+        u8 index = (teeth > 0 ? teeth : -teeth) / 2;
+
+        fe_copy(yp, comb_Yp[index]);
+        fe_copy(ym, comb_Ym[index]);
+        fe_copy(t2, comb_T2[index]);
+
+        if (teeth > 0) { ge_madd(p, p, yp, ym, t2, a, b); }
+        else           { ge_msub(p, p, yp, ym, t2, a, b); }
+        */
+        // End of the experimental method
+
+        // Control method. The one that works.
+        // Note that odd and even elements of the table are separated.
+        // This is to ensure we use the same odd table for the signed comb.
+        // Since this method works, an error in the tables is unlikely.
         u8 teeth = scalar_bit(scalar, i)
             |     (scalar_bit(scalar, i +  51) << 1)
             |     (scalar_bit(scalar, i + 102) << 2)
             |     (scalar_bit(scalar, i + 153) << 3)
             |     (scalar_bit(scalar, i + 204) << 4);
-        u8 index = teeth / 2;
-        if (teeth & 1) {
-            FOR (j, 0, 16) {
-                i32 select = (1 & (((j ^ index) - 1) >> 8)) - 1;
-                fe_ccopy(yp, comb_Yp[j], select);
-                fe_ccopy(ym, comb_Ym[j], select);
-                fe_ccopy(t2, comb_T2[j], select);
-            }
-        } else {
-            FOR (j, 1, 16) {
-                i32 select = (1 & (((j ^ index) - 1) >> 8)) - 1;
-                fe_ccopy(yp, comb_Yp_even[j], select);
-                fe_ccopy(ym, comb_Ym_even[j], select);
-                fe_ccopy(t2, comb_T2_even[j], select);
-            }
+        u8  index = teeth / 2;
+        if (teeth & 1) { // pick from the odd table
+            fe_copy(yp, comb_Yp[index]);
+            fe_copy(ym, comb_Ym[index]);
+            fe_copy(t2, comb_T2[index]);
+        } else {         // pick from the even table
+            fe_copy(yp, comb_Yp_even[index]);
+            fe_copy(ym, comb_Ym_even[index]);
+            fe_copy(t2, comb_T2_even[index]);
         }
-        ge_madd(p, p, yp, ym, t2, a, b);
+        ge_msub(p, p, yp, ym, t2, a, b); // test subtraction
+        ge_madd(p, p, yp, ym, t2, a, b); // add to compensate
+        ge_madd(p, p, yp, ym, t2, a, b); // add for real
+        // End of the control method.
     }
     WIPE_CTX(&dbl);
     WIPE_BUFFER(ym);  WIPE_BUFFER(yp);  WIPE_BUFFER(t2);
     WIPE_BUFFER(a );  WIPE_BUFFER(b );
+    WIPE_BUFFER(s );  WIPE_BUFFER(s_scalar);
 }
 
 void crypto_sign_public_key(u8       public_key[32],
