@@ -1725,15 +1725,6 @@ static const fe comb_T2[16] = {
      -7350198, 21035059, -14970947, 25910190, 11122681},
 };
 
-// Little utility to make sure I don't screw up subtraction
-static void ge_msub(ge *s, const ge *p, const fe yp, const fe ym, const fe t2,
-                    fe a, fe b)
-{
-    fe nt2;
-    fe_neg(nt2, t2);
-    ge_madd(s, p, ym, yp, nt2, a, b);
-}
-
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
     // Transform the scalar into all bit set form
@@ -1762,8 +1753,8 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
     modL(s_scalar, s);
 
     // Double and add ladder
-    fe yp, ym, t2, a, b; // temporaries for addition
-    ge dbl;              // temporary for doublings
+    fe yp, ym, t2, n2, a, b; // temporaries for addition
+    ge dbl;                  // temporary for doublings
     ge_zero(p);
     for (int i = 50; i >= 0; i--) {
         if (i < 50) {
@@ -1777,24 +1768,24 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
             +      (scalar_bit(s_scalar, i + 102) << 2)
             +      (scalar_bit(s_scalar, i + 153) << 3)
             +      (scalar_bit(s_scalar, i + 204) << 4);
-        u8 index = teeth & 15;
-
-        if (teeth & 16) {
-            fe_copy(yp, comb_Yp[index]);
-            fe_copy(ym, comb_Ym[index]);
-            fe_copy(t2, comb_T2[index]);
-            ge_madd(p, p, yp, ym, t2, a, b);
-        } else {
-            fe_copy(yp, comb_Yp[~index & 15]);
-            fe_copy(ym, comb_Ym[~index & 15]);
-            fe_copy(t2, comb_T2[~index & 15]);
-            ge_msub(p, p, yp, ym, t2, a, b);
+        u8 high  = teeth >> 4;
+        u8 index = (teeth ^ (high - 1)) & 15;
+        FOR (j, 0, 16) {
+            i32 select = (1 & (((j ^ index) - 1) >> 8)) - 1;
+            fe_ccopy(yp, comb_Yp[j], select);
+            fe_ccopy(ym, comb_Ym[j], select);
+            fe_ccopy(t2, comb_T2[j], select);
         }
+
+        fe_neg (n2, t2);
+        fe_cswap(t2, n2, high);
+        fe_cswap(yp, ym, high);
+        ge_madd(p, p, ym, yp, n2, a, b);
     }
     WIPE_CTX(&dbl);
-    WIPE_BUFFER(ym);  WIPE_BUFFER(yp);  WIPE_BUFFER(t2);
-    WIPE_BUFFER(a );  WIPE_BUFFER(b );
-    WIPE_BUFFER(s );  WIPE_BUFFER(s_scalar);
+    WIPE_BUFFER(a);  WIPE_BUFFER(yp);  WIPE_BUFFER(t2);
+    WIPE_BUFFER(b);  WIPE_BUFFER(ym);  WIPE_BUFFER(n2);
+    WIPE_BUFFER(s);  WIPE_BUFFER(s_scalar);
 }
 
 void crypto_sign_public_key(u8       public_key[32],
