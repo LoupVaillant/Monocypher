@@ -1395,6 +1395,21 @@ static void reduce(u8 r[64])
     WIPE_BUFFER(x);
 }
 
+// r = (a * b) + c
+static void mul_add(u8 r[32], const u8 a[32], const u8 b[32], const u8 c[32])
+{
+    i64 s[64];
+    FOR (i,  0, 32) { s[i] = (u64) c[i]; }
+    FOR (i, 32, 64) { s[i] = 0;          }
+    FOR (i,  0, 32) {
+        FOR (j, 0, 32) {
+            s[i+j] += a[i] * (u64) b[j];
+        }
+    }
+    modL(r, s);
+    WIPE_BUFFER(s);
+}
+
 // Point in a twisted Edwards curve,
 // in extended projective coordinates.
 // x = X/Z, y = Y/Z, T = XY/Z
@@ -1727,8 +1742,6 @@ static const fe comb_T2[16] = {
 
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
-    // Transform the scalar into all bit set form
-    // Method 1: (scalar + 2^255 - 1) * (1/2)
     static const u8 half_mod_L[32] = {
         0xf7, 0xe9, 0x7a, 0x2e, 0x8d, 0x31, 0x09, 0x2c,
         0x6b, 0xce, 0x7b, 0x51, 0xef, 0x7c, 0x6f, 0x0a,
@@ -1741,16 +1754,9 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07,
     };
-    i64 s[64];
-    FOR (i,  0, 32) { s[i] = (u64) half_ones[i]; }
-    FOR (i, 32, 64) { s[i] = 0;                  }
-    FOR (i,  0, 32) {
-        FOR (j, 0, 32) {
-            s[i+j] += half_mod_L[i] * (u64) scalar[j];
-        }
-    }
-    u8 s_scalar[32]; // for each bit: 1 means 1, 0 means -1
-    modL(s_scalar, s);
+    // All bits set form: 1 means 1, 0 means -1
+    u8 s_scalar[32];
+    mul_add(s_scalar, scalar, half_mod_L, half_ones);
 
     // Double and add ladder
     fe yp, ym, t2, n2, a, b; // temporaries for addition
@@ -1785,7 +1791,7 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
     WIPE_CTX(&dbl);
     WIPE_BUFFER(a);  WIPE_BUFFER(yp);  WIPE_BUFFER(t2);
     WIPE_BUFFER(b);  WIPE_BUFFER(ym);  WIPE_BUFFER(n2);
-    WIPE_BUFFER(s);  WIPE_BUFFER(s_scalar);
+    WIPE_BUFFER(s_scalar);
 }
 
 void crypto_sign_public_key(u8       public_key[32],
@@ -1859,23 +1865,12 @@ void crypto_sign_final(crypto_sign_ctx *ctx, u8 signature[64])
     u8 h_ram[64];
     HASH_FINAL(&ctx->hash, h_ram);
     reduce(h_ram);  // reduce the hash modulo L
-
-    i64 s[64]; // s = r + h_ram * a
-    FOR (i,  0, 32) { s[i] = (u64) r[i]; }
-    FOR (i, 32, 64) { s[i] = 0;          }
-    FOR (i,  0, 32) {
-        FOR (j, 0, 32) {
-            s[i+j] += h_ram[i] * (u64) a[j];
-        }
-    }
     FOR (i, 0, 32) {
         signature[i] = half_sig[i];
     }
-    modL(signature + 32, s);  // second half of the signature = s
-
+    mul_add(signature + 32, h_ram, a, r); // s = h_ram * a + r
     WIPE_CTX(ctx);
     WIPE_BUFFER(h_ram);
-    WIPE_BUFFER(s);
 }
 
 void crypto_sign(u8        signature[64],
