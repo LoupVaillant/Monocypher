@@ -20,7 +20,8 @@ Implementors
 - **X25519:**   Daniel J. Bernstein, taken and packaged from SUPERCOP
                 ref10.
 - **EdDSA:**    Daniel J. Bernstein, taken and adapted from SUPERCOP
-                ref10 and TweetNaCl.
+                ref10 and TweetNaCl.  (With significant speed tweaks).
+
 
 Test suite
 ----------
@@ -47,3 +48,8 @@ Andrew Moon clarified carry propagation in modular arithmetic.
 
 Fabio Scotoni provided much needed advice about testing, interface, and
 above all, packaging.
+
+Mike Hamburg explained comb algorithms, including the signed
+all-bits-set comb described in his 2012 paper, Fast and compact
+elliptic-curve cryptography.  This made EdDSA signatures over twice as
+fast.
