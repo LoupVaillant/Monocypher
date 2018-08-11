@@ -1567,30 +1567,44 @@ static void ge_double(ge *s, const ge *p, ge *q)
     fe_mul(s->T, q->X , q->T);
 }
 
-// Compute lookup indices for unsigned sliding windows
+// Compute signed sliding windows (either 0, or odd numbers between -15 and 15)
 static void slide(i8 adds[256], const u8 scalar[32])
 {
     FOR (i, 0, 256) {
-        adds[i] = 0;
+        adds[i] = scalar_bit(scalar, i);
     }
     int i = 0;
-    while (i < 253) {
-        if (scalar_bit(scalar, i) != 0) {
-            adds[i] = 1
-                |     scalar_bit(scalar, i+1) << 1
-                |     scalar_bit(scalar, i+2) << 2
-                |     scalar_bit(scalar, i+3) << 3;
-            i += 3;
+    while (i < 252) {
+        if (adds[i] != 0) {
+            // base value of the 5-bit window
+            FOR (j, 1, 5) {
+                adds[i  ] |= adds[i+j] << j;
+                adds[i+j]  = 0;
+            }
+            i += 5;
+            if (adds[i-5] > 16) {
+                // subtract 32, propagate carry.
+                adds[i-5] -= 32;
+                while (adds[i] != 0) {
+                    adds[i] = 0;
+                    i++;
+                }
+                adds[i] = 1;
+            }
+        } else {
+            i++;
         }
-        i++;
     }
     // Skip last zeroes
-    while (i < 256 && scalar_bit(scalar, i) == 0) {
+    while (i < 256 && adds[i] == 0) {
         i++;
     }
-    // last lookup (if any)
+    // last lookup (if any). This one never exceeds 16
     if (i < 256) {
-        adds[i] = scalar[31] >> (i - 247);;
+        FOR (j, 1, (size_t)(256 - i)) {
+            adds[i  ] |= adds[i+j] << j;
+            adds[i+j]  = 0;
+        }
     }
 }
 
@@ -1607,9 +1621,9 @@ static void ge_precompute(ge_cached lut[8], const ge *P1)
 }
 
 // Could be a function, but the macro avoids some overhead.
-#define LUT_ADD(sum, lut, adds, i)                                   \
-    if (adds[i] > 0) { ge_add(sum, sum, &lut[      adds[i]  / 2]); } \
-    if (adds[i] < 0) { ge_sub(sum, sum, &lut[(16 - adds[i]) / 2]); }
+#define LUT_ADD(sum, lut, adds, i)                             \
+    if (adds[i] > 0) { ge_add(sum, sum, &lut[ adds[i] / 2]); } \
+    if (adds[i] < 0) { ge_sub(sum, sum, &lut[-adds[i] / 2]); }
 
 // Variable time! P, sP, and sB must not be secret!
 static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
