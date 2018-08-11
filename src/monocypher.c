@@ -1561,14 +1561,15 @@ static void ge_double(ge *s, const ge *p, ge *q)
 static void slide(i8 adds[256], const u8 scalar[32])
 {
     FOR (i, 0, 256) {
-        adds[i] = -1;
+        adds[i] = 0;
     }
     int i = 0;
     while (i < 253) {
         if (scalar_bit(scalar, i) != 0) {
-            adds[i] = scalar_bit(scalar, i+1)
-                |     scalar_bit(scalar, i+2) << 1
-                |     scalar_bit(scalar, i+3) << 2;
+            adds[i] = 1
+                |     scalar_bit(scalar, i+1) << 1
+                |     scalar_bit(scalar, i+2) << 2
+                |     scalar_bit(scalar, i+3) << 3;
             i += 3;
         }
         i++;
@@ -1617,21 +1618,21 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
 
     // Avoid the first doublings
     int i = 255;
-    while (i >= 0          &&
-           p_adds[i] == -1 &&
-           b_adds[i] == -1) {
+    while (i >= 0         &&
+           p_adds[i] == 0 &&
+           b_adds[i] == 0) {
         i--;
     }
 
     // Merged double and add ladder
     ge_zero(sum);
-    if (p_adds[i] != -1) { ge_add(sum, sum, &cP[p_adds[i]]); }
-    if (b_adds[i] != -1) { ge_add(sum, sum, &cB[b_adds[i]]); }
+    if (p_adds[i] != 0) { ge_add(sum, sum, &cP[p_adds[i]/2]); }
+    if (b_adds[i] != 0) { ge_add(sum, sum, &cB[b_adds[i]/2]); }
     i--;
     while (i >= 0) {
         ge_double(sum, sum, &B); // B is no longer used, we can overwrite it
-        if (p_adds[i] != -1) { ge_add(sum, sum, &cP[p_adds[i]]); }
-        if (b_adds[i] != -1) { ge_add(sum, sum, &cB[b_adds[i]]); }
+        if (p_adds[i] != 0) { ge_add(sum, sum, &cP[p_adds[i]/2]); }
+        if (b_adds[i] != 0) { ge_add(sum, sum, &cB[b_adds[i]/2]); }
         i--;
     }
 }
