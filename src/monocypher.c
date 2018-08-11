@@ -1926,7 +1926,8 @@ int crypto_check_final(crypto_check_ctx *ctx)
     u8 h_ram[64], R_check[32];
     u8 *s = ctx->sig + 32;                       // s
     u8 *R = ctx->sig;                            // R
-    if (ge_frombytes_neg_vartime(&A, ctx->pk)) { // -A
+    if (ge_frombytes_neg_vartime(&A, ctx->pk) || // -A
+        (s[31] & 224) != 0) { // reduce malleability for the sliding windows
         return -1;
     }
     HASH_FINAL(&ctx->hash, h_ram);
