@@ -1518,6 +1518,16 @@ static void ge_add(ge *s, const ge *p, const ge_cached *q)
     fe_mul(s->Z, a   , b   );
 }
 
+static void ge_sub(ge *s, const ge *p, const ge_cached *q)
+{
+    ge_cached neg;
+    fe_copy(neg.Ym, q->Yp);
+    fe_copy(neg.Yp, q->Ym);
+    fe_copy(neg.Z , q->Z );
+    fe_neg (neg.T2, q->T2);
+    ge_add(s, p, &neg);
+}
+
 static void ge_madd(ge *s, const ge *p, const fe yp, const fe ym, const fe t2,
                     fe a, fe b)
 {
@@ -1596,6 +1606,11 @@ static void ge_precompute(ge_cached lut[8], const ge *P1)
     }
 }
 
+// Could be a function, but the macro avoids some overhead.
+#define LUT_ADD(sum, lut, adds, i)                                   \
+    if (adds[i] > 0) { ge_add(sum, sum, &lut[      adds[i]  / 2]); } \
+    if (adds[i] < 0) { ge_sub(sum, sum, &lut[(16 - adds[i]) / 2]); }
+
 // Variable time! P, sP, and sB must not be secret!
 static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
                                          u8 p[32], u8 b[32])
@@ -1626,13 +1641,13 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
 
     // Merged double and add ladder
     ge_zero(sum);
-    if (p_adds[i] != 0) { ge_add(sum, sum, &cP[p_adds[i]/2]); }
-    if (b_adds[i] != 0) { ge_add(sum, sum, &cB[b_adds[i]/2]); }
+    LUT_ADD(sum, cP, p_adds, i);
+    LUT_ADD(sum, cB, b_adds, i);
     i--;
     while (i >= 0) {
         ge_double(sum, sum, &B); // B is no longer used, we can overwrite it
-        if (p_adds[i] != 0) { ge_add(sum, sum, &cP[p_adds[i]/2]); }
-        if (b_adds[i] != 0) { ge_add(sum, sum, &cB[b_adds[i]/2]); }
+        LUT_ADD(sum, cP, p_adds, i);
+        LUT_ADD(sum, cB, b_adds, i);
         i--;
     }
 }
