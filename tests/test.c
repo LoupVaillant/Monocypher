@@ -631,7 +631,7 @@ static int p_eddsa_random()
     return status;
 }
 
-// Tests that the input and output buffers of crypto_check() can overlap.
+// Tests that the input and output buffers of crypto_sign() can overlap.
 static int p_eddsa_overlap()
 {
     int status = 0;
