@@ -1568,13 +1568,12 @@ static void ge_double(ge *s, const ge *p, ge *q)
 }
 
 // Compute signed sliding windows (either 0, or odd numbers between -15 and 15)
-static void slide(i8 adds[256], const u8 scalar[32])
+static void slide(i8 adds[258], const u8 scalar[32])
 {
-    FOR (i, 0, 256) {
-        adds[i] = scalar_bit(scalar, i);
-    }
+    FOR (i,   0, 256) { adds[i] = scalar_bit(scalar, i); }
+    FOR (i, 256, 258) { adds[i] = 0;                     }
     int i = 0;
-    while (i < 252) {
+    while (i < 254) {
         if (adds[i] != 0) {
             // base value of the 5-bit window
             FOR (j, 1, 5) {
@@ -1593,17 +1592,6 @@ static void slide(i8 adds[256], const u8 scalar[32])
             }
         } else {
             i++;
-        }
-    }
-    // Skip last zeroes
-    while (i < 256 && adds[i] == 0) {
-        i++;
-    }
-    // last lookup (if any). This one never exceeds 16
-    if (i < 256) {
-        FOR (j, 1, (size_t)(256 - i)) {
-            adds[i  ] |= adds[i+j] << j;
-            adds[i+j]  = 0;
         }
     }
 }
@@ -1642,11 +1630,11 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     // cached points for addition
     ge_cached cP[8];  ge_precompute(cP,  P);
     ge_cached cB[8];  ge_precompute(cB, &B);
-    i8 p_adds[256];   slide(p_adds, p);
-    i8 b_adds[256];   slide(b_adds, b);
+    i8 p_adds[258];   slide(p_adds, p);
+    i8 b_adds[258];   slide(b_adds, b);
 
     // Avoid the first doublings
-    int i = 255;
+    int i = 253;
     while (i >= 0         &&
            p_adds[i] == 0 &&
            b_adds[i] == 0) {
