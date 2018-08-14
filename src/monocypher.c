@@ -1572,26 +1572,23 @@ static void slide(i8 adds[258], const u8 scalar[32])
 {
     FOR (i,   0, 256) { adds[i] = scalar_bit(scalar, i); }
     FOR (i, 256, 258) { adds[i] = 0;                     }
-    int i = 0;
-    while (i < 254) {
+    FOR (i, 0, 254) {
         if (adds[i] != 0) {
             // base value of the 5-bit window
             FOR (j, 1, 5) {
                 adds[i  ] |= adds[i+j] << j;
                 adds[i+j]  = 0;
             }
-            i += 5;
-            if (adds[i-5] > 16) {
-                // subtract 32, propagate carry.
-                adds[i-5] -= 32;
-                while (adds[i] != 0) {
-                    adds[i] = 0;
-                    i++;
+            if (adds[i] > 16) {
+                // go back to [-15, 15], propagate carry.
+                adds[i] -= 32;
+                int j = i + 5;
+                while (adds[j] != 0) {
+                    adds[j] = 0;
+                    j++;
                 }
-                adds[i] = 1;
+                adds[j] = 1;
             }
-        } else {
-            i++;
         }
     }
 }
