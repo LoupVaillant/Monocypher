@@ -1353,12 +1353,13 @@ void crypto_x25519_public_key(u8       public_key[32],
 /// Ed25519 ///
 ///////////////
 
+static const  u64 L[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
+                            0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10};
+
 static void modL(u8 *r, i64 x[64])
 {
-    static const  u64 L[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-                                0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10};
     for (unsigned i = 63; i >= 32; i--) {
         i64 carry = 0;
         FOR (j, i-32, i-12) {
@@ -1408,6 +1409,15 @@ static void mul_add(u8 r[32], const u8 a[32], const u8 b[32], const u8 c[32])
     }
     modL(r, s);
     WIPE_BUFFER(s);
+}
+
+static int is_above_L(const u8 a[32])
+{
+    for (int i = 31; i >= 0; i--) {
+        if (a[i] > L[i]) { return 1; }
+        if (a[i] < L[i]) { return 0; }
+    }
+    return 1;
 }
 
 // Point in a twisted Edwards curve,
@@ -1925,8 +1935,8 @@ int crypto_check_final(crypto_check_ctx *ctx)
     u8 h_ram[64], R_check[32];
     u8 *s = ctx->sig + 32;                       // s
     u8 *R = ctx->sig;                            // R
-    if (ge_frombytes_neg_vartime(&A, ctx->pk) || // -A
-        (s[31] & 224) != 0) { // reduce malleability for the sliding windows
+    if (ge_frombytes_neg_vartime(&A, ctx->pk) ||
+        is_above_L(s)) { // prevent s malleability
         return -1;
     }
     HASH_FINAL(&ctx->hash, h_ram);
