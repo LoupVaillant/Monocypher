@@ -3,9 +3,9 @@ CFLAGS = -pedantic -Wall -Wextra
 
 .PHONY: all clean
 
-VEC     = chacha20.vec xchacha20.vec aead_ietf.vec poly1305.vec       \
-          blake2b.vec  sha512.vec    argon2i.vec                      \
-          edDSA.vec    edDSA_pk.vec  ed_25519.vec  ed_25519_check.vec \
+VEC     = chacha20.vec hchacha20.vec xchacha20.vec aead_ietf.vec poly1305.vec \
+          blake2b.vec  sha512.vec    argon2i.vec                              \
+          edDSA.vec    edDSA_pk.vec  ed_25519.vec  ed_25519_check.vec         \
           x25519.vec   x25519_pk.vec
 VEC2    = $(patsubst %.vec, %.all.vec, $(VEC)) key_exchange.all.vec
 HEADERS = $(patsubst %.all.vec, %.h.vec, $(VEC2))
@@ -48,6 +48,7 @@ chacha20.all.vec      : chacha20.vec  ../vectors/chacha20
 poly1305.all.vec      : poly1305.vec  ../vectors/poly1305
 x25519.all.vec        : x25519.vec    ../vectors/x25519
 x25519_pk.all.vec     : x25519_pk.vec
+hchacha20.all.vec     : hchacha20.vec
 xchacha20.all.vec     : xchacha20.vec
 aead_ietf.all.vec     : aead_ietf.vec
 blake2b.all.vec       : blake2b.vec

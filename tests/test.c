@@ -103,6 +103,13 @@ static void chacha20(const vector in[], vector *out)
     crypto_chacha20_encrypt(&ctx, out->buf, plain->buf, plain->size);
 }
 
+static void hchacha20(const vector in[], vector *out)
+{
+    const vector *key   = in;
+    const vector *nonce = in + 1;
+    crypto_chacha20_H(out->buf, key->buf, nonce->buf);
+}
+
 static void xchacha20(const vector in[], vector *out)
 {
     const vector *key   = in;
@@ -821,6 +828,7 @@ int main(void)
     printf("\nTest against vectors");
     printf("\n--------------------\n");
     status |= TEST(chacha20      , 4);
+    status |= TEST(hchacha20     , 2);
     status |= TEST(xchacha20     , 4);
     status |= TEST(poly1305      , 2);
     status |= TEST(aead_ietf     , 4);
