@@ -1810,7 +1810,7 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
             fe_ccopy(t2, comb_T2[j], select);
         }
 
-        fe_neg (n2, t2);
+        fe_neg(n2, t2);
         fe_cswap(t2, n2, high);
         fe_cswap(yp, ym, high);
         ge_madd(p, p, ym, yp, n2, a, b);
