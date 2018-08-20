@@ -1026,10 +1026,10 @@ static void fe_cswap(fe f, fe g, int b)
     }
 }
 
-static void fe_ccopy(fe f, const fe g, i32 b)
+static void fe_ccopy(fe f, const fe g, int b)
 {
     FOR (i, 0, 10) {
-        i32 x = (f[i] ^ g[i]) & ~(u32)b;
+        i32 x = (f[i] ^ g[i]) & -b;
         f[i] = f[i] ^ x;
     }
 }
@@ -1804,7 +1804,7 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
         u8 high  = teeth >> 4;
         u8 index = (teeth ^ (high - 1)) & 15;
         FOR (j, 0, 16) {
-            i32 select = (1 & (((j ^ index) - 1) >> 8)) - 1;
+            i32 select = 1 & (((j ^ index) - 1) >> 8);
             fe_ccopy(yp, comb_Yp[j], select);
             fe_ccopy(ym, comb_Ym[j], select);
             fe_ccopy(t2, comb_T2[j], select);
