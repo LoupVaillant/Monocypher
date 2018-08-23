@@ -614,7 +614,7 @@ static int p_eddsa_roundtrip()
 
         // reject forgeries
         u8 zero   [64] = {0};
-        u8 forgery[64]; FOR (i, 0, 64) { forgery[i] = signature[i] + 1; }
+        u8 forgery[64]; FOR (j, 0, 64) { forgery[j] = signature[j] + 1; }
         status |= !crypto_check(zero   , pk, message, i);
         status |= !crypto_check(forgery, pk, message, i);
     }
