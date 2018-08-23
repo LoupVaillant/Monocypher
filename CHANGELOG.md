@@ -1,3 +1,10 @@
+2.0.5
+-----
+2018/08/23
+
+- Faster EdDSA signatures and verification.  Like, 4 times as fast.
+
+
 2.0.4
 -----
 2018/06/24
