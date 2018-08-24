@@ -634,6 +634,18 @@ static int p_eddsa_random()
         RANDOM_INPUT(signature , 64);
         status |= ~crypto_check(signature, pk, message, MESSAGE_SIZE);
     }
+    // Testing S == L (for code coverage)
+    RANDOM_INPUT(message, MESSAGE_SIZE);
+    RANDOM_INPUT(pk, 32);
+    static const u8 signature[64] =
+        { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
+          0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10};
+    status |= ~crypto_check(signature, pk, message, MESSAGE_SIZE);
+
     printf("%s: EdDSA (random)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
