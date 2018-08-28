@@ -146,7 +146,7 @@ This is easier to use than
 .Fn getrandom .
 .It
 Windows provides
-.Fn CryptGenRandom .
+.Fn BCryptGenRandom .
 .El
 .Pp
 The
