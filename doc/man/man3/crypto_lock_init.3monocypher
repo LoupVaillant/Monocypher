@@ -143,7 +143,7 @@ attacker's interference.
 Encryption:
 .Bd -literal -offset indent
 const uint8_t key        [ 32]; /* Session key                 */
-const uint8_t nonce      [ 32]; /* Unique per session key      */
+const uint8_t nonce      [ 24]; /* Unique per session key      */
 const uint8_t ad         [500]; /* Optional additional data    */
 const uint8_t plain_text [500]; /* Secret message              */
 uint8_t       cipher_text[500]; /* Encrypted message           */
@@ -174,7 +174,7 @@ crypto_lock_final(&ctx, mac);
 To decrypt the above:
 .Bd -literal -offset indent
 const uint8_t key        [ 32]; /* Session key              */
-const uint8_t nonce      [ 32]; /* Unique per session key   */
+const uint8_t nonce      [ 24]; /* Unique per session key   */
 const uint8_t mac        [ 16]; /* Transmitted MAC          */
 const uint8_t ad         [500]; /* Optional additional data */
 const uint8_t cipher_text[500]; /* Encrypted message        */
@@ -210,7 +210,7 @@ crypto_wipe(plain_text, 500);
 To authenticate the above without decrypting it:
 .Bd -literal -offset indent
 const uint8_t key        [ 32]; /* Session key              */
-const uint8_t nonce      [ 32]; /* Unique per session key   */
+const uint8_t nonce      [ 24]; /* Unique per session key   */
 const uint8_t mac        [ 16]; /* Transmitted MAC          */
 const uint8_t ad         [500]; /* Optional additional data */
 const uint8_t cipher_text[500]; /* Encrypted message        */
@@ -242,7 +242,7 @@ if (crypto_unlock_final(&ctx, mac)) {
 In-place encryption without additional data:
 .Bd -literal -offset indent
 const uint8_t key   [ 32]; /* Session key                 */
-const uint8_t nonce [ 32]; /* Unique per session key      */
+const uint8_t nonce [ 24]; /* Unique per session key      */
 uint8_t       text  [500]; /* Message                     */
 uint8_t       mac   [ 16]; /* Message authentication code */
 
