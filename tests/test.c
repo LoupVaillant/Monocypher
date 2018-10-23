@@ -403,6 +403,27 @@ static int p_chacha20_set_ctr()
     return status;
 }
 
+static int p_chacha20_H()
+{
+    int status = 0;
+    FOR (i, 0, 100) {
+        RANDOM_INPUT(buffer, 80);
+        size_t out_idx = rand64() % 48;
+        size_t key_idx = rand64() % 48;
+        size_t in_idx  = rand64() % 64;
+        u8 key[32]; FOR (j, 0, 32) { key[j] = buffer[j + key_idx]; }
+        u8 in [16]; FOR (j, 0, 16) { in [j] = buffer[j +  in_idx]; }
+
+        // Run with and without overlap, then compare
+        u8 out[32];
+        crypto_chacha20_H(out, key, in);
+        crypto_chacha20_H(buffer + out_idx, buffer + key_idx, buffer + in_idx);
+        status |= memcmp(out, buffer + out_idx, 32);
+    }
+    printf("%s: HChacha20 (overlap)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 // Tests that authenticating bit by bit yields the same mac than
 // authenticating all at once
 static int p_poly1305()
@@ -867,6 +888,7 @@ int main(void)
     status |= p_chacha20();
     status |= p_chacha20_same_ptr();
     status |= p_chacha20_set_ctr();
+    status |= p_chacha20_H();
     status |= p_poly1305();
     status |= p_poly1305_overlap();
     status |= p_blake2b();
