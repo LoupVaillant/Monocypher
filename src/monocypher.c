@@ -1964,11 +1964,8 @@ int crypto_key_exchange(u8       shared_key[32],
                         const u8 your_secret_key [32],
                         const u8 their_public_key[32])
 {
-    u8 raw_shared_secret[32];
-    int status = crypto_x25519(raw_shared_secret,
-                               your_secret_key, their_public_key);
-    crypto_chacha20_H(shared_key, raw_shared_secret, zero);
-    WIPE_BUFFER(raw_shared_secret);
+    int status = crypto_x25519(shared_key, your_secret_key, their_public_key);
+    crypto_chacha20_H(shared_key, shared_key, zero);
     return status;
 }
 
