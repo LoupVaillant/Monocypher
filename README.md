@@ -126,22 +126,24 @@ TweetNaCl (the default is `-O3 march=native`):
 Customisation
 -------------
 
-For simplicity, compactness, and performance reasons, Monocypher
-signatures default to EdDSA with curve25519 and Blake2b.  This is
-different from the more mainstream Ed25519, which uses SHA-512
-instead.
+Monocypher has two preprocessor flags: `ED25519_SHA512` and
+`BLAKE2_NO_UNROLLING`, which are activated by compiling monocypher.c
+with the options `-DED25519_SHA512` and `-DBLAKE2_NO_UNROLLING`
+respectively.
 
-If you need Ed25519 compatibility, you must do the following:
+The `-DED25519_SHA512` option is a compatibility feature for public key
+signatures.  The default is EdDSA with Curve25519 and Blake2b.
+Activating the option replaces it by Ed25519 (EdDSA with Curve25519 and
+SHA-512).  When this option is activated, you will need to link the
+final program with a suitable SHA-512 implementation.  You can use the
+`sha512.c` and `sha512.h` files provided in `src/optional`.
 
-- Compile Monocypher.c with option -DED25519_SHA512.
-- Link the final program with a suitable SHA-512 implementation.  You
-  can use the `sha512.c` and `sha512.h` files provided in
-  `src/optional`.
-
-Note that even though the default hash (Blake2b) is not "standard",
-you can still upgrade to faster implementations if you really need to.
-The Donna implementations of ed25519 for instance can use a custom
-hash —one test does just that.
+The `-DBLAKE2_NO_UNROLLING` option is a performance tweak.  By default,
+Monocypher unrolls the Blake2b inner loop, because it is over 25% faster
+on modern processors.  On some embedded processors however, unrolling
+the loop makes it _slower_ (the unrolled loop is 5KB bigger, and may
+strain the instruction cache).  If you're using an embedded platform,
+try this option.  The binary will be smaller, perhaps even faster.
 
 
 Contributor notes
