@@ -1288,7 +1288,7 @@ static void trim_scalar(u8 s[32])
     s[31] |= 64;
 }
 
-static int scalar_bit(const u8 s[32], int i) { return (s[i>>3] >> (i&7)) & 1; }
+static int scalar_bit(const u8 s[32], size_t i) {return (s[i>>3] >> (i&7)) & 1;}
 
 int crypto_x25519(u8       raw_shared_secret[32],
                   const u8 your_secret_key  [32],
@@ -1600,7 +1600,7 @@ static void slide(i8 adds[258], const u8 scalar[32])
             if (adds[i] > 16) {
                 // go back to [-15, 15], propagate carry.
                 adds[i] -= 32;
-                int j = i + 5;
+                size_t j = i + 5;
                 while (adds[j] != 0) {
                     adds[j] = 0;
                     j++;
