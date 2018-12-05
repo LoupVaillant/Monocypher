@@ -1585,22 +1585,25 @@ static void ge_double(ge *s, const ge *p, ge *q)
     fe_mul(s->T, q->X , q->T);
 }
 
-// Compute signed sliding windows (either 0, or odd numbers between -15 and 15)
-static void slide(i8 adds[258], const u8 scalar[32])
+#define WINDOW_WIDTH 5
+#define WINDOW_SIZE  (1<<(WINDOW_WIDTH-2))
+
+// Compute signed sliding windows (either 0, or odd numbers)
+static void slide(size_t width, i8 *adds, const u8 scalar[32])
 {
-    FOR (i,   0, 256) { adds[i] = scalar_bit(scalar, i); }
-    FOR (i, 256, 258) { adds[i] = 0;                     }
+    FOR (i,   0, 256        ) { adds[i] = scalar_bit(scalar, i); }
+    FOR (i, 256, 253 + width) { adds[i] = 0;                     }
     FOR (i, 0, 254) {
         if (adds[i] != 0) {
-            // base value of the 5-bit window
-            FOR (j, 1, 5) {
+            // base value of the window
+            FOR (j, 1, width) {
                 adds[i  ] |= adds[i+j] << j;
                 adds[i+j]  = 0;
             }
-            if (adds[i] > 16) {
-                // go back to [-15, 15], propagate carry.
-                adds[i] -= 32;
-                size_t j = i + 5;
+            if (adds[i] > (1 << (width - 1))) {
+                // go back to [-half_range, half_range], propagate carry.
+                adds[i] -= 1 << width;
+                size_t j = i + width;
                 while (adds[j] != 0) {
                     adds[j] = 0;
                     j++;
@@ -1612,12 +1615,12 @@ static void slide(i8 adds[258], const u8 scalar[32])
 }
 
 // Look up table for sliding windows
-static void ge_precompute(ge_cached lut[8], const ge *P1)
+static void ge_precompute(ge_cached lut[WINDOW_SIZE], const ge *P1)
 {
     ge P2, tmp;
     ge_double(&P2, P1, &tmp);
     ge_cache(&lut[0], P1);
-    FOR (i, 0, 7) {
+    FOR (i, 0, (WINDOW_SIZE)-1) {
         ge_add(&tmp, &P2, &lut[i]);
         ge_cache(&lut[i+1], &tmp);
     }
@@ -1643,10 +1646,10 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     fe_mul (B.T, X, Y);
 
     // cached points for addition
-    ge_cached cP[8];  ge_precompute(cP,  P);
-    ge_cached cB[8];  ge_precompute(cB, &B);
-    i8 p_adds[258];   slide(p_adds, p);
-    i8 b_adds[258];   slide(b_adds, b);
+    ge_cached cP[WINDOW_SIZE];      ge_precompute(cP,  P);
+    ge_cached cB[WINDOW_SIZE];      ge_precompute(cB, &B);
+    i8 p_adds[253 + WINDOW_WIDTH];  slide(WINDOW_WIDTH, p_adds, p);
+    i8 b_adds[253 + WINDOW_WIDTH];  slide(WINDOW_WIDTH, b_adds, b);
 
     // Avoid the first doublings
     int i = 253;
