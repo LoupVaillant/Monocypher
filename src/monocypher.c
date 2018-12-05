@@ -1567,6 +1567,14 @@ static void ge_madd(ge *s, const ge *p, const fe yp, const fe ym, const fe t2,
     fe_mul(s->Z, a   , b   );
 }
 
+static void ge_msub(ge *s, const ge *p, const fe yp, const fe ym, const fe t2,
+                    fe a, fe b)
+{
+    fe n2;
+    fe_neg(n2, t2);
+    ge_madd(s, p, ym, yp, n2, a, b);
+}
+
 static void ge_double(ge *s, const ge *p, ge *q)
 {
     fe_sq (q->X, p->X);
@@ -1585,7 +1593,7 @@ static void ge_double(ge *s, const ge *p, ge *q)
     fe_mul(s->T, q->X , q->T);
 }
 
-static const fe B_Yp[16] = {
+static const fe window_Yp[8] = {
     {25967493, -14356035, 29566456, 3660896, -12694345,
      4014787, 27544626, -11754271, -6079156, 2047605},
     {15636291, -9688557, 24204773, -7912398, 616977,
@@ -1603,7 +1611,7 @@ static const fe B_Yp[16] = {
     {-3151181, -5046075, 9282714, 6866145, -31907062,
      -863023, -18940575, 15033784, 25105118, -7894876},
 };
-static const fe B_Ym[16] = {
+static const fe window_Ym[8] = {
     {-12545711, 934262, -2722910, 3049990, -727428,
      9406986, 12720692, 5043384, 19500929, -15469378},
     {16568933, 4717097, -11556148, -1102322, 15682896,
@@ -1621,7 +1629,7 @@ static const fe B_Ym[16] = {
     {-24326370, 15950226, -31801215, -14592823, -11662737,
      -5090925, 1573892, -2625887, 2198790, -15804619},
 };
-static const fe B_T2[16] = {
+static const fe window_T2[8] = {
     {-8738181, 4489570, 9688441, -14785194, 10184609,
      -12363380, 29287919, 11864899, -24514362, -4438546},
     {30464156, -5976125, -11779434, -15670865, 23220365,
@@ -1682,34 +1690,15 @@ static void ge_precompute(ge_cached lut[WINDOW_SIZE], const ge *P1)
     }
 }
 
-// Could be a function, but the macro avoids some overhead.
-#define LUT_ADD(sum, lut, adds, i)                             \
-    if (adds[i] > 0) { ge_add(sum, sum, &lut[ adds[i] / 2]); } \
-    if (adds[i] < 0) { ge_sub(sum, sum, &lut[-adds[i] / 2]); }
-
 // Variable time! P, sP, and sB must not be secret!
 static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
                                          u8 p[32], u8 b[32])
 {
-    static const fe X = { -14297830, -7645148, 16144683, -16471763, 27570974,
-                          -2696100, -26142465, 8378389, 20764389, 8758491 };
-    static const fe Y = { -26843541, -6710886, 13421773, -13421773, 26843546,
-                          6710886, -13421773, 13421773, -26843546, -6710886 };
-    ge B;
-    fe_copy(B.X, X);
-    fe_copy(B.Y, Y);
-    fe_1   (B.Z);
-    fe_mul (B.T, X, Y);
+    // cache P window for addition
+    ge_cached cP[WINDOW_SIZE];
+    ge_precompute(cP,  P);
 
-    // cached points for addition
-    ge_cached cP[WINDOW_SIZE];      ge_precompute(cP,  P);
-    ge_cached cB[WINDOW_SIZE];
-    FOR (i, 0, WINDOW_SIZE) {
-        fe_copy(cB[i].Yp, B_Yp[i]);
-        fe_copy(cB[i].Ym, B_Ym[i]);
-        fe_copy(cB[i].T2, B_T2[i]);
-        fe_1   (cB[i].Z);
-    }
+    // Compute the indices for the windows
     i8 p_adds[253 + WINDOW_WIDTH];  slide(WINDOW_WIDTH, p_adds, p);
     i8 b_adds[253 + WINDOW_WIDTH];  slide(WINDOW_WIDTH, b_adds, b);
 
@@ -1722,14 +1711,25 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     }
 
     // Merged double and add ladder
+    fe t1, t2;
+#define CACHED_ADD(i)                                              \
+    if (p_adds[i] > 0) { ge_add(sum, sum, &cP[ p_adds[i] / 2]); }  \
+    if (p_adds[i] < 0) { ge_sub(sum, sum, &cP[-p_adds[i] / 2]); }  \
+    if (b_adds[i] > 0) { ge_madd(sum, sum,                         \
+                                 window_Yp[ b_adds[i] / 2],            \
+                                 window_Ym[ b_adds[i] / 2],            \
+                                 window_T2[ b_adds[i] / 2], t1, t2); } \
+    if (b_adds[i] < 0) { ge_msub(sum, sum,                             \
+                                 window_Yp[-b_adds[i] / 2],            \
+                                 window_Ym[-b_adds[i] / 2],            \
+                                 window_T2[-b_adds[i] / 2], t1, t2); }
     ge_zero(sum);
-    LUT_ADD(sum, cP, p_adds, i);
-    LUT_ADD(sum, cB, b_adds, i);
+    CACHED_ADD(i);
     i--;
     while (i >= 0) {
-        ge_double(sum, sum, &B); // B is no longer used, we can overwrite it
-        LUT_ADD(sum, cP, p_adds, i);
-        LUT_ADD(sum, cB, b_adds, i);
+        ge tmp;
+        ge_double(sum, sum, &tmp);
+        CACHED_ADD(i);
         i--;
     }
 }
