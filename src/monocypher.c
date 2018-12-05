@@ -1678,25 +1678,19 @@ static void slide(size_t width, i8 *adds, const u8 scalar[32])
     }
 }
 
-// Look up table for sliding windows
-static void ge_precompute(ge_cached lut[WINDOW_SIZE], const ge *P1)
-{
-    ge P2, tmp;
-    ge_double(&P2, P1, &tmp);
-    ge_cache(&lut[0], P1);
-    FOR (i, 0, (WINDOW_SIZE)-1) {
-        ge_add(&tmp, &P2, &lut[i]);
-        ge_cache(&lut[i+1], &tmp);
-    }
-}
-
 // Variable time! P, sP, and sB must not be secret!
 static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
                                          u8 p[32], u8 b[32])
 {
     // cache P window for addition
     ge_cached cP[WINDOW_SIZE];
-    ge_precompute(cP,  P);
+    ge P2, tmp;
+    ge_double(&P2, P, &tmp);
+    ge_cache(&cP[0], P);
+    FOR (i, 0, (WINDOW_SIZE)-1) {
+        ge_add(&tmp, &P2, &cP[i]);
+        ge_cache(&cP[i+1], &tmp);
+    }
 
     // Compute the indices for the windows
     i8 p_adds[253 + WINDOW_WIDTH];  slide(WINDOW_WIDTH, p_adds, p);
