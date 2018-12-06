@@ -1648,10 +1648,6 @@ static const fe window_T2[8] = {
      -2735503, -13812022, -16236442, -32461234, -12290683},
 };
 
-
-#define WINDOW_WIDTH 5
-#define WINDOW_SIZE  (1<<(WINDOW_WIDTH-2))
-
 // Compute signed sliding windows (either 0, or odd numbers)
 static void slide(size_t width, i8 *adds, const u8 scalar[32])
 {
@@ -1678,23 +1674,28 @@ static void slide(size_t width, i8 *adds, const u8 scalar[32])
     }
 }
 
+#define P_WINDOW_WIDTH 3 // Affects the size of the stack
+#define B_WINDOW_WIDTH 5 // Affects the size of the binary
+#define P_WINDOW_SIZE  (1<<(P_WINDOW_WIDTH-2))
+#define B_WINDOW_SIZE  (1<<(B_WINDOW_WIDTH-2))
+
 // Variable time! P, sP, and sB must not be secret!
 static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
                                          u8 p[32], u8 b[32])
 {
     // cache P window for addition
-    ge_cached cP[WINDOW_SIZE];
+    ge_cached cP[P_WINDOW_SIZE];
     ge P2, tmp;
     ge_double(&P2, P, &tmp);
     ge_cache(&cP[0], P);
-    FOR (i, 0, (WINDOW_SIZE)-1) {
+    FOR (i, 0, (P_WINDOW_SIZE)-1) {
         ge_add(&tmp, &P2, &cP[i]);
         ge_cache(&cP[i+1], &tmp);
     }
 
     // Compute the indices for the windows
-    i8 p_adds[253 + WINDOW_WIDTH];  slide(WINDOW_WIDTH, p_adds, p);
-    i8 b_adds[253 + WINDOW_WIDTH];  slide(WINDOW_WIDTH, b_adds, b);
+    i8 p_adds[253 + P_WINDOW_WIDTH];  slide(P_WINDOW_WIDTH, p_adds, p);
+    i8 b_adds[253 + B_WINDOW_WIDTH];  slide(B_WINDOW_WIDTH, b_adds, b);
 
     // Avoid the first doublings
     int i = 253;
