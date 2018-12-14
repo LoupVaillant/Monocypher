@@ -1685,12 +1685,15 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
 {
     // cache P window for addition
     ge_cached cP[P_WINDOW_SIZE];
-    ge P2, tmp;
-    ge_double(&P2, P, &tmp);
-    ge_cache(&cP[0], P);
-    FOR (i, 0, (P_WINDOW_SIZE)-1) {
-        ge_add(&tmp, &P2, &cP[i]);
-        ge_cache(&cP[i+1], &tmp);
+    ge tmp;
+    {
+        ge P2;
+        ge_double(&P2, P, &tmp);
+        ge_cache(&cP[0], P);
+        FOR (i, 0, (P_WINDOW_SIZE)-1) {
+            ge_add(&tmp, &P2, &cP[i]);
+            ge_cache(&cP[i+1], &tmp);
+        }
     }
 
     // Compute the indices for the windows
