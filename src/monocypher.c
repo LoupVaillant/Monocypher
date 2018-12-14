@@ -150,7 +150,7 @@ static void chacha20_init_key(crypto_chacha_ctx *ctx, const u8 key[32])
 static u8 chacha20_pool_byte(crypto_chacha_ctx *ctx)
 {
     u32 pool_word = ctx->pool[ctx->pool_idx >> 2];
-    u8  pool_byte = pool_word >> (8*(ctx->pool_idx & 3));
+    u8  pool_byte = (u8)(pool_word >> (8*(ctx->pool_idx & 3)));
     ctx->pool_idx++;
     return pool_byte;
 }
@@ -1272,7 +1272,7 @@ static int fe_isnonzero(const fe f)
 {
     u8 s[32];
     fe_tobytes(s, f);
-    u8 isnonzero = zerocmp32(s);
+    int isnonzero = zerocmp32(s);
     WIPE_BUFFER(s);
     return isnonzero;
 }
@@ -1651,8 +1651,8 @@ static const fe window_T2[8] = {
 // Compute signed sliding windows (either 0, or odd numbers)
 static void slide(size_t width, i8 *adds, const u8 scalar[32])
 {
-    FOR (i,   0, 256        ) { adds[i] = scalar_bit(scalar, i); }
-    FOR (i, 256, 253 + width) { adds[i] = 0;                     }
+    FOR (i,   0, 256        ) { adds[i] = (i8)scalar_bit(scalar, i); }
+    FOR (i, 256, 253 + width) { adds[i] = 0;                         }
     FOR (i, 0, 254) {
         if (adds[i] != 0) {
             // base value of the window
@@ -1722,7 +1722,6 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     CACHED_ADD(i);
     i--;
     while (i >= 0) {
-        ge tmp;
         ge_double(sum, sum, &tmp);
         CACHED_ADD(i);
         i--;
@@ -1864,11 +1863,11 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
         fe_1(yp);
         fe_1(ym);
         fe_0(t2);
-        u8 teeth =  scalar_bit(s_scalar, i)
-            +      (scalar_bit(s_scalar, i +  51) << 1)
-            +      (scalar_bit(s_scalar, i + 102) << 2)
-            +      (scalar_bit(s_scalar, i + 153) << 3)
-            +      (scalar_bit(s_scalar, i + 204) << 4);
+        u8 teeth = (u8)((scalar_bit(s_scalar, i)           ) +
+                        (scalar_bit(s_scalar, i +  51) << 1) +
+                        (scalar_bit(s_scalar, i + 102) << 2) +
+                        (scalar_bit(s_scalar, i + 153) << 3) +
+                        (scalar_bit(s_scalar, i + 204) << 4));
         u8 high  = teeth >> 4;
         u8 index = (teeth ^ (high - 1)) & 15;
         FOR (j, 0, 16) {
