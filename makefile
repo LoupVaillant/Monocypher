@@ -8,6 +8,12 @@ MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
 TARBALL_VERSION=$$(cat VERSION.md)
 TARBALL_DIR=.
 
+ifeq ($(findstring -DED25519_SHA512, $(CFLAGS)),)
+LINK_SHA512=
+else
+LINK_SHA512=lib/sha512.o
+endif
+
 .PHONY: all library static-library dynamic-library \
         install install-doc                        \
         check test speed                           \
@@ -63,12 +69,12 @@ test speed speed-sodium speed-tweetnacl:
 	./$<
 
 # Monocypher libraries
-lib/libmonocypher.a: lib/monocypher.o
+lib/libmonocypher.a: lib/monocypher.o $(LINK_SHA512)
 	ar cr $@ $^
 lib/libmonocypher.so: lib/libmonocypher.so.2
 	@mkdir -p $(@D)
 	ln -s $$(basename $<) $@
-lib/libmonocypher.so.2: lib/monocypher.o
+lib/libmonocypher.so.2: lib/monocypher.o $(LINK_SHA512)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -shared -o $@ $^
 lib/sha512.o    : src/optional/sha512.c src/optional/sha512.h

@@ -136,7 +136,11 @@ signatures.  The default is EdDSA with Curve25519 and Blake2b.
 Activating the option replaces it by Ed25519 (EdDSA with Curve25519 and
 SHA-512).  When this option is activated, you will need to link the
 final program with a suitable SHA-512 implementation.  You can use the
-`sha512.c` and `sha512.h` files provided in `src/optional`.
+`sha512.c` and `sha512.h` files provided in `src/optional`.  The
+makefile does this linking automatically whenever the `$CFLAGS` variable
+contains the `-DED25519_SHA512` option. For instance:
+
+    $ make CFLAGS="-O2 -DED25519_SHA512"
 
 The `-DBLAKE2_NO_UNROLLING` option is a performance tweak.  By default,
 Monocypher unrolls the Blake2b inner loop, because it is over 25% faster
