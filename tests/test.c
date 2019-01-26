@@ -855,8 +855,13 @@ static int p_auth()
     return status;
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
+    if (argc > 1) {
+        sscanf(argv[1], "%" PRIu64 "", &random_state);
+    }
+    printf("\nRandom seed: %" PRIu64 "\n", random_state);
+
     int status = 0;
     printf("\nTest against vectors");
     printf("\n--------------------\n");

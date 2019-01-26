@@ -44,14 +44,17 @@ u64 load64_le(const u8 s[8])
         | ((u64)s[7] << 56);
 }
 
+// Must be seeded with a nonzero value.
+// Accessible from the outside so we can modify it
+static u64 random_state = 12345;
+
 // Pseudo-random 64 bit number, based on xorshift*
 u64 rand64()
 {
-    static u64 x = 12345; // Must be seeded with a nonzero value.
-    x ^= x >> 12;
-    x ^= x << 25;
-    x ^= x >> 27;
-    return x * 0x2545F4914F6CDD1D; // magic constant
+    random_state ^= random_state >> 12;
+    random_state ^= random_state << 25;
+    random_state ^= random_state >> 27;
+    return random_state * 0x2545F4914F6CDD1D; // magic constant
 }
 
 void p_random(u8 *stream, size_t size)
