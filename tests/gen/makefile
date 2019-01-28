@@ -33,12 +33,13 @@ clean:
             $$(pkg-config --libs libsodium)
 
 ed25519.o: ../ed25519-donna/ed25519.c  $(wildcard ../ed25519-donna/*.h)
-	$(CC) $(CFLAGS) -c $<       \
-            -I ../../src            \
-            -I ../../src/optional   \
-            -DED25519_CUSTOMHASH    \
-            -DED25519_TEST          \
-            -DED25519_NO_INLINE_ASM \
+	$(CC) $(CFLAGS) -c $<                 \
+            -I ../../src                      \
+            -I ../../src/optional             \
+            $$(pkg-config --cflags libsodium) \
+            -DED25519_CUSTOMHASH              \
+            -DED25519_TEST                    \
+            -DED25519_NO_INLINE_ASM           \
             -DED25519_FORCE_32BIT
 
 vector_to_header.out: ../vector_to_header.c
