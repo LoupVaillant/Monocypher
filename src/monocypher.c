@@ -82,7 +82,7 @@ static u64 x16(const u8 a[16], const u8 b[16])
     return (load64_le(a + 0) ^ load64_le(b + 0))
         |  (load64_le(a + 8) ^ load64_le(b + 8));
 }
-static u64 x32(const u8 a[16],const u8 b[16]){return x16(a,b)| x16(a+16, b+16);}
+static u64 x32(const u8 a[32],const u8 b[32]){return x16(a,b)| x16(a+16, b+16);}
 static u64 x64(const u8 a[64],const u8 b[64]){return x32(a,b)| x32(a+32, b+32);}
 int crypto_verify16(const u8 a[16], const u8 b[16]){ return neq0(x16(a, b)); }
 int crypto_verify32(const u8 a[32], const u8 b[32]){ return neq0(x32(a, b)); }
