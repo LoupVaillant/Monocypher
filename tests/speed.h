@@ -10,38 +10,30 @@ typedef struct timespec timespec;
 #define KILOBYTE 1024
 #define MEGABYTE 1024 * KILOBYTE
 #define SIZE     (256 * KILOBYTE)
-#define DIV      (MEGABYTE / SIZE)
+#define MUL      (MEGABYTE / SIZE)
+#define BILLION  1000000000
 
-static timespec diff(timespec start, timespec end)
+// Difference in nanoseconds
+static u64 diff(timespec start, timespec end)
 {
-    timespec duration;
-    duration.tv_sec  = end.tv_sec  - start.tv_sec;
-    duration.tv_nsec = end.tv_nsec - start.tv_nsec;
-    if (duration.tv_nsec < 0) {
-        duration.tv_nsec += 1000000000;
-        duration.tv_sec  -= 1;
+    return
+        (end.tv_sec  - start.tv_sec ) * BILLION +
+        (end.tv_nsec - start.tv_nsec);
+}
+
+static u64 min(u64 a, u64 b)
+{
+    return a < b ? a : b;
+}
+
+static void print(const char *name, u64 duration, const char *unit)
+{
+    if (duration == 0) {
+        printf("%s: too fast to be measured\n", name);
+    } else {
+        u64 speed_hz = BILLION / duration;
+        printf("%s: %5" PRIu64 " %s\n", name, speed_hz, unit);
     }
-    return duration;
-}
-
-static timespec min(timespec a, timespec b)
-{
-    if (a.tv_sec < b.tv_sec ||
-        (a.tv_sec == b.tv_sec && a.tv_nsec < b.tv_nsec)) {
-        return a;
-    }
-    return b;
-}
-
-static u64 speed(timespec duration)
-{
-    static const u64 giga = 1000000000;
-    return giga / (duration.tv_nsec + duration.tv_sec * giga);
-}
-
-static void print(const char *name, u64 speed, const char *unit)
-{
-    printf("%s: %5" PRIu64 " %s\n", name, speed, unit);
 }
 
 #define TIMESTAMP(t)                            \
@@ -49,11 +41,7 @@ static void print(const char *name, u64 speed, const char *unit)
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t)
 
 #define TIMING_START                            \
-    timespec duration;                          \
-    duration.tv_sec = -1;                       \
-    duration.tv_nsec = -1;                      \
-    duration.tv_sec  = 3600 * 24;               \
-    duration.tv_nsec = 0;                       \
+    u64 duration = -1u;                         \
     FOR (i, 0, 500) {                           \
         TIMESTAMP(start);
 
@@ -61,4 +49,4 @@ static void print(const char *name, u64 speed, const char *unit)
     TIMESTAMP(end);                             \
     duration = min(duration, diff(start, end)); \
     } /* end FOR*/                              \
-    return speed(duration)
+    return duration
