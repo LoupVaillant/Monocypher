@@ -87,11 +87,18 @@ lib/monocypher.o lib/sha512.o:
 $TEST_COMMON=tests/utils.h src/monocypher.h src/optional/sha512.h
 lib/test.o           : tests/test.c            $(TEST_COMMON) tests/vectors.h
 lib/speed.o          : tests/speed.c           $(TEST_COMMON) tests/speed.h
-lib/speed-sodium.o   : tests/speed-sodium.c    $(TEST_COMMON) tests/speed.h
 lib/speed-tweetnacl.o: tests/speed-tweetnacl.c $(TEST_COMMON) tests/speed.h
-lib/utils.o lib/test.o lib/speed.o lib/speed-sodium.o lib/speed-tweetnacl.o:
+lib/utils.o lib/test.o lib/speed.o lib/speed-tweetnacl.o:
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ $<
+
+lib/speed-sodium.o   : tests/speed-sodium.c    $(TEST_COMMON) tests/speed.h
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS)                       \
+            -I src                            \
+            -I src/optional                   \
+            $$(pkg-config --cflags libsodium) \
+            -fPIC -c -o $@ $<
 
 # test & speed executables
 test.out : lib/test.o  lib/monocypher.o lib/sha512.o
