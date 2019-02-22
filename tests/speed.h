@@ -36,6 +36,9 @@ static void print(const char *name, u64 duration, const char *unit)
     }
 }
 
+// Note: not all systems will work well with CLOCK_PROCESS_CPUTIME_ID.
+// If you get weird timings on your system, you may want to replace it
+// with another clock id.  Perhaps even replace clock_gettime().
 #define TIMESTAMP(t)                            \
     timespec t;                                 \
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t)
