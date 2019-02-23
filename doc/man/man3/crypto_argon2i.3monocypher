@@ -61,12 +61,12 @@ This argument should be set to 32 or 64 for compatibility with the
 .Fn crypto_verify*
 constant time comparison functions.
 .It Fa work_area
-Temporary buffer for the algorithm.
-Must be
+Temporary buffer for the algorithm, allocated by the caller.
+It must be
 .Fa nb_blocks
 × 1024 bytes big, and suitably aligned for 64-bit integers.
-.Fn malloc
-will yield a suitable chunk of memory.
+If you are not sure how to allocate that buffer, just use
+.Fn malloc .
 .Pp
 The work area is automatically wiped by
 .Fn crypto_argon2i .
