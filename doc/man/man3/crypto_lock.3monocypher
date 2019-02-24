@@ -245,7 +245,7 @@ crypto_wipe(key, 32);
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement RFC 7539, with XChacha20 instead of Chacha20.
+These functions implement RFC 8439, with XChacha20 instead of Chacha20.
 XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).

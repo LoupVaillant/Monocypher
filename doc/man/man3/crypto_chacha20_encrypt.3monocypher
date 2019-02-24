@@ -176,7 +176,7 @@ Resuming the encryption will use the stream at the block
 .Ql ctr \(mu 64 ) .
 This can be used to encrypt (or decrypt) part of a long message, or to
 implement some AEAD constructions such as the one described in RFC
-7539.
+8439.
 Be careful when using this not to accidentally reuse parts of the
 random stream as that would destroy confidentiality.
 .Sh RETURN VALUES
@@ -278,7 +278,7 @@ crypto_wipe(plain_text, 500);
 .Xr intro 3monocypher
 .Sh STANDARDS
 These functions implement Chacha20 and XChacha20.
-Chacha20 is described in RFC 7539.
+Chacha20 is described in RFC 8439.
 XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).

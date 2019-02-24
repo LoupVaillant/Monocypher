@@ -161,9 +161,9 @@ if (crypto_check_final(&ctx)) {
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement EdDSA with Curve25519 and Blake2b.
+These functions implement PureEdDSA with Curve25519 and Blake2b, as
+described in RFC 8032.
 This is the same as Ed25519, with Blake2b instead of SHA-512.
-Ed25519 is described in RFC 7748.
 .Sh SECURITY CONSIDERATIONS
 Messages are not verified until the call to
 .Fn crypto_check_final .

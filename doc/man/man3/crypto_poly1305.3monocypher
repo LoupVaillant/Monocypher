@@ -134,7 +134,7 @@ crypto_poly1305_final(&ctx, mac);
 .Xr crypto_verify16 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement Poly1305, described in RFC 7539.
+These functions implement Poly1305, described in RFC 8439.
 .Sh SECURITY CONSIDERATIONS
 Poly1305 is difficult to use correctly.
 Do not use it unless you are absolutely sure what you are doing.
