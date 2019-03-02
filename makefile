@@ -73,7 +73,7 @@ lib/libmonocypher.a: lib/monocypher.o $(LINK_SHA512)
 	ar cr $@ $^
 lib/libmonocypher.so: lib/libmonocypher.so.2
 	@mkdir -p $(@D)
-	ln -s $$(basename $<) $@
+	ln -sf $$(basename $<) $@
 lib/libmonocypher.so.2: lib/monocypher.o $(LINK_SHA512)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -shared -o $@ $^
