@@ -957,6 +957,8 @@ static int p_monokex_xk1()
     crypto_kex_xk1_1(&client2, msg12);
     crypto_kex_xk1_2(&server1, msg21, msg11);
     crypto_kex_xk1_2(&server2, msg22, msg12);
+    crypto_kex_ctx client_save = client1;
+    crypto_kex_ctx server_save = server1;
     // make sure everything is accepted as it should be
     status |= crypto_kex_xk1_3(&client1, client_key1, msg31, msg21);
     status |= crypto_kex_xk1_3(&client2, client_key2, msg32, msg22);
@@ -970,9 +972,9 @@ static int p_monokex_xk1()
     status |= memcmp(remote_pk1 , remote_pk2 , 32);
     // make sure wrong messages are rejected as they should be.
     msg21[1]++;
-    status |= !crypto_kex_xk1_3(&client1, client_key1, msg31, msg21);
+    status |= !crypto_kex_xk1_3(&client_save, client_key1, msg31, msg21);
     msg32[1]++;
-    status |= !crypto_kex_xk1_4(&server2, server_key2, remote_pk2, msg32);
+    status |= !crypto_kex_xk1_4(&server_save, server_key2, remote_pk2, msg32);
 
     printf("%s: monokex_xk1\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -1001,6 +1003,7 @@ static int p_monokex_x()
     u8 remote_pk1 [32];    u8 remote_pk2 [32];
     crypto_kex_x_1(&client1, client_key1, msg11);
     crypto_kex_x_1(&client2, client_key2, msg12);
+    crypto_kex_ctx server_save = server1;
     // make sure everything is accepted as it should be
     status |= crypto_kex_x_2(&server1, server_key1, remote_pk1, msg11);
     status |= crypto_kex_x_2(&server2, server_key2, remote_pk2, msg12);
@@ -1010,7 +1013,7 @@ static int p_monokex_x()
     status |= memcmp(remote_pk1 , remote_pk2 , 32);
     // make sure wrong messages are rejected as they should be.
     msg11[1]++;
-    status |= !crypto_kex_x_2(&server1, server_key1, remote_pk1, msg11);
+    status |= !crypto_kex_x_2(&server_save, server_key1, remote_pk1, msg11);
 
     printf("%s: monokex_x\n", status != 0 ? "FAILED" : "OK");
     return status;
