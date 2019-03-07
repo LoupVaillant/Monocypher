@@ -74,7 +74,7 @@ If you can, always prefer
 When starting a new connection to the server, the client first reads
 the server's public key from the network; then it calls
 .Fn crypto_client_x_init_client
-to initialize a
+to initialise a
 .Vt crypto_kex_ctx .
 The arguments to
 .Fn crypto_client_x_init_client
@@ -119,7 +119,7 @@ to the server to complete the key exchange.
 .Ss Key exchange as the server
 When accepting a new connection from a client, the server calls
 .Fn crypto_client_xk1_init_server
-to initialize a
+to initialise a
 .Vt crypto_kex_ctx .
 The arguments to
 .Fn crypto_client_xk1_init_server
@@ -133,7 +133,7 @@ can be specified because the server authenticates clients
 only once the handshake completes,
 which is application logic and not part of the key exchange protocol.
 .Pp
-After initializing
+After initialising
 .Fa ctx , 
 the server waits for the client to send
 .Fa msg1

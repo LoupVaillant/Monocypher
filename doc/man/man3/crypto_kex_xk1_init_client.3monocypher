@@ -87,7 +87,7 @@ to a connection from a client immediately.
 .Ss Key exchange as the client
 When starting a new connection to the server, the client first calls
 .Fn crypto_client_xk1_init_client
-to initialize a
+to initialise a
 .Vt crypto_kex_ctx .
 The arguments to
 .Fn crypto_client_xk1_init_client
@@ -150,7 +150,7 @@ to the server to complete the key exchange.
 .Ss Key exchange as the server
 When accepting a new connection from a client, the server first calls
 .Fn crypto_client_xk1_init_server
-to initialize a
+to initialise a
 .Vt crypto_kex_ctx .
 The arguments to
 .Fn crypto_client_xk1_init_server
@@ -166,7 +166,7 @@ and
 .Fa local_pk
 are generated ahead of time and known to the clients.
 .Pp
-After initializing
+After initialising
 .Fa ctx , 
 the server waits for the client to send
 .Fa msg1
