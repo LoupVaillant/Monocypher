@@ -63,10 +63,13 @@ that is suitable for use with
 .Xr crypto_lock 3monocypher .
 The
 .Em server
-must have generated an X25519 secret key and its corresponding public
-key ahead of time using
+and the
+.Em client
+each generate a long-term X25519 secret key and its corresponding public
+key ahead of time before the key exchange using
 .Xr crypto_key_exchange_public_key 3monocypher .
-This key is also used by the client to verify the server's identity.
+These keys are also used by the by each party to verify the other
+party's identity.
 The
 .Em client
 must know the
@@ -78,8 +81,9 @@ initiates the key exchange.
 .Pp
 These functions differ from the
 .Xr crypto_kex_x_init_client 3monocypher
-functions in that the functions described in this page authenticate a
-server's identity.
+functions in that the functions described in this page provide stronger
+security guarantees, but also require the server to be able to respond
+to a connection from a client immediately.
 .Ss Key exchange as the client
 When starting a new connection to the server, the client first calls
 .Fn crypto_client_xk1_init_client
@@ -98,9 +102,10 @@ See
 .Xr intro 3monocypher
 for advice about generating random bytes (use the operating system's
 random number generator).
+This argument is not constant because it is wiped after use.
 .It Fa local_sk
 A 32-byte secret random number.
-This should be different for every connection the client makes.
+This is a long-term secret used to identify the respective party.
 .It Fa local_pk
 The public key corresponding to the
 .Fa local_sk ,
@@ -115,7 +120,7 @@ making a connection.
 This is used to authenticate the server's identity.
 .El
 .Pp
-After creating initializing
+After initialising
 .Fa ctx , 
 the client calls
 .Fn crypto_kex_xk1_1
@@ -137,7 +142,7 @@ and
 returns zero on success and -1 if the server's message mismatches the
 key exchange until now.
 .Em Always check the return value .
-On success, this function also wipes the data in
+This function also wipes the data in
 .Fa ctx .
 The client sends
 .Fa msg3
@@ -151,11 +156,11 @@ The arguments to
 .Fn crypto_client_xk1_init_server
 are identical to the arguments to
 .Fn crypto_client_xk1_init_client ,
-except that the server does not know a client's public key yet,
+except that the server does not know the client's public key yet,
 so no
 .Fa remote_pk
-can be specified;
-the server's
+can be specified because the server authenticates clients
+once the handshake completes; the server's
 .Fa local_sk
 and
 .Fa local_pk
@@ -185,11 +190,13 @@ which yields
 and
 .Fa remote_pk ,
 the client's public key.
+The server can use this to authenticate clients by their public key;
+.Em if possible, always authenticate clients .
 .Fn crypto_kex_xk1_4
 returns zero on success and -1 if the client's message mismatches the
 key exchange until now.
 .Em Always check the return value .
-On success, this function also wipes the data in
+This function also wipes the data in
 .Fa ctx .
 .Sh RETURN VALUES
 .Fn crypto_kex_xk1_init_client ,
@@ -207,7 +214,7 @@ server's identity.
 Corruption can be caused by transmission errors, programmer error, or an
 attacker's interference.
 .Sh EXAMPLES
-These examples use UNIX\(rg networking functions to keep the examples
+These examples use *NIX networking functions to keep the examples
 readable,
 but any kind of networking code will work.
 It is assumed that the client and server have already established a
@@ -216,7 +223,7 @@ connection with each other.
 Client:
 .Bd -literal -offset indent
 crypto_kex_ctx client_ctx; /* key exchange context */
-uint8_t sk[32];            /* 32 random bytes ephemeral secret key */
+uint8_t sk[32];            /* 32 random bytes long-term secret key */
 uint8_t their_pk[32];      /* the server's public key 
                             * (known ahead of time) */
 uint8_t seed[32];          /* 32 random bytes */
@@ -224,7 +231,7 @@ uint8_t buf[48];           /* buffer for the key exchange messages */
 uint8_t session_key[32];   /* the resulting session key */
 int fd;                    /* the socket of the connection */
 
-/* (generate random bytes in seed and sk here) */
+/* (generate random bytes in seed here) */
 crypto_kex_xk1_init_client(&client_ctx, seed, sk, NULL, their_pk);
 crypto_kex_xk1_1(&client_ctx, buf);
 if (write(fd, buf, 32) != 32)

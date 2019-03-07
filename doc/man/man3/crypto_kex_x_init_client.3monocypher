@@ -48,13 +48,14 @@ that is suitable for use with
 .Xr crypto_lock 3monocypher .
 The
 .Em server
-generates an X25519 secret key and its corresponding public
-key ahead of time using
-.Xr crypto_key_exchange_public_key 3monocypher
-when the key exchange starts.
+and the
+.Em client
+each generate a long-term X25519 secret key and its corresponding public
+key ahead of time before the key exchange using
+.Xr crypto_key_exchange_public_key 3monocypher .
 The
 .Em client
-does not need to know the
+must know the
 .Em server's
 public key before performing the key exchange.
 The
@@ -64,16 +65,14 @@ initiates the key exchange.
 These functions differ from the
 .Xr crypto_kex_xk1_init_client 3monocypher
 functions in that the functions described in this page
-.Em do not
-authenticate the server's identity.
-If you can share a server's public key with client applications ahead of
-time,
-always prefer
+can be used even if a server is offline (i.e. asynchronous
+communication); they have lower security guarantees, see
+.Sx SECURITY CONSIDERATIONS .
+If you can, always prefer
 .Xr crypto_kex_xk1_init_client 3monocypher .
 .Ss Key exchange as the client
 When starting a new connection to the server, the client first reads
-the server's public key from the network;
-then it calls
+the server's public key from the network; then it calls
 .Fn crypto_client_x_init_client
 to initialize a
 .Vt crypto_kex_ctx .
@@ -90,9 +89,10 @@ See
 .Xr intro 3monocypher
 for advice about generating random bytes (use the operating system's
 random number generator).
+This argument is not constant because it is wiped after use.
 .It Fa local_sk
 A 32-byte secret random number.
-This should be different for every connection you make.
+This is a long-term secret used to identify the respective party.
 .It Fa local_pk
 The public key corresponding to the
 .Fa local_sk ,
@@ -105,7 +105,7 @@ the public key will be generated for you.
 The public key of the server.
 .El
 .Pp
-After creating initializing
+After creating initialising
 .Fa ctx , 
 the client calls
 .Fn crypto_kex_x_1
@@ -117,12 +117,7 @@ It proceeds to send
 .Fa msg1
 to the server to complete the key exchange.
 .Ss Key exchange as the server
-When accepting a new connection from a client, the server first
-generates a new secret key and sends the corresponding public key,
-derived from the secret key using
-.Xr crypto_key_exchange_public_key 3monocypher ,
-to the client.
-It then calls
+When accepting a new connection from a client, the server calls
 .Fn crypto_client_xk1_init_server
 to initialize a
 .Vt crypto_kex_ctx .
@@ -130,12 +125,13 @@ The arguments to
 .Fn crypto_client_xk1_init_server
 are identical to the arguments to
 .Fn crypto_client_xk1_init_client ,
-except that the server does not need a 
-.Fa random_seed
-and does not need to know a client's public key,
-so no
+except that the server does not need a
+.Fa random_seed ;
+no
 .Fa remote_pk
-can be specified.
+can be specified because the server authenticates clients
+only once the handshake completes,
+which is application logic and not part of the key exchange protocol.
 .Pp
 After initializing
 .Fa ctx , 
@@ -151,11 +147,13 @@ which yields
 and
 .Fa remote_pk ,
 the client's public key.
+The server can use this to authenticate clients by their public key;
+.Em if possible, always authenticate clients .
 .Fn crypto_kex_x_2
 returns zero on success and -1 if the client's message mismatches the
 key exchange until now.
 .Em Always check the return value .
-On success, this function also wipes the data in
+This function also wipes the data in
 .Fa ctx .
 .Sh RETURN VALUES
 .Fn crypto_kex_x_init_client ,
@@ -170,7 +168,7 @@ server's identity.
 Corruption can be caused by transmission errors, programmer error, or an
 attacker's interference.
 .Sh EXAMPLES
-These examples use UNIX\(rg networking functions to keep the examples
+These examples use *NIX networking functions to keep the examples
 concise,
 but any kind of networking code will work.
 It is assumed that the client and server have already established a
@@ -179,16 +177,15 @@ connection with each other.
 Client:
 .Bd -literal -offset indent
 crypto_kex_ctx client_ctx; /* key exchange context */
-uint8_t sk[32];            /* 32 random bytes ephemeral secret key */
-uint8_t their_pk[32];      /* the server's ephemeral public key */
+uint8_t sk[32];            /* 32 random bytes long-term secret key */
+uint8_t their_pk[32];      /* the server's public key 
+                            * (known ahead of time) */
 uint8_t seed[32];          /* 32 random bytes */
 uint8_t buf[80];           /* buffer for the key exchange messages */
 uint8_t session_key[32];   /* the resulting session key */
 int fd;                    /* the socket of the connection */
 
-if (read(fd, their_pk, 32) != 32)
-    return -1;
-/* (generate random bytes in seed and sk here) */
+/* (generate random bytes in seed) */
 crypto_kex_x_init_client(&client_ctx, seed, sk, NULL, their_pk);
 crypto_kex_x_1(&client_ctx, session_key, buf);
 if (write(fd, buf, 80) != 80)
@@ -200,18 +197,14 @@ if (write(fd, buf, 80) != 80)
 Server:
 .Bd -literal -offset indent
 crypto_kex_ctx server_ctx; /* key exchange context */
-uint8_t sk[32];            /* 32 random bytes ephemeral secret key */
+uint8_t sk[32];            /* 32 random bytes long-term secret key */
 uint8_t my_pk[32];         /* public key to sk */
-uint8_t their_pk[32];      /* the server's public key */
+uint8_t their_pk[32];      /* the client's public key */
 uint8_t seed[32];          /* 32 random bytes */
 uint8_t buf[80];           /* buffer for the key exchange messages */
 uint8_t session_key[32];   /* the resulting session key */
 int fd;                    /* the socket of the connection */
 
-/* (generate random bytes in sk here) */
-crypto_key_exchange_public_key(my_pk, sk);
-if (write(fd, my_pk, 32) != 32)
-    return -1;
 crypto_kex_x_init_server(&server_ctx, sk, my_pk);
 if (read(fd, buf, 80) != 80)
     return -2;
@@ -227,3 +220,26 @@ crypto_kex_1_2(&server_ctx, session_key, their_pk, buf);
 .Sh STANDARDS
 These functions are equivalent to an implementation of the X pattern
 of the Noise protocol framework.
+.Sh SECURITY CONSIDERATIONS
+Unlike the
+.Xr crypto_kex_xk1_init_client 3monocypher
+family of functions, the functions described on this page suffer from a
+number of security issues:
+.Bl -tag -width Ds
+.It Limited forward secrecy
+If an attacker manages to steal the server's long-term secret key,
+past messages may be recovered.
+.It Replay attacks
+The server does not send a random challenge in this.
+.It Key compromise impersonation
+If an attacker manages to steal the server's long-term secret key,
+the attacker can impersonate
+.Em any
+client to that server; if client identity is tied to authorization,
+this also means that authorization requirements can be bypassed.
+.El
+.Pp
+The reason they are provided is because they work even if the other
+party cannot respond to a key exchange immediately (e.g. if the server
+may not always be available; consider something like crash dumps where
+a program may be used temporarily in an offline environment).
