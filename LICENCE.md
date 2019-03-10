@@ -8,7 +8,7 @@ to the public domain.  The BSD licence serves as a fallback.
 Licence 1 (2-clause BSD)
 ------------------------
 
-Copyright (c) 2017, Loup Vaillant
+Copyright (c) 2017-2019, Loup Vaillant
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
