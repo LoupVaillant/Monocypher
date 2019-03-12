@@ -77,7 +77,7 @@ This recomputation doubles the execution time.
 checks that a given signature is genuine.
 Meaning, only someone who had the private key could have signed the
 message.
-.Sy \It does not run in constant time .
+.Sy \&It does not run in constant time .
 It does not have to in most threat models, because nothing is secret:
 everyone knows the public key, and the signature and message are
 rarely secret.

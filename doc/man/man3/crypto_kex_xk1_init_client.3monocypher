@@ -121,7 +121,7 @@ This is used to authenticate the server's identity.
 .El
 .Pp
 After initialising
-.Fa ctx , 
+.Fa ctx ,
 the client calls
 .Fn crypto_kex_xk1_1
 to generate
@@ -167,7 +167,7 @@ and
 are generated ahead of time and known to the clients.
 .Pp
 After initialising
-.Fa ctx , 
+.Fa ctx ,
 the server waits for the client to send
 .Fa msg1
 and reads it from the network.
@@ -224,7 +224,7 @@ Client:
 .Bd -literal -offset indent
 crypto_kex_ctx client_ctx; /* key exchange context */
 uint8_t sk[32];            /* 32 random bytes long-term secret key */
-uint8_t their_pk[32];      /* the server's public key 
+uint8_t their_pk[32];      /* the server's public key
                             * (known ahead of time) */
 uint8_t seed[32];          /* 32 random bytes */
 uint8_t buf[48];           /* buffer for the key exchange messages */
