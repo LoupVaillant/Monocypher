@@ -142,10 +142,10 @@ static void get_interactive_session(u8 msg1[32], u8 msg2[48], u8 msg3[48],
         c_seed[i] = client_seed[i];
         s_seed[i] = server_seed[i];
     }
-    crypto_kex_ctx client_ctx;
+    crypto_kex_client_ctx client_ctx;
     crypto_kex_xk1_init_client(&client_ctx, c_seed, client_sk, client_pk,
                                server_pk);
-    crypto_kex_ctx server_ctx;
+    crypto_kex_server_ctx server_ctx;
     crypto_kex_xk1_init_server(&server_ctx, s_seed, server_sk, server_pk);
 
     crypto_kex_xk1_1(&client_ctx, msg1);
@@ -191,7 +191,7 @@ static u64 interactive_client(void)
                             client_seed, server_seed);
     TIMING_START {
         u8 session_key[32];
-        crypto_kex_ctx client_ctx;
+        crypto_kex_client_ctx client_ctx;
         u8 seed[32];
         FOR (i, 0, 32) {
             seed[i] = client_seed[i];
@@ -223,7 +223,7 @@ static u64 interactive_server(void)
     TIMING_START {
         u8 session_key[32];
         u8 remote_pk         [32]; // same as client_pk
-        crypto_kex_ctx server_ctx;
+        crypto_kex_server_ctx server_ctx;
         u8 seed[32];
         FOR (i, 0, 32) {
             seed[i] = server_seed[i];
@@ -252,10 +252,10 @@ static void get_one_way_session(u8 msg[80], u8 client_pk[32], u8 server_pk[32],
         c_seed[i] = client_seed[i];
     }
 
-    crypto_kex_ctx client_ctx;
+    crypto_kex_client_ctx client_ctx;
     crypto_kex_x_init_client(&client_ctx, c_seed, client_sk, client_pk,
                              server_pk);
-    crypto_kex_ctx server_ctx;
+    crypto_kex_server_ctx server_ctx;
     crypto_kex_x_init_server(&server_ctx, server_sk, server_pk);
 
     u8 client_session_key[32];
@@ -294,7 +294,7 @@ static u64 one_way_client(void)
         FOR (i, 0, 32) {
             seed[i] = client_seed[i];
         }
-        crypto_kex_ctx client_ctx;
+        crypto_kex_client_ctx client_ctx;
         crypto_kex_x_init_client(&client_ctx, seed, client_sk, client_pk,
                                  server_pk);
         crypto_kex_x_1(&client_ctx, session_key, msg);
@@ -315,7 +315,7 @@ static u64 one_way_server(void)
     TIMING_START {
         u8 session_key[32];
         u8 remote_pk         [32]; // same as client_pk
-        crypto_kex_ctx server_ctx;
+        crypto_kex_server_ctx server_ctx;
         crypto_kex_x_init_server(&server_ctx, server_sk, server_pk);
         if (crypto_kex_x_2(&server_ctx, session_key, remote_pk, msg)) {
             fprintf(stderr, "Cannot receive\n");

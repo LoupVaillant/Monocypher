@@ -240,8 +240,8 @@ static void monokex_xk1(const vector in[], vector *out)
     const vector *msg1 = in + 6;
     const vector *msg2 = in + 7;
     const vector *msg3 = in + 8;
-    crypto_kex_ctx client;
-    crypto_kex_ctx server;
+    crypto_kex_client_ctx client;
+    crypto_kex_server_ctx server;
     u8 client_seed[32];  memcpy(client_seed, ie->buf, ie->size);
     u8 server_seed[32];  memcpy(server_seed, re->buf, re->size);
     crypto_kex_xk1_init_client(&client, client_seed, is->buf, IS->buf, RS->buf);
@@ -281,8 +281,8 @@ static void monokex_x(const vector in[], vector *out)
     const vector *IS   = in + 3;
     const vector *RS   = in + 4;
     const vector *msg1 = in + 5;
-    crypto_kex_ctx client;
-    crypto_kex_ctx server;
+    crypto_kex_client_ctx client;
+    crypto_kex_server_ctx server;
     u8 seed[32];  memcpy(seed, ie->buf, ie->size);
     crypto_kex_x_init_client(&client, seed, is->buf, IS->buf, RS->buf);
     crypto_kex_x_init_server(&server,       rs->buf, RS->buf);
@@ -934,8 +934,8 @@ static int p_monokex_xk1()
     u8 IS[32];  crypto_x25519_public_key(IS, is);
     u8 RS[32];  crypto_x25519_public_key(RS, rs);
 
-    crypto_kex_ctx client1, client2;
-    crypto_kex_ctx server1, server2;
+    crypto_kex_client_ctx client1, client2;
+    crypto_kex_server_ctx server1, server2;
     u8 client_seed1[32];  memcpy(client_seed1, ie, 32);
     u8 client_seed2[32];  memcpy(client_seed2, ie, 32);
     u8 server_seed1[32];  memcpy(server_seed1, re, 32);
@@ -957,8 +957,8 @@ static int p_monokex_xk1()
     crypto_kex_xk1_1(&client2, msg12);
     crypto_kex_xk1_2(&server1, msg21, msg11);
     crypto_kex_xk1_2(&server2, msg22, msg12);
-    crypto_kex_ctx client_save = client1;
-    crypto_kex_ctx server_save = server1;
+    crypto_kex_client_ctx client_save = client1;
+    crypto_kex_server_ctx server_save = server1;
     // make sure everything is accepted as it should be
     status |= crypto_kex_xk1_3(&client1, client_key1, msg31, msg21);
     status |= crypto_kex_xk1_3(&client2, client_key2, msg32, msg22);
@@ -989,8 +989,8 @@ static int p_monokex_x()
     u8 IS[32];  crypto_x25519_public_key(IS, is);
     u8 RS[32];  crypto_x25519_public_key(RS, rs);
 
-    crypto_kex_ctx client1, client2;
-    crypto_kex_ctx server1, server2;
+    crypto_kex_client_ctx client1, client2;
+    crypto_kex_server_ctx server1, server2;
     u8 seed1[32];  memcpy(seed1, ie, 32);
     u8 seed2[32];  memcpy(seed2, ie, 32);
     crypto_kex_x_init_client(&client1, seed1, is, IS, RS);
@@ -1003,7 +1003,7 @@ static int p_monokex_x()
     u8 remote_pk1 [32];    u8 remote_pk2 [32];
     crypto_kex_x_1(&client1, client_key1, msg11);
     crypto_kex_x_1(&client2, client_key2, msg12);
-    crypto_kex_ctx server_save = server1;
+    crypto_kex_server_ctx server_save = server1;
     // make sure everything is accepted as it should be
     status |= crypto_kex_x_2(&server1, server_key1, remote_pk1, msg11);
     status |= crypto_kex_x_2(&server2, server_key2, remote_pk2, msg12);
