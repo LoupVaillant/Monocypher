@@ -1567,6 +1567,8 @@ static void ge_madd(ge *s, const ge *p, const fe yp, const fe ym, const fe t2,
     fe_mul(s->Z, a   , b   );
 }
 
+// Internal buffers are not wiped! Inputs must not be secret!
+// => Use only to *check* signatures.
 static void ge_msub(ge *s, const ge *p, const fe yp, const fe ym, const fe t2,
                     fe a, fe b)
 {
@@ -1679,7 +1681,8 @@ static void slide(size_t width, i8 *adds, const u8 scalar[32])
 #define P_WINDOW_SIZE  (1<<(P_WINDOW_WIDTH-2))
 #define B_WINDOW_SIZE  (1<<(B_WINDOW_WIDTH-2))
 
-// Variable time! P, sP, and sB must not be secret!
+// Variable time! Internal buffers are not wiped! Inputs must not be secret!
+// => Use only to *check* signatures.
 static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
                                          u8 p[32], u8 b[32])
 {
