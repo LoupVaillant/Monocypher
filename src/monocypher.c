@@ -388,10 +388,9 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
     // Process the message block by block
     size_t nb_blocks = message_size >> 4;
     FOR (i, 0, nb_blocks) {
-        ctx->c[0] = load32_le(message +  0);
-        ctx->c[1] = load32_le(message +  4);
-        ctx->c[2] = load32_le(message +  8);
-        ctx->c[3] = load32_le(message + 12);
+        FOR (i, 0, 4) {
+            ctx->c[i] = load32_le(message +  i*4);
+        }
         poly_block(ctx);
         message += 16;
     }
