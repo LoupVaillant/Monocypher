@@ -24,6 +24,9 @@
 #define WIPE_BUFFER(buffer)  crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)            ((a) <= (b) ? (a) : (b))
 #define ALIGN(x, block_size) ((~(x) + 1) & ((block_size) - 1))
+#define LOAD32_LE_POLY1305(s)         *(u32*)(s)
+#define STORE32_LE_POLY1305(out,in)   *(u32*)(out) = in
+
 typedef int8_t   i8;
 typedef uint8_t  u8;
 typedef uint32_t u32;
@@ -371,9 +374,9 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
     ctx->c[4] = 1;
     poly_clear_c(ctx);
     // load r and pad (r has some of its bits cleared)
-    FOR (i, 0, 1) { ctx->r  [0] = load32_le(key           ) & 0x0fffffff; }
-    FOR (i, 1, 4) { ctx->r  [i] = load32_le(key + i*4     ) & 0x0ffffffc; }
-    FOR (i, 0, 4) { ctx->pad[i] = load32_le(key + i*4 + 16);              }
+    FOR (i, 0, 1) { ctx->r  [0] = LOAD32_LE_POLY1305(key           ) & 0x0fffffff; }
+    FOR (i, 1, 4) { ctx->r  [i] = LOAD32_LE_POLY1305(key + i*4     ) & 0x0ffffffc; }
+    FOR (i, 0, 4) { ctx->pad[i] = LOAD32_LE_POLY1305(key + i*4 + 16);              }
 }
 
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
@@ -388,10 +391,10 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
     // Process the message block by block
     size_t nb_blocks = message_size >> 4;
     FOR (i, 0, nb_blocks) {
-        ctx->c[0] = load32_le(message +  0);
-        ctx->c[1] = load32_le(message +  4);
-        ctx->c[2] = load32_le(message +  8);
-        ctx->c[3] = load32_le(message + 12);
+        ctx->c[0] = LOAD32_LE_POLY1305(message +  0);
+        ctx->c[1] = LOAD32_LE_POLY1305(message +  4);
+        ctx->c[2] = LOAD32_LE_POLY1305(message +  8);
+        ctx->c[3] = LOAD32_LE_POLY1305(message + 12);
         poly_block(ctx);
         message += 16;
     }
