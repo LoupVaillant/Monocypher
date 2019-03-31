@@ -108,7 +108,7 @@ making a connection.
 This is used to authenticate the server's identity.
 It must thus be known to the client before making a connection.
 .It Fa msg1
-A 32-byte message, which is generated and sent by the client.
+A 80-byte message, which is generated and sent by the client.
 It is the only message in the key exchange.
 .El
 .Pp
@@ -203,7 +203,7 @@ int fd;                    /* the socket of the connection */
 
 /* (generate random bytes in seed) */
 crypto_kex_x_init_client(&client_ctx, seed, client_sk, NULL,
-        server_pk);
+                         server_pk);
 crypto_kex_x_1(&client_ctx, session_key, buf);
 if (write(fd, buf, 80) != 80)
     return -2;

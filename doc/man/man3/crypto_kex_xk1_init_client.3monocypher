@@ -121,8 +121,7 @@ the public key will be generated for you.
 A 32-byte secret random number.
 This is a long-term secret used to identify the server.
 .It Fa server_pk
-The public key of the server, which must be known to the client before
-making a connection.
+The public key of the server.
 This is used to authenticate the server's identity.
 It must thus be known to the client before making a connection.
 .It Fa msg1
@@ -252,7 +251,7 @@ int fd;                    /* the socket of the connection */
 
 /* (generate random bytes in seed here) */
 crypto_kex_xk1_init_client(&client_ctx, seed, client_sk, NULL,
-        server_pk);
+                           server_pk);
 crypto_kex_xk1_1(&client_ctx, buf);
 if (write(fd, buf, 32) != 32)
     return -1;
