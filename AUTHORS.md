@@ -22,7 +22,6 @@ Implementors
 - **EdDSA:**    Daniel J. Bernstein, taken and adapted from SUPERCOP
                 ref10 and TweetNaCl.  (With significant speed tweaks).
 
-
 Test suite
 ----------
 
@@ -34,20 +33,23 @@ Manual
 
 Loup Vaillant, Fabio Scotoni, and Michael Savage.
 
-Loup Vaillant did a first draft, Fabio Scotoni rewrote the manual into
-proper man pages, and Michael Savage did extensive editing and
-proofreading.
+- Loup Vaillant did a first draft.
+- Fabio Scotoni rewrote the manual into proper man pages (and
+  substantially changed it in the process), and wrote the crypto_kex*()
+  pages from scratch.
+- Michael Savage did extensive editing and proofreading.
 
 Thanks
 ------
+
+Fabio Scotoni provided much needed advice about testing, interface,
+packaging, and the general direction of the whole project.  He also
+redesigned monocypher.org style sheets.
 
 Mike Pechkin and André Maroneze found bugs in earlier versions of
 Monocypher.
 
 Andrew Moon clarified carry propagation in modular arithmetic.
-
-Fabio Scotoni provided much needed advice about testing, interface, and
-above all, packaging.
 
 Mike Hamburg explained comb algorithms, including the signed
 all-bits-set comb described in his 2012 paper, Fast and compact
