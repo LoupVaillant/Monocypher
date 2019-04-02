@@ -5,7 +5,7 @@ PREFIX=usr/local
 PKGCONFIG=$(DESTDIR)/$(PREFIX)/lib/pkgconfig
 MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
 
-TARBALL_VERSION=$$(cat VERSION.md)
+TARBALL_VERSION=`cat VERSION.md`
 TARBALL_DIR=.
 
 ifeq ($(findstring -DED25519_SHA512, $(CFLAGS)),)
@@ -34,7 +34,7 @@ install: library src/monocypher.h install-doc
 	@echo 'includedir=$${prefix}/include'   >> $(PKGCONFIG)/monocypher.pc
 	@echo ''                                >> $(PKGCONFIG)/monocypher.pc
 	@echo 'Name: monocypher'                >> $(PKGCONFIG)/monocypher.pc
-	@echo 'Version:' $$(cat VERSION.md)     >> $(PKGCONFIG)/monocypher.pc
+	@echo 'Version:' `cat VERSION.md`       >> $(PKGCONFIG)/monocypher.pc
 	@echo 'Description: Easy to use, easy to deploy crypto library' \
                                                 >> $(PKGCONFIG)/monocypher.pc
 	@echo ''                                >> $(PKGCONFIG)/monocypher.pc
@@ -73,7 +73,7 @@ lib/libmonocypher.a: lib/monocypher.o $(LINK_SHA512)
 	ar cr $@ $^
 lib/libmonocypher.so: lib/libmonocypher.so.2
 	@mkdir -p $(@D)
-	ln -sf $$(basename $<) $@
+	ln -sf `basename $<` $@
 lib/libmonocypher.so.2: lib/monocypher.o $(LINK_SHA512)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -shared -o $@ $^
@@ -97,7 +97,7 @@ lib/speed-sodium.o   : tests/speed-sodium.c    $(TEST_COMMON) tests/speed.h
 	$(CC) $(CFLAGS)                       \
             -I src                            \
             -I src/optional                   \
-            $$(pkg-config --cflags libsodium) \
+            `pkg-config --cflags libsodium` \
             -fPIC -c -o $@ $<
 
 # test & speed executables
@@ -107,8 +107,8 @@ test.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
 speed-sodium.out: lib/speed-sodium.o
 	$(CC) $(CFLAGS) -o $@ $^              \
-            $$(pkg-config --cflags libsodium) \
-            $$(pkg-config --libs   libsodium)
+            `pkg-config --cflags libsodium` \
+            `pkg-config --libs   libsodium`
 lib/tweetnacl.o: tests/tweetnacl.c tests/tweetnacl.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 speed-tweetnacl.out: lib/speed-tweetnacl.o lib/tweetnacl.o
