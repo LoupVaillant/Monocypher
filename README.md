@@ -28,13 +28,26 @@ script.  This requires mandoc.
 Installation
 ------------
 
+### Option 1: grab the sources
+
 The easiest way to use Monocypher is to include `src/monocypher.h` and
 `src/monocypher.c` directly into your project.  They compile as C99,
 C11, C++98, C++11, C++14, and C++17.
 
-Alternatively, you can run `make`, then grab `lib/libmonocypher.a` or
-`lib/libmonocypher.so`.  If you're running a UNIX system, you can even
-install Monocypher (you need to be root):
+
+### Option 2: grab the library
+
+Alternatively, you can run `make`, then grab the `src/monocypher.h`
+header and the `lib/libmonocypher.a` or `lib/libmonocypher.so` library.
+The default compiler is `gcc -std=gnu99`, and the default flags are
+`-pedantic -Wall -Wextra -O3 -march=native`.  If they don't work on your
+platform, you can change them like this:
+
+    $ make CC="clang -std=c99" CFLAGS="-O2"
+
+### Option 3 install it on your system
+
+The following should work on most UNIX systems:
 
     $ make install
 
