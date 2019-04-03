@@ -175,6 +175,11 @@ The
 and
 .Fn crypto_check_final
 functions first appeared in Monocypher 1.1.0.
+.Pp
+.Sy A critical security vulnerability
+that caused all-zero signatures to be accepted was introduced in
+Monocypher 0.3;
+it was fixed in Monocypher 1.1.1 and 2.0.4.
 .Sh SECURITY CONSIDERATIONS
 Messages are not verified until the call to
 .Fn crypto_check_final .

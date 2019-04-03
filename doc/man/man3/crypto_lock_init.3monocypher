@@ -287,6 +287,14 @@ The
 and
 .Fn crypto_unlock_final
 functions first appeared in Monocypher 1.1.0.
+.Fn crypto_lock_aead_auth
+and
+.Fn crypto_unlock_aead_auth
+were renamed to
+.Fn crypto_lock_auth_ad
+and
+.Fn crypto_unlock_auth_ad
+respectively in Monocypher 2.0.0.
 .Sh SECURITY CONSIDERATIONS
 Messages are not verified until the call to
 .Fn crypto_unlock_final .
