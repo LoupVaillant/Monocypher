@@ -105,6 +105,13 @@ crypto_wipe(your_sk, 32);
 These functions implement X25519, described in RFC 7748.
 .Fn crypto_key_exchange
 uses HChacha20 as well.
+.Sh HISTORY
+The
+.Fn crypto_key_exchange
+function first appeared in Monocypher 0.2.
+The
+.Fn crypto_key_exchange_public_key
+macro alias first appeared in Monocypher 1.1.0.
 .Sh SECURITY CONSIDERATIONS
 If either of the long term secret keys leaks, it may compromise
 .Em all past messages .

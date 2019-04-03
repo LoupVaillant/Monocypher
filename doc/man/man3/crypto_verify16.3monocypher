@@ -61,3 +61,14 @@ These functions return 0 if the two memory chunks are the same, -1
 otherwise.
 .Sh SEE ALSO
 .Xr intro 3monocypher
+.Sh HISTORY
+The
+.Fn crypto_verify16 ,
+.Fn crypto_verify32 ,
+.Fn crypto_verify64
+functions first appeared in Monocypher 1.1.0.
+They replaced the
+.Fn crypto_memcmp
+and
+.Fn crypto_zerocmp
+functions that were present until Monocypher 1.0.1.

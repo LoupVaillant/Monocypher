@@ -212,6 +212,15 @@ free(work_area);
 .Sh STANDARDS
 These functions implement Argon2i.
 An RFC draft is being maintained.
+.Sh HISTORY
+The
+.Fn crypto_argon2i_general
+function first appeared in Monocypher 0.1 but was called
+.Fn crypto_argon2i ;
+it was renamed to its current name in Monocypher 1.1.0.
+The current
+.Fn crypto_argon2i
+first appeared in Monocypher 1.1.0.
 .Sh CAVEATS
 Any deviation from the specified input and output length ranges results
 in

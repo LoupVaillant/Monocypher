@@ -208,6 +208,16 @@ crypto_blake2b_final(&ctx, hash);
 .Xr intro 3monocypher
 .Sh STANDARDS
 These functions implement BLAKE2b.
+.Sh HISTORY
+The
+.Fn crypto_blake2b ,
+.Fn crypto_blake2b_general ,
+.Fn crypto_blake2b_general_init ,
+.Fn crypto_blake2b_init ,
+.Fn crypto_blake2b_update ,
+and
+.Fn crypto_blake2b_final
+functions first appeared in Monocypher 0.1.
 .Sh CAVEATS
 Monocypher does not perform any input validation.
 Any deviation from the specified input and output length ranges results

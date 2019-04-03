@@ -249,3 +249,22 @@ These functions implement RFC 8439, with XChacha20 instead of Chacha20.
 XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
+.Sh HISTORY
+The
+.Fn crypto_lock
+and
+.Fn crypto_unlock
+functions first appeared in Monocypher 0.1.
+.Fn crypto_lock_aead
+and
+.Fn crypto_unlock_aead
+were introduced in Monocypher 1.1.0.
+In Monocypher 2.0.0, the underlying algorithms for these functions were
+changed from a custom XChacha20/Poly1305 construction to an
+implementation of RFC 7539 (now RFC 8439) with XChacha20 instead of
+Chacha20.
+The
+.Fn crypto_lock_encrypt
+and
+.Fn crypto_lock_auth
+functions were removed in Monocypher 2.0.0.
