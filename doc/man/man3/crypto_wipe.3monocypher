@@ -52,3 +52,7 @@ for instructions on how to lock down memory on common operating systems.
 This function returns nothing.
 .Sh SEE ALSO
 .Xr intro 3monocypher
+.Sh HISTORY
+The
+.Fn crypto_wipe
+function first appeared in Monocypher 1.1.0.

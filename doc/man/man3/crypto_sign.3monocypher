@@ -138,6 +138,13 @@ if (crypto_check(signature, pk, message, 500)) {
 These functions implement PureEdDSA with Curve25519 and Blake2b, as
 described in RFC 8032.
 This is the same as Ed25519, with Blake2b instead of SHA-512.
+.Sh HISTORY
+The
+.Fn crypto_sign ,
+.Fn crypto_check ,
+and
+.Fn crypto_sign_public_key
+functions appeared in Monocypher 0.2.
 .Sh SECURITY CONSIDERATIONS
 .Ss Signature malleability
 EdDSA signatures are not unique like cryptographic hashes.

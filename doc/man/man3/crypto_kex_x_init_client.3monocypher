@@ -240,6 +240,14 @@ crypto_kex_1_2(&server_ctx, session_key, client_pk, buf);
 .Sh STANDARDS
 These functions are equivalent to an implementation of the X pattern
 of the Noise protocol framework.
+.Sh HISTORY
+The
+.Fn crypto_kex_x_init_client ,
+.Fn crypto_kex_x_init_server ,
+.Fn crypto_kex_x_1 ,
+and
+.Fn crypto_kex_x_2
+functions first appeared in Monocypher 2.1.0.
 .Sh SECURITY CONSIDERATIONS
 Unlike the
 .Xr crypto_kex_xk1_init_client 3monocypher

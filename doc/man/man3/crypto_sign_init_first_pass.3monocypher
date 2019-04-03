@@ -164,6 +164,17 @@ if (crypto_check_final(&ctx)) {
 These functions implement PureEdDSA with Curve25519 and Blake2b, as
 described in RFC 8032.
 This is the same as Ed25519, with Blake2b instead of SHA-512.
+.Sh HISTORY
+The
+.Fn crypto_sign_init_first_pass ,
+.Fn crypto_sign_update ,
+.Fn crypto_sign_final ,
+.Fn crypto_sign_init_second_pass ,
+.Fn crypto_check_init ,
+.Fn crypto_check_update ,
+and
+.Fn crypto_check_final
+functions first appeared in Monocypher 1.1.0.
 .Sh SECURITY CONSIDERATIONS
 Messages are not verified until the call to
 .Fn crypto_check_final .

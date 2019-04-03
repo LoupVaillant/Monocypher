@@ -101,6 +101,12 @@ crypto_wipe(shared_secret, 32);
 .Xr intro 3monocypher
 .Sh STANDARDS
 This function implements X25519, described in RFC 7748.
+.Sh HISTORY
+The
+.Fn crypto_x25519 ,
+and
+.Fn crypto_x25519_public_key
+functions first appeared in Monocypher 0.1.
 .Sh SECURITY CONSIDERATIONS
 If either of the long term secret keys leaks, it may compromise
 .Em all past messages .

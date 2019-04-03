@@ -301,3 +301,13 @@ if (crypto_kex_xk1_4(&server_ctx, session_key, client_pk, buf) != 0)
 .Sh STANDARDS
 These functions are equivalent to an implementation of the XK1 pattern
 of the Noise protocol framework.
+.Sh HISTORY
+The
+.Fn crypto_kex_xk1_init_client ,
+.Fn crypto_kex_xk1_init_server ,
+.Fn crypto_kex_xk1_1 ,
+.Fn crypto_kex_xk1_2 ,
+.Fn crypto_kex_xk1_3 ,
+and
+.Fn crypto_kex_xk1_4
+functions first appeared in Monocypher 2.1.0.

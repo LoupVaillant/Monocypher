@@ -282,6 +282,17 @@ Chacha20 is described in RFC 8439.
 XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
+.Sh HISTORY
+The
+.Fn crypto_chacha20_encrypt ,
+.Fn crypto_chacha20_init ,
+functions first appeared in Monocypher 0.1.
+.Fn crypto_chacha20_stream
+was added in Monocypher 0.2.
+.Fn crypto_chacha20_x_init
+and
+.Fn crypto_chacha20_set_ctr
+were added in Monocypher 1.0.
 .Sh SECURITY CONSIDERATIONS
 .Ss Encrypted does not mean secure
 Chacha20 only protects against eavesdropping, not forgeries.

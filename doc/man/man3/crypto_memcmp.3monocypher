@@ -36,3 +36,10 @@ instead.
 .Sh SEE ALSO
 .Xr crypto_verify16 3monocypher ,
 .Xr intro 3monocypher
+.Sh HISTORY
+The
+.Fn crypto_memcmp
+function first appeared in Monocypher 0.1.
+.Fn crypto_zerocmp
+was introduced in Monocypher 0.6.
+These functions were removed in Monocypher 1.1.0.

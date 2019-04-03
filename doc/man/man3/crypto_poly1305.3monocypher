@@ -135,6 +135,15 @@ crypto_poly1305_final(&ctx, mac);
 .Xr intro 3monocypher
 .Sh STANDARDS
 These functions implement Poly1305, described in RFC 8439.
+.Sh HISTORY
+The
+.Fn crypto_poly1305_init ,
+.Fn crypto_poly1305_update ,
+and
+.Fn crypto_poly1305_final
+functions first appeared in Monocypher 0.1.
+.Fn crypto_poly1305
+first appeared in Monocypher 1.1.0.
 .Sh SECURITY CONSIDERATIONS
 Poly1305 is difficult to use correctly.
 Do not use it unless you are absolutely sure what you are doing.

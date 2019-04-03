@@ -273,6 +273,20 @@ These functions implement RFC 8439, with XChacha20 instead of Chacha20.
 XChacha20 derives from Chacha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
 as long as Chacha20 itself is secure).
+.Sh HISTORY
+The
+.Fn crypto_lock_init ,
+.Fn crypto_lock_auth_ad ,
+.Fn crypto_lock_auth_message ,
+.Fn crypto_lock_update ,
+.Fn crypto_lock_final ,
+.Fn crypto_unlock_init ,
+.Fn crypto_unlock_auth_ad ,
+.Fn crypto_unlock_auth_message ,
+.Fn crypto_unlock_update ,
+and
+.Fn crypto_unlock_final
+functions first appeared in Monocypher 1.1.0.
 .Sh SECURITY CONSIDERATIONS
 Messages are not verified until the call to
 .Fn crypto_unlock_final .
