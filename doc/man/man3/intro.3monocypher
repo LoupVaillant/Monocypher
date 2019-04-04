@@ -170,7 +170,8 @@ hard to use correctly and securely.
 Reads may be interrupted, and more attacks are possible on a file than
 on a system call.
 .Ss Timing attacks
-Monocypher runs in "constant time".
+Monocypher runs in
+.Dq constant time .
 There is no flow from secrets to timings.
 No secret dependent indices, no secret dependent branches.
 Nevertheless, there are a couple important caveats.
@@ -198,7 +199,8 @@ If an attacker can add data to the input before it is compressed and
 encrypted, they can observe changes to the ciphertext length to recover
 secrets from the input.
 Researchers have demonstrated an attack on HTTPS to steal session
-cookies when compression is enabled, dubbed "CRIME".
+cookies when compression is enabled, dubbed
+.Dq CRIME .
 .Ss Forward secrecy
 Long term secrets cannot be expected to stay safe indefinitely.
 Users may reveal them by mistake, or the host computer might have a
