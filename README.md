@@ -45,7 +45,7 @@ platform, you can change them like this:
 
     $ make CC="clang -std=c99" CFLAGS="-O2"
 
-### Option 3 install it on your system
+### Option 3: install it on your system
 
 The following should work on most UNIX systems:
 
