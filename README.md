@@ -107,8 +107,8 @@ settings.  To run the code under the TIS interpreter, run
 (Note: `tis-interpreter.sh` is part of TIS.  If it is not in your
 path, adjust the command accordingly.)
 
-[Frama-c]:http://frama-c.com/
-[TIS]: http://trust-in-soft.com/tis-interpreter/
+[Frama-c]:https://frama-c.com/
+[TIS]: https://trust-in-soft.com/tis-interpreter/
 
 
 Speed benchmark
