@@ -111,7 +111,6 @@ It must thus be known to the client before making a connection.
 A 80-byte message, which is generated and sent by the client.
 It is the only message in the key exchange.
 .El
-.Pp
 .Ss Key exchange as the client
 When starting a new connection to the server, the client first reads
 the server's public key from the network; then it calls

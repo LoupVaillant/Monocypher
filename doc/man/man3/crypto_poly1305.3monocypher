@@ -34,7 +34,8 @@
 .Fc
 .Sh DESCRIPTION
 Poly1305 is a one-time message authentication code.
-"One-time" means the authentication key can be used only once.
+.Dq One-time
+means the authentication key can be used only once.
 .Sy This makes Poly1305 easy to misuse .
 On the other hand, Poly1305 is fast, and provably secure if used
 correctly.
