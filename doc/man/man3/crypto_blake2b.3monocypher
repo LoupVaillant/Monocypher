@@ -207,7 +207,7 @@ crypto_blake2b_final(&ctx, hash);
 .Xr crypto_lock 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement BLAKE2b.
+These functions implement BLAKE2b, described in RFC 7693.
 .Sh HISTORY
 The
 .Fn crypto_blake2b ,
