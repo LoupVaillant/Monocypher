@@ -32,7 +32,7 @@ static u64 authenticated(void)
     u8 out[SIZE + 32];
     RANDOM_INPUT(in   , SIZE + 32);
     RANDOM_INPUT(key  ,        32);
-    RANDOM_INPUT(nonce,         8);
+    RANDOM_INPUT(nonce,        24);
 
     TIMING_START {
         crypto_secretbox(out, in, SIZE + 32, nonce, key);
