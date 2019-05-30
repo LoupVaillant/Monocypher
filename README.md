@@ -102,10 +102,18 @@ You must have Frama-c installed.  See `frama-c.sh` for the recommended
 settings.  To run the code under the TIS interpreter, run
 
     $ tests/formal-analysis.sh
-    $ tis-interpreter.sh tests/formal-analysis/*.c
+    $ tis-interpreter.sh --cc -Dvolatile= tests/formal-analysis/*.c
 
-(Note: `tis-interpreter.sh` is part of TIS.  If it is not in your
-path, adjust the command accordingly.)
+Notes:
+
+- `tis-interpreter.sh` is part of TIS.  If it is not in your path,
+  adjust the command accordingly.
+
+- The TIS interpreter sometimes fails to evaluate correct programs when
+  they use the `volatile` keyword (which is only used as an attempt to
+  prevent dead store elimination for memory wipes).  The `-cc
+  -Dvolatile=` option works around that bug by ignoring `volatile`
+  altogether.
 
 [Frama-c]:https://frama-c.com/
 [TIS]: https://trust-in-soft.com/tis-interpreter/
