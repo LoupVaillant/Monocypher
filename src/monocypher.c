@@ -627,7 +627,7 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
     FOR (i, 0, nb_words) {
         store64_le(hash + i*8, ctx->hash[i]);
     }
-    FOR (i, nb_words * 8, ctx->hash_size) {
+    FOR (i, nb_words << 3, ctx->hash_size) {
         hash[i] = (ctx->hash[i >> 3] >> (8 * (i & 7))) & 0xff;
     }
     WIPE_CTX(ctx);
@@ -1067,7 +1067,7 @@ static void fe_frombytes(fe h, const u8 s[32])
     i64 t6 =  load24_le(s + 20) << 7;
     i64 t7 =  load24_le(s + 23) << 5;
     i64 t8 =  load24_le(s + 26) << 4;
-    i64 t9 = (load24_le(s + 29) & 8388607) << 2;
+    i64 t9 = (load24_le(s + 29) & 0x7fffff) << 2;
     FE_CARRY;
 }
 
