@@ -1683,13 +1683,12 @@ static void slide(size_t width, i8 *adds, const u8 scalar[32])
 // Variable time! Internal buffers are not wiped! Inputs must not be secret!
 // => Use only to *check* signatures.
 static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
-                                         u8 p[32], u8 b[32])
+                                         const u8 p[32], const u8 b[32])
 {
     // cache P window for addition
     ge_cached cP[P_WINDOW_SIZE];
-    ge tmp;
     {
-        ge P2;
+        ge P2, tmp;
         ge_double(&P2, P, &tmp);
         ge_cache(&cP[0], P);
         FOR (i, 0, (P_WINDOW_SIZE)-1) {
@@ -1727,6 +1726,7 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
     CACHED_ADD(i);
     i--;
     while (i >= 0) {
+        ge tmp;
         ge_double(sum, sum, &tmp);
         CACHED_ADD(i);
         i--;
@@ -2003,8 +2003,10 @@ void crypto_check_update(crypto_check_ctx *ctx, const u8 *msg, size_t msg_size)
 
 int crypto_check_final(crypto_check_ctx *ctx)
 {
-    ge diff, A;
-    u8 h_ram[64], R_check[32];
+    ge  A;
+    ge *diff = &A;       // share stack space
+    u8  h_ram[64];
+    u8 *R_check = h_ram; // share stack space
     u8 *s = ctx->sig + 32;                       // s
     u8 *R = ctx->sig;                            // R
     if (ge_frombytes_neg_vartime(&A, ctx->pk) ||
@@ -2013,8 +2015,8 @@ int crypto_check_final(crypto_check_ctx *ctx)
     }
     HASH_FINAL(&ctx->hash, h_ram);
     reduce(h_ram);
-    ge_double_scalarmult_vartime(&diff, &A, h_ram, s);
-    ge_tobytes(R_check, &diff);                  // R_check = s*B - h_ram*A
+    ge_double_scalarmult_vartime(diff, &A, h_ram, s);
+    ge_tobytes(R_check, diff);                   // R_check = s*B - h_ram*A
     return crypto_verify32(R, R_check);          // R == R_check ? OK : fail
     // No secret, no wipe
 }
