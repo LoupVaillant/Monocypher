@@ -1858,8 +1858,8 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
     mul_add(s_scalar, scalar, half_mod_L, half_ones);
 
     // Double and add ladder
-    fe yp, ym, t2, n2, a, b; // temporaries for addition
-    ge dbl;                  // temporary for doublings
+    fe yp, ym, t2, n2, a; // temporaries for addition
+    ge dbl;               // temporary for doublings
     ge_zero(p);
     for (int i = 50; i >= 0; i--) {
         if (i < 50) {
@@ -1885,11 +1885,11 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
         fe_neg(n2, t2);
         fe_cswap(t2, n2, high);
         fe_cswap(yp, ym, high);
-        ge_madd(p, p, ym, yp, n2, a, b);
+        ge_madd(p, p, ym, yp, n2, a, t2); // reuse t2 as temporary
     }
     WIPE_CTX(&dbl);
-    WIPE_BUFFER(a);  WIPE_BUFFER(yp);  WIPE_BUFFER(t2);
-    WIPE_BUFFER(b);  WIPE_BUFFER(ym);  WIPE_BUFFER(n2);
+    WIPE_BUFFER(yp);  WIPE_BUFFER(t2);  WIPE_BUFFER(a);
+    WIPE_BUFFER(ym);  WIPE_BUFFER(n2);
     WIPE_BUFFER(s_scalar);
 }
 
