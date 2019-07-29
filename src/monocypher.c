@@ -1276,10 +1276,6 @@ static int fe_isnonzero(const fe f)
     return isnonzero;
 }
 
-///////////////
-/// X-25519 /// Taken from Supercop's ref10 implementation.
-///////////////
-
 static void trim_scalar(u8 s[32])
 {
     s[ 0] &= 248;
@@ -1288,6 +1284,10 @@ static void trim_scalar(u8 s[32])
 }
 
 static int scalar_bit(const u8 s[32], size_t i) {return (s[i>>3] >> (i&7)) & 1;}
+
+///////////////
+/// X-25519 /// Taken from Supercop's ref10 implementation.
+///////////////
 
 int crypto_x25519(u8       raw_shared_secret[32],
                   const u8 your_secret_key  [32],
