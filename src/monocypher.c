@@ -272,7 +272,7 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
 }
 
 void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
-                            uint8_t *stream, size_t size)
+                            u8 *stream, size_t size)
 {
     crypto_chacha20_encrypt(ctx, stream, 0, size);
 }
@@ -496,7 +496,7 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
     u64 v7 = ctx->hash[7];  u64 v15 = iv[7];
 
     // mangle work vector
-    uint64_t *input = ctx->input;
+    u64 *input = ctx->input;
 #define BLAKE2_G(v, a, b, c, d, x, y)                  \
     v##a += v##b + x;  v##d = rotr64(v##d ^ v##a, 32); \
     v##c += v##d;      v##b = rotr64(v##b ^ v##c, 24); \
