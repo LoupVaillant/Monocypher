@@ -19,7 +19,7 @@
 #define HASH_UPDATE COMBINE2(HASH, _update)
 #define HASH_FINAL  COMBINE2(HASH, _final)
 
-#define FOR(i, start, end)   for (size_t (i) = (start); (i) < (end); (i)++)
+#define FOR(i, start, end)   for (size_t i = (start); i < (end); i++)
 #define WIPE_CTX(ctx)        crypto_wipe(ctx   , sizeof(*(ctx)))
 #define WIPE_BUFFER(buffer)  crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)            ((a) <= (b) ? (a) : (b))
@@ -492,7 +492,7 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
     u64 v3 = ctx->hash[3];  u64 v11 = iv[3];
     u64 v4 = ctx->hash[4];  u64 v12 = iv[4] ^ ctx->input_offset[0];
     u64 v5 = ctx->hash[5];  u64 v13 = iv[5] ^ ctx->input_offset[1];
-    u64 v6 = ctx->hash[6];  u64 v14 = iv[6] ^ is_last_block;
+    u64 v6 = ctx->hash[6];  u64 v14 = iv[6] ^ (u64)~(is_last_block - 1);
     u64 v7 = ctx->hash[7];  u64 v15 = iv[7];
 
     // mangle work vector
@@ -501,7 +501,7 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
     v##a += v##b + x;  v##d = rotr64(v##d ^ v##a, 32); \
     v##c += v##d;      v##b = rotr64(v##b ^ v##c, 24); \
     v##a += v##b + y;  v##d = rotr64(v##d ^ v##a, 16); \
-    v##c += v##d;      v##b = rotr64(v##b ^ v##c, 63);
+    v##c += v##d;      v##b = rotr64(v##b ^ v##c, 63)
 #define BLAKE2_ROUND(i)                                                 \
     BLAKE2_G(v, 0, 4,  8, 12, input[sigma[i][ 0]], input[sigma[i][ 1]]);\
     BLAKE2_G(v, 1, 5,  9, 13, input[sigma[i][ 2]], input[sigma[i][ 3]]);\
@@ -621,8 +621,8 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
     FOR (i, ctx->input_idx, 128) {
         blake2b_set_input(ctx, 0, i);
     }
-    blake2b_incr(ctx);         // update the input offset
-    blake2b_compress(ctx, -1); // compress the last block
+    blake2b_incr(ctx);        // update the input offset
+    blake2b_compress(ctx, 1); // compress the last block
     size_t nb_words = ctx->hash_size >> 3;
     FOR (i, 0, nb_words) {
         store64_le(hash + i*8, ctx->hash[i]);
@@ -708,7 +708,7 @@ static void extended_hash(u8       *digest, u32 digest_size,
     if (digest_size > 64) {
         // the conversion to u64 avoids integer overflow on
         // ludicrously big hash sizes.
-        u32 r   = (((u64)digest_size + 31) >> 5) - 2;
+        u32 r   = (u32)(((u64)digest_size + 31) >> 5) - 2;
         u32 i   =  1;
         u32 in  =  0;
         u32 out = 32;
@@ -1133,7 +1133,7 @@ static void fe_mul(fe h, const fe f, const fe g)
     c9 = (h9 + (i64) (1<<24)) >> 25; h0 += c9 * 19; h9 -= c9 * (1 << 25); \
     c0 = (h0 + (i64) (1<<25)) >> 26; h1 += c0;      h0 -= c0 * (1 << 26); \
     h[0]=(i32)h0;  h[1]=(i32)h1;  h[2]=(i32)h2;  h[3]=(i32)h3;  h[4]=(i32)h4; \
-    h[5]=(i32)h5;  h[6]=(i32)h6;  h[7]=(i32)h7;  h[8]=(i32)h8;  h[9]=(i32)h9; \
+    h[5]=(i32)h5;  h[6]=(i32)h6;  h[7]=(i32)h7;  h[8]=(i32)h8;  h[9]=(i32)h9
 
     CARRY;
 }
@@ -1285,7 +1285,7 @@ static void trim_scalar(u8 s[32])
     s[31] |= 64;
 }
 
-static int scalar_bit(const u8 s[32], size_t i) {return (s[i>>3] >> (i&7)) & 1;}
+static int scalar_bit(const u8 s[32], int i) { return (s[i>>3] >> (i&7)) & 1; }
 
 ///////////////
 /// X-25519 /// Taken from Supercop's ref10 implementation.
@@ -1398,7 +1398,7 @@ static void reduce(u8 r[64])
 {
     i64 x[64];
     FOR (i, 0, 64) {
-        x[i] = (u64) r[i];
+        x[i] = (i64)(u64)r[i]; // preserve unsigned
         r[i] = 0;
     }
     modL(r, x);
@@ -1409,11 +1409,11 @@ static void reduce(u8 r[64])
 static void mul_add(u8 r[32], const u8 a[32], const u8 b[32], const u8 c[32])
 {
     i64 s[64];
-    FOR (i,  0, 32) { s[i] = (u64) c[i]; }
-    FOR (i, 32, 64) { s[i] = 0;          }
+    FOR (i,  0, 32) { s[i] = (i64)(u64)c[i]; } // preserve unsigned
+    FOR (i, 32, 64) { s[i] = 0;              }
     FOR (i,  0, 32) {
         FOR (j, 0, 32) {
-            s[i+j] += a[i] * (u64) b[j];
+            s[i+j] += a[i] * (u64)b[j];
         }
     }
     modL(r, s);
@@ -1654,8 +1654,8 @@ static const fe window_T2[8] = {
 // Compute signed sliding windows (either 0, or odd numbers)
 static void slide(size_t width, i8 *adds, const u8 scalar[32])
 {
-    FOR (i,   0, 256        ) { adds[i] = (i8)scalar_bit(scalar, i); }
-    FOR (i, 256, 253 + width) { adds[i] = 0;                         }
+    FOR (i,   0, 256        ) { adds[i] = (i8)scalar_bit(scalar, (int)i); }
+    FOR (i, 256, 253 + width) { adds[i] = 0;                              }
     FOR (i, 0, 254) {
         if (adds[i] != 0) {
             // base value of the window
@@ -1713,17 +1713,19 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
 
     // Merged double and add ladder
     fe t1, t2;
-#define CACHED_ADD(i)                                              \
-    if (p_adds[i] > 0) { ge_add(sum, sum, &cP[ p_adds[i] / 2]); }  \
-    if (p_adds[i] < 0) { ge_sub(sum, sum, &cP[-p_adds[i] / 2]); }  \
-    if (b_adds[i] > 0) { ge_madd(sum, sum,                         \
-                                 window_Yp[ b_adds[i] / 2],            \
-                                 window_Ym[ b_adds[i] / 2],            \
-                                 window_T2[ b_adds[i] / 2], t1, t2); } \
-    if (b_adds[i] < 0) { ge_msub(sum, sum,                             \
-                                 window_Yp[-b_adds[i] / 2],            \
-                                 window_Ym[-b_adds[i] / 2],            \
-                                 window_T2[-b_adds[i] / 2], t1, t2); }
+#define CACHED_ADD(i)                                                      \
+    do {                                                                   \
+        if (p_adds[i] > 0) { ge_add(sum, sum, &cP[ p_adds[i] / 2]); }      \
+        if (p_adds[i] < 0) { ge_sub(sum, sum, &cP[-p_adds[i] / 2]); }      \
+        if (b_adds[i] > 0) { ge_madd(sum, sum,                             \
+                                     window_Yp[ b_adds[i] / 2],            \
+                                     window_Ym[ b_adds[i] / 2],            \
+                                     window_T2[ b_adds[i] / 2], t1, t2); } \
+        if (b_adds[i] < 0) { ge_msub(sum, sum,                             \
+                                     window_Yp[-b_adds[i] / 2],            \
+                                     window_Ym[-b_adds[i] / 2],            \
+                                     window_T2[-b_adds[i] / 2], t1, t2); } \
+    } while (0)
     ge_zero(sum);
     CACHED_ADD(i);
     i--;

@@ -12,12 +12,14 @@ typedef int32_t  i32;
 typedef int64_t  i64;
 typedef uint64_t u64;
 
-#define FOR(i, start, end) for (size_t (i) = (start); (i) < (end); (i)++)
-#define SODIUM_INIT                                 \
-    if (sodium_init() == -1) {                      \
-        printf("Libsodium init failed.  Abort.\n"); \
-        return 1;                                   \
-    }
+#define FOR(i, start, end) for (size_t i = (start); i < (end); i++)
+#define SODIUM_INIT                                     \
+    do {                                                \
+        if (sodium_init() == -1) {                      \
+            printf("Libsodium init failed.  Abort.\n"); \
+            return 1;                                   \
+        }                                               \
+    } while (0)
 #define RANDOM_INPUT(name, size) u8 name[size]; p_random(name, size)
 
 static void store64_le(u8 out[8], u64 in)

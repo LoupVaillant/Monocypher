@@ -16,9 +16,8 @@ typedef struct timespec timespec;
 // Difference in nanoseconds
 static u64 diff(timespec start, timespec end)
 {
-    return
-        (end.tv_sec  - start.tv_sec ) * BILLION +
-        (end.tv_nsec - start.tv_nsec);
+    return (u64)((end.tv_sec  - start.tv_sec ) * BILLION +
+                 (end.tv_nsec - start.tv_nsec));
 }
 
 static u64 min(u64 a, u64 b)
@@ -44,7 +43,7 @@ static void print(const char *name, u64 duration, const char *unit)
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t)
 
 #define TIMING_START                            \
-    u64 duration = -1u;                         \
+    u64 duration = (u64)-1;                     \
     FOR (i, 0, 500) {                           \
         TIMESTAMP(start);
 

@@ -34,8 +34,8 @@ int main(int argc, char** argv)
         else {
             printf("uint8_t %s_%d[] = { ", prefix, nb_vec);
             while (c != ':') {
-                char msb = c;  c = getchar();
-                char lsb = c;  c = getchar();
+                char msb = (char)c;  c = getchar();
+                char lsb = (char)c;  c = getchar();
                 printf("0x%c%c, ", msb, lsb);
                 size ++;
             }

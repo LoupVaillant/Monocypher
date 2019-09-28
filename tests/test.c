@@ -12,7 +12,6 @@
 #define POLY1305_BLOCK_SIZE  16
 #define BLAKE2B_BLOCK_SIZE  128
 #define SHA_512_BLOCK_SIZE  128
-#define COMPARISON_DIFF_THRESHOLD 0.04
 
 /////////////////
 /// Utilities ///
@@ -164,12 +163,12 @@ static void argon2i(const vector in[], vector *out)
     const vector *ad       = in + 5;
 
     void *work_area = alloc(nb_blocks * 1024);
-    crypto_argon2i_general(out->buf, out->size,
-                           work_area, nb_blocks, nb_iterations,
-                           password->buf, password->size,
-                           salt    ->buf, salt    ->size,
-                           key     ->buf, key     ->size,
-                           ad      ->buf, ad      ->size);
+    crypto_argon2i_general(out->buf, (u32)out->size,
+                           work_area, (u32)nb_blocks, (u32)nb_iterations,
+                           password->buf, (u32)password->size,
+                           salt    ->buf, (u32)salt    ->size,
+                           key     ->buf, (u32)key     ->size,
+                           ad      ->buf, (u32)ad      ->size);
     free(work_area);
 }
 
@@ -261,11 +260,13 @@ static void monokex_xk1(const vector in[], vector *out)
         fprintf(stderr, "FAILURE: crypto_kex_xk1_4\n");
         return;
     }
-#define COMPARE(local, vector)                      \
-    if (memcmp(local, vector->buf, vector->size)) { \
-        fprintf(stderr, "FAILURE: "#vector"\n");    \
-        return;                                     \
-    }
+#define COMPARE(local, vector)                          \
+    do {                                                \
+        if (memcmp(local, vector->buf, vector->size)) { \
+            fprintf(stderr, "FAILURE: "#vector"\n");    \
+            return;                                     \
+        }                                               \
+    } while (0)
     COMPARE(m1        , msg1);
     COMPARE(m2        , msg2);
     COMPARE(m3        , msg3);
@@ -351,8 +352,8 @@ static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
         FOR (j, 0, 2) {
             // Set every byte to the chosen value, then compare
             FOR (k, 0, size) {
-                a[k] = i;
-                b[k] = j;
+                a[k] = (u8)i;
+                b[k] = (u8)j;
             }
             int cmp = compare(a, b);
             status |= (i == j ? cmp : ~cmp);
@@ -362,8 +363,8 @@ static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
                     a[l] = 0;
                     b[l] = 0;
                 }
-                a[k] = i; a[k + size/2 - 1] = i;
-                b[k] = j; b[k + size/2 - 1] = j;
+                a[k] = (u8)i; a[k + size/2 - 1] = (u8)i;
+                b[k] = (u8)j; b[k + size/2 - 1] = (u8)j;
                 int cmp = compare(a, b);
                 status |= (i == j ? cmp : ~cmp);
             }
