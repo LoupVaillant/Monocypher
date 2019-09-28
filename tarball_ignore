@@ -13,5 +13,6 @@ tests/formal-analysis/*
 tests/formal-analysis
 *.tar.gz
 monocypher-*
+monocypher.*
 lib/*
 .git*
