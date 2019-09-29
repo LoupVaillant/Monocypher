@@ -6,8 +6,8 @@ CFLAGS = -pedantic -Wall -Wextra
 VEC     = chacha20    hchacha20  xchacha20     aead_ietf poly1305 \
           blake2b     sha512     argon2i                          \
           edDSA       edDSA_pk   ed_25519      ed_25519_check     \
-          x25519      x25519_pk  key_exchange                     \
-          monokex_xk1 monokex_x
+          x25519      x25519_pk  key_exchange
+#          monokex_xk1 monokex_x
 VEC2    = $(patsubst %, %.all.vec, $(VEC))
 HEADERS = $(patsubst %, %.h.vec  , $(VEC))
 VECTORS = ../vectors.h

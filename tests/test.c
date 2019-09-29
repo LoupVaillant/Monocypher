@@ -228,77 +228,6 @@ static void ed_25519_check(const vector in[], vector *out)
 }
 #endif
 
-static void monokex_xk1(const vector in[], vector *out)
-{
-    const vector *is   = in;
-    const vector *ie   = in + 1;
-    const vector *rs   = in + 2;
-    const vector *re   = in + 3;
-    const vector *IS   = in + 4;
-    const vector *RS   = in + 5;
-    const vector *msg1 = in + 6;
-    const vector *msg2 = in + 7;
-    const vector *msg3 = in + 8;
-    crypto_kex_client_ctx client;
-    crypto_kex_server_ctx server;
-    u8 client_seed[32];  memcpy(client_seed, ie->buf, ie->size);
-    u8 server_seed[32];  memcpy(server_seed, re->buf, re->size);
-    crypto_kex_xk1_init_client(&client, client_seed, is->buf, IS->buf, RS->buf);
-    crypto_kex_xk1_init_server(&server, server_seed, rs->buf, RS->buf);
-    u8 m1        [32];
-    u8 m2        [48];
-    u8 m3        [48];
-    u8 client_key[32];
-    u8 remote_pk [32];
-    crypto_kex_xk1_1(&client, m1);
-    crypto_kex_xk1_2(&server, m2, m1);
-    if (crypto_kex_xk1_3(&client, client_key, m3, m2)) {
-        fprintf(stderr, "FAILURE: crypto_kex_xk1_3\n");
-        return;
-    }
-    if (crypto_kex_xk1_4(&server, out->buf, remote_pk, m3)) {
-        fprintf(stderr, "FAILURE: crypto_kex_xk1_4\n");
-        return;
-    }
-#define COMPARE(local, vector)                          \
-    do {                                                \
-        if (memcmp(local, vector->buf, vector->size)) { \
-            fprintf(stderr, "FAILURE: "#vector"\n");    \
-            return;                                     \
-        }                                               \
-    } while (0)
-    COMPARE(m1        , msg1);
-    COMPARE(m2        , msg2);
-    COMPARE(m3        , msg3);
-    COMPARE(remote_pk , IS  );
-    COMPARE(client_key, out );
-}
-
-static void monokex_x(const vector in[], vector *out)
-{
-    const vector *is   = in;
-    const vector *ie   = in + 1;
-    const vector *rs   = in + 2;
-    const vector *IS   = in + 3;
-    const vector *RS   = in + 4;
-    const vector *msg1 = in + 5;
-    crypto_kex_client_ctx client;
-    crypto_kex_server_ctx server;
-    u8 seed[32];  memcpy(seed, ie->buf, ie->size);
-    crypto_kex_x_init_client(&client, seed, is->buf, IS->buf, RS->buf);
-    crypto_kex_x_init_server(&server,       rs->buf, RS->buf);
-    u8 m1        [80];
-    u8 client_key[32];
-    u8 remote_pk [32];
-    crypto_kex_x_1(&client, client_key, m1);
-    if (crypto_kex_x_2(&server, out->buf, remote_pk, m1)) {
-        fprintf(stderr, "FAILURE: crypto_kex_x_2\n");
-        return;
-    }
-    COMPARE(m1        , msg1);
-    COMPARE(remote_pk , IS  );
-    COMPARE(client_key, out );
-}
 static void iterate_x25519(u8 k[32], u8 u[32])
 {
     u8 tmp[32];
@@ -925,101 +854,6 @@ static int p_auth()
     return status;
 }
 
-static int p_monokex_xk1()
-{
-    int status = 0;
-    RANDOM_INPUT(is, 32);
-    RANDOM_INPUT(ie, 32);
-    RANDOM_INPUT(rs, 32);
-    RANDOM_INPUT(re, 32);
-    u8 IS[32];  crypto_x25519_public_key(IS, is);
-    u8 RS[32];  crypto_x25519_public_key(RS, rs);
-
-    crypto_kex_client_ctx client1, client2;
-    crypto_kex_server_ctx server1, server2;
-    u8 client_seed1[32];  memcpy(client_seed1, ie, 32);
-    u8 client_seed2[32];  memcpy(client_seed2, ie, 32);
-    u8 server_seed1[32];  memcpy(server_seed1, re, 32);
-    u8 server_seed2[32];  memcpy(server_seed2, re, 32);
-
-    // Test the same thing, with and without the local pk
-    // (the API is supposed to reconstruct it)
-    crypto_kex_xk1_init_client(&client1, client_seed1, is, IS, RS);
-    crypto_kex_xk1_init_client(&client2, client_seed2, is,  0, RS);
-    crypto_kex_xk1_init_server(&server1, server_seed1, rs, RS);
-    crypto_kex_xk1_init_server(&server2, server_seed2, rs,  0);
-    u8 msg11      [32];    u8 msg12      [32];
-    u8 msg21      [48];    u8 msg22      [48];
-    u8 msg31      [48];    u8 msg32      [48];
-    u8 client_key1[32];    u8 client_key2[32];
-    u8 server_key1[32];    u8 server_key2[32];
-    u8 remote_pk1 [32];    u8 remote_pk2 [32];
-    crypto_kex_xk1_1(&client1, msg11);
-    crypto_kex_xk1_1(&client2, msg12);
-    crypto_kex_xk1_2(&server1, msg21, msg11);
-    crypto_kex_xk1_2(&server2, msg22, msg12);
-    crypto_kex_client_ctx client_save = client1;
-    crypto_kex_server_ctx server_save = server1;
-    // make sure everything is accepted as it should be
-    status |= crypto_kex_xk1_3(&client1, client_key1, msg31, msg21);
-    status |= crypto_kex_xk1_3(&client2, client_key2, msg32, msg22);
-    status |= crypto_kex_xk1_4(&server1, server_key1, remote_pk1, msg31);
-    status |= crypto_kex_xk1_4(&server2, server_key2, remote_pk2, msg32);
-    // Make sure we get the same result whether we gave the local pk or not
-    status |= memcmp(msg11      , msg12      , 32);
-    status |= memcmp(msg21      , msg22      , 48);
-    status |= memcmp(msg31      , msg32      , 48);
-    status |= memcmp(client_key1, client_key2, 32);
-    status |= memcmp(remote_pk1 , remote_pk2 , 32);
-    // make sure wrong messages are rejected as they should be.
-    msg21[1]++;
-    status |= !crypto_kex_xk1_3(&client_save, client_key1, msg31, msg21);
-    msg32[1]++;
-    status |= !crypto_kex_xk1_4(&server_save, server_key2, remote_pk2, msg32);
-
-    printf("%s: monokex_xk1\n", status != 0 ? "FAILED" : "OK");
-    return status;
-}
-
-static int p_monokex_x()
-{
-    int status = 0;
-    RANDOM_INPUT(is, 32);
-    RANDOM_INPUT(ie, 32);
-    RANDOM_INPUT(rs, 32);
-    u8 IS[32];  crypto_x25519_public_key(IS, is);
-    u8 RS[32];  crypto_x25519_public_key(RS, rs);
-
-    crypto_kex_client_ctx client1, client2;
-    crypto_kex_server_ctx server1, server2;
-    u8 seed1[32];  memcpy(seed1, ie, 32);
-    u8 seed2[32];  memcpy(seed2, ie, 32);
-    crypto_kex_x_init_client(&client1, seed1, is, IS, RS);
-    crypto_kex_x_init_client(&client2, seed2, is,  0, RS);
-    crypto_kex_x_init_server(&server1,        rs, RS);
-    crypto_kex_x_init_server(&server2,        rs,  0);
-    u8 msg11      [80];    u8 msg12      [80];
-    u8 client_key1[32];    u8 client_key2[32];
-    u8 server_key1[32];    u8 server_key2[32];
-    u8 remote_pk1 [32];    u8 remote_pk2 [32];
-    crypto_kex_x_1(&client1, client_key1, msg11);
-    crypto_kex_x_1(&client2, client_key2, msg12);
-    crypto_kex_server_ctx server_save = server1;
-    // make sure everything is accepted as it should be
-    status |= crypto_kex_x_2(&server1, server_key1, remote_pk1, msg11);
-    status |= crypto_kex_x_2(&server2, server_key2, remote_pk2, msg12);
-    // Make sure we get the same result whether we gave the local pk or not
-    status |= memcmp(msg11      , msg12      , 80);
-    status |= memcmp(client_key1, client_key2, 32);
-    status |= memcmp(remote_pk1 , remote_pk2 , 32);
-    // make sure wrong messages are rejected as they should be.
-    msg11[1]++;
-    status |= !crypto_kex_x_2(&server_save, server_key1, remote_pk1, msg11);
-
-    printf("%s: monokex_x\n", status != 0 ? "FAILED" : "OK");
-    return status;
-}
-
 int main(int argc, char *argv[])
 {
     if (argc > 1) {
@@ -1048,8 +882,6 @@ int main(int argc, char *argv[])
     status |= TEST(edDSA         , 3);
     status |= TEST(edDSA_pk      , 1);
 #endif
-    status |= TEST(monokex_xk1   , 9);
-    status |= TEST(monokex_x     , 6);
     status |= test_x25519();
 
     printf("\nProperty based tests");
@@ -1076,8 +908,6 @@ int main(int argc, char *argv[])
     status |= p_aead();
     status |= p_lock_incremental();
     status |= p_auth();
-    status |= p_monokex_xk1();
-    status |= p_monokex_x();
     printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
     return status;
 }
