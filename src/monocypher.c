@@ -137,10 +137,10 @@ static void chacha20_rounds(u32 out[16], const u32 in[16])
 static void chacha20_init_key(crypto_chacha_ctx *ctx, const u8 key[32])
 {
     // constant
-    ctx->input[0] = load32_le((u8*)"expa");
-    ctx->input[1] = load32_le((u8*)"nd 3");
-    ctx->input[2] = load32_le((u8*)"2-by");
-    ctx->input[3] = load32_le((u8*)"te k");
+    ctx->input[0] = load32_le((const u8*)"expa");
+    ctx->input[1] = load32_le((const u8*)"nd 3");
+    ctx->input[2] = load32_le((const u8*)"2-by");
+    ctx->input[3] = load32_le((const u8*)"te k");
     // key
     FOR (i, 0, 8) {
         ctx->input[i+4] = load32_le(key + i*4);
