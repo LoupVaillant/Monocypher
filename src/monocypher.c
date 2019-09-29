@@ -1420,6 +1420,7 @@ static void mul_add(u8 r[32], const u8 a[32], const u8 b[32], const u8 c[32])
     WIPE_BUFFER(s);
 }
 
+// Variable time! a must not be secret!
 static int is_above_L(const u8 a[32])
 {
     for (int i = 31; i >= 0; i--) {
