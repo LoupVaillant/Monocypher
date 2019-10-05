@@ -1394,6 +1394,7 @@ static void modL(u8 *r, i64 x[64])
     }
 }
 
+// Reduces a hash modulo L (little endian)
 static void reduce(u8 r[64])
 {
     i64 x[64];
@@ -1968,7 +1969,7 @@ void crypto_sign_final(crypto_sign_ctx *ctx, u8 signature[64])
     u8 *half_sig = ctx->buf + 64;
     u8 h_ram[64];
     HASH_FINAL(&ctx->hash, h_ram);
-    reduce(h_ram);  // reduce the hash modulo L
+    reduce(h_ram);
     FOR (i, 0, 32) {
         signature[i] = half_sig[i];
     }
