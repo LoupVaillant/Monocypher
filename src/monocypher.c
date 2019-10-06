@@ -27,6 +27,7 @@
 #define ALIGN(x, block_size) ((~(x) + 1) & ((block_size) - 1))
 typedef int8_t   i8;
 typedef uint8_t  u8;
+typedef int16_t  i16;
 typedef uint32_t u32;
 typedef int32_t  i32;
 typedef int64_t  i64;
@@ -1660,9 +1661,9 @@ static const fe window_T2[8] = {
 // Incremental sliding windows (left to right)
 // Based on Roberto Maria Avanzi[2005]
 typedef struct {
-    int next_index; // position of the next signed digit
-    int next_digit; // next signed digit (odd number below 2^window_width)
-    int next_check; // point at which we must check for a new window
+    i16 next_index; // position of the next signed digit
+    i8  next_digit; // next signed digit (odd number below 2^window_width)
+    u8  next_check; // point at which we must check for a new window
 } slide_ctx;
 
 void slide_init(slide_ctx *ctx, const u8 scalar[32])
@@ -1671,28 +1672,28 @@ void slide_init(slide_ctx *ctx, const u8 scalar[32])
     while (i > 0 && scalar_bit(scalar, i) == 0) {
         i--;
     }
-    ctx->next_check = i + 1;
+    ctx->next_check = (u8)(i + 1);
     ctx->next_index = -1;
     ctx->next_digit = -1;
 }
 
-void slide_step(slide_ctx *ctx, size_t width, int i, const u8 scalar[32])
+void slide_step(slide_ctx *ctx, int width, int i, const u8 scalar[32])
 {
     if (scalar_bit(scalar, i) == scalar_bit(scalar, i - 1)) {
         ctx->next_check--;
     } else {
-        unsigned w  = MIN(width, (unsigned)(i + 1));
+        int w = MIN(width, i + 1);
         int v = -(scalar_bit(scalar, i) << ((int)w-1));
-        FOR (j, 0, w-1) {
-            v += scalar_bit(scalar, i-(w-1)+j) << j;
+        FOR (j, 0, (size_t)w-1) {
+            v += scalar_bit(scalar, i-(w-1)+(int)j) << j;
         }
         v += scalar_bit(scalar, i-w);
-        unsigned lsb = v & (~v + 1);           // smallest bit of v
-        unsigned s   = (   ((lsb & 0xAA) != 0) // log2(lsb)
-                        | (((lsb & 0xCC) != 0) << 1)
-                        | (((lsb & 0xF0) != 0) << 2));
-        ctx->next_index  = i-(w-1)+s;
-        ctx->next_digit  = v >> s;
+        int lsb = v & (~v + 1);            // smallest bit of v
+        int s   = (   ((lsb & 0xAA) != 0)  // log2(lsb)
+                   | (((lsb & 0xCC) != 0) << 1)
+                   | (((lsb & 0xF0) != 0) << 2));
+        ctx->next_index  = (i16)(i-(w-1)+s);
+        ctx->next_digit  = (i8) (v >> s   );
         ctx->next_check -= w;
     }
 }
