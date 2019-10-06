@@ -1285,7 +1285,10 @@ static void trim_scalar(u8 s[32])
     s[31] |= 64;
 }
 
-static int scalar_bit(const u8 s[32], int i) { return (s[i>>3] >> (i&7)) & 1; }
+static int scalar_bit(const u8 s[32], int i) {
+    if (i < 0) { return 0; } // handle -1 for sliding windows
+    return (s[i>>3] >> (i&7)) & 1;
+}
 
 ///////////////
 /// X-25519 /// Taken from Supercop's ref10 implementation.
@@ -1654,27 +1657,34 @@ static const fe window_T2[8] = {
 };
 
 // Compute signed sliding windows (either 0, or odd numbers)
+// Slide from left to right, based on Roberto Maria Avanzi[2005]
 static void slide(size_t width, i8 *adds, const u8 scalar[32])
 {
-    FOR (i,   0, 256        ) { adds[i] = (i8)scalar_bit(scalar, (int)i); }
-    FOR (i, 256, 253 + width) { adds[i] = 0;                              }
-    FOR (i, 0, 254) {
-        if (adds[i] != 0) {
-            // base value of the window
-            FOR (j, 1, width) {
-                adds[i  ] |= adds[i+j] << j;
-                adds[i+j]  = 0;
+    int i = 256;
+    while (i-1 > 0 && scalar_bit(scalar, i-1) == 0) {
+        i--;
+    }
+    FOR (j, 0, 253 + width) {
+        adds[j] = 0;
+    }
+    while (i >= 0) {
+        unsigned e0 = (unsigned) scalar_bit(scalar, i    );
+        unsigned e1 = (unsigned) scalar_bit(scalar, i - 1);
+        if (e0 == e1) {
+            i--;
+        } else {
+            unsigned w = MIN(width, (unsigned)(i + 1));
+            int      v = -(int)(e0 << (w-1));
+            FOR (j, 0, w-1) {
+                v += scalar_bit(scalar, i-(w-1)+j) << j;
             }
-            if (adds[i] > (1 << (width - 1))) {
-                // go back to [-half_range, half_range], propagate carry.
-                adds[i] -= 1 << width;
-                size_t j = i + width;
-                while (adds[j] != 0) {
-                    adds[j] = 0;
-                    j++;
-                }
-                adds[j] = 1;
-            }
+            v += scalar_bit(scalar, i-w);
+            unsigned lsb = v & (~v + 1);              // smallest bit of v
+            unsigned s   = ( (lsb & 0xAA) != 0      ) // log2(lsb)
+                         | (((lsb & 0xCC) != 0) << 1)
+                         | (((lsb & 0xF0) != 0) << 2);
+            adds[i-(w-1)+s] = v >> s;
+            i -= w;
         }
     }
 }
