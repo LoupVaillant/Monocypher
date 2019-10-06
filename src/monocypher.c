@@ -1656,36 +1656,64 @@ static const fe window_T2[8] = {
      -2735503, -13812022, -16236442, -32461234, -12290683},
 };
 
-// Compute signed sliding windows (either 0, or odd numbers)
-// Slide from left to right, based on Roberto Maria Avanzi[2005]
-static void slide(size_t width, i8 *adds, const u8 scalar[32])
+// Incremental sliding windows (left to right)
+// Based on Roberto Maria Avanzi[2005]
+typedef struct {
+    int next_index; // position of the next signed digit
+    int next_digit; // next signed digit (odd number below 2^window_width)
+    int next_check; // point at which we must check for a new window
+} slide_ctx;
+
+void slide_init(slide_ctx *ctx, const u8 scalar[32])
 {
-    int i = 256;
-    while (i-1 > 0 && scalar_bit(scalar, i-1) == 0) {
+    int i = 255;
+    while (i > 0 && scalar_bit(scalar, i) == 0) {
         i--;
     }
+    ctx->next_check = i + 1;
+    ctx->next_index = -1;
+    ctx->next_digit = -1;
+}
+
+void slide_step(slide_ctx *ctx, size_t width, int i, const u8 scalar[32])
+{
+    if (scalar_bit(scalar, i) == scalar_bit(scalar, i - 1)) {
+        ctx->next_check--;
+    } else {
+        unsigned w  = MIN(width, (unsigned)(i + 1));
+        int v = -(scalar_bit(scalar, i) << ((int)w-1));
+        FOR (j, 0, w-1) {
+            v += scalar_bit(scalar, i-(w-1)+j) << j;
+        }
+        v += scalar_bit(scalar, i-w);
+        unsigned lsb = v & (~v + 1);           // smallest bit of v
+        unsigned s   = (   ((lsb & 0xAA) != 0) // log2(lsb)
+                        | (((lsb & 0xCC) != 0) << 1)
+                        | (((lsb & 0xF0) != 0) << 2));
+        ctx->next_index  = i-(w-1)+s;
+        ctx->next_digit  = v >> s;
+        ctx->next_check -= w;
+    }
+}
+
+static void slide(size_t width, i8 *adds, const u8 scalar[32])
+{
     FOR (j, 0, 253 + width) {
         adds[j] = 0;
     }
+    slide_ctx ctx;
+    slide_init(&ctx, scalar);
+    int i = ctx.next_check;
     while (i >= 0) {
-        unsigned e0 = (unsigned) scalar_bit(scalar, i    );
-        unsigned e1 = (unsigned) scalar_bit(scalar, i - 1);
-        if (e0 == e1) {
-            i--;
-        } else {
-            unsigned w = MIN(width, (unsigned)(i + 1));
-            int      v = -(int)(e0 << (w-1));
-            FOR (j, 0, w-1) {
-                v += scalar_bit(scalar, i-(w-1)+j) << j;
-            }
-            v += scalar_bit(scalar, i-w);
-            unsigned lsb = v & (~v + 1);              // smallest bit of v
-            unsigned s   = ( (lsb & 0xAA) != 0      ) // log2(lsb)
-                         | (((lsb & 0xCC) != 0) << 1)
-                         | (((lsb & 0xF0) != 0) << 2);
-            adds[i-(w-1)+s] = v >> s;
-            i -= w;
+        if (i == ctx.next_check) {
+            slide_step(&ctx, width, i, scalar);
         }
+        if (i == ctx.next_index) {
+            // addition goes here
+            adds[i] = ctx.next_digit;
+        }
+        // doubling goes here
+        i--;
     }
 }
 
