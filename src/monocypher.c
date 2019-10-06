@@ -23,6 +23,7 @@
 #define WIPE_CTX(ctx)        crypto_wipe(ctx   , sizeof(*(ctx)))
 #define WIPE_BUFFER(buffer)  crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)            ((a) <= (b) ? (a) : (b))
+#define MAX(a, b)            ((a) >= (b) ? (a) : (b))
 #define ALIGN(x, block_size) ((~(x) + 1) & ((block_size) - 1))
 typedef int8_t   i8;
 typedef uint8_t  u8;
@@ -1696,31 +1697,10 @@ void slide_step(slide_ctx *ctx, size_t width, int i, const u8 scalar[32])
     }
 }
 
-static void slide(size_t width, i8 *adds, const u8 scalar[32])
-{
-    FOR (j, 0, 253 + width) {
-        adds[j] = 0;
-    }
-    slide_ctx ctx;
-    slide_init(&ctx, scalar);
-    int i = ctx.next_check;
-    while (i >= 0) {
-        if (i == ctx.next_check) {
-            slide_step(&ctx, width, i, scalar);
-        }
-        if (i == ctx.next_index) {
-            // addition goes here
-            adds[i] = ctx.next_digit;
-        }
-        // doubling goes here
-        i--;
-    }
-}
-
-#define P_WINDOW_WIDTH 3 // Affects the size of the stack
-#define B_WINDOW_WIDTH 5 // Affects the size of the binary
-#define P_WINDOW_SIZE  (1<<(P_WINDOW_WIDTH-2))
-#define B_WINDOW_SIZE  (1<<(B_WINDOW_WIDTH-2))
+#define P_W_WIDTH 3 // Affects the size of the stack
+#define B_W_WIDTH 5 // Affects the size of the binary
+#define P_W_SIZE  (1<<(P_W_WIDTH-2))
+#define B_W_SIZE  (1<<(B_W_WIDTH-2))
 
 // Variable time! Internal buffers are not wiped! Inputs must not be secret!
 // => Use only to *check* signatures.
@@ -1728,51 +1708,44 @@ static void ge_double_scalarmult_vartime(ge *sum, const ge *P,
                                          const u8 p[32], const u8 b[32])
 {
     // cache P window for addition
-    ge_cached cP[P_WINDOW_SIZE];
+    ge_cached cP[P_W_SIZE];
     {
         ge P2, tmp;
         ge_double(&P2, P, &tmp);
         ge_cache(&cP[0], P);
-        FOR (i, 0, (P_WINDOW_SIZE)-1) {
+        FOR (i, 0, (P_W_SIZE)-1) {
             ge_add(&tmp, &P2, &cP[i]);
             ge_cache(&cP[i+1], &tmp);
         }
     }
 
-    // Compute the indices for the windows
-    i8 p_adds[253 + P_WINDOW_WIDTH];  slide(P_WINDOW_WIDTH, p_adds, p);
-    i8 b_adds[253 + B_WINDOW_WIDTH];  slide(B_WINDOW_WIDTH, b_adds, b);
-
-    // Avoid the first doublings
-    int i = 253;
-    while (i >= 0         &&
-           p_adds[i] == 0 &&
-           b_adds[i] == 0) {
-        i--;
-    }
-
-    // Merged double and add ladder
-    fe t1, t2;
-#define CACHED_ADD(i)                                                      \
-    do {                                                                   \
-        if (p_adds[i] > 0) { ge_add(sum, sum, &cP[ p_adds[i] / 2]); }      \
-        if (p_adds[i] < 0) { ge_sub(sum, sum, &cP[-p_adds[i] / 2]); }      \
-        if (b_adds[i] > 0) { ge_madd(sum, sum,                             \
-                                     window_Yp[ b_adds[i] / 2],            \
-                                     window_Ym[ b_adds[i] / 2],            \
-                                     window_T2[ b_adds[i] / 2], t1, t2); } \
-        if (b_adds[i] < 0) { ge_msub(sum, sum,                             \
-                                     window_Yp[-b_adds[i] / 2],            \
-                                     window_Ym[-b_adds[i] / 2],            \
-                                     window_T2[-b_adds[i] / 2], t1, t2); } \
-    } while (0)
+    // Merged double and add ladder, fused with sliding
+    slide_ctx p_slide;  slide_init(&p_slide, p);
+    slide_ctx b_slide;  slide_init(&b_slide, b);
+    int i = MAX(p_slide.next_check, b_slide.next_check);
     ge_zero(sum);
-    CACHED_ADD(i);
-    i--;
     while (i >= 0) {
         ge tmp;
         ge_double(sum, sum, &tmp);
-        CACHED_ADD(i);
+        if (i == p_slide.next_check) { slide_step(&p_slide, P_W_WIDTH, i, p); }
+        if (i == b_slide.next_check) { slide_step(&b_slide, B_W_WIDTH, i, b); }
+        if (i == p_slide.next_index) {
+            int digit = p_slide.next_digit;
+            if (digit > 0) { ge_add(sum, sum, &cP[ digit / 2]); }
+            if (digit < 0) { ge_sub(sum, sum, &cP[-digit / 2]); }
+        }
+        if (i == b_slide.next_index) {
+            fe t1, t2;
+            int digit = b_slide.next_digit;
+            if (digit > 0) { ge_madd(sum, sum,
+                                     window_Yp[ digit / 2],
+                                     window_Ym[ digit / 2],
+                                     window_T2[ digit / 2], t1, t2); }
+            if (digit < 0) { ge_msub(sum, sum,
+                                     window_Yp[-digit / 2],
+                                     window_Ym[-digit / 2],
+                                     window_T2[-digit / 2], t1, t2); }
+        }
         i--;
     }
 }
