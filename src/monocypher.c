@@ -2022,18 +2022,24 @@ void crypto_check_update(crypto_check_ctx *ctx, const u8 *msg, size_t msg_size)
 int crypto_check_final(crypto_check_ctx *ctx)
 {
     ge  A;
-    u8  h_ram[64];
-    u8 *R_check = h_ram; // share stack space
-    u8 *s = ctx->sig + 32;                       // s
-    u8 *R = ctx->sig;                            // R
+    u8 *h_ram   = ctx->pk; // save stack space
+    u8 *R_check = ctx->pk; // save stack space
+    u8 *R       = ctx->sig;                      // R
+    u8 *s       = ctx->sig + 32;                 // s
+    ge *diff    = &A;                            // -A is overwriten...
     if (ge_frombytes_neg_vartime(&A, ctx->pk) ||
         is_above_L(s)) { // prevent s malleability
         return -1;
     }
-    HASH_FINAL(&ctx->hash, h_ram);
-    reduce(h_ram);
-    ge_double_scalarmult_vartime(&A, h_ram, s);  // ovewrite -A...
-    ge *diff = &A;                               // ...with s*B - h_ram*A
+    {
+        u8 h_ram[64];
+        HASH_FINAL(&ctx->hash, h_ram);
+        reduce(h_ram);
+        FOR (i, 0, 32) { // the extra copy saves 32 bytes of stack
+            ctx->pk[i] = h_ram[i];
+        }
+    }
+    ge_double_scalarmult_vartime(&A, h_ram, s);  // ...here
     ge_tobytes(R_check, diff);                   // R_check = s*B - h_ram*A
     return crypto_verify32(R, R_check);          // R == R_check ? OK : fail
     // No secret, no wipe
