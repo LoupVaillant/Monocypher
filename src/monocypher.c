@@ -1668,7 +1668,17 @@ typedef struct {
 
 void slide_init(slide_ctx *ctx, const u8 scalar[32])
 {
-    int i = 255;
+    // scalar is guaranteed to be below L, either because we checked (s),
+    // or because we reduced it modulo L (h_ram). L is under 2^253, so
+    // so bits 253 to 255 are guaranteed to be zero. No need to test them.
+    //
+    // Note however that L is very close to 2^252, so bit 252 is almost
+    // always zero.  If we were to start at bit 251, the tests wouldn't
+    // catch the off-by-one error (constructing one that does would be
+    // prohibitively expensive).
+    //
+    // We should still check bit 252, though.
+    int i = 252;
     while (i > 0 && scalar_bit(scalar, i) == 0) {
         i--;
     }
