@@ -4,9 +4,9 @@
 /// Utilities ///
 /////////////////
 
-// By default, EdDSA signatures use blake2b.  SHA-512 is provided as an
+// By default, EdDSA signatures use Blake2b.  SHA-512 is provided as an
 // option for full ed25519 compatibility. To use with SHA-512, compile
-// with option -DED25519_SHA512 and provide the "sha512" header.
+// with option -DED25519_SHA512 and include "sha512.h".
 #ifdef ED25519_SHA512
     #define HASH crypto_sha512
 #else
@@ -333,7 +333,7 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     ctx->h[4] = (u32)u4;         // u4 <=          4
 }
 
-// (re-)initializes the input counter and input buffer
+// (re-)initialises the input counter and input buffer
 static void poly_clear_c(crypto_poly1305_ctx *ctx)
 {
     ctx->c[0]  = 0;
@@ -576,8 +576,8 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
     }
     ctx->hash[0] ^= 0x01010000 ^ (key_size << 8) ^ hash_size;
 
-    ctx->input_offset[0] = 0;         // begining of the input, no offset
-    ctx->input_offset[1] = 0;         // begining of the input, no offset
+    ctx->input_offset[0] = 0;         // beginning of the input, no offset
+    ctx->input_offset[1] = 0;         // beginning of the input, no offset
     ctx->hash_size       = hash_size; // remember the hash size we want
     ctx->input_idx       = 0;
 
@@ -667,7 +667,7 @@ static void wipe_block(block *b)
     }
 }
 
-// updates a blake2 hash with a 32 bit word, little endian.
+// updates a Blake2 hash with a 32 bit word, little endian.
 static void blake_update_32(crypto_blake2b_ctx *ctx, u32 input)
 {
     u8 buf[4];
@@ -787,7 +787,7 @@ static void g_xor(block *result, const block *x, const block *y, block *tmp)
     xor_block (result, tmp); // result = R ^ old ^ Z
 }
 
-// unary version of the compression function.
+// Unary version of the compression function.
 // The missing argument is implied zero.
 // Does the transformation in place.
 static void unary_g(block *work_block)
@@ -803,7 +803,7 @@ static void unary_g(block *work_block)
 // Argon2i uses a kind of stream cipher to determine which reference
 // block it will take to synthesise the next block.  This context hold
 // that stream's state.  (It's very similar to Chacha20.  The block b
-// is anologous to Chacha's own pool)
+// is analogous to Chacha's own pool)
 typedef struct {
     block b;
     u32 pass_number;
@@ -820,7 +820,7 @@ typedef struct {
 // easier, but timing attacks are the bigger threat in many settings.
 static void gidx_refresh(gidx_ctx *ctx)
 {
-    // seed the begining of the block...
+    // seed the beginning of the block...
     ctx->b.a[0] = ctx->pass_number;
     ctx->b.a[1] = 0;  // lane number (we have only one)
     ctx->b.a[2] = ctx->slice_number;
@@ -846,7 +846,7 @@ static void gidx_init(gidx_ctx *ctx,
     ctx->nb_iterations = nb_iterations;
     ctx->ctr           = 0;
 
-    // Offset from the begining of the segment.  For the first slice
+    // Offset from the beginning of the segment.  For the first slice
     // of the first pass, we start at the *third* block, so the offset
     // starts at 2, not 0.
     if (pass_number != 0 || slice_number != 0) {
@@ -1012,7 +1012,7 @@ void crypto_argon2i(u8       *hash,      u32 hash_size,
 ////////////////////////////////////
 /// Arithmetic modulo 2^255 - 19 ///
 ////////////////////////////////////
-//  Taken from Supercop's ref10 implementation.
+//  Taken from SUPERCOP's ref10 implementation.
 //  A bit bigger than TweetNaCl, over 4 times faster.
 
 // field element
@@ -1293,7 +1293,7 @@ static int scalar_bit(const u8 s[32], int i) {
 }
 
 ///////////////
-/// X-25519 /// Taken from Supercop's ref10 implementation.
+/// X-25519 /// Taken from SUPERCOP's ref10 implementation.
 ///////////////
 
 int crypto_x25519(u8       raw_shared_secret[32],
@@ -1314,7 +1314,7 @@ int crypto_x25519(u8       raw_shared_secret[32],
     // computes the actual scalar product (the result is in x2 and z2)
     fe x2, z2, x3, z3, t0, t1;
     // Montgomery ladder
-    // In projective coordinates, to avoid divisons: x = X / Z
+    // In projective coordinates, to avoid divisions: x = X / Z
     // We don't care about the y coordinate, it's only 1 bit of information
     fe_1(x2);        fe_0(z2); // "zero" point
     fe_copy(x3, x1); fe_1(z3); // "one"  point
@@ -1887,7 +1887,7 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 
     // Double and add ladder
     fe yp, ym, t2, n2, a; // temporaries for addition
-    ge dbl;               // temporary for doublings
+    ge dbl;               // temporary for doubling
     ge_zero(p);
     for (int i = 50; i >= 0; i--) {
         if (i < 50) {
@@ -1971,7 +1971,7 @@ void crypto_sign_init_second_pass(crypto_sign_ctx *ctx)
     HASH_FINAL(&ctx->hash, r);
     reduce(r);
 
-    // first half of the signature = "random" nonce times basepoint
+    // first half of the signature = "random" nonce times the base point
     ge R;
     ge_scalarmult_base(&R, r);
     ge_tobytes(half_sig, &R);
@@ -2036,7 +2036,7 @@ int crypto_check_final(crypto_check_ctx *ctx)
     u8 *R_check = ctx->pk; // save stack space
     u8 *R       = ctx->sig;                      // R
     u8 *s       = ctx->sig + 32;                 // s
-    ge *diff    = &A;                            // -A is overwriten...
+    ge *diff    = &A;                            // -A is overwritten...
     if (ge_frombytes_neg_vartime(&A, ctx->pk) ||
         is_above_L(s)) { // prevent s malleability
         return -1;
