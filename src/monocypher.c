@@ -19,12 +19,13 @@
 #define HASH_UPDATE COMBINE2(HASH, _update)
 #define HASH_FINAL  COMBINE2(HASH, _final)
 
-#define FOR(i, start, end)   for (size_t i = (start); i < (end); i++)
-#define WIPE_CTX(ctx)        crypto_wipe(ctx   , sizeof(*(ctx)))
-#define WIPE_BUFFER(buffer)  crypto_wipe(buffer, sizeof(buffer))
-#define MIN(a, b)            ((a) <= (b) ? (a) : (b))
-#define MAX(a, b)            ((a) >= (b) ? (a) : (b))
-#define ALIGN(x, block_size) ((~(x) + 1) & ((block_size) - 1))
+#define FOR_T(type, i, start, end) for (type i = (start); i < (end); i++)
+#define FOR(i, start, end)         FOR_T(size_t, i, start, end)
+#define WIPE_CTX(ctx)              crypto_wipe(ctx   , sizeof(*(ctx)))
+#define WIPE_BUFFER(buffer)        crypto_wipe(buffer, sizeof(buffer))
+#define MIN(a, b)                  ((a) <= (b) ? (a) : (b))
+#define MAX(a, b)                  ((a) >= (b) ? (a) : (b))
+#define ALIGN(x, block_size)       ((~(x) + 1) & ((block_size) - 1))
 typedef int8_t   i8;
 typedef uint8_t  u8;
 typedef int16_t  i16;
@@ -273,8 +274,7 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
     chacha20_encrypt(ctx, cipher_text, plain_text, text_size);
 }
 
-void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
-                            u8 *stream, size_t size)
+void crypto_chacha20_stream(crypto_chacha_ctx *ctx, u8 *stream, size_t size)
 {
     crypto_chacha20_encrypt(ctx, stream, 0, size);
 }
@@ -326,11 +326,11 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     const u64 u4 = (u3 >> 32)     + (u5 & 3);
 
     // Update the hash
-    ctx->h[0] = u0 & 0xffffffff; // u0 <= 1_9ffffff0
-    ctx->h[1] = u1 & 0xffffffff; // u1 <= 1_97ffffe0
-    ctx->h[2] = u2 & 0xffffffff; // u2 <= 1_8fffffe2
-    ctx->h[3] = u3 & 0xffffffff; // u3 <= 1_87ffffe4
-    ctx->h[4] = (u32)u4;         // u4 <=          4
+    ctx->h[0] = (u32)u0; // u0 <= 1_9ffffff0
+    ctx->h[1] = (u32)u1; // u1 <= 1_97ffffe0
+    ctx->h[2] = (u32)u2; // u2 <= 1_8fffffe2
+    ctx->h[3] = (u32)u3; // u3 <= 1_87ffffe4
+    ctx->h[4] = (u32)u4; // u4 <=          4
 }
 
 // (re-)initialises the input counter and input buffer
@@ -953,24 +953,23 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
     // fill (then re-fill) the rest of the blocks
     block tmp;
     gidx_ctx ctx;
-    FOR (pass_number, 0, nb_iterations) {
+    FOR_T (u32, pass_number, 0, nb_iterations) {
         int first_pass = pass_number == 0;
 
-        FOR (segment, 0, 4) {
-            gidx_init(&ctx, (u32)pass_number, (u32)segment,
-                      nb_blocks, nb_iterations);
+        FOR_T (u32, segment, 0, 4) {
+            gidx_init(&ctx, pass_number, segment, nb_blocks, nb_iterations);
 
             // On the first segment of the first pass,
             // blocks 0 and 1 are already filled.
             // We use the offset to skip them.
             u32 start_offset  = first_pass && segment == 0 ? 2 : 0;
-            u32 segment_start = (u32)segment * segment_size + start_offset;
-            u32 segment_end   = ((u32)segment + 1) * segment_size;
-            FOR (current_block, segment_start, segment_end) {
+            u32 segment_start = segment * segment_size + start_offset;
+            u32 segment_end   = (segment + 1) * segment_size;
+            FOR_T (u32, current_block, segment_start, segment_end) {
                 u32 reference_block = gidx_next(&ctx);
                 u32 previous_block  = current_block == 0
                                     ? nb_blocks - 1
-                                    : (u32)current_block - 1;
+                                    : current_block - 1;
                 block *c = blocks + current_block;
                 block *p = blocks + previous_block;
                 block *r = blocks + reference_block;
@@ -1047,16 +1046,16 @@ static void fe_ccopy(fe f, const fe g, int b)
 
 #define FE_CARRY                                                        \
     i64 c0, c1, c2, c3, c4, c5, c6, c7, c8, c9;                         \
-    c9 = (t9 + (i64) (1<<24)) >> 25; t0 += c9 * 19; t9 -= c9 * (1 << 25); \
-    c1 = (t1 + (i64) (1<<24)) >> 25; t2 += c1;      t1 -= c1 * (1 << 25); \
-    c3 = (t3 + (i64) (1<<24)) >> 25; t4 += c3;      t3 -= c3 * (1 << 25); \
-    c5 = (t5 + (i64) (1<<24)) >> 25; t6 += c5;      t5 -= c5 * (1 << 25); \
-    c7 = (t7 + (i64) (1<<24)) >> 25; t8 += c7;      t7 -= c7 * (1 << 25); \
-    c0 = (t0 + (i64) (1<<25)) >> 26; t1 += c0;      t0 -= c0 * (1 << 26); \
-    c2 = (t2 + (i64) (1<<25)) >> 26; t3 += c2;      t2 -= c2 * (1 << 26); \
-    c4 = (t4 + (i64) (1<<25)) >> 26; t5 += c4;      t4 -= c4 * (1 << 26); \
-    c6 = (t6 + (i64) (1<<25)) >> 26; t7 += c6;      t6 -= c6 * (1 << 26); \
-    c8 = (t8 + (i64) (1<<25)) >> 26; t9 += c8;      t8 -= c8 * (1 << 26); \
+    c9 = (t9 + (i64)(1<<24)) >> 25; t0 += c9 * 19; t9 -= c9 * (1 << 25); \
+    c1 = (t1 + (i64)(1<<24)) >> 25; t2 += c1;      t1 -= c1 * (1 << 25); \
+    c3 = (t3 + (i64)(1<<24)) >> 25; t4 += c3;      t3 -= c3 * (1 << 25); \
+    c5 = (t5 + (i64)(1<<24)) >> 25; t6 += c5;      t5 -= c5 * (1 << 25); \
+    c7 = (t7 + (i64)(1<<24)) >> 25; t8 += c7;      t7 -= c7 * (1 << 25); \
+    c0 = (t0 + (i64)(1<<25)) >> 26; t1 += c0;      t0 -= c0 * (1 << 26); \
+    c2 = (t2 + (i64)(1<<25)) >> 26; t3 += c2;      t2 -= c2 * (1 << 26); \
+    c4 = (t4 + (i64)(1<<25)) >> 26; t5 += c4;      t4 -= c4 * (1 << 26); \
+    c6 = (t6 + (i64)(1<<25)) >> 26; t7 += c6;      t6 -= c6 * (1 << 26); \
+    c8 = (t8 + (i64)(1<<25)) >> 26; t9 += c8;      t8 -= c8 * (1 << 26); \
     h[0]=(i32)t0;  h[1]=(i32)t1;  h[2]=(i32)t2;  h[3]=(i32)t3;  h[4]=(i32)t4; \
     h[5]=(i32)t5;  h[6]=(i32)t6;  h[7]=(i32)t7;  h[8]=(i32)t8;  h[9]=(i32)t9
 
@@ -1666,7 +1665,7 @@ typedef struct {
     u8  next_check; // point at which we must check for a new window
 } slide_ctx;
 
-void slide_init(slide_ctx *ctx, const u8 scalar[32])
+static void slide_init(slide_ctx *ctx, const u8 scalar[32])
 {
     // scalar is guaranteed to be below L, either because we checked (s),
     // or because we reduced it modulo L (h_ram). L is under 2^253, so
@@ -1687,26 +1686,31 @@ void slide_init(slide_ctx *ctx, const u8 scalar[32])
     ctx->next_digit = -1;
 }
 
-void slide_step(slide_ctx *ctx, int width, int i, const u8 scalar[32])
+static int slide_step(slide_ctx *ctx, int width, int i, const u8 scalar[32])
 {
-    if (scalar_bit(scalar, i) == scalar_bit(scalar, i - 1)) {
-        ctx->next_check--;
-    } else {
-        int w = MIN(width, i + 1);
-        int v = -(scalar_bit(scalar, i) << ((int)w-1));
-        FOR (j, 0, (size_t)w-1) {
-            v += scalar_bit(scalar, i-(w-1)+(int)j) << j;
+    if (i == ctx->next_check) {
+        if (scalar_bit(scalar, i) == scalar_bit(scalar, i - 1)) {
+            ctx->next_check--;
+        } else {
+            // compute digit of next window
+            int w = MIN(width, i + 1);
+            int v = -(scalar_bit(scalar, i) << (w-1));
+            FOR_T (int, j, 0, w-1) {
+                v += scalar_bit(scalar, i-(w-1)+j) << j;
+            }
+            v += scalar_bit(scalar, i-w);
+            int lsb = v & (~v + 1);            // smallest bit of v
+            int s   = (   ((lsb & 0xAA) != 0)  // log2(lsb)
+                       | (((lsb & 0xCC) != 0) << 1)
+                       | (((lsb & 0xF0) != 0) << 2));
+            ctx->next_index  = (i16)(i-(w-1)+s);
+            ctx->next_digit  = (i8) (v >> s   );
+            ctx->next_check -= w;
         }
-        v += scalar_bit(scalar, i-w);
-        int lsb = v & (~v + 1);            // smallest bit of v
-        int s   = (   ((lsb & 0xAA) != 0)  // log2(lsb)
-                   | (((lsb & 0xCC) != 0) << 1)
-                   | (((lsb & 0xF0) != 0) << 2));
-        ctx->next_index  = (i16)(i-(w-1)+s);
-        ctx->next_digit  = (i8) (v >> s   );
-        ctx->next_check -= w;
     }
+    return i == ctx->next_index ? ctx->next_digit: 0;
 }
+
 
 #define P_W_WIDTH 3 // Affects the size of the stack
 #define B_W_WIDTH 5 // Affects the size of the binary
@@ -1738,25 +1742,19 @@ static void ge_double_scalarmult_vartime(ge *P, const u8 p[32], const u8 b[32])
     while (i >= 0) {
         ge tmp;
         ge_double(sum, sum, &tmp);
-        if (i == p_slide.next_check) { slide_step(&p_slide, P_W_WIDTH, i, p); }
-        if (i == b_slide.next_check) { slide_step(&b_slide, B_W_WIDTH, i, b); }
-        if (i == p_slide.next_index) {
-            int digit = p_slide.next_digit;
-            if (digit > 0) { ge_add(sum, sum, &cP[ digit / 2]); }
-            if (digit < 0) { ge_sub(sum, sum, &cP[-digit / 2]); }
-        }
-        if (i == b_slide.next_index) {
-            fe t1, t2;
-            int digit = b_slide.next_digit;
-            if (digit > 0) { ge_madd(sum, sum,
-                                     window_Yp[ digit / 2],
-                                     window_Ym[ digit / 2],
-                                     window_T2[ digit / 2], t1, t2); }
-            if (digit < 0) { ge_msub(sum, sum,
-                                     window_Yp[-digit / 2],
-                                     window_Ym[-digit / 2],
-                                     window_T2[-digit / 2], t1, t2); }
-        }
+        int p_digit = slide_step(&p_slide, P_W_WIDTH, i, p);
+        int b_digit = slide_step(&b_slide, B_W_WIDTH, i, b);
+        if (p_digit > 0) { ge_add(sum, sum, &cP[ p_digit / 2]); }
+        if (p_digit < 0) { ge_sub(sum, sum, &cP[-p_digit / 2]); }
+        fe t1, t2;
+        if (b_digit > 0) { ge_madd(sum, sum,
+                                   window_Yp[ b_digit / 2],
+                                   window_Ym[ b_digit / 2],
+                                   window_T2[ b_digit / 2], t1, t2); }
+        if (b_digit < 0) { ge_msub(sum, sum,
+                                   window_Yp[-b_digit / 2],
+                                   window_Ym[-b_digit / 2],
+                                   window_T2[-b_digit / 2], t1, t2); }
         i--;
     }
 }
@@ -1921,8 +1919,7 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
     WIPE_BUFFER(s_scalar);
 }
 
-void crypto_sign_public_key(u8       public_key[32],
-                            const u8 secret_key[32])
+void crypto_sign_public_key(u8 public_key[32], const u8 secret_key[32])
 {
     u8 a[64];
     HASH(a, secret_key, 32);
@@ -1935,8 +1932,8 @@ void crypto_sign_public_key(u8       public_key[32],
 }
 
 void crypto_sign_init_first_pass(crypto_sign_ctx *ctx,
-                                 const u8  secret_key[32],
-                                 const u8  public_key[32])
+                                 const u8 secret_key[32],
+                                 const u8 public_key[32])
 {
     u8 *a      = ctx->buf;
     u8 *prefix = ctx->buf + 32;
@@ -2042,11 +2039,11 @@ int crypto_check_final(crypto_check_ctx *ctx)
         return -1;
     }
     {
-        u8 h_ram[64];
-        HASH_FINAL(&ctx->hash, h_ram);
-        reduce(h_ram);
+        u8 tmp[64];
+        HASH_FINAL(&ctx->hash, tmp);
+        reduce(tmp);
         FOR (i, 0, 32) { // the extra copy saves 32 bytes of stack
-            ctx->pk[i] = h_ram[i];
+            h_ram[i] = tmp[i];
         }
     }
     ge_double_scalarmult_vartime(&A, h_ram, s);  // ...here
