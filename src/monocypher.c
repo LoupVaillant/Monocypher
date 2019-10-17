@@ -1474,7 +1474,7 @@ static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
         -32595792, -7943725, 9377950, 3500415, 12389472,
         -272473, -25146209, -2005654, 326686, 11406482
     } ;
-    fe u, v, v3, vxx, check; // no secret, no wipe
+    fe u, v, v3; // no secret, no wipe
     fe_frombytes(h->Y, s);
     fe_1(h->Z);
     fe_sq(u, h->Y);            // y^2
@@ -1492,6 +1492,7 @@ static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
     fe_mul(h->X, h->X, v3);
     fe_mul(h->X, h->X, u);     // x = uv^3(uv^7)^((q-5)/8)
 
+    fe vxx, check; // no secret, no wipe
     fe_sq(vxx, h->X);
     fe_mul(vxx, vxx, v);
     fe_sub(check, vxx, u);     // vx^2-u
