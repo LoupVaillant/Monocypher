@@ -34,17 +34,8 @@ implements the Argon2i resource intensive hash algorithm.
 Argon2 won the password hashing competition in 2015.
 Unlike Scrypt, Argon2i is immune to timing attacks.
 .Ss Key exchange
-The
-.Xr crypto_kex_xk1_init_client 3monocypher
-and
-.Xr crypto_kex_x_init_client 3monocypher
-families of functions,
-provide key exhange protocols with forward secrecy.
-.Pp
-If more control over the key exchange is required,
-there is
-.Xr crypto_key_exchange 3monocypher ,
-which implements X25519, an elliptic curve Diffie Hellman key exchange
+.Xr crypto_key_exchange 3monocypher
+implements X25519, an elliptic curve Diffie Hellman key exchange
 algorithm based on Curve25519.
 X25519 derives a shared secret from two private/public key pairs.
 It is fast, simple, and relatively easy to implement securely.

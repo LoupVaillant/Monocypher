@@ -24,12 +24,6 @@ computes a shared key with your secret key and their public key.
 .Pp
 .Fn crypto_key_exchange_public_key
 deterministically computes the public key from a random secret key.
-It is a medium-level primitive.
-Prefer the
-.Xr crypto_kex_xk1_init_client 3monocypher
-and
-.Xr crypto_kex_x_init_client 3monocypher
-families of functions unless you have a specific reason not to.
 .Pp
 The arguments are:
 .Bl -tag -width Ds
