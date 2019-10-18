@@ -112,12 +112,6 @@ If either of the long term secret keys leaks, it may compromise
 .Em all past messages .
 This can be avoided by using protocols that provide forward secrecy,
 such as the X3DH key agreement protocol.
-Monocypher provides the
-.Xr crypto_kex_xk1_init_client 3monocypher
-and
-.Xr crypto_kex_x_init_client 3monocypher
-families of functions,
-which provide forward secrecy.
 .Sh IMPLEMENTATION DETAILS
 The most significant bit of the public key is systematically ignored.
 It is not needed because every public key should be smaller than
