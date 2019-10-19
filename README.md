@@ -164,11 +164,11 @@ contains the `-DED25519_SHA512` option. For instance:
     $ make CFLAGS="-O2 -DED25519_SHA512"
 
 The `-DBLAKE2_NO_UNROLLING` option is a performance tweak.  By default,
-Monocypher unrolls the Blake2b inner loop, because it is over 25% faster
-on modern processors.  On some embedded processors however, unrolling
-the loop makes it _slower_ (the unrolled loop is 5KB bigger, and may
-strain the instruction cache).  If you're using an embedded platform,
-try this option.  The binary will be smaller, perhaps even faster.
+Monocypher unrolls the Blake2b inner loop, because doing so is over 25%
+faster on modern processors.  Some embedded processors however, run the
+unrolled loop _slower_ (possibly because of the cost of fetching 5KB of
+additional code).  If you're using an embedded platform, try this
+option.  The binary will be about 5KB smaller, and in some cases faster.
 
 
 Contributor notes
