@@ -1,3 +1,5 @@
+// Monocypher version __git__
+
 #include "sha512.h"
 
 #define FOR(i, min, max)     for (size_t i = min; i < max; i++)

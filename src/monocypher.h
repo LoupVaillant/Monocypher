@@ -1,3 +1,5 @@
+// Monocypher version __git__
+
 #ifndef MONOCYPHER_H
 #define MONOCYPHER_H
 

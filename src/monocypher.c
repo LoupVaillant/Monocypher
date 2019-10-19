@@ -1,3 +1,5 @@
+// Monocypher version __git__
+
 #include "monocypher.h"
 
 /////////////////

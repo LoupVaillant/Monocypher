@@ -5,8 +5,7 @@ PREFIX=usr/local
 PKGCONFIG=$(DESTDIR)/$(PREFIX)/lib/pkgconfig
 MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
 
-TARBALL_VERSION=`cat VERSION.md`
-TARBALL_DIR=.
+VERSION=__git__
 
 ifeq ($(findstring -DED25519_SHA512, $(CFLAGS)),)
 LINK_SHA512=
@@ -34,7 +33,7 @@ install: library src/monocypher.h install-doc
 	@echo 'includedir=$${prefix}/include'   >> $(PKGCONFIG)/monocypher.pc
 	@echo ''                                >> $(PKGCONFIG)/monocypher.pc
 	@echo 'Name: monocypher'                >> $(PKGCONFIG)/monocypher.pc
-	@echo 'Version:' `cat VERSION.md`       >> $(PKGCONFIG)/monocypher.pc
+	@echo 'Version: ' $(VERSION)            >> $(PKGCONFIG)/monocypher.pc
 	@echo 'Description: Easy to use, easy to deploy crypto library' \
                                                 >> $(PKGCONFIG)/monocypher.pc
 	@echo ''                                >> $(PKGCONFIG)/monocypher.pc
@@ -131,9 +130,5 @@ tests/vectors.h:
 	@echo ""
 	return 1
 
-tarball: tests/vectors.h
-	doc/man2html.sh
-	touch     $(TARBALL_DIR)/monocypher-$(TARBALL_VERSION).tar.gz
-	tar -czvf $(TARBALL_DIR)/monocypher-$(TARBALL_VERSION).tar.gz \
-            -X tarball_ignore                                         \
-            --transform='flags=r;s|^.|monocypher-'$(TARBALL_VERSION)'|' .
+dist: tests/vectors.h
+	./release.sh
