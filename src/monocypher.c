@@ -1,4 +1,5 @@
 // Monocypher version __git__
+const char *monocypher_version = "__git__";
 
 #include "monocypher.h"
 

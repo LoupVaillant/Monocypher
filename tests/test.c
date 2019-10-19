@@ -856,6 +856,8 @@ static int p_auth()
 
 int main(int argc, char *argv[])
 {
+    printf("\nMonocypher version: %s\n", monocypher_version);
+
     if (argc > 1) {
         sscanf(argv[1], "%" PRIu64 "", &random_state);
     }

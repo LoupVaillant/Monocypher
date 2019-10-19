@@ -3,6 +3,8 @@
 #ifndef MONOCYPHER_H
 #define MONOCYPHER_H
 
+extern const char *monocypher_version;
+
 #include <inttypes.h>
 #include <stddef.h>
 
