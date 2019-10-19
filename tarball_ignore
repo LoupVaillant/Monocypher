@@ -24,3 +24,11 @@ tests/formal-analysis
 monocypher-*
 lib*
 .git*
+release.sh
+tarball_ignore
+tests/gen*
+tests/vector_to_header.c
+tests/vectors
+tests/vectors/*
+tests/ed25519-donna*
+doc/man2html.sh

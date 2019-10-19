@@ -18,11 +18,8 @@ The manual can be found at https://monocypher.org/manual/, and in the
 `doc/` folder.
 
 The `doc/man/` folder contains the man pages.  You can install them in
-your system by running `make install-doc`.
-
-Unless you cloned the git repository, there is a html version in
-`doc/html/`, that you can regenerate by executing the `doc/man2html.sh`
-script.  This requires mandoc.
+your system by running `make install-doc`. Official releases also have a
+`doc/html/` folder with an html version.
 
 
 Installation
@@ -31,17 +28,17 @@ Installation
 ### Option 1: grab the sources
 
 The easiest way to use Monocypher is to include `src/monocypher.h` and
-`src/monocypher.c` directly into your project.  They compile as C99,
-C11, C++98, C++11, C++14, and C++17.
+`src/monocypher.c` directly into your project.  They compile as C (since
+C99) and C++ (since C++98).
 
 
 ### Option 2: grab the library
 
-Alternatively, you can run `make`, then grab the `src/monocypher.h`
-header and the `lib/libmonocypher.a` or `lib/libmonocypher.so` library.
-The default compiler is `gcc -std=gnu99`, and the default flags are
-`-pedantic -Wall -Wextra -O3 -march=native`.  If they don't work on your
-platform, you can change them like this:
+Run `make`, then grab the `src/monocypher.h` header and either the
+`lib/libmonocypher.a` or `lib/libmonocypher.so` library.  The default
+compiler is `gcc -std=gnu99`, and the default flags are `-pedantic -Wall
+-Wextra -O3 -march=native`.  If they don't work on your platform, you
+can change them like this:
 
     $ make CC="clang -std=c99" CFLAGS="-O2"
 
@@ -82,7 +79,7 @@ somewhere.
 
 *Do not* use Monocypher without running those tests at least once.
 
-The same test suite can be run under clang sanitisers and valgrind, and
+The same test suite can be run under Clang sanitisers and Valgrind, and
 be checked for code coverage:
 
     $ tests/test.sh
@@ -174,8 +171,8 @@ option.  The binary will be about 5KB smaller, and in some cases faster.
 Contributor notes
 -----------------
 
-If you just cloned the GitHub repository, you will miss a couple files
-that ship with the tarball releases:
+If you are reading this, you cloned the GitHub repository.  You miss a
+couple files that ship with the tarball releases:
 
 - The `test/vectors.h` header.  Generating it requires Libsodium. Go
   to `test/gen/`, then run `make`.
