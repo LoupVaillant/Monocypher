@@ -78,8 +78,6 @@ the chances of leaks.
 .Xr crypto_check_final 3monocypher ,
 .Xr crypto_check_init 3monocypher ,
 .Xr crypto_check_update 3monocypher ,
-.Xr crypto_kex_xk1_init_client 3monocypher ,
-.Xr crypto_kex_x_init_client 3monocypher ,
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_lock_aead 3monocypher ,
@@ -200,12 +198,6 @@ To mitigate this problem, some protocols guarantee that past messages
 are not compromised even if the long term keys are.
 This is done by generating temporary keys, then encrypting messages
 using them.
-Monocypher provides the
-.Xr crypto_kex_xk1_init_client 3monocypher
-and
-.Xr crypto_kex_x_init_client 3monocypher
-families of functions,
-which provide forward secrecy.
 .Pp
 In general, secrets that went through a computer should not be
 compromised when this computer is stolen or infected at a later point.
