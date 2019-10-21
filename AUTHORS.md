@@ -35,8 +35,7 @@ Loup Vaillant, Fabio Scotoni, and Michael Savage.
 
 - Loup Vaillant did a first draft.
 - Fabio Scotoni rewrote the manual into proper man pages (and
-  substantially changed it in the process), and wrote the
-  `crypto_kex*()` pages from scratch.
+  substantially changed it in the process).
 - Michael Savage did extensive editing and proofreading.
 
 Thanks
