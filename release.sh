@@ -22,18 +22,15 @@ rm -rf $FOLDER
 # copy everything except ignored files to the
 rsync -ad --exclude-from=tarball_ignore ./ $FOLDER
 
-# Replace version markers by the actual version number (from tags)
-for file in `find monocypher-$VERSION -type f`
-do
-    sed -i "s/__git__/$VERSION/g" $file
-done
-
 # Remove the dist target from the makefile (no recursive releases!),
 # and the tests/vector.h target, which ships with the tarball.
 sed '/tests\/vectors.h:/,$d' makefile > $FOLDER/makefile
 
 # Remove contributor notes from the README
 sed '/Contributor notes/,$d' README.md > $FOLDER/README.md
+
+# Replace version markers by the actual version number (from tags)
+find $FOLDER -type f -exec sed -i "s/__git__/$VERSION/g" \{\} \;
 
 # Make the actual tarball
 tar -cvzf $TARBALL $FOLDER
