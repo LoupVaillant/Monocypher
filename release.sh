@@ -30,10 +30,10 @@ done
 
 # Remove the dist target from the makefile (no recursive releases!),
 # and the tests/vector.h target, which ships with the tarball.
-sed '/tests\/vectors.h:/,$d' makefile > $FOLDER/makefile
+sed -i '/tests\/vectors.h:/,$d' $FOLDER/makefile
 
 # Remove contributor notes from the README
-sed '/Contributor notes/,$d' README.md > $FOLDER/README.md
+sed -i '/Contributor notes/,$d' $FOLDER/README.md
 
 # Make the actual tarball
 tar -cvzf $TARBALL $FOLDER
