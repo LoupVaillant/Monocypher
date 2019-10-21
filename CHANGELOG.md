@@ -1,3 +1,17 @@
+2.0.6
+-----
+2019/10/21
+
+- Added the `BLAKE2_NO_UNROLLING` preprocessor definition. Activating it
+  makes the binary about 5KB smaller, and speeds up processing times on
+  many embedded processors.
+- Reduced the stack usage of signature verification by about
+  40%. Signature verification now fits in smaller machines.
+- Fixed many implicit casts warnings.
+- Fixed the manual here and there.
+- Lots of small nitpicks.
+
+
 2.0.5
 -----
 2018/08/23
