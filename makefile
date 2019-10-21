@@ -83,19 +83,21 @@ lib/monocypher.o lib/sha512.o:
 	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ $<
 
 # Test & speed libraries
-$TEST_COMMON=tests/utils.h src/monocypher.h src/optional/sha512.h
-lib/test.o           : tests/test.c            $(TEST_COMMON) tests/vectors.h
-lib/speed.o          : tests/speed.c           $(TEST_COMMON) tests/speed.h
-lib/speed-tweetnacl.o: tests/speed-tweetnacl.c $(TEST_COMMON) tests/speed.h
+TEST_COMMON = tests/utils.h src/monocypher.h src/optional/sha512.h
+SPEED       = tests/speed
+lib/test.o           :tests/test.c               $(TEST_COMMON) tests/vectors.h
+lib/speed.o          :$(SPEED)/speed.c           $(TEST_COMMON) $(SPEED)/speed.h
+lib/speed-tweetnacl.o:$(SPEED)/speed-tweetnacl.c $(TEST_COMMON) $(SPEED)/speed.h
 lib/utils.o lib/test.o lib/speed.o lib/speed-tweetnacl.o:
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ $<
+	$(CC) $(CFLAGS)                                        \
+            -I src -I src/optional -I tests -I tests/externals \
+            -fPIC -c -o $@ $<
 
-lib/speed-sodium.o   : tests/speed-sodium.c    $(TEST_COMMON) tests/speed.h
+lib/speed-sodium.o:$(SPEED)/speed-sodium.c $(TEST_COMMON) $(SPEED)/speed.h
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS)                       \
-            -I src                            \
-            -I src/optional                   \
+	$(CC) $(CFLAGS)                     \
+            -I src -I src/optional -I tests \
             `pkg-config --cflags libsodium` \
             -fPIC -c -o $@ $<
 
@@ -108,7 +110,7 @@ speed-sodium.out: lib/speed-sodium.o
 	$(CC) $(CFLAGS) -o $@ $^              \
             `pkg-config --cflags libsodium` \
             `pkg-config --libs   libsodium`
-lib/tweetnacl.o: tests/tweetnacl.c tests/tweetnacl.h
+lib/tweetnacl.o: tests/externals/tweetnacl.c tests/externals/tweetnacl.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 speed-tweetnacl.out: lib/speed-tweetnacl.o lib/tweetnacl.o
 	$(CC) $(CFLAGS) -o $@ $^

@@ -27,8 +27,5 @@ lib*
 release.sh
 tarball_ignore
 tests/gen*
-tests/vector_to_header.c
-tests/vectors
-tests/vectors/*
-tests/ed25519-donna*
+tests/externals/ed25519-donna*
 doc/man2html.sh

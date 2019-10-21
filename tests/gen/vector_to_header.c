@@ -22,8 +22,6 @@ int main(int argc, char** argv)
     int   c      = getchar();
     int   nb_vec = 0;
 
-    printf("#include <inttypes.h>\n");
-    printf("#include <stddef.h>\n");
     while (c != EOF) {
         int size = 0;
         if (c == ':') {

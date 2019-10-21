@@ -21,19 +21,20 @@ clean:
 %.vec: %.out
 	./$< > $@
 
-%.o: %.c ../utils.h ../ed25519-donna/ed25519.h
-	$(CC) $(CFLAGS) -c $<     \
-            -I ..                 \
-            -I ../ed25519-donna   \
-            -I ../../src          \
-            -I ../../src/optional \
+%.o: %.c ../utils.h ../externals/ed25519-donna/ed25519.h
+	$(CC) $(CFLAGS) -c $<              \
+            -I ..                          \
+            -I ../externals/ed25519-donna  \
+            -I ../../src                   \
+            -I ../../src/optional          \
             $$(pkg-config --cflags libsodium)
 
 %.out: %.o ed25519.o
 	$(CC) $(CFLAGS) -o $@ $^ \
             $$(pkg-config --libs libsodium)
 
-ed25519.o: ../ed25519-donna/ed25519.c  $(wildcard ../ed25519-donna/*.h)
+ed25519.o: ../externals/ed25519-donna/ed25519.c \
+           $(wildcard ../externals/ed25519-donna/*.h)
 	$(CC) $(CFLAGS) -c $<                 \
             -I ../../src                      \
             -I ../../src/optional             \
@@ -43,24 +44,24 @@ ed25519.o: ../ed25519-donna/ed25519.c  $(wildcard ../ed25519-donna/*.h)
             -DED25519_NO_INLINE_ASM           \
             -DED25519_FORCE_32BIT
 
-vector_to_header.out: ../vector_to_header.c
+vector_to_header.out: vector_to_header.c
 	$(CC) $(CFLAGS) $< -o $@
 
-chacha20.all.vec      : chacha20.vec    ../vectors/chacha20
-poly1305.all.vec      : poly1305.vec    ../vectors/poly1305
-x25519.all.vec        : x25519.vec      ../vectors/x25519
+chacha20.all.vec      : chacha20.vec    vectors/chacha20
+poly1305.all.vec      : poly1305.vec    vectors/poly1305
+x25519.all.vec        : x25519.vec      vectors/x25519
 x25519_pk.all.vec     : x25519_pk.vec
 hchacha20.all.vec     : hchacha20.vec
 xchacha20.all.vec     : xchacha20.vec
 aead_ietf.all.vec     : aead_ietf.vec
 blake2b.all.vec       : blake2b.vec
 sha512.all.vec        : sha512.vec
-argon2i.all.vec       : argon2i.vec     ../vectors/argon2i
+argon2i.all.vec       : argon2i.vec     vectors/argon2i
 edDSA.all.vec         : edDSA.vec
 edDSA_pk.all.vec      : edDSA_pk.vec
 ed_25519.all.vec      : ed_25519.vec
-ed_25519_check.all.vec:                 ../vectors/ed_25519_check
-key_exchange.all.vec  :                 ../vectors/key_exchange
+ed_25519_check.all.vec:                 vectors/ed_25519_check
+key_exchange.all.vec  :                 vectors/key_exchange
 monokex_xk1.all.vec   : monokex_xk1.vec
 monokex_x.all.vec     : monokex_x.vec
 $(VEC2):
@@ -70,5 +71,14 @@ $(VEC2):
 %.h.vec: %.all.vec vector_to_header.out
 	./vector_to_header.out  $(patsubst %.all.vec,%,$<) < $< > $@
 
- $(VECTORS): $(HEADERS)
+prelude.h.vec:
+	@echo "creating prelude.h.vec"
+	@echo "// Generated with hard coded official vectors, and"     >  $@
+	@echo "// random vectors with Libsodium and ed25519-donna."    >> $@
+	@echo "// Download Monocypher's git repository to regenerate." >> $@
+	@echo "#include <inttypes.h>"                                  >> $@
+	@echo "#include <stddef.h>"                                    >> $@
+	@echo ""                                                       >> $@
+
+$(VECTORS): prelude.h.vec $(HEADERS)
 	cat $^ > $@
