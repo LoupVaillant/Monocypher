@@ -28,8 +28,9 @@ do
     sed -i "s/__git__/$VERSION/g" $file
 done
 
-# Remove the dist target from the makefile (no recursive releases!)
-sed '/dist:/,$d' makefile > $FOLDER/makefile
+# Remove the dist target from the makefile (no recursive releases!),
+# and the tests/vector.h target, which ships with the tarball.
+sed '/tests\/vectors.h:/,$d' makefile > $FOLDER/makefile
 
 # Remove contributor notes from the README
 sed '/Contributor notes/,$d' README.md > $FOLDER/README.md
