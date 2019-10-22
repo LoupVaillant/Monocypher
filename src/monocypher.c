@@ -313,11 +313,11 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     const u32 rr3 = (r3 >> 2) + r3; // rr3 <= 13fffffb // rr1 == (r3 >> 2) * 5
 
     // (h + c) * r, without carry propagation
-    const u64 x0 = s0*r0 + s1*rr3 + s2*rr2 + s3*rr1 +s4*rr0;//<=97ffffe007fffff8
-    const u64 x1 = s0*r1 + s1*r0  + s2*rr3 + s3*rr2 +s4*rr1;//<=8fffffe20ffffff6
-    const u64 x2 = s0*r2 + s1*r1  + s2*r0  + s3*rr3 +s4*rr2;//<=87ffffe417fffff4
-    const u64 x3 = s0*r3 + s1*r2  + s2*r1  + s3*r0  +s4*rr3;//<=7fffffe61ffffff2
-    const u32 x4 = s4 * (r0 & 3); // ...recover 2 bits      //<=               f
+    const u64 x0 = s0*r0+ s1*rr3+ s2*rr2+ s3*rr1+ s4*rr0; // <= 97ffffe007fffff8
+    const u64 x1 = s0*r1+ s1*r0 + s2*rr3+ s3*rr2+ s4*rr1; // <= 8fffffe20ffffff6
+    const u64 x2 = s0*r2+ s1*r1 + s2*r0 + s3*rr3+ s4*rr2; // <= 87ffffe417fffff4
+    const u64 x3 = s0*r3+ s1*r2 + s2*r1 + s3*r0 + s4*rr3; // <= 7fffffe61ffffff2
+    const u32 x4 = s4 * (r0 & 3); // ...recover 2 bits    // <=                f
 
     // partial reduction modulo 2^130 - 5
     const u32 u5 = x4 + (x3 >> 32); // u5 <= 7ffffff5
