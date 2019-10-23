@@ -77,9 +77,6 @@ static u64 edDSA_sign(void)
     TIMING_END;
 }
 
-//int crypto_sign     (u8 *sm, u64 *smlen, const u8 *m , u64 n, const u8 *sk);
-//int crypto_sign_open(u8 *m , u64 *mlen , const u8 *sm, u64 n, const u8 *pk);
-
 static u64 edDSA_check(void)
 {
     u8 sk        [ 64];
