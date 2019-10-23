@@ -13,10 +13,10 @@ else
 LINK_SHA512=lib/sha512.o
 endif
 
-.PHONY: all library static-library dynamic-library \
-        install install-doc                        \
-        check test speed                           \
-        clean uninstall                            \
+.PHONY: all library static-library dynamic-library    \
+        install install-doc pkg-config-libhydrogen    \
+        check test speed speed-sodium speed-tweetnacl \
+        clean uninstall                               \
         tarball
 
 all    : library
@@ -44,6 +44,10 @@ install-doc:
 	mkdir -p $(MAN_DIR)
 	cp -r doc/man/man3/*.3monocypher $(MAN_DIR)
 
+pkg-config-libhydrogen: tests/externals/libhydrogen.pc
+	mkdir -p $(PKGCONFIG)
+	cp $< $(PKGCONFIG)/libhydrogen.pc
+
 library: static-library dynamic-library
 static-library : lib/libmonocypher.a
 dynamic-library: lib/libmonocypher.so lib/libmonocypher.so.2
@@ -64,7 +68,8 @@ test           : test.out
 speed          : speed.out
 speed-sodium   : speed-sodium.out
 speed-tweetnacl: speed-tweetnacl.out
-test speed speed-sodium speed-tweetnacl:
+speed-hydrogen : speed-hydrogen.out
+test speed speed-sodium speed-tweetnacl speed-hydrogen:
 	./$<
 
 # Monocypher libraries
@@ -101,15 +106,26 @@ lib/speed-sodium.o:$(SPEED)/speed-sodium.c $(TEST_COMMON) $(SPEED)/speed.h
             `pkg-config --cflags libsodium` \
             -fPIC -c -o $@ $<
 
+lib/speed-hydrogen.o:$(SPEED)/speed-hydrogen.c $(TEST_COMMON) $(SPEED)/speed.h
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS)                       \
+            -I src -I src/optional -I tests   \
+            `pkg-config --cflags libhydrogen` \
+            -fPIC -c -o $@ $<
+
 # test & speed executables
 test.out : lib/test.o  lib/monocypher.o lib/sha512.o
 speed.out: lib/speed.o lib/monocypher.o lib/sha512.o
 test.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
 speed-sodium.out: lib/speed-sodium.o
-	$(CC) $(CFLAGS) -o $@ $^              \
+	$(CC) $(CFLAGS) -o $@ $^            \
             `pkg-config --cflags libsodium` \
             `pkg-config --libs   libsodium`
+speed-hydrogen.out: lib/speed-hydrogen.o
+	$(CC) $(CFLAGS) -o $@ $^              \
+            `pkg-config --cflags libhydrogen` \
+            `pkg-config --libs   libhydrogen`
 lib/tweetnacl.o: tests/externals/tweetnacl.c tests/externals/tweetnacl.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 speed-tweetnacl.out: lib/speed-tweetnacl.o lib/tweetnacl.o
