@@ -1714,11 +1714,9 @@ static int slide_step(slide_ctx *ctx, int width, int i, const u8 scalar[32])
     return i == ctx->next_index ? ctx->next_digit: 0;
 }
 
-
 #define P_W_WIDTH 3 // Affects the size of the stack
 #define B_W_WIDTH 5 // Affects the size of the binary
 #define P_W_SIZE  (1<<(P_W_WIDTH-2))
-#define B_W_SIZE  (1<<(B_W_WIDTH-2))
 
 // Variable time! Internal buffers are not wiped! Inputs must not be secret!
 // => Use only to *check* signatures.
