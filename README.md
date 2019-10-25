@@ -129,10 +129,14 @@ not sure, you can always switch later.
 Note: the speed benchmark currently requires the POSIX
 `clock_gettime()` function.
 
-There are similar benchmarks for Libsodium and TweetNaCl:
+There are similar benchmarks for Libsodium, TweetNaCl, and LibHydrogen:
 
     $ make speed-sodium
     $ make speed-tweetnacl
+    $ make speed-hydrogen
+
+(The `speed-hydrogen` target assumes it has pkg-config installed. Try
+`make pkg-config-libhydrogen` as root if it is not.)
 
 You can also adjust the optimisation options for Monocypher and
 TweetNaCl (the default is `-O3 march=native`):
