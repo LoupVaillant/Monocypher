@@ -44,9 +44,22 @@ install-doc:
 	mkdir -p $(MAN_DIR)
 	cp -r doc/man/man3/*.3monocypher $(MAN_DIR)
 
-pkg-config-libhydrogen: tests/externals/libhydrogen.pc
+pkg-config-libhydrogen:
 	mkdir -p $(PKGCONFIG)
-	cp $< $(PKGCONFIG)/libhydrogen.pc
+	@echo "Creating $(PKGCONFIG)/libhydrogen.pc"
+	@echo "prefix=/$(PREFIX)"               > $(PKGCONFIG)/libhydrogen.pc
+	@echo 'exec_prefix=$${prefix}'         >> $(PKGCONFIG)/libhydrogen.pc
+	@echo 'libdir=$${exec_prefix}/lib'     >> $(PKGCONFIG)/libhydrogen.pc
+	@echo 'includedir=$${prefix}/include'  >> $(PKGCONFIG)/libhydrogen.pc
+	@echo ''                               >> $(PKGCONFIG)/libhydrogen.pc
+	@echo 'Name: libhydrogen'              >> $(PKGCONFIG)/libhydrogen.pc
+	@echo 'Version: git-HEAD'              >> $(PKGCONFIG)/libhydrogen.pc
+	@echo 'Description: Small, easy-to-use,'      \
+              'hard-to-misuse cryptographic library.' \
+                                               >> $(PKGCONFIG)/libhydrogen.pc
+	@echo ''                               >> $(PKGCONFIG)/libhydrogen.pc
+	@echo 'Libs: -L$${libdir} -lhydrogen'  >> $(PKGCONFIG)/libhydrogen.pc
+	@echo 'Cflags: -I$${includedir}'       >> $(PKGCONFIG)/libhydrogen.pc
 
 library: static-library dynamic-library
 static-library : lib/libmonocypher.a
