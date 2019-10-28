@@ -13,10 +13,11 @@ else
 LINK_SHA512=lib/sha512.o
 endif
 
-.PHONY: all library static-library dynamic-library    \
-        install install-doc pkg-config-libhydrogen    \
-        check test speed speed-sodium speed-tweetnacl \
-        clean uninstall                               \
+.PHONY: all library static-library dynamic-library                     \
+        install install-doc pkg-config-libhydrogen                     \
+        check test                                                     \
+        speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519 \
+        clean uninstall                                                \
         tarball
 
 all    : library
@@ -82,7 +83,8 @@ speed          : speed.out
 speed-sodium   : speed-sodium.out
 speed-tweetnacl: speed-tweetnacl.out
 speed-hydrogen : speed-hydrogen.out
-test speed speed-sodium speed-tweetnacl speed-hydrogen:
+speed-c25519   : speed-c25519.out
+test speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519:
 	./$<
 
 # Monocypher libraries
@@ -126,6 +128,29 @@ lib/speed-hydrogen.o:$(SPEED)/speed-hydrogen.c $(TEST_COMMON) $(SPEED)/speed.h
             `pkg-config --cflags libhydrogen` \
             -fPIC -c -o $@ $<
 
+C25519=         c25519 edsign ed25519 morph25519 fprime f25519 sha512
+C25519_SOURCE=  $(patsubst %, tests/externals/c25519/%.c, $(C25519))
+C25519_HEADERS= $(patsubst %, tests/externals/c25519/%.h, $(C25519))
+C25519_OBJECTS= $(patsubst %, lib/c25519/%.o,             $(C25519))
+lib/c25519/c25519.o    : tests/externals/c25519/c25519.c      $(C25519_HEADERS)
+lib/c25519/ed25519.o   : tests/externals/c25519/ed25519.c     $(C25519_HEADERS)
+lib/c25519/edsign.o    : tests/externals/c25519/edsign.c      $(C25519_HEADERS)
+lib/c25519/f25519.o    : tests/externals/c25519/f25519.c      $(C25519_HEADERS)
+lib/c25519/fprime.o    : tests/externals/c25519/fprime.c      $(C25519_HEADERS)
+lib/c25519/morph25519.o: tests/externals/c25519/morph25519.c  $(C25519_HEADERS)
+lib/c25519/sha512.o    : tests/externals/c25519/sha512.c      $(C25519_HEADERS)
+$(C25519_OBJECTS):
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -I tests/externals/c25519/ -c -o $@ $<
+
+lib/speed-c25519.o:$(SPEED)/speed-c25519.c \
+                   $(SPEED)/speed.h        \
+                   $(TEST_COMMON)          \
+                   $(C25519_HEADERS)
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -I tests -I tests/externals/c25519 -c -o $@ $<
+
+
 # test & speed executables
 test.out : lib/test.o  lib/monocypher.o lib/sha512.o
 speed.out: lib/speed.o lib/monocypher.o lib/sha512.o
@@ -142,6 +167,8 @@ speed-hydrogen.out: lib/speed-hydrogen.o
 lib/tweetnacl.o: tests/externals/tweetnacl.c tests/externals/tweetnacl.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 speed-tweetnacl.out: lib/speed-tweetnacl.o lib/tweetnacl.o
+speed-c25519.out   : lib/speed-c25519.o    $(C25519_OBJECTS)
+speed-tweetnacl.out speed-c25519.out:
 	$(CC) $(CFLAGS) -o $@ $^
 
 tests/vectors.h:
