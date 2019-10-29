@@ -33,10 +33,10 @@ uint8_t edsign_verify(const uint8_t *signature, const uint8_t *pub,
 
 static u64 edDSA_sign(void)
 {
-    u8 sk [32];
+    RANDOM_INPUT(sk     , 32);
+    RANDOM_INPUT(message, 64);
     u8 pk [32];
     u8 sig[64];
-    RANDOM_INPUT(message, 64);
     edsign_sec_to_pub(pk, sk);
 
     TIMING_START {
@@ -47,10 +47,10 @@ static u64 edDSA_sign(void)
 
 static u64 edDSA_check(void)
 {
-    u8 sk [32];
+    RANDOM_INPUT(sk     , 32);
+    RANDOM_INPUT(message, 64);
     u8 pk [32];
     u8 sig[64];
-    RANDOM_INPUT(message, 64);
     edsign_sec_to_pub(pk, sk);
     edsign_sign(sig, pk, sk, message, 64);
 
