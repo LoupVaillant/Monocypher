@@ -2,6 +2,12 @@
 #include "utils.h"
 #include "tweetnacl.h"
 
+// TweetNaCl needs to link with this
+void randombytes(u8 *stream, u64 size)
+{
+    p_random(stream, (size_t)size);
+}
+
 static u64 salsa20(void)
 {
     u8 out[SIZE];

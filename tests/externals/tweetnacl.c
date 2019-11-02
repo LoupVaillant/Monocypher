@@ -7,19 +7,7 @@ typedef unsigned long u32;
 typedef unsigned long long u64;
 typedef long long i64;
 typedef i64 gf[16];
-
-// Not at all random function (for speed tests only)
-void randombytes(u8 *stream, u64 size)
-{
-    u64 i;
-    static u64 x = 12345;
-    FOR (i, size) {
-        x ^= x >> 12;
-        x ^= x << 25;
-        x ^= x >> 27;
-        stream[i] = x * 0x2545F4914F6CDD1D;
-    }
-}
+extern void randombytes(u8 *,u64);
 
 static const u8
   _0[16],
@@ -65,8 +53,7 @@ sv ts64(u8 *x,u64 u)
 
 static int vn(const u8 *x,const u8 *y,int n)
 {
-  int i;
-  u32 d = 0;
+  u32 i,d = 0;
   FOR(i,n) d |= x[i]^y[i];
   return (1 & ((d - 1) >> 8)) - 1;
 }
@@ -724,8 +711,7 @@ sv reduce(u8 *r)
 int crypto_sign(u8 *sm,u64 *smlen,const u8 *m,u64 n,const u8 *sk)
 {
   u8 d[64],h[64],r[64];
-  u64 i;
-  i64 j,x[64];
+  i64 i,j,x[64];
   gf p[4];
 
   crypto_hash(d, sk, 32);
@@ -792,7 +778,7 @@ static int unpackneg(gf r[4],const u8 p[32])
 
 int crypto_sign_open(u8 *m,u64 *mlen,const u8 *sm,u64 n,const u8 *pk)
 {
-  unsigned i;
+  int i;
   u8 t[32],h[64];
   gf p[4],q[4];
 
