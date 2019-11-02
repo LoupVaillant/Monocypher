@@ -3,6 +3,7 @@
 #include "tweetnacl.h"
 
 // TweetNaCl needs to link with this
+// Not really random, but we don't care for those benchmarks.
 void randombytes(u8 *stream, u64 size)
 {
     p_random(stream, (size_t)size);
