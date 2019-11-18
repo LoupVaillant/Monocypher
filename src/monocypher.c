@@ -1182,30 +1182,6 @@ static void fe_sq2(fe h, const fe f)
 }
 
 // This could be simplified, but it would be slower
-static void fe_invert(fe out, const fe z)
-{
-    fe t0, t1, t2, t3;
-    fe_sq(t0, z );
-    fe_sq(t1, t0);
-    fe_sq(t1, t1);
-    fe_mul(t1,  z, t1);
-    fe_mul(t0, t0, t1);
-    fe_sq(t2, t0);                                fe_mul(t1 , t1, t2);
-    fe_sq(t2, t1); FOR (i, 1,   5) fe_sq(t2, t2); fe_mul(t1 , t2, t1);
-    fe_sq(t2, t1); FOR (i, 1,  10) fe_sq(t2, t2); fe_mul(t2 , t2, t1);
-    fe_sq(t3, t2); FOR (i, 1,  20) fe_sq(t3, t3); fe_mul(t2 , t3, t2);
-    fe_sq(t2, t2); FOR (i, 1,  10) fe_sq(t2, t2); fe_mul(t1 , t2, t1);
-    fe_sq(t2, t1); FOR (i, 1,  50) fe_sq(t2, t2); fe_mul(t2 , t2, t1);
-    fe_sq(t3, t2); FOR (i, 1, 100) fe_sq(t3, t3); fe_mul(t2 , t3, t2);
-    fe_sq(t2, t2); FOR (i, 1,  50) fe_sq(t2, t2); fe_mul(t1 , t2, t1);
-    fe_sq(t1, t1); FOR (i, 1,   5) fe_sq(t1, t1); fe_mul(out, t1, t0);
-    WIPE_BUFFER(t0);
-    WIPE_BUFFER(t1);
-    WIPE_BUFFER(t2);
-    WIPE_BUFFER(t3);
-}
-
-// This could be simplified, but it would be slower
 static void fe_pow22523(fe out, const fe z)
 {
     fe t0, t1, t2;
@@ -1224,6 +1200,20 @@ static void fe_pow22523(fe out, const fe z)
     WIPE_BUFFER(t0);
     WIPE_BUFFER(t1);
     WIPE_BUFFER(t2);
+}
+
+// Inverting means multiplying by 2^255 - 23
+// 2^255 - 21 = (2^252 - 3) * 8 + 3
+// So we reuse the multiplication chain of fe_pow22523
+static void fe_invert(fe out, const fe z)
+{
+    fe tmp;
+    fe_pow22523(tmp, z);
+    // tmp2^8 * z^3
+    fe_sq(tmp, tmp);                        // 0
+    fe_sq(tmp, tmp);  fe_mul(tmp, tmp, z);  // 1
+    fe_sq(tmp, tmp);  fe_mul(out, tmp, z);  // 1
+    WIPE_BUFFER(tmp);
 }
 
 static void fe_tobytes(u8 s[32], const fe h)
