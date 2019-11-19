@@ -186,7 +186,7 @@ tests/vectors.h:
 	@echo " need libsodium."
 	@echo "======================================================"
 	@echo ""
-	return 1
+	exit 1
 
 dist: tests/vectors.h
 	./release.sh
