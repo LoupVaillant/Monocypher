@@ -1202,7 +1202,7 @@ static void fe_pow22523(fe out, const fe z)
     WIPE_BUFFER(t2);
 }
 
-// Inverting means multiplying by 2^255 - 23
+// Inverting means multiplying by 2^255 - 21
 // 2^255 - 21 = (2^252 - 3) * 8 + 3
 // So we reuse the multiplication chain of fe_pow22523
 static void fe_invert(fe out, const fe z)
