@@ -1029,7 +1029,7 @@ static void fe_sub (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] - g[i];}
 
 static void fe_cswap(fe f, fe g, int b)
 {
-    u32 mask = -b; // -1 = 0xffffffff
+    i32 mask = -b; // -1 = 0xffffffff
     FOR (i, 0, 10) {
         i32 x = (f[i] ^ g[i]) & mask;
         f[i] = f[i] ^ x;
@@ -1039,7 +1039,7 @@ static void fe_cswap(fe f, fe g, int b)
 
 static void fe_ccopy(fe f, const fe g, int b)
 {
-    u32 mask = -b; // -1 = 0xffffffff
+    i32 mask = -b; // -1 = 0xffffffff
     FOR (i, 0, 10) {
         i32 x = (f[i] ^ g[i]) & mask;
         f[i] = f[i] ^ x;
