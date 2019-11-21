@@ -95,7 +95,7 @@ lib/libmonocypher.so: lib/libmonocypher.so.2
 	ln -sf `basename $<` $@
 lib/libmonocypher.so.2: lib/monocypher.o $(LINK_SHA512)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -shared -o $@ $^
+	$(CC) $(CFLAGS) -shared -Wl,-soname,libmonocypher.so.2 -o $@ $^
 lib/sha512.o    : src/optional/sha512.c src/optional/sha512.h
 lib/monocypher.o: src/monocypher.c src/monocypher.h
 lib/monocypher.o lib/sha512.o:
