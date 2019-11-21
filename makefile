@@ -4,6 +4,7 @@ DESTDIR=
 PREFIX=usr/local
 PKGCONFIG=$(DESTDIR)/$(PREFIX)/lib/pkgconfig
 MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
+SONAME=libmonocypher.so.2
 
 VERSION=__git__
 
@@ -64,7 +65,7 @@ pkg-config-libhydrogen:
 
 library: static-library dynamic-library
 static-library : lib/libmonocypher.a
-dynamic-library: lib/libmonocypher.so lib/libmonocypher.so.2
+dynamic-library: lib/libmonocypher.so lib/$(SONAME)
 
 clean:
 	rm -rf lib/
@@ -90,12 +91,12 @@ test speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519:
 # Monocypher libraries
 lib/libmonocypher.a: lib/monocypher.o $(LINK_SHA512)
 	ar cr $@ $^
-lib/libmonocypher.so: lib/libmonocypher.so.2
+lib/libmonocypher.so: lib/$(SONAME)
 	@mkdir -p $(@D)
 	ln -sf `basename $<` $@
-lib/libmonocypher.so.2: lib/monocypher.o $(LINK_SHA512)
+lib/$(SONAME): lib/monocypher.o $(LINK_SHA512)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -shared -Wl,-soname,libmonocypher.so.2 -o $@ $^
+	$(CC) $(CFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $^
 lib/sha512.o    : src/optional/sha512.c src/optional/sha512.h
 lib/monocypher.o: src/monocypher.c src/monocypher.h
 lib/monocypher.o lib/sha512.o:
