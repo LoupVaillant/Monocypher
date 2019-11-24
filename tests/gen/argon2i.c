@@ -1,7 +1,7 @@
 #include <sodium.h>
 #include "utils.h"
 
-void test(size_t nb_blocks, size_t hash_size, size_t nb_iterations)
+static void test(size_t nb_blocks, size_t hash_size, size_t nb_iterations)
 {
     RANDOM_INPUT(password, 16                     );
     RANDOM_INPUT(salt    , crypto_pwhash_SALTBYTES);

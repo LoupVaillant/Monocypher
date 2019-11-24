@@ -1,7 +1,7 @@
 #include <sodium.h>
 #include "utils.h"
 
-void test(size_t msg_size)
+static void test(size_t msg_size)
 {
     RANDOM_INPUT(seed,  32);
     RANDOM_INPUT(msg , 256);

@@ -1,7 +1,7 @@
 #include <sodium.h>
 #include "utils.h"
 
-void test(size_t size)
+static void test(size_t size)
 {
     RANDOM_INPUT(in  , 256);
     u8 hash[64];

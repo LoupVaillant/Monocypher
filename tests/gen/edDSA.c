@@ -1,7 +1,7 @@
 #include "utils.h"
 #include "ed25519.h"
 
-void test(size_t msg_size)
+static void test(size_t msg_size)
 {
     RANDOM_INPUT(sk ,  32);
     RANDOM_INPUT(msg, 256);

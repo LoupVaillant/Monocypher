@@ -1,7 +1,7 @@
 #include <sodium.h>
 #include "utils.h"
 
-void test(u8 sk[32])
+static void test(u8 sk[32])
 {
     u8 pk[32];
     crypto_scalarmult_base(pk, sk);
