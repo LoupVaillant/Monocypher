@@ -255,7 +255,9 @@ void crypto_xchacha20_ctr(u8 *cipher_text, const u8 *plain_text,
 {
     u8 sub_key[32];
     crypto_hchacha20(sub_key, key, nonce);
-    crypto_chacha20_ctr(cipher_text, plain_text, text_size, key, nonce+16, ctr);
+    crypto_chacha20_ctr(cipher_text, plain_text, text_size,
+                        sub_key, nonce+16, ctr);
+    WIPE_BUFFER(sub_key);
 }
 
 void crypto_chacha20(u8 *cipher_text, const u8 *plain_text, size_t text_size,
