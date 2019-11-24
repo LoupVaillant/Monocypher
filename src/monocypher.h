@@ -13,13 +13,6 @@
 // Do not rely on the size or content on any of those types,
 // they may change without notice.
 
-// Chacha20
-typedef struct {
-    uint32_t input[16]; // current input, unencrypted
-    uint32_t pool [16]; // last input, encrypted
-    size_t   pool_idx;  // pointer to random_pool
-} crypto_chacha_ctx;
-
 // Poly1305
 typedef struct {
     uint32_t r[4];   // constant multiplier (from the secret key)
@@ -28,16 +21,6 @@ typedef struct {
     uint32_t pad[4]; // random number added at the end (from the secret key)
     size_t   c_idx;  // How many bytes are there in the chunk.
 } crypto_poly1305_ctx;
-
-// Authenticated encryption
-typedef struct {
-    crypto_chacha_ctx   chacha;
-    crypto_poly1305_ctx poly;
-    uint64_t            ad_size;
-    uint64_t            message_size;
-    int                 ad_phase;
-} crypto_lock_ctx;
-#define crypto_unlock_ctx crypto_lock_ctx
 
 // Hash (Blake2b)
 typedef struct {
@@ -113,31 +96,6 @@ int crypto_unlock_aead(uint8_t       *plain_text,
                        const uint8_t  mac[16],
                        const uint8_t *ad         , size_t ad_size,
                        const uint8_t *cipher_text, size_t text_size);
-
-// Incremental interface (encryption)
-void crypto_lock_init(crypto_lock_ctx *ctx,
-                      const uint8_t    key[32],
-                      const uint8_t    nonce[24]);
-void crypto_lock_auth_ad(crypto_lock_ctx *ctx,
-                         const uint8_t   *message,
-                         size_t           message_size);
-void crypto_lock_auth_message(crypto_lock_ctx *ctx,
-                              const uint8_t *cipher_text, size_t text_size);
-void crypto_lock_update(crypto_lock_ctx *ctx,
-                        uint8_t         *cipher_text,
-                        const uint8_t   *plain_text,
-                        size_t           text_size);
-void crypto_lock_final(crypto_lock_ctx *ctx, uint8_t mac[16]);
-
-// Incremental interface (decryption)
-#define crypto_unlock_init         crypto_lock_init
-#define crypto_unlock_auth_ad      crypto_lock_auth_ad
-#define crypto_unlock_auth_message crypto_lock_auth_message
-void crypto_unlock_update(crypto_unlock_ctx *ctx,
-                          uint8_t           *plain_text,
-                          const uint8_t     *cipher_text,
-                          size_t             text_size);
-int crypto_unlock_final(crypto_unlock_ctx *ctx, const uint8_t mac[16]);
 
 
 // General purpose hash (Blake2b)
@@ -227,32 +185,47 @@ int crypto_check_final  (crypto_check_ctx *ctx);
 
 // For experts only.  You have been warned.
 
-
 // Chacha20
 // --------
 
 // Specialised hash.
-void crypto_chacha20_H(uint8_t       out[32],
-                       const uint8_t key[32],
-                       const uint8_t in [16]);
+void crypto_hchacha20(uint8_t       out[32],
+                      const uint8_t key[32],
+                      const uint8_t in [16]);
 
-void crypto_chacha20_init(crypto_chacha_ctx *ctx,
-                          const uint8_t      key[32],
-                          const uint8_t      nonce[8]);
-
-void crypto_chacha20_x_init(crypto_chacha_ctx *ctx,
-                            const uint8_t      key[32],
-                            const uint8_t      nonce[24]);
-
-void crypto_chacha20_set_ctr(crypto_chacha_ctx *ctx, uint64_t ctr);
-
-void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
-                             uint8_t           *cipher_text,
-                             const uint8_t     *plain_text,
-                             size_t             text_size);
-
-void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
-                            uint8_t *stream, size_t size);
+void crypto_chacha20(uint8_t       *cipher_text,
+                     const uint8_t *plain_text,
+                     size_t         text_size,
+                     const uint8_t  key[32],
+                     const uint8_t  nonce[8]);
+void crypto_xchacha20(uint8_t       *cipher_text,
+                      const uint8_t *plain_text,
+                      size_t         text_size,
+                      const uint8_t  key[32],
+                      const uint8_t  nonce[24]);
+void crypto_ietf_chacha20(uint8_t       *cipher_text,
+                          const uint8_t *plain_text,
+                          size_t         text_size,
+                          const uint8_t  key[32],
+                          const uint8_t  nonce[12]);
+void crypto_chacha20_ctr(uint8_t       *cipher_text,
+                         const uint8_t *plain_text,
+                         size_t         text_size,
+                         const uint8_t  key[32],
+                         const uint8_t  nonce[8],
+                         uint64_t       ctr);
+void crypto_xchacha20_ctr(uint8_t       *cipher_text,
+                          const uint8_t *plain_text,
+                          size_t         text_size,
+                          const uint8_t  key[32],
+                          const uint8_t  nonce[24],
+                          uint64_t       ctr);
+void crypto_ietf_chacha20_ctr(uint8_t       *cipher_text,
+                              const uint8_t *plain_text,
+                              size_t         text_size,
+                              const uint8_t  key[32],
+                              const uint8_t  nonce[12],
+                              uint32_t       ctr);
 
 
 // Poly 1305

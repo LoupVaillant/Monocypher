@@ -97,9 +97,11 @@ lib/libmonocypher.so: lib/$(SONAME)
 lib/$(SONAME): lib/monocypher.o $(LINK_SHA512)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $^
-lib/sha512.o    : src/optional/sha512.c src/optional/sha512.h
+lib/sha512.o    : src/optional/sha512.c      src/optional/sha512.h
+lib/chacha20.o  : src/deprecated/chacha20.c  src/deprecated/chacha20.h
+lib/aead-incr.o : src/deprecated/aead-incr.c src/deprecated/aead-incr.h
 lib/monocypher.o: src/monocypher.c src/monocypher.h
-lib/monocypher.o lib/sha512.o:
+lib/monocypher.o lib/sha512.o lib/chacha20.o lib/aead-incr.o:
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ $<
 
@@ -107,7 +109,7 @@ lib/monocypher.o lib/sha512.o:
 TEST_COMMON = tests/utils.h src/monocypher.h src/optional/sha512.h
 SPEED       = tests/speed
 lib/utils.o          :tests/utils.c
-lib/test.o           :tests/test.c               $(TEST_COMMON) tests/vectors.h
+lib/test.o           :tests/test.c               $(TEST_COMMON) tests/vectors.h  src/deprecated/chacha20.h
 lib/speed.o          :$(SPEED)/speed.c           $(TEST_COMMON) $(SPEED)/speed.h
 lib/speed-tweetnacl.o:$(SPEED)/speed-tweetnacl.c $(TEST_COMMON) $(SPEED)/speed.h
 lib/utils.o lib/test.o lib/speed.o lib/speed-tweetnacl.o:
@@ -154,7 +156,7 @@ lib/speed-c25519.o:$(SPEED)/speed-c25519.c \
 
 
 # test & speed executables
-test.out : lib/test.o  lib/utils.o lib/monocypher.o lib/sha512.o
+test.out : lib/test.o  lib/utils.o lib/monocypher.o lib/sha512.o lib/chacha20.o lib/aead-incr.o
 speed.out: lib/speed.o lib/utils.o lib/monocypher.o lib/sha512.o
 test.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^

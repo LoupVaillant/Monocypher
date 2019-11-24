@@ -139,148 +139,143 @@ static void chacha20_rounds(u32 out[16], const u32 in[16])
     out[12] = t12;  out[13] = t13;  out[14] = t14;  out[15] = t15;
 }
 
-static void chacha20_init_key(crypto_chacha_ctx *ctx, const u8 key[32])
+void chacha20_init_key(u32 block[16], const u8 key[32])
 {
     // constant
-    ctx->input[0] = load32_le((const u8*)"expa");
-    ctx->input[1] = load32_le((const u8*)"nd 3");
-    ctx->input[2] = load32_le((const u8*)"2-by");
-    ctx->input[3] = load32_le((const u8*)"te k");
+    block[0] = load32_le((const u8*)"expa");
+    block[1] = load32_le((const u8*)"nd 3");
+    block[2] = load32_le((const u8*)"2-by");
+    block[3] = load32_le((const u8*)"te k");
     // key
     FOR (i, 0, 8) {
-        ctx->input[i+4] = load32_le(key + i*4);
+        block[i+4] = load32_le(key + i*4);
     }
 }
 
-static u8 chacha20_pool_byte(crypto_chacha_ctx *ctx)
+void chacha20_fill_pool(u8 pool[64], u32 input[16])
 {
-    u32 pool_word = ctx->pool[ctx->pool_idx >> 2];
-    u8  pool_byte = (u8)(pool_word >> (8*(ctx->pool_idx & 3)));
-    ctx->pool_idx++;
-    return pool_byte;
-}
-
-// Fill the pool if needed, update the counters
-static void chacha20_refill_pool(crypto_chacha_ctx *ctx)
-{
-    chacha20_rounds(ctx->pool, ctx->input);
+    u32 tmp[16];
+    chacha20_rounds(tmp, input);
     FOR (j, 0, 16) {
-        ctx->pool[j] += ctx->input[j];
+        tmp[j] += input[j];
     }
-    ctx->pool_idx = 0;
-    ctx->input[12]++;
-    if (ctx->input[12] == 0) {
-        ctx->input[13]++;
+    input[12]++;
+    if (input[12] == 0) {
+        input[13]++;
+    }
+    FOR (i, 0, 16) {
+        store32_le(pool + i*4, tmp[i]);
     }
 }
 
-void crypto_chacha20_H(u8 out[32], const u8 key[32], const u8 in[16])
+void crypto_hchacha20(u8 out[32], const u8 key[32], const u8 in [16])
 {
-    crypto_chacha_ctx ctx;
-    chacha20_init_key(&ctx, key);
+    u32 block[16];
+    chacha20_init_key(block, key);
+    // input
     FOR (i, 0, 4) {
-        ctx.input[i+12] = load32_le(in + i*4);
+        block[i+12] = load32_le(in + i*4);
     }
-    u32 buffer[16];
-    chacha20_rounds(buffer, ctx.input);
+    chacha20_rounds(block, block);
     // prevents reversal of the rounds by revealing only half of the buffer.
     FOR (i, 0, 4) {
-        store32_le(out      + i*4, buffer[i     ]); // constant
-        store32_le(out + 16 + i*4, buffer[i + 12]); // counter and nonce
+        store32_le(out      + i*4, block[i     ]); // constant
+        store32_le(out + 16 + i*4, block[i + 12]); // counter and nonce
     }
-    WIPE_CTX(&ctx);
-    WIPE_BUFFER(buffer);
+    WIPE_BUFFER(block);
 }
 
-static void chacha20_encrypt(crypto_chacha_ctx *ctx,
-                             u8                *cipher_text,
-                             const u8          *plain_text,
-                             size_t             text_size)
+void chacha20_core(u32 input[16], u8 *cipher_text, const u8 *plain_text,
+                   size_t text_size)
 {
-    FOR (i, 0, text_size) {
-        if (ctx->pool_idx == 64) {
-            chacha20_refill_pool(ctx);
-        }
-        u8 plain = 0;
+    u8 pool[64];
+    while (text_size >= 64) {
+        chacha20_fill_pool(pool, input);
+        // TODO: there must be cleaner, faster ways to do this.
         if (plain_text != 0) {
-            plain = *plain_text;
-            plain_text++;
+            FOR (i, 0, 64) {
+                cipher_text[i] = pool[i] ^ plain_text[i];
+            }
+            plain_text  += 64;
+        } else {
+            FOR (i, 0, 64) {
+                cipher_text[i] = pool[i];
+            }
         }
-        *cipher_text = chacha20_pool_byte(ctx) ^ plain;
-        cipher_text++;
+        cipher_text += 64;
+        text_size   -= 64;
     }
-}
-
-void crypto_chacha20_init(crypto_chacha_ctx *ctx,
-                          const u8           key[32],
-                          const u8           nonce[8])
-{
-    chacha20_init_key      (ctx, key);     // key
-    crypto_chacha20_set_ctr(ctx, 0  );     // counter
-    ctx->input[14] = load32_le(nonce + 0); // nonce
-    ctx->input[15] = load32_le(nonce + 4); // nonce
-}
-
-void crypto_chacha20_x_init(crypto_chacha_ctx *ctx,
-                            const u8           key[32],
-                            const u8           nonce[24])
-{
-    u8 derived_key[32];
-    crypto_chacha20_H(derived_key, key, nonce);
-    crypto_chacha20_init(ctx, derived_key, nonce + 16);
-    WIPE_BUFFER(derived_key);
-}
-
-void crypto_chacha20_set_ctr(crypto_chacha_ctx *ctx, u64 ctr)
-{
-    ctx->input[12] = ctr & 0xffffffff;
-    ctx->input[13] = ctr >> 32;
-    ctx->pool_idx  = 64;  // The random pool (re)starts empty
-}
-
-void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
-                             u8                *cipher_text,
-                             const u8          *plain_text,
-                             size_t             text_size)
-{
-    // Align ourselves with block boundaries
-    size_t align = MIN(ALIGN(ctx->pool_idx, 64), text_size);
-    chacha20_encrypt(ctx, cipher_text, plain_text, align);
-    if (plain_text != 0) {
-        plain_text += align;
-    }
-    cipher_text += align;
-    text_size   -= align;
-
-    // Process the message block by block
-    FOR (i, 0, text_size >> 6) {  // number of blocks
-        chacha20_refill_pool(ctx);
+    if (text_size > 0) {
+        chacha20_fill_pool(pool, input);
+        // TODO: there must be cleaner, faster ways to do this.
         if (plain_text != 0) {
-            FOR (j, 0, 16) {
-                u32 plain = load32_le(plain_text);
-                store32_le(cipher_text, ctx->pool[j] ^ plain);
-                plain_text  += 4;
-                cipher_text += 4;
+            FOR (i, 0, text_size) {
+                cipher_text[i] = pool[i] ^ plain_text[i];
             }
         } else {
-            FOR (j, 0, 16) {
-                store32_le(cipher_text, ctx->pool[j]);
-                cipher_text += 4;
+            FOR (i, 0, text_size) {
+                cipher_text[i] = pool[i];
             }
         }
-        ctx->pool_idx = 64;
     }
-    text_size &= 63;
-
-    // remaining bytes
-    chacha20_encrypt(ctx, cipher_text, plain_text, text_size);
+    WIPE_BUFFER(pool);
 }
 
-void crypto_chacha20_stream(crypto_chacha_ctx *ctx, u8 *stream, size_t size)
+void crypto_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
+                         size_t text_size, const u8 key[32], const u8 nonce[8],
+                         u64 ctr)
 {
-    crypto_chacha20_encrypt(ctx, stream, 0, size);
+    u32 input[16];
+    chacha20_init_key(input, key);
+    input[12] = (u32) ctr;
+    input[13] = (u32)(ctr >> 32);
+    input[14] = load32_le(nonce);
+    input[15] = load32_le(nonce + 4);
+    chacha20_core(input, cipher_text, plain_text, text_size);
+    WIPE_BUFFER(input);
 }
 
+void crypto_ietf_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
+                              size_t text_size,
+                              const u8 key[32], const u8 nonce[12], u32 ctr)
+{
+    u32 input[16];
+    chacha20_init_key(input, key);
+    input[12] = (u32) ctr;
+    input[13] = load32_le(nonce);
+    input[14] = load32_le(nonce + 4);
+    input[15] = load32_le(nonce + 8);
+    chacha20_core(input, cipher_text, plain_text, text_size);
+    WIPE_BUFFER(input);
+}
+
+void crypto_xchacha20_ctr(u8 *cipher_text, const u8 *plain_text,
+                          size_t text_size,
+                          const u8 key[32], const u8 nonce[24], u64 ctr)
+{
+    u8 sub_key[32];
+    crypto_hchacha20(sub_key, key, nonce);
+    crypto_chacha20_ctr(cipher_text, plain_text, text_size, key, nonce+16, ctr);
+}
+
+void crypto_chacha20(u8 *cipher_text, const u8 *plain_text, size_t text_size,
+                     const u8 key[32], const u8 nonce[8])
+{
+    crypto_chacha20_ctr(cipher_text, plain_text, text_size, key, nonce, 0);
+
+}
+void crypto_ietf_chacha20(u8 *cipher_text, const u8 *plain_text,
+                          size_t text_size,
+                          const u8 key[32], const u8 nonce[12])
+{
+    crypto_ietf_chacha20_ctr(cipher_text, plain_text, text_size, key, nonce, 0);
+}
+
+void crypto_xchacha20(u8 *cipher_text, const u8 *plain_text, size_t text_size,
+                      const u8 key[32], const u8 nonce[24])
+{
+    crypto_xchacha20_ctr(cipher_text, plain_text, text_size, key, nonce, 0);
+}
 
 /////////////////
 /// Poly 1305 ///
@@ -2061,81 +2056,28 @@ int crypto_key_exchange(u8       shared_key[32],
                         const u8 their_public_key[32])
 {
     int status = crypto_x25519(shared_key, your_secret_key, their_public_key);
-    crypto_chacha20_H(shared_key, shared_key, zero);
+    crypto_hchacha20(shared_key, shared_key, zero);
     return status;
 }
 
 ////////////////////////////////
 /// Authenticated encryption ///
 ////////////////////////////////
-static void lock_ad_padding(crypto_lock_ctx *ctx)
+static void lock_auth(u8 mac[16], const u8  auth_key[32],
+                      const u8 *ad         , size_t ad_size,
+                      const u8 *cipher_text, size_t text_size)
 {
-    if (ctx->ad_phase) {
-        ctx->ad_phase = 0;
-        crypto_poly1305_update(&ctx->poly, zero, ALIGN(ctx->ad_size, 16));
-    }
-}
-
-void crypto_lock_init(crypto_lock_ctx *ctx,
-                      const u8 key[32], const u8 nonce[24])
-{
-    u8 auth_key[64]; // "Wasting" the whole Chacha block is faster
-    ctx->ad_phase     = 1;
-    ctx->ad_size      = 0;
-    ctx->message_size = 0;
-    crypto_chacha20_x_init(&ctx->chacha, key, nonce);
-    crypto_chacha20_stream(&ctx->chacha, auth_key, 64);
-    crypto_poly1305_init  (&ctx->poly  , auth_key);
-    WIPE_BUFFER(auth_key);
-}
-
-void crypto_lock_auth_ad(crypto_lock_ctx *ctx, const u8 *msg, size_t msg_size)
-{
-    crypto_poly1305_update(&ctx->poly, msg, msg_size);
-    ctx->ad_size += msg_size;
-}
-
-void crypto_lock_auth_message(crypto_lock_ctx *ctx,
-                              const u8 *cipher_text, size_t text_size)
-{
-    lock_ad_padding(ctx);
-    ctx->message_size += text_size;
-    crypto_poly1305_update(&ctx->poly, cipher_text, text_size);
-}
-
-void crypto_lock_update(crypto_lock_ctx *ctx, u8 *cipher_text,
-                        const u8 *plain_text, size_t text_size)
-{
-    crypto_chacha20_encrypt(&ctx->chacha, cipher_text, plain_text, text_size);
-    crypto_lock_auth_message(ctx, cipher_text, text_size);
-}
-
-void crypto_lock_final(crypto_lock_ctx *ctx, u8 mac[16])
-{
-    lock_ad_padding(ctx);
     u8 sizes[16]; // Not secret, not wiped
-    store64_le(sizes + 0, ctx->ad_size);
-    store64_le(sizes + 8, ctx->message_size);
-    crypto_poly1305_update(&ctx->poly, zero, ALIGN(ctx->message_size, 16));
-    crypto_poly1305_update(&ctx->poly, sizes, 16);
-    crypto_poly1305_final (&ctx->poly, mac);
-    WIPE_CTX(ctx);
-}
-
-void crypto_unlock_update(crypto_lock_ctx *ctx, u8 *plain_text,
-                          const u8 *cipher_text, size_t text_size)
-{
-    crypto_unlock_auth_message(ctx, cipher_text, text_size);
-    crypto_chacha20_encrypt(&ctx->chacha, plain_text, cipher_text, text_size);
-}
-
-int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
-{
-    u8 real_mac[16];
-    crypto_lock_final(ctx, real_mac);
-    int mismatch = crypto_verify16(real_mac, mac);
-    WIPE_BUFFER(real_mac);
-    return mismatch;
+    store64_le(sizes + 0, ad_size);
+    store64_le(sizes + 8, text_size);
+    crypto_poly1305_ctx poly_ctx;           // auto wiped...
+    crypto_poly1305_init  (&poly_ctx, auth_key);
+    crypto_poly1305_update(&poly_ctx, ad         , ad_size);
+    crypto_poly1305_update(&poly_ctx, zero       , ALIGN(ad_size, 16));
+    crypto_poly1305_update(&poly_ctx, cipher_text, text_size);
+    crypto_poly1305_update(&poly_ctx, zero       , ALIGN(text_size, 16));
+    crypto_poly1305_update(&poly_ctx, sizes      , 16);
+    crypto_poly1305_final (&poly_ctx, mac); // ...here
 }
 
 void crypto_lock_aead(u8        mac[16],
@@ -2145,11 +2087,15 @@ void crypto_lock_aead(u8        mac[16],
                       const u8 *ad        , size_t ad_size,
                       const u8 *plain_text, size_t text_size)
 {
-    crypto_lock_ctx ctx;
-    crypto_lock_init   (&ctx, key, nonce);
-    crypto_lock_auth_ad(&ctx, ad, ad_size);
-    crypto_lock_update (&ctx, cipher_text, plain_text, text_size);
-    crypto_lock_final  (&ctx, mac);
+    u8 sub_key[32];
+    u8 auth_key[64]; // "Wasting" the whole Chacha block is faster
+    crypto_hchacha20(sub_key, key, nonce);
+    crypto_chacha20(auth_key, 0, 64, sub_key, nonce + 16);
+    crypto_chacha20_ctr(cipher_text, plain_text, text_size,
+                        sub_key, nonce + 16, 1);
+    lock_auth(mac, auth_key, ad, ad_size, cipher_text, text_size);
+    WIPE_BUFFER(sub_key);
+    WIPE_BUFFER(auth_key);
 }
 
 int crypto_unlock_aead(u8       *plain_text,
@@ -2159,17 +2105,20 @@ int crypto_unlock_aead(u8       *plain_text,
                        const u8 *ad         , size_t ad_size,
                        const u8 *cipher_text, size_t text_size)
 {
-    crypto_unlock_ctx ctx;
-    crypto_unlock_init        (&ctx, key, nonce);
-    crypto_unlock_auth_ad     (&ctx, ad, ad_size);
-    crypto_unlock_auth_message(&ctx, cipher_text, text_size);
-    crypto_chacha_ctx chacha_ctx = ctx.chacha; // avoid the wiping...
-    if (crypto_unlock_final(&ctx, mac)) {      // ...that occurs here
-        WIPE_CTX(&chacha_ctx);
-        return -1; // reject forgeries before wasting our time decrypting
+    u8 sub_key[32];
+    u8 auth_key[64]; // "Wasting" the whole Chacha block is faster
+    crypto_hchacha20(sub_key, key, nonce);
+    crypto_chacha20(auth_key, 0, 64, sub_key, nonce + 16);
+    u8 real_mac[16];
+    lock_auth(real_mac, auth_key, ad, ad_size, cipher_text, text_size);
+    WIPE_BUFFER(auth_key);
+    if (crypto_verify16(mac, real_mac)) {
+        WIPE_BUFFER(sub_key);
+        return -1;
     }
-    crypto_chacha20_encrypt(&chacha_ctx, plain_text, cipher_text, text_size);
-    WIPE_CTX(&chacha_ctx);
+    crypto_chacha20_ctr(plain_text, cipher_text, text_size,
+                        sub_key, nonce + 16, 1);
+    WIPE_BUFFER(sub_key);
     return 0;
 }
 

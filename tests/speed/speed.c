@@ -11,9 +11,7 @@ static u64 chacha20(void)
     RANDOM_INPUT(nonce,    8);
 
     TIMING_START {
-        crypto_chacha_ctx ctx;
-        crypto_chacha20_init(&ctx, key, nonce);
-        crypto_chacha20_encrypt(&ctx, out, in, SIZE);
+        crypto_chacha20(out, in, SIZE, key, nonce);
     }
     TIMING_END;
 }

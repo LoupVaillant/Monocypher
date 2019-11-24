@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "monocypher.h"
+#include "deprecated/chacha20.h"
+#include "deprecated/aead-incr.h"
 #include "sha512.h"
 #include "utils.h"
 #include "vectors.h"
@@ -21,10 +23,13 @@ static void chacha20(const vector in[], vector *out)
     const vector *nonce = in + 1;
     const vector *plain = in + 2;
     u64 ctr = load64_le(in[3].buf);
-    crypto_chacha_ctx ctx;
-    crypto_chacha20_init   (&ctx, key->buf, nonce->buf);
-    crypto_chacha20_set_ctr(&ctx, ctr);
-    crypto_chacha20_encrypt(&ctx, out->buf, plain->buf, plain->size);
+    crypto_chacha20_ctr(out->buf, plain->buf, plain->size,
+                        key->buf, nonce->buf, ctr);
+
+    /* crypto_chacha_ctx ctx; */
+    /* crypto_chacha20_init   (&ctx, key->buf, nonce->buf); */
+    /* crypto_chacha20_set_ctr(&ctx, ctr); */
+    /* crypto_chacha20_encrypt(&ctx, out->buf, plain->buf, plain->size); */
 }
 
 static void hchacha20(const vector in[], vector *out)
