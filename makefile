@@ -80,12 +80,13 @@ uninstall:
 
 check: test
 test           : test.out
+test-legacy    : test-legacy.out
 speed          : speed.out
 speed-sodium   : speed-sodium.out
 speed-tweetnacl: speed-tweetnacl.out
 speed-hydrogen : speed-hydrogen.out
 speed-c25519   : speed-c25519.out
-test speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519:
+test test-legacy speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519:
 	./$<
 
 # Monocypher libraries
@@ -107,12 +108,14 @@ lib/monocypher.o lib/sha512.o lib/chacha20.o lib/aead-incr.o:
 
 # Test & speed libraries
 TEST_COMMON = tests/utils.h src/monocypher.h src/optional/sha512.h
+TEST_LEGACY = $(TEST_COMMON) src/deprecated/chacha20.h src/deprecated/aead-incr.h
 SPEED       = tests/speed
 lib/utils.o          :tests/utils.c
-lib/test.o           :tests/test.c               $(TEST_COMMON) tests/vectors.h  src/deprecated/chacha20.h
+lib/test.o           :tests/test.c               $(TEST_COMMON) tests/vectors.h
+lib/test-legacy.o    :tests/test-legacy.c        $(TEST_LEGACY) tests/vectors.h
 lib/speed.o          :$(SPEED)/speed.c           $(TEST_COMMON) $(SPEED)/speed.h
 lib/speed-tweetnacl.o:$(SPEED)/speed-tweetnacl.c $(TEST_COMMON) $(SPEED)/speed.h
-lib/utils.o lib/test.o lib/speed.o lib/speed-tweetnacl.o:
+lib/utils.o lib/test.o lib/test-legacy.o lib/speed.o lib/speed-tweetnacl.o:
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS)                                        \
             -I src -I src/optional -I tests -I tests/externals \
@@ -156,9 +159,11 @@ lib/speed-c25519.o:$(SPEED)/speed-c25519.c \
 
 
 # test & speed executables
-test.out : lib/test.o  lib/utils.o lib/monocypher.o lib/sha512.o lib/chacha20.o lib/aead-incr.o
-speed.out: lib/speed.o lib/utils.o lib/monocypher.o lib/sha512.o
-test.out speed.out:
+TEST_OBJ=  lib/utils.o lib/monocypher.o
+test.out       : $(TEST_OBJ) lib/test.o lib/sha512.o
+test-legacy.out: $(TEST_OBJ) lib/test-legacy.o lib/chacha20.o lib/aead-incr.o
+speed.out      : $(TEST_OBJ) lib/sha512.o
+test.out test-legacy.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
 speed-sodium.out: lib/speed-sodium.o lib/utils.o
 	$(CC) $(CFLAGS) -o $@ $^            \

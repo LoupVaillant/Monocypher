@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "monocypher.h"
-#include "deprecated/chacha20.h"
-#include "deprecated/aead-incr.h"
 #include "sha512.h"
 #include "utils.h"
 #include "vectors.h"
@@ -25,18 +23,13 @@ static void chacha20(const vector in[], vector *out)
     u64 ctr = load64_le(in[3].buf);
     crypto_chacha20_ctr(out->buf, plain->buf, plain->size,
                         key->buf, nonce->buf, ctr);
-
-    /* crypto_chacha_ctx ctx; */
-    /* crypto_chacha20_init   (&ctx, key->buf, nonce->buf); */
-    /* crypto_chacha20_set_ctr(&ctx, ctr); */
-    /* crypto_chacha20_encrypt(&ctx, out->buf, plain->buf, plain->size); */
 }
 
 static void hchacha20(const vector in[], vector *out)
 {
     const vector *key   = in;
     const vector *nonce = in + 1;
-    crypto_chacha20_H(out->buf, key->buf, nonce->buf);
+    crypto_hchacha20(out->buf, key->buf, nonce->buf);
 }
 
 static void xchacha20(const vector in[], vector *out)
@@ -45,10 +38,8 @@ static void xchacha20(const vector in[], vector *out)
     const vector *nonce = in + 1;
     const vector *plain = in + 2;
     u64 ctr = load64_le(in[3].buf);
-    crypto_chacha_ctx ctx;
-    crypto_chacha20_x_init (&ctx, key->buf, nonce->buf);
-    crypto_chacha20_set_ctr(&ctx, ctr);
-    crypto_chacha20_encrypt(&ctx, out->buf, plain->buf, plain->size);
+    crypto_xchacha20_ctr(out->buf, plain->buf, plain->size,
+                         key->buf, nonce->buf, ctr);
 }
 
 static void poly1305(const vector in[], vector *out)
@@ -235,103 +226,23 @@ static int p_verify16(){ return p_verify(16, crypto_verify16); }
 static int p_verify32(){ return p_verify(32, crypto_verify32); }
 static int p_verify64(){ return p_verify(64, crypto_verify64); }
 
-
-// Tests that encrypting in chunks yields the same result than
-// encrypting all at once.
-static int p_chacha20()
-{
-#undef INPUT_SIZE
-#define INPUT_SIZE (CHACHA_BLOCK_SIZE * 4) // total input size
-    int status = 0;
-    FOR (i, 0, INPUT_SIZE) {
-        // outputs
-        u8 output_chunk[INPUT_SIZE];
-        u8 output_whole[INPUT_SIZE];
-        // inputs
-        RANDOM_INPUT(input, INPUT_SIZE);
-        RANDOM_INPUT(key  , 32);
-        RANDOM_INPUT(nonce, 8);
-
-        // Encrypt in chunks
-        crypto_chacha_ctx ctx;
-        crypto_chacha20_init(&ctx, key, nonce);
-        crypto_chacha20_encrypt(&ctx, output_chunk  , input  , i);
-        crypto_chacha20_encrypt(&ctx, output_chunk+i, input+i, INPUT_SIZE-i);
-        // Encrypt all at once
-        crypto_chacha20_init(&ctx, key, nonce);
-        crypto_chacha20_encrypt(&ctx, output_whole, input, INPUT_SIZE);
-        // Compare
-        status |= memcmp(output_chunk, output_whole, INPUT_SIZE);
-
-        // Stream in chunks
-        crypto_chacha20_init(&ctx, key, nonce);
-        crypto_chacha20_stream(&ctx, output_chunk    , i);
-        crypto_chacha20_stream(&ctx, output_chunk + i, INPUT_SIZE - i);
-        // Stream all at once
-        crypto_chacha20_init(&ctx, key, nonce);
-        crypto_chacha20_stream(&ctx, output_whole, INPUT_SIZE);
-        // Compare
-        status |= memcmp(output_chunk, output_whole, INPUT_SIZE);
-    }
-    printf("%s: Chacha20 (incremental)\n", status != 0 ? "FAILED" : "OK");
-    return status;
-}
-
 // Tests that output and input can be the same pointer
 static int p_chacha20_same_ptr()
 {
+#define INPUT_SIZE (CHACHA_BLOCK_SIZE * 4) // total input size
     int status = 0;
     u8  output[INPUT_SIZE];
     RANDOM_INPUT(input, INPUT_SIZE);
     RANDOM_INPUT(key  , 32);
     RANDOM_INPUT(nonce, 8);
-    crypto_chacha_ctx ctx;
-    crypto_chacha20_init   (&ctx, key, nonce);
-    crypto_chacha20_encrypt(&ctx, output, input, INPUT_SIZE);
-    crypto_chacha20_init   (&ctx, key, nonce);
-    crypto_chacha20_encrypt(&ctx, input, input, INPUT_SIZE);
+    crypto_chacha20(output, input, INPUT_SIZE, key, nonce);
+    crypto_chacha20(input , input, INPUT_SIZE, key, nonce);
     status |= memcmp(output, input, CHACHA_BLOCK_SIZE);
     printf("%s: Chacha20 (output == input)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
-static int p_chacha20_set_ctr()
-{
-#define STREAM_SIZE (CHACHA_BLOCK_SIZE * CHACHA_NB_BLOCKS)
-    int status = 0;
-    FOR (i, 0, CHACHA_NB_BLOCKS) {
-        u8 output_part[STREAM_SIZE    ];
-        u8 output_all [STREAM_SIZE    ];
-        u8 output_more[STREAM_SIZE * 2];
-        RANDOM_INPUT(key  , 32);
-        RANDOM_INPUT(nonce, 8);
-        size_t limit = i * CHACHA_BLOCK_SIZE;
-        // Encrypt all at once
-        crypto_chacha_ctx ctx;
-        crypto_chacha20_init(&ctx, key, nonce);
-        crypto_chacha20_stream(&ctx, output_all, STREAM_SIZE);
-        // Encrypt second part
-        crypto_chacha20_set_ctr(&ctx, i);
-        crypto_chacha20_stream(&ctx, output_part + limit, STREAM_SIZE - limit);
-        // Encrypt first part
-        crypto_chacha20_set_ctr(&ctx, 0);
-        crypto_chacha20_stream(&ctx, output_part, limit);
-        // Compare the results (must be the same)
-        status |= memcmp(output_part, output_all, STREAM_SIZE);
-
-        // Encrypt before the begining
-        crypto_chacha20_set_ctr(&ctx, -(u64)i);
-        crypto_chacha20_stream(&ctx,
-                               output_more + STREAM_SIZE - limit,
-                               STREAM_SIZE + limit);
-        // Compare the results (must be the same)
-        status |= memcmp(output_more + STREAM_SIZE, output_all, STREAM_SIZE);
-    }
-    printf("%s: Chacha20 (set counter)\n", status != 0 ? "FAILED" : "OK");
-    return status;
-}
-
-static int p_chacha20_H()
+static int p_hchacha20()
 {
     int status = 0;
     FOR (i, 0, 100) {
@@ -344,8 +255,8 @@ static int p_chacha20_H()
 
         // Run with and without overlap, then compare
         u8 out[32];
-        crypto_chacha20_H(out, key, in);
-        crypto_chacha20_H(buffer + out_idx, buffer + key_idx, buffer + in_idx);
+        crypto_hchacha20(out, key, in);
+        crypto_hchacha20(buffer + out_idx, buffer + key_idx, buffer + in_idx);
         status |= memcmp(out, buffer + out_idx, 32);
     }
     printf("%s: HChacha20 (overlap)\n", status != 0 ? "FAILED" : "OK");
@@ -687,102 +598,6 @@ static int p_aead()
     return status;
 }
 
-static int p_lock_incremental()
-{
-    int status = 0;
-    FOR (i, 0, 1000) {
-        RANDOM_INPUT(key  ,  32);
-        RANDOM_INPUT(nonce,  24);
-        RANDOM_INPUT(ad   , 128);
-        RANDOM_INPUT(plain, 256);
-        // total sizes
-        size_t ad_size    = rand64() % 128;
-        size_t text_size  = rand64() % 256;
-        // incremental sizes
-        size_t ad_size1   = ad_size   == 0 ? 0 : rand64() % ad_size;
-        size_t text_size1 = text_size == 0 ? 0 : rand64() % text_size;
-        size_t ad_size2   = ad_size   - ad_size1;
-        size_t text_size2 = text_size - text_size1;
-        // incremental buffers
-        u8 *ad1    = ad;    u8 *ad2    = ad + ad_size1;
-        u8 *plain1 = plain; u8 *plain2 = plain + text_size1;
-
-        u8 mac1[16], cipher1[256];
-        u8 mac2[16], cipher2[256];
-        crypto_lock_aead(mac1, cipher1, key, nonce,
-                         ad, ad_size, plain, text_size);
-        crypto_lock_ctx ctx;
-        crypto_lock_init   (&ctx, key, nonce);
-        crypto_lock_auth_ad(&ctx, ad1, ad_size1); // just to show ad also have
-        crypto_lock_auth_ad(&ctx, ad2, ad_size2); // an incremental interface
-        crypto_lock_update (&ctx, cipher2             , plain1, text_size1);
-        crypto_lock_update (&ctx, cipher2 + text_size1, plain2, text_size2);
-        crypto_lock_final  (&ctx, mac2);
-        status |= memcmp(mac1   , mac2   , 16       );
-        status |= memcmp(cipher1, cipher2, text_size);
-
-        // Now test the round trip.
-        u8 re_plain1[256];
-        u8 re_plain2[256];
-        status |= crypto_unlock_aead(re_plain1, key, nonce, mac1,
-                                     ad, ad_size, cipher1, text_size);
-        crypto_unlock_init   (&ctx, key, nonce);
-        crypto_unlock_auth_ad(&ctx, ad, ad_size);
-        crypto_unlock_update (&ctx, re_plain2, cipher2, text_size);
-        status |= crypto_unlock_final(&ctx, mac2);
-        status |= memcmp(mac1 , mac2     , 16       );
-        status |= memcmp(plain, re_plain1, text_size);
-        status |= memcmp(plain, re_plain2, text_size);
-
-        // Test authentication without decryption
-        crypto_unlock_init        (&ctx, key, nonce);
-        crypto_unlock_auth_ad     (&ctx, ad     , ad_size  );
-        crypto_unlock_auth_message(&ctx, cipher2, text_size);
-        status |= crypto_unlock_final(&ctx, mac2);
-        // The same, except we're supposed to reject forgeries
-        if (text_size > 0) {
-            cipher2[0]++; // forgery attempt
-            crypto_unlock_init        (&ctx, key, nonce);
-            crypto_unlock_auth_ad     (&ctx, ad     , ad_size  );
-            crypto_unlock_auth_message(&ctx, cipher2, text_size);
-            status |= !crypto_unlock_final(&ctx, mac2);
-        }
-    }
-    printf("%s: aead (incremental)\n", status != 0 ? "FAILED" : "OK");
-    return status;
-}
-
-// Only additionnal data
-static int p_auth()
-{
-    int status = 0;
-    FOR (i, 0, 128) {
-        RANDOM_INPUT(key   ,  32);
-        RANDOM_INPUT(nonce ,  24);
-        RANDOM_INPUT(ad    , 128);
-        u8 mac1[16];
-        u8 mac2[16];
-        // roundtrip
-        {
-            crypto_lock_ctx ctx;
-            crypto_lock_init   (&ctx, key, nonce);
-            crypto_lock_auth_ad(&ctx, ad, i);
-            crypto_lock_final  (&ctx, mac1);
-            crypto_lock_aead(mac2, 0, key, nonce, ad, i, 0, 0);
-            status |= memcmp(mac1, mac2, 16);
-        }
-        {
-            crypto_unlock_ctx ctx;
-            crypto_unlock_init   (&ctx, key, nonce);
-            crypto_unlock_auth_ad(&ctx, ad, i);
-            status |= crypto_unlock_final(&ctx, mac1);
-            status |= crypto_unlock_aead(0, key, nonce, mac1, ad, i, 0, 0);
-        }
-    }
-    printf("%s: aead (authentication)\n", status != 0 ? "FAILED" : "OK");
-    return status;
-}
-
 #define TEST(name, nb_inputs) vector_test(name, #name, nb_inputs, \
                                           nb_##name##_vectors,    \
                                           name##_vectors,         \
@@ -823,10 +638,8 @@ int main(int argc, char *argv[])
     status |= p_verify16();
     status |= p_verify32();
     status |= p_verify64();
-    status |= p_chacha20();
     status |= p_chacha20_same_ptr();
-    status |= p_chacha20_set_ctr();
-    status |= p_chacha20_H();
+    status |= p_hchacha20();
     status |= p_poly1305();
     status |= p_poly1305_overlap();
     status |= p_blake2b();
@@ -840,8 +653,6 @@ int main(int argc, char *argv[])
     status |= p_eddsa_overlap();
     status |= p_eddsa_incremental();
     status |= p_aead();
-    status |= p_lock_incremental();
-    status |= p_auth();
     printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
     return status;
 }
