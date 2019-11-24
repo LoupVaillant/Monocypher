@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include "monocypher.h"
 #include "sha512.h"
 #include "utils.h"
@@ -13,83 +12,9 @@
 #define BLAKE2B_BLOCK_SIZE  128
 #define SHA_512_BLOCK_SIZE  128
 
-/////////////////
-/// Utilities ///
-/////////////////
-
-static void* alloc(size_t size)
-{
-    if (size == 0) {
-        // Some systems refuse to allocate zero bytes.
-        // So we don't.  Instead, we just return a non-sensical pointer.
-        // It shouldn't be dereferenced anyway.
-        return NULL;
-    }
-    void *buf = malloc(size);
-    if (buf == NULL) {
-        fprintf(stderr, "Allocation failed: 0x%zx bytes\n", size);
-        exit(1);
-    }
-    return buf;
-}
-
-typedef struct {
-    u8     *buf;
-    size_t  size;
-} vector;
-
-int zerocmp(const u8 *p, size_t n)
-{
-    FOR (i, 0, n) {
-        if (p[i] != 0) { return -1; }
-    }
-    return 0;
-}
-
-static int test(void (*f)(const vector[], vector*),
-                const char *name, size_t nb_inputs,
-                size_t nb_vectors, u8 **vectors, size_t *sizes)
-{
-    int     status   = 0;
-    int     nb_tests = 0;
-    size_t  idx      = 0;
-    vector *in;
-    in = (vector*)alloc(nb_vectors * sizeof(vector));
-    while (idx < nb_vectors) {
-        size_t out_size = sizes[idx + nb_inputs];
-        vector out;
-        out.buf  = (u8*)alloc(out_size);
-        out.size = out_size;
-        FOR (i, 0, nb_inputs) {
-            in[i].buf  = vectors[idx+i];
-            in[i].size = sizes  [idx+i];
-        }
-        f(in, &out);
-        vector expected;
-        expected.buf  = vectors[idx+nb_inputs];
-        expected.size = sizes  [idx+nb_inputs];
-        status |= out.size - expected.size;
-        if (out.size != 0) {
-            status |= memcmp(out.buf, expected.buf, out.size);
-        }
-        free(out.buf);
-        idx += nb_inputs + 1;
-        nb_tests++;
-    }
-    free(in);
-    printf("%s %4d tests: %s\n",
-           status != 0 ? "FAILED" : "OK", nb_tests, name);
-    return status;
-}
-
-#define TEST(name, nb_inputs) test(name, #name, nb_inputs, \
-                                   nb_##name##_vectors,    \
-                                   name##_vectors,         \
-                                   name##_sizes)
-
-////////////////////////
-/// The tests proper ///
-////////////////////////
+////////////////////////////
+/// Tests aginst vectors ///
+////////////////////////////
 static void chacha20(const vector in[], vector *out)
 {
     const vector *key   = in;
@@ -271,7 +196,6 @@ static int test_x25519()
 //////////////////////////////
 /// Self consistency tests ///
 //////////////////////////////
-
 static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
 {
     int status = 0;
@@ -853,6 +777,11 @@ static int p_auth()
     printf("%s: aead (authentication)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
+
+#define TEST(name, nb_inputs) vector_test(name, #name, nb_inputs, \
+                                          nb_##name##_vectors,    \
+                                          name##_vectors,         \
+                                          name##_sizes)
 
 int main(int argc, char *argv[])
 {

@@ -106,6 +106,7 @@ lib/monocypher.o lib/sha512.o:
 # Test & speed libraries
 TEST_COMMON = tests/utils.h src/monocypher.h src/optional/sha512.h
 SPEED       = tests/speed
+lib/utils.o          :tests/utils.c
 lib/test.o           :tests/test.c               $(TEST_COMMON) tests/vectors.h
 lib/speed.o          :$(SPEED)/speed.c           $(TEST_COMMON) $(SPEED)/speed.h
 lib/speed-tweetnacl.o:$(SPEED)/speed-tweetnacl.c $(TEST_COMMON) $(SPEED)/speed.h
@@ -153,22 +154,22 @@ lib/speed-c25519.o:$(SPEED)/speed-c25519.c \
 
 
 # test & speed executables
-test.out : lib/test.o  lib/monocypher.o lib/sha512.o
-speed.out: lib/speed.o lib/monocypher.o lib/sha512.o
+test.out : lib/test.o  lib/utils.o lib/monocypher.o lib/sha512.o
+speed.out: lib/speed.o lib/utils.o lib/monocypher.o lib/sha512.o
 test.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
-speed-sodium.out: lib/speed-sodium.o
+speed-sodium.out: lib/speed-sodium.o lib/utils.o
 	$(CC) $(CFLAGS) -o $@ $^            \
             `pkg-config --cflags libsodium` \
             `pkg-config --libs   libsodium`
-speed-hydrogen.out: lib/speed-hydrogen.o
+speed-hydrogen.out: lib/speed-hydrogen.o lib/utils.o
 	$(CC) $(CFLAGS) -o $@ $^              \
             `pkg-config --cflags libhydrogen` \
             `pkg-config --libs   libhydrogen`
 lib/tweetnacl.o: tests/externals/tweetnacl.c tests/externals/tweetnacl.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-speed-tweetnacl.out: lib/speed-tweetnacl.o lib/tweetnacl.o
-speed-c25519.out   : lib/speed-c25519.o    $(C25519_OBJECTS)
+speed-tweetnacl.out: lib/speed-tweetnacl.o lib/tweetnacl.o lib/utils.o
+speed-c25519.out   : lib/speed-c25519.o $(C25519_OBJECTS) lib/utils.o
 speed-tweetnacl.out speed-c25519.out:
 	$(CC) $(CFLAGS) -o $@ $^
 

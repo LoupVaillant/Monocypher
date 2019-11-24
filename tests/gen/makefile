@@ -21,6 +21,9 @@ clean:
 %.vec: %.out
 	./$< > $@
 
+utils.o: ../utils.c ../utils.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
 %.o: %.c ../utils.h ../externals/ed25519-donna/ed25519.h
 	$(CC) $(CFLAGS) -c $<              \
             -I ..                          \
@@ -29,7 +32,7 @@ clean:
             -I ../../src/optional          \
             $$(pkg-config --cflags libsodium)
 
-%.out: %.o ed25519.o
+%.out: %.o ed25519.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^ \
             $$(pkg-config --libs libsodium)
 
