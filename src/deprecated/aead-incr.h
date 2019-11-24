@@ -38,14 +38,18 @@
 #include <stddef.h>
 #include <inttypes.h>
 #include "monocypher.h"
-#include "deprecated/chacha20.h"
 
 typedef struct {
-    crypto_chacha_ctx   chacha;
     crypto_poly1305_ctx poly;
     uint64_t            ad_size;
     uint64_t            message_size;
     int                 ad_phase;
+    // Chacha20 context
+    uint8_t  key[32];
+    uint8_t  nonce[8];
+    uint64_t ctr;
+    uint8_t  pool[64];
+    size_t   pool_idx;
 } crypto_lock_ctx;
 #define crypto_unlock_ctx crypto_lock_ctx
 

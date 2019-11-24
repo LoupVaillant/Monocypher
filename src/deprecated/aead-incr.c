@@ -63,6 +63,48 @@ static void store64_le(u8 out[8], u64 in)
     out[7] = (in >> 56) & 0xff;
 }
 
+////////////////////////////////////
+/// Incremental API for Chacha20 ///
+////////////////////////////////////
+static void chacha20_x_init(crypto_lock_ctx *ctx,
+                            const u8 key[32], const u8 nonce[24])
+{
+    crypto_hchacha20(ctx->key, key, nonce);
+    FOR (i, 0,  8) { ctx->nonce[i] = nonce[i + 16]; }
+    ctx->ctr = 0;
+    ctx->pool_idx = 64; // The random pool starts empty
+}
+
+static void chacha20_encrypt(crypto_lock_ctx *ctx, u8 *cipher_text,
+                             const u8 *plain_text, size_t text_size)
+{
+    FOR (i, 0, text_size) {
+        if (ctx->pool_idx == 64) {
+            crypto_chacha20_ctr(ctx->pool, 0, 64,
+                                ctx->key, ctx-> nonce, ctx->ctr);
+            ctx->pool_idx = 0;
+            ctx->ctr++;
+        }
+        u8 plain = 0;
+        if (plain_text != 0) {
+            plain = *plain_text;
+            plain_text++;
+        }
+        *cipher_text = ctx->pool[ctx->pool_idx] ^ plain;
+        ctx->pool_idx++;
+        cipher_text++;
+    }
+}
+
+static void chacha20_stream(crypto_lock_ctx *ctx, u8 *stream, size_t size)
+{
+    chacha20_encrypt(ctx, stream, 0, size);
+}
+
+
+////////////////////////////////
+/// Incremental API for AEAD ///
+////////////////////////////////
 static void lock_ad_padding(crypto_lock_ctx *ctx)
 {
     if (ctx->ad_phase) {
@@ -78,8 +120,8 @@ void crypto_lock_init(crypto_lock_ctx *ctx,
     ctx->ad_phase     = 1;
     ctx->ad_size      = 0;
     ctx->message_size = 0;
-    crypto_chacha20_x_init(&ctx->chacha, key, nonce);
-    crypto_chacha20_stream(&ctx->chacha, auth_key, 64);
+    chacha20_x_init(ctx, key, nonce);
+    chacha20_stream(ctx, auth_key, 64);
     crypto_poly1305_init  (&ctx->poly  , auth_key);
     WIPE_BUFFER(auth_key);
 }
@@ -101,7 +143,7 @@ void crypto_lock_auth_message(crypto_lock_ctx *ctx,
 void crypto_lock_update(crypto_lock_ctx *ctx, u8 *cipher_text,
                         const u8 *plain_text, size_t text_size)
 {
-    crypto_chacha20_encrypt(&ctx->chacha, cipher_text, plain_text, text_size);
+    chacha20_encrypt(ctx, cipher_text, plain_text, text_size);
     crypto_lock_auth_message(ctx, cipher_text, text_size);
 }
 
@@ -121,7 +163,7 @@ void crypto_unlock_update(crypto_lock_ctx *ctx, u8 *plain_text,
                           const u8 *cipher_text, size_t text_size)
 {
     crypto_unlock_auth_message(ctx, cipher_text, text_size);
-    crypto_chacha20_encrypt(&ctx->chacha, plain_text, cipher_text, text_size);
+    chacha20_encrypt(ctx, plain_text, cipher_text, text_size);
 }
 
 int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
