@@ -139,7 +139,7 @@ static void chacha20_rounds(u32 out[16], const u32 in[16])
     out[12] = t12;  out[13] = t13;  out[14] = t14;  out[15] = t15;
 }
 
-void chacha20_init_key(u32 block[16], const u8 key[32])
+static void chacha20_init_key(u32 block[16], const u8 key[32])
 {
     // constant
     block[0] = load32_le((const u8*)"expa");
@@ -152,7 +152,7 @@ void chacha20_init_key(u32 block[16], const u8 key[32])
     }
 }
 
-void chacha20_fill_pool(u8 pool[64], u32 input[16])
+static void chacha20_fill_pool(u8 pool[64], u32 input[16])
 {
     u32 tmp[16];
     chacha20_rounds(tmp, input);
@@ -168,25 +168,8 @@ void chacha20_fill_pool(u8 pool[64], u32 input[16])
     }
 }
 
-void crypto_hchacha20(u8 out[32], const u8 key[32], const u8 in [16])
-{
-    u32 block[16];
-    chacha20_init_key(block, key);
-    // input
-    FOR (i, 0, 4) {
-        block[i+12] = load32_le(in + i*4);
-    }
-    chacha20_rounds(block, block);
-    // prevents reversal of the rounds by revealing only half of the buffer.
-    FOR (i, 0, 4) {
-        store32_le(out      + i*4, block[i     ]); // constant
-        store32_le(out + 16 + i*4, block[i + 12]); // counter and nonce
-    }
-    WIPE_BUFFER(block);
-}
-
-void chacha20_core(u32 input[16], u8 *cipher_text, const u8 *plain_text,
-                   size_t text_size)
+static void chacha20_core(u32 input[16], u8 *cipher_text, const u8 *plain_text,
+                          size_t text_size)
 {
     u8 pool[64];
     while (text_size >= 64) {
@@ -219,6 +202,23 @@ void chacha20_core(u32 input[16], u8 *cipher_text, const u8 *plain_text,
         }
     }
     WIPE_BUFFER(pool);
+}
+
+void crypto_hchacha20(u8 out[32], const u8 key[32], const u8 in [16])
+{
+    u32 block[16];
+    chacha20_init_key(block, key);
+    // input
+    FOR (i, 0, 4) {
+        block[i+12] = load32_le(in + i*4);
+    }
+    chacha20_rounds(block, block);
+    // prevents reversal of the rounds by revealing only half of the buffer.
+    FOR (i, 0, 4) {
+        store32_le(out      + i*4, block[i     ]); // constant
+        store32_le(out + 16 + i*4, block[i + 12]); // counter and nonce
+    }
+    WIPE_BUFFER(block);
 }
 
 void crypto_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
