@@ -257,7 +257,7 @@ static int p_chacha20_same_ptr()
     RANDOM_INPUT(nonce, 8);
     crypto_chacha20(output, input, INPUT_SIZE, key, nonce);
     crypto_chacha20(input , input, INPUT_SIZE, key, nonce);
-    status |= memcmp(output, input, CHACHA_BLOCK_SIZE);
+    status |= memcmp(output, input, INPUT_SIZE);
     printf("%s: Chacha20 (output == input)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
