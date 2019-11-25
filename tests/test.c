@@ -226,9 +226,29 @@ static int p_verify16(){ return p_verify(16, crypto_verify16); }
 static int p_verify32(){ return p_verify(32, crypto_verify32); }
 static int p_verify64(){ return p_verify(64, crypto_verify64); }
 
+// Tests that Chacha20(nullptr) == Chacha20(all-zeroes)
+static int p_chacha20_stream()
+{
+    int status = 0;
+#define INPUT_SIZE (CHACHA_BLOCK_SIZE * 2 + 1)
+    FOR (i, 0, INPUT_SIZE) {
+        u8 output_normal[INPUT_SIZE];
+        u8 output_stream[INPUT_SIZE];
+        u8 zeroes       [INPUT_SIZE] = {0};
+        RANDOM_INPUT(key  , 32);
+        RANDOM_INPUT(nonce, 8);
+        crypto_chacha20(output_normal, zeroes, i, key, nonce);
+        crypto_chacha20(output_stream, 0     , i, key, nonce);
+        status |= memcmp(output_normal, output_stream, i);
+    }
+    printf("%s: Chacha20 (nullptr == zeroes)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 // Tests that output and input can be the same pointer
 static int p_chacha20_same_ptr()
 {
+#undef INPUT_SIZE
 #define INPUT_SIZE (CHACHA_BLOCK_SIZE * 4) // total input size
     int status = 0;
     u8  output[INPUT_SIZE];
@@ -638,6 +658,7 @@ int main(int argc, char *argv[])
     status |= p_verify16();
     status |= p_verify32();
     status |= p_verify64();
+    status |= p_chacha20_stream();
     status |= p_chacha20_same_ptr();
     status |= p_hchacha20();
     status |= p_poly1305();
