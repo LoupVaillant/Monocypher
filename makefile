@@ -4,7 +4,7 @@ DESTDIR=
 PREFIX=usr/local
 PKGCONFIG=$(DESTDIR)/$(PREFIX)/lib/pkgconfig
 MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
-SONAME=libmonocypher.so.2
+SONAME=libmonocypher.so.3
 
 VERSION=__git__
 
