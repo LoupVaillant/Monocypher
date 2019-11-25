@@ -160,9 +160,9 @@ lib/speed-c25519.o:$(SPEED)/speed-c25519.c \
 
 # test & speed executables
 TEST_OBJ=  lib/utils.o lib/monocypher.o
-test.out       : $(TEST_OBJ) lib/test.o lib/sha512.o
-test-legacy.out: $(TEST_OBJ) lib/test-legacy.o lib/chacha20.o lib/aead-incr.o
-speed.out      : $(TEST_OBJ) lib/sha512.o
+test.out       : lib/test.o        $(TEST_OBJ) lib/sha512.o
+test-legacy.out: lib/test-legacy.o $(TEST_OBJ) lib/chacha20.o lib/aead-incr.o
+speed.out      : lib/speed.o       $(TEST_OBJ) lib/sha512.o
 test.out test-legacy.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
 speed-sodium.out: lib/speed-sodium.o lib/utils.o
