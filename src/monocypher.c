@@ -152,54 +152,49 @@ static void chacha20_init_key(u32 block[16], const u8 key[32])
     }
 }
 
-static void chacha20_fill_pool(u8 pool[64], u32 input[16])
-{
-    u32 tmp[16];
-    chacha20_rounds(tmp, input);
-    FOR (j, 0, 16) {
-        tmp[j] += input[j];
-    }
-    input[12]++;
-    if (input[12] == 0) {
-        input[13]++;
-    }
-    FOR (i, 0, 16) {
-        store32_le(pool + i*4, tmp[i]);
-    }
-}
-
 static void chacha20_core(u32 input[16], u8 *cipher_text, const u8 *plain_text,
                           size_t text_size)
 {
-    u8 pool[64];
-    while (text_size >= 64) {
-        chacha20_fill_pool(pool, input);
-        // TODO: there must be cleaner, faster ways to do this.
+    // Whole blocks
+    u32    pool[16];
+    size_t nb_blocks = text_size >> 6;
+    FOR (i, 0, nb_blocks) {
+        chacha20_rounds(pool, input);
         if (plain_text != 0) {
-            FOR (i, 0, 64) {
-                cipher_text[i] = pool[i] ^ plain_text[i];
+            FOR (j, 0, 16) {
+                u32 p = pool[j] + input[j];
+                store32_le(cipher_text, p ^ load32_le(plain_text));
+                cipher_text += 4;
+                plain_text  += 4;
             }
-            plain_text  += 64;
         } else {
-            FOR (i, 0, 64) {
-                cipher_text[i] = pool[i];
+            FOR (j, 0, 16) {
+                u32 p = pool[j] + input[j];
+                store32_le(cipher_text, p);
+                cipher_text += 4;
             }
         }
-        cipher_text += 64;
-        text_size   -= 64;
+        input[12]++;
+        if (input[12] == 0) {
+            input[13]++;
+        }
     }
+    text_size &= 63;
+
+    // Last (incomplete) block
     if (text_size > 0) {
-        chacha20_fill_pool(pool, input);
-        // TODO: there must be cleaner, faster ways to do this.
-        if (plain_text != 0) {
-            FOR (i, 0, text_size) {
-                cipher_text[i] = pool[i] ^ plain_text[i];
-            }
-        } else {
-            FOR (i, 0, text_size) {
-                cipher_text[i] = pool[i];
-            }
+        if (plain_text == 0) {
+            plain_text = zero;
         }
+        chacha20_rounds(pool, input);
+        u8 tmp[64];
+        FOR (i, 0, 16) {
+            store32_le(tmp + i*4, pool[i] + input[i]);
+        }
+        FOR (i, 0, text_size) {
+            cipher_text[i] = tmp[i] ^ plain_text[i];
+        }
+        WIPE_BUFFER(tmp);
     }
     WIPE_BUFFER(pool);
 }
