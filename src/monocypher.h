@@ -3,8 +3,8 @@
 #ifndef MONOCYPHER_H
 #define MONOCYPHER_H
 
-#include <inttypes.h>
 #include <stddef.h>
+#include <stdint.h>
 
 ////////////////////////
 /// Type definitions ///
