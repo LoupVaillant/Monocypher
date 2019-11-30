@@ -1,6 +1,6 @@
 #include "speed.h"
 #include "monocypher.h"
-#include "sha512.h"
+#include "ed25519.h"
 #include "utils.h"
 
 static u64 chacha20(void)
