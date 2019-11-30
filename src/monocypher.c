@@ -5,22 +5,6 @@
 /////////////////
 /// Utilities ///
 /////////////////
-
-// By default, EdDSA signatures use Blake2b.  SHA-512 is provided as an
-// option for full ed25519 compatibility. To use with SHA-512, compile
-// with option -DED25519_SHA512 and include "sha512.h".
-#ifdef ED25519_SHA512
-    #define HASH crypto_sha512
-#else
-    #define HASH crypto_blake2b
-#endif
-#define COMBINE1(x, y) x ## y
-#define COMBINE2(x, y) COMBINE1(x, y)
-#define HASH_CTX    COMBINE2(HASH, _ctx)
-#define HASH_INIT   COMBINE2(HASH, _init)
-#define HASH_UPDATE COMBINE2(HASH, _update)
-#define HASH_FINAL  COMBINE2(HASH, _final)
-
 #define FOR_T(type, i, start, end) for (type i = (start); i < (end); i++)
 #define FOR(i, start, end)         FOR_T(size_t, i, start, end)
 #define WIPE_CTX(ctx)              crypto_wipe(ctx   , sizeof(*(ctx)))
@@ -644,6 +628,14 @@ void crypto_blake2b(u8 hash[64], const u8 *message, size_t message_size)
     crypto_blake2b_general(hash, 64, 0, 0, message, message_size);
 }
 
+const crypto_hash_vtable crypto_blake2b_vtable = {
+    (void (*)(u8*, const u8*, size_t)  )crypto_blake2b,
+    (void (*)(void*)                   )crypto_blake2b_init,
+    (void (*)(void*, const u8*, size_t))crypto_blake2b_update,
+    (void (*)(void*, u8*)              )crypto_blake2b_final,
+    offsetof(crypto_sign_blake2b_ctx, hash),
+    sizeof  (crypto_sign_blake2b_ctx),
+};
 
 ////////////////
 /// Argon2 i ///
@@ -1902,10 +1894,12 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
     WIPE_BUFFER(s_scalar);
 }
 
-void crypto_sign_public_key(u8 public_key[32], const u8 secret_key[32])
+void crypto_sign_public_key_custom_hash(u8       public_key[32],
+                                        const u8 secret_key[32],
+                                        const crypto_hash_vtable *hash)
 {
     u8 a[64];
-    HASH(a, secret_key, 32);
+    hash->hash(a, secret_key, 32);
     trim_scalar(a);
     ge A;
     ge_scalarmult_base(&A, a);
@@ -1914,17 +1908,25 @@ void crypto_sign_public_key(u8 public_key[32], const u8 secret_key[32])
     WIPE_CTX(&A);
 }
 
-void crypto_sign_init_first_pass(crypto_sign_ctx *ctx,
-                                 const u8 secret_key[32],
-                                 const u8 public_key[32])
+void crypto_sign_public_key(u8 public_key[32], const u8 secret_key[32])
 {
+    crypto_sign_public_key_custom_hash(public_key, secret_key,
+                                       &crypto_blake2b_vtable);
+}
+
+void crypto_sign_init_first_pass_custom_hash(crypto_sign_ctx_abstract *ctx,
+                                             const u8 secret_key[32],
+                                             const u8 public_key[32],
+                                             const crypto_hash_vtable *hash)
+{
+    ctx->hash  = hash; // set vtable
     u8 *a      = ctx->buf;
     u8 *prefix = ctx->buf + 32;
-    HASH(a, secret_key, 32);
+    ctx->hash->hash(a, secret_key, 32);
     trim_scalar(a);
 
     if (public_key == 0) {
-        crypto_sign_public_key(ctx->pk, secret_key);
+        crypto_sign_public_key_custom_hash(ctx->pk, secret_key, ctx->hash);
     } else {
         FOR (i, 0, 32) {
             ctx->pk[i] = public_key[i];
@@ -1935,20 +1937,29 @@ void crypto_sign_init_first_pass(crypto_sign_ctx *ctx,
     // An actual random number would work just fine, and would save us
     // the trouble of hashing the message twice.  If we did that
     // however, the user could fuck it up and reuse the nonce.
-    HASH_INIT  (&ctx->hash);
-    HASH_UPDATE(&ctx->hash, prefix , 32);
+    ctx->hash->init  ((char*)ctx + ctx->hash->offset);
+    ctx->hash->update((char*)ctx + ctx->hash->offset, prefix , 32);
 }
 
-void crypto_sign_update(crypto_sign_ctx *ctx, const u8 *msg, size_t msg_size)
+void crypto_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
+                                 const u8 secret_key[32],
+                                 const u8 public_key[32])
 {
-    HASH_UPDATE(&ctx->hash, msg, msg_size);
+    crypto_sign_init_first_pass_custom_hash(ctx, secret_key, public_key,
+                                            &crypto_blake2b_vtable);
 }
 
-void crypto_sign_init_second_pass(crypto_sign_ctx *ctx)
+void crypto_sign_update(crypto_sign_ctx_abstract *ctx,
+                        const u8 *msg, size_t msg_size)
+{
+    ctx->hash->update((char*)ctx + ctx->hash->offset, msg, msg_size);
+}
+
+void crypto_sign_init_second_pass(crypto_sign_ctx_abstract *ctx)
 {
     u8 *r        = ctx->buf + 32;
     u8 *half_sig = ctx->buf + 64;
-    HASH_FINAL(&ctx->hash, r);
+    ctx->hash->final((char*)ctx + ctx->hash->offset, r);
     reduce(r);
 
     // first half of the signature = "random" nonce times the base point
@@ -1959,25 +1970,25 @@ void crypto_sign_init_second_pass(crypto_sign_ctx *ctx)
 
     // Hash R, the public key, and the message together.
     // It cannot be done in parallel with the first hash.
-    HASH_INIT  (&ctx->hash);
-    HASH_UPDATE(&ctx->hash, half_sig, 32);
-    HASH_UPDATE(&ctx->hash, ctx->pk , 32);
+    ctx->hash->init  ((char*)ctx + ctx->hash->offset);
+    ctx->hash->update((char*)ctx + ctx->hash->offset, half_sig, 32);
+    ctx->hash->update((char*)ctx + ctx->hash->offset, ctx->pk , 32);
 }
 
-void crypto_sign_final(crypto_sign_ctx *ctx, u8 signature[64])
+void crypto_sign_final(crypto_sign_ctx_abstract *ctx, u8 signature[64])
 {
     u8 *a        = ctx->buf;
     u8 *r        = ctx->buf + 32;
     u8 *half_sig = ctx->buf + 64;
     u8 h_ram[64];
-    HASH_FINAL(&ctx->hash, h_ram);
+    ctx->hash->final((char*)ctx + ctx->hash->offset, h_ram);
     reduce(h_ram);
     FOR (i, 0, 32) {
         signature[i] = half_sig[i];
     }
     mul_add(signature + 32, h_ram, a, r); // s = h_ram * a + r
-    WIPE_CTX(ctx);
     WIPE_BUFFER(h_ram);
+    crypto_wipe(ctx, ctx->hash->ctx_size);
 }
 
 void crypto_sign(u8        signature[64],
@@ -1985,37 +1996,49 @@ void crypto_sign(u8        signature[64],
                  const u8  public_key[32],
                  const u8 *message, size_t message_size)
 {
-    crypto_sign_ctx ctx;
-    crypto_sign_init_first_pass (&ctx, secret_key, public_key);
-    crypto_sign_update          (&ctx, message, message_size);
-    crypto_sign_init_second_pass(&ctx);
-    crypto_sign_update          (&ctx, message, message_size);
-    crypto_sign_final           (&ctx, signature);
+    crypto_sign_blake2b_ctx   ctx;
+    crypto_sign_ctx_abstract *ctx_ptr = (void*)&ctx;
+    crypto_sign_init_first_pass (ctx_ptr, secret_key, public_key);
+    crypto_sign_update          (ctx_ptr, message, message_size);
+    crypto_sign_init_second_pass(ctx_ptr);
+    crypto_sign_update          (ctx_ptr, message, message_size);
+    crypto_sign_final           (ctx_ptr, signature);
 }
 
-void crypto_check_init(crypto_check_ctx *ctx,
-                      const u8 signature[64],
-                      const u8 public_key[32])
+void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
+                                   const u8 signature[64],
+                                   const u8 public_key[32],
+                                   const crypto_hash_vtable  *hash)
 {
-    FOR (i, 0, 64) { ctx->sig[i] = signature [i]; }
+    ctx->hash = hash; // set vtable
+    FOR (i, 0, 64) { ctx->buf[i] = signature [i]; }
     FOR (i, 0, 32) { ctx->pk [i] = public_key[i]; }
-    HASH_INIT  (&ctx->hash);
-    HASH_UPDATE(&ctx->hash, signature , 32);
-    HASH_UPDATE(&ctx->hash, public_key, 32);
+    ctx->hash->init  ((char*)ctx + ctx->hash->offset);
+    ctx->hash->update((char*)ctx + ctx->hash->offset, signature , 32);
+    ctx->hash->update((char*)ctx + ctx->hash->offset, public_key, 32);
 }
 
-void crypto_check_update(crypto_check_ctx *ctx, const u8 *msg, size_t msg_size)
+void crypto_check_init(crypto_check_ctx_abstract *ctx,
+                       const u8 signature[64],
+                       const u8 public_key[32])
 {
-    HASH_UPDATE(&ctx->hash, msg , msg_size);
+    crypto_check_init_custom_hash(ctx, signature, public_key,
+                                  &crypto_blake2b_vtable);
 }
 
-int crypto_check_final(crypto_check_ctx *ctx)
+void crypto_check_update(crypto_check_ctx_abstract *ctx,
+                         const u8 *msg, size_t msg_size)
+{
+    ctx->hash->update((char*)ctx + ctx->hash->offset, msg, msg_size);
+}
+
+int crypto_check_final(crypto_check_ctx_abstract *ctx)
 {
     ge  A;
     u8 *h_ram   = ctx->pk; // save stack space
     u8 *R_check = ctx->pk; // save stack space
-    u8 *R       = ctx->sig;                      // R
-    u8 *s       = ctx->sig + 32;                 // s
+    u8 *R       = ctx->buf;                      // R
+    u8 *s       = ctx->buf + 32;                 // s
     ge *diff    = &A;                            // -A is overwritten...
     if (ge_frombytes_neg_vartime(&A, ctx->pk) ||
         is_above_L(s)) { // prevent s malleability
@@ -2023,7 +2046,7 @@ int crypto_check_final(crypto_check_ctx *ctx)
     }
     {
         u8 tmp[64];
-        HASH_FINAL(&ctx->hash, tmp);
+        ctx->hash->final((char*)ctx + ctx->hash->offset, tmp);
         reduce(tmp);
         FOR (i, 0, 32) { // the extra copy saves 32 bytes of stack
             h_ram[i] = tmp[i];
@@ -2039,10 +2062,11 @@ int crypto_check(const u8  signature[64],
                  const u8  public_key[32],
                  const u8 *message, size_t message_size)
 {
-    crypto_check_ctx ctx;
-    crypto_check_init(&ctx, signature, public_key);
-    crypto_check_update(&ctx, message, message_size);
-    return crypto_check_final(&ctx);
+    crypto_check_blake2b_ctx   ctx;
+    crypto_check_ctx_abstract *ctx_ptr = (void*)&ctx;
+    crypto_check_init(ctx_ptr, signature, public_key);
+    crypto_check_update(ctx_ptr, message, message_size);
+    return crypto_check_final(ctx_ptr);
 }
 
 ////////////////////

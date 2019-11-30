@@ -32,22 +32,27 @@ typedef struct {
 } crypto_blake2b_ctx;
 
 // Signatures (EdDSA)
-#ifdef ED25519_SHA512
-    #include "sha512.h"
-    typedef crypto_sha512_ctx crypto_hash_ctx;
-#else
-    typedef crypto_blake2b_ctx crypto_hash_ctx;
-#endif
 typedef struct {
-    crypto_hash_ctx hash;
+    void (*hash)(uint8_t hash[64], const uint8_t *message, size_t message_size);
+    void (*init  )(void *ctx);
+    void (*update)(void *ctx, const uint8_t *message, size_t message_size);
+    void (*final )(void *ctx, uint8_t *hash);
+    ptrdiff_t offset;
+    size_t    ctx_size;
+} crypto_hash_vtable;
+
+typedef struct {
+    const crypto_hash_vtable *hash;
     uint8_t buf[96];
     uint8_t pk [32];
-} crypto_sign_ctx;
+} crypto_sign_ctx_abstract;
+typedef crypto_sign_ctx_abstract crypto_check_ctx_abstract;
+
 typedef struct {
-    crypto_hash_ctx hash;
-    uint8_t sig[64];
-    uint8_t pk [32];
-} crypto_check_ctx;
+    crypto_sign_ctx_abstract ctx;
+    crypto_blake2b_ctx       hash;
+} crypto_sign_blake2b_ctx;
+typedef crypto_sign_blake2b_ctx crypto_check_blake2b_ctx;
 
 ////////////////////////////
 /// High level interface ///
@@ -118,6 +123,9 @@ void crypto_blake2b_final (crypto_blake2b_ctx *ctx, uint8_t *hash);
 void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
                                  const uint8_t      *key, size_t key_size);
 
+// vtable for signatures
+extern const crypto_hash_vtable crypto_blake2b_vtable;
+
 
 // Password key derivation (Argon2 i)
 // ----------------------------------
@@ -161,23 +169,35 @@ int crypto_check(const uint8_t  signature [64],
                  const uint8_t *message, size_t message_size);
 
 // Incremental interface for signatures (2 passes)
-void crypto_sign_init_first_pass(crypto_sign_ctx *ctx,
+void crypto_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
                                  const uint8_t  secret_key[32],
                                  const uint8_t  public_key[32]);
-void crypto_sign_update(crypto_sign_ctx *ctx,
+void crypto_sign_update(crypto_sign_ctx_abstract *ctx,
                         const uint8_t *message, size_t message_size);
-void crypto_sign_init_second_pass(crypto_sign_ctx *ctx);
+void crypto_sign_init_second_pass(crypto_sign_ctx_abstract *ctx);
 // use crypto_sign_update() again.
-void crypto_sign_final(crypto_sign_ctx *ctx, uint8_t signature[64]);
+void crypto_sign_final(crypto_sign_ctx_abstract *ctx, uint8_t signature[64]);
 
 // Incremental interface for verification (1 pass)
-void crypto_check_init  (crypto_check_ctx *ctx,
+void crypto_check_init  (crypto_check_ctx_abstract *ctx,
                          const uint8_t signature[64],
                          const uint8_t public_key[32]);
-void crypto_check_update(crypto_check_ctx *ctx,
+void crypto_check_update(crypto_check_ctx_abstract *ctx,
                          const uint8_t *message, size_t message_size);
-int crypto_check_final  (crypto_check_ctx *ctx);
+int crypto_check_final  (crypto_check_ctx_abstract *ctx);
 
+// Custom hash interface
+void crypto_sign_public_key_custom_hash(uint8_t       public_key[32],
+                                        const uint8_t secret_key[32],
+                                        const crypto_hash_vtable *hash);
+void crypto_sign_init_first_pass_custom_hash(crypto_sign_ctx_abstract *ctx,
+                                             const uint8_t secret_key[32],
+                                             const uint8_t public_key[32],
+                                             const crypto_hash_vtable *hash);
+void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
+                                   const uint8_t signature[64],
+                                   const uint8_t public_key[32],
+                                   const crypto_hash_vtable *hash);
 
 ////////////////////////////
 /// Low level primitives ///

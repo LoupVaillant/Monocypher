@@ -8,10 +8,8 @@ SONAME=libmonocypher.so.3
 
 VERSION=__git__
 
-ifeq ($(findstring -DED25519_SHA512, $(CFLAGS)),)
-LINK_SHA512=
-else
-LINK_SHA512=lib/sha512.o
+ifdef LINK_ED25519
+LINK_ED25519=lib/ed25519.o
 endif
 
 .PHONY: all library static-library dynamic-library                     \
@@ -90,24 +88,24 @@ test test-legacy speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519:
 	./$<
 
 # Monocypher libraries
-lib/libmonocypher.a: lib/monocypher.o $(LINK_SHA512)
+lib/libmonocypher.a: lib/monocypher.o $(LINK_ED25519)
 	ar cr $@ $^
 lib/libmonocypher.so: lib/$(SONAME)
 	@mkdir -p $(@D)
 	ln -sf `basename $<` $@
-lib/$(SONAME): lib/monocypher.o $(LINK_SHA512)
+lib/$(SONAME): lib/monocypher.o $(LINK_ED25519)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $^
-lib/sha512.o    : src/optional/sha512.c      src/optional/sha512.h
+lib/ed25519.o   : src/optional/ed25519.c     src/optional/ed25519.h
 lib/chacha20.o  : src/deprecated/chacha20.c  src/deprecated/chacha20.h
 lib/aead-incr.o : src/deprecated/aead-incr.c src/deprecated/aead-incr.h
 lib/monocypher.o: src/monocypher.c src/monocypher.h
-lib/monocypher.o lib/sha512.o lib/chacha20.o lib/aead-incr.o:
+lib/monocypher.o lib/ed25519.o lib/chacha20.o lib/aead-incr.o:
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ $<
 
 # Test & speed libraries
-TEST_COMMON = tests/utils.h src/monocypher.h src/optional/sha512.h
+TEST_COMMON = tests/utils.h src/monocypher.h src/optional/ed25519.h
 TEST_LEGACY = $(TEST_COMMON) src/deprecated/chacha20.h src/deprecated/aead-incr.h
 SPEED       = tests/speed
 lib/utils.o          :tests/utils.c
@@ -160,9 +158,9 @@ lib/speed-c25519.o:$(SPEED)/speed-c25519.c \
 
 # test & speed executables
 TEST_OBJ=  lib/utils.o lib/monocypher.o
-test.out       : lib/test.o        $(TEST_OBJ) lib/sha512.o
+test.out       : lib/test.o        $(TEST_OBJ) lib/ed25519.o
 test-legacy.out: lib/test-legacy.o $(TEST_OBJ) lib/chacha20.o lib/aead-incr.o
-speed.out      : lib/speed.o       $(TEST_OBJ) lib/sha512.o
+speed.out      : lib/speed.o       $(TEST_OBJ) lib/ed25519.o
 test.out test-legacy.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
 speed-sodium.out: lib/speed-sodium.o lib/utils.o

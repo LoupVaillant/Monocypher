@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "monocypher.h"
-#include "sha512.h"
+#include "ed25519.h"
 #include "utils.h"
 #include "vectors.h"
 
@@ -137,17 +137,33 @@ static void edDSA_pk(const vector in[], vector *out)
     crypto_sign_public_key(out->buf, in->buf);
 }
 
-#ifdef ED25519_SHA512
-static void (*ed_25519)(const vector[], vector*) = edDSA;
+static void ed_25519(const vector in[], vector *out)
+{
+    const vector *secret_k = in;
+    const vector *public_k = in + 1;
+    const vector *msg      = in + 2;
+    u8            out2[64];
+
+    // Sign with cached public key, then by reconstructing the key
+    crypto_ed25519_sign(out->buf, secret_k->buf, public_k->buf,
+                        msg->buf, msg->size);
+    crypto_ed25519_sign(out2    , secret_k->buf, 0,
+                        msg->buf, msg->size);
+    // Compare signatures (must be the same)
+    if (memcmp(out->buf, out2, out->size)) {
+        printf("FAILURE: reconstructing public key"
+               " yields different signature\n");
+    }
+}
 
 static void ed_25519_check(const vector in[], vector *out)
 {
     const vector *public_k = in;
     const vector *msg      = in + 1;
     const vector *sig      = in + 2;
-    out->buf[0] = crypto_check(sig->buf, public_k->buf, msg->buf, msg->size);
+    out->buf[0] = crypto_ed25519_check(sig->buf, public_k->buf,
+                                       msg->buf, msg->size);
 }
-#endif
 
 static void iterate_x25519(u8 k[32], u8 u[32])
 {
@@ -559,23 +575,25 @@ static int p_eddsa_incremental()
         u8 sig_mono[64];  crypto_sign(sig_mono, sk, pk, message, MESSAGE_SIZE);
         u8 sig_incr[64];
         {
-            crypto_sign_ctx ctx;
-            crypto_sign_init_first_pass (&ctx, sk, pk);
-            crypto_sign_update          (&ctx, message    , i);
-            crypto_sign_update          (&ctx, message + i, MESSAGE_SIZE - i);
-            crypto_sign_init_second_pass(&ctx);
-            crypto_sign_update          (&ctx, message    , i);
-            crypto_sign_update          (&ctx, message + i, MESSAGE_SIZE - i);
-            crypto_sign_final           (&ctx, sig_incr);
+            crypto_sign_blake2b_ctx   ctx;
+            crypto_sign_ctx_abstract *ctx_ptr = (void*)&ctx;
+            crypto_sign_init_first_pass (ctx_ptr, sk, pk);
+            crypto_sign_update          (ctx_ptr, message    , i);
+            crypto_sign_update          (ctx_ptr, message + i, MESSAGE_SIZE - i);
+            crypto_sign_init_second_pass(ctx_ptr);
+            crypto_sign_update          (ctx_ptr, message    , i);
+            crypto_sign_update          (ctx_ptr, message + i, MESSAGE_SIZE - i);
+            crypto_sign_final           (ctx_ptr, sig_incr);
         }
         status |= memcmp(sig_mono, sig_incr, 64);
         status |= crypto_check(sig_mono, pk, message, MESSAGE_SIZE);
         {
-            crypto_check_ctx ctx;
-            crypto_check_init  (&ctx, sig_incr, pk);
-            crypto_check_update(&ctx, message    , i);
-            crypto_check_update(&ctx, message + i, MESSAGE_SIZE - i);
-            status |= crypto_check_final(&ctx);
+            crypto_check_blake2b_ctx  ctx;
+            crypto_check_ctx_abstract*ctx_ptr=(void*)&ctx;
+            crypto_check_init  (ctx_ptr, sig_incr, pk);
+            crypto_check_update(ctx_ptr, message    , i);
+            crypto_check_update(ctx_ptr, message + i, MESSAGE_SIZE - i);
+            status |= crypto_check_final(ctx_ptr);
         }
     }
     printf("%s: EdDSA (incremental)\n", status != 0 ? "FAILED" : "OK");
@@ -644,13 +662,10 @@ int main(int argc, char *argv[])
     status |= TEST(x25519        , 2);
     status |= TEST(x25519_pk     , 1);
     status |= TEST(key_exchange  , 2);
-#ifdef ED25519_SHA512
-    status |= TEST(ed_25519      , 3);
-    status |= TEST(ed_25519_check, 3);
-#else
     status |= TEST(edDSA         , 3);
     status |= TEST(edDSA_pk      , 1);
-#endif
+    status |= TEST(ed_25519      , 3);
+    status |= TEST(ed_25519_check, 3);
     status |= test_x25519();
 
     printf("\nProperty based tests");

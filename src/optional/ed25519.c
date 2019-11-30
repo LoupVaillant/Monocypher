@@ -1,7 +1,10 @@
 // Monocypher version __git__
 
-#include "sha512.h"
+#include "ed25519.h"
 
+/////////////////
+/// Utilities ///
+/////////////////
 #define FOR(i, min, max)     for (size_t i = min; i < max; i++)
 #define WIPE_CTX(ctx)        crypto_wipe(ctx   , sizeof(*(ctx)))
 #define MIN(a, b)            ((a) <= (b) ? (a) : (b))
@@ -33,14 +36,9 @@ static void store64_be(u8 out[8], u64 in)
     out[7] =  in        & 0xff;
 }
 
-static void crypto_wipe(void *secret, size_t size)
-{
-    volatile u8 *v_secret = (u8*)secret;
-    FOR (i, 0, size) {
-        v_secret[i] = 0;
-    }
-}
-
+///////////////
+/// SHA 512 ///
+///////////////
 static u64 rot(u64 x, int c       ) { return (x >> c) | (x << (64 - c));   }
 static u64 ch (u64 x, u64 y, u64 z) { return (x & y) ^ (~x & z);           }
 static u64 maj(u64 x, u64 y, u64 z) { return (x & y) ^ ( x & z) ^ (y & z); }
@@ -206,3 +204,66 @@ void crypto_sha512(u8 *hash, const u8 *message, size_t message_size)
     crypto_sha512_update(&ctx, message, message_size);
     crypto_sha512_final (&ctx, hash);
 }
+
+const crypto_hash_vtable crypto_sha512_vtable = {
+    (void (*)(u8*, const u8*, size_t)  )crypto_sha512,
+    (void (*)(void*)                   )crypto_sha512_init,
+    (void (*)(void*, const u8*, size_t))crypto_sha512_update,
+    (void (*)(void*, u8*)              )crypto_sha512_final,
+    offsetof(crypto_sign_sha512_ctx, hash),
+    sizeof  (crypto_sign_sha512_ctx),
+};
+
+///////////////
+/// Ed25519 ///
+///////////////
+
+void crypto_ed25519_public_key(u8       public_key[32],
+                               const u8 secret_key[32])
+{
+    crypto_sign_public_key_custom_hash(public_key, secret_key,
+                                       &crypto_sha512_vtable);
+}
+
+void crypto_ed25519_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
+                                         const u8 secret_key[32],
+                                         const u8 public_key[32])
+{
+    crypto_sign_init_first_pass_custom_hash(ctx, secret_key, public_key,
+                                            &crypto_sha512_vtable);
+}
+
+void crypto_ed25519_check_init(crypto_check_ctx_abstract *ctx,
+                               const u8 signature[64],
+                               const u8 public_key[32])
+{
+    crypto_check_init_custom_hash(ctx, signature, public_key,
+                                  &crypto_sha512_vtable);
+}
+
+void crypto_ed25519_sign(u8        signature [64],
+                         const u8  secret_key[32],
+                         const u8  public_key[32],
+                         const u8 *message, size_t message_size)
+{
+    crypto_sign_sha512_ctx    ctx;
+    crypto_sign_ctx_abstract *ctx_ptr = (void*)&ctx;
+    crypto_ed25519_sign_init_first_pass(ctx_ptr, secret_key, public_key);
+    crypto_sign_update                 (ctx_ptr, message, message_size);
+    crypto_sign_init_second_pass       (ctx_ptr);
+    crypto_sign_update                 (ctx_ptr, message, message_size);
+    crypto_sign_final                  (ctx_ptr, signature);
+
+}
+
+int crypto_ed25519_check(const u8  signature [64],
+                         const u8  public_key[32],
+                         const u8 *message, size_t message_size)
+{
+    crypto_check_sha512_ctx    ctx;
+    crypto_check_ctx_abstract *ctx_ptr = (void*)&ctx;
+    crypto_ed25519_check_init(ctx_ptr, signature, public_key);
+    crypto_check_update(ctx_ptr, message, message_size);
+    return crypto_check_final(ctx_ptr);
+}
+
