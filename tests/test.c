@@ -20,9 +20,13 @@ static void chacha20(const vector in[], vector *out)
     const vector *key   = in;
     const vector *nonce = in + 1;
     const vector *plain = in + 2;
-    u64 ctr = load64_le(in[3].buf);
-    crypto_chacha20_ctr(out->buf, plain->buf, plain->size,
-                        key->buf, nonce->buf, ctr);
+    u64 ctr       = load64_le(in[3].buf);
+    u64 new_ctr   = crypto_chacha20_ctr(out->buf, plain->buf, plain->size,
+                                        key->buf, nonce->buf, ctr);
+    u64 nb_blocks = plain->size / 64 + (plain->size % 64 != 0);
+    if (new_ctr - ctr != nb_blocks) {
+        printf("FAILURE: Chacha20 returned counter not correct: ");
+    }
 }
 
 static void hchacha20(const vector in[], vector *out)
@@ -37,9 +41,13 @@ static void xchacha20(const vector in[], vector *out)
     const vector *key   = in;
     const vector *nonce = in + 1;
     const vector *plain = in + 2;
-    u64 ctr = load64_le(in[3].buf);
-    crypto_xchacha20_ctr(out->buf, plain->buf, plain->size,
-                         key->buf, nonce->buf, ctr);
+    u64 ctr       = load64_le(in[3].buf);
+    u64 new_ctr   = crypto_xchacha20_ctr(out->buf, plain->buf, plain->size,
+                                         key->buf, nonce->buf, ctr);
+    u64 nb_blocks = plain->size / 64 + (plain->size % 64 != 0);
+    if (new_ctr - ctr != nb_blocks) {
+        printf("FAILURE: Chacha20 returned counter not correct: ");
+    }
 }
 
 static void poly1305(const vector in[], vector *out)

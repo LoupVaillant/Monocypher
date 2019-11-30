@@ -136,8 +136,8 @@ static void chacha20_init_key(u32 block[16], const u8 key[32])
     }
 }
 
-static void chacha20_core(u32 input[16], u8 *cipher_text, const u8 *plain_text,
-                          size_t text_size)
+static u64 chacha20_core(u32 input[16], u8 *cipher_text, const u8 *plain_text,
+                         size_t text_size)
 {
     // Whole blocks
     u32    pool[16];
@@ -181,6 +181,7 @@ static void chacha20_core(u32 input[16], u8 *cipher_text, const u8 *plain_text,
         WIPE_BUFFER(tmp);
     }
     WIPE_BUFFER(pool);
+    return input[12] + ((u64)input[13] << 32) + (text_size > 0);
 }
 
 void crypto_hchacha20(u8 out[32], const u8 key[32], const u8 in [16])
@@ -200,9 +201,9 @@ void crypto_hchacha20(u8 out[32], const u8 key[32], const u8 in [16])
     WIPE_BUFFER(block);
 }
 
-void crypto_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
-                         size_t text_size, const u8 key[32], const u8 nonce[8],
-                         u64 ctr)
+u64 crypto_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
+                        size_t text_size, const u8 key[32], const u8 nonce[8],
+                        u64 ctr)
 {
     u32 input[16];
     chacha20_init_key(input, key);
@@ -210,13 +211,14 @@ void crypto_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
     input[13] = (u32)(ctr >> 32);
     input[14] = load32_le(nonce);
     input[15] = load32_le(nonce + 4);
-    chacha20_core(input, cipher_text, plain_text, text_size);
+    ctr = chacha20_core(input, cipher_text, plain_text, text_size);
     WIPE_BUFFER(input);
+    return ctr;
 }
 
-void crypto_ietf_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
-                              size_t text_size,
-                              const u8 key[32], const u8 nonce[12], u32 ctr)
+u32 crypto_ietf_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
+                             size_t text_size,
+                             const u8 key[32], const u8 nonce[12], u32 ctr)
 {
     u32 input[16];
     chacha20_init_key(input, key);
@@ -224,19 +226,21 @@ void crypto_ietf_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
     input[13] = load32_le(nonce);
     input[14] = load32_le(nonce + 4);
     input[15] = load32_le(nonce + 8);
-    chacha20_core(input, cipher_text, plain_text, text_size);
+    ctr = chacha20_core(input, cipher_text, plain_text, text_size);
     WIPE_BUFFER(input);
+    return ctr;
 }
 
-void crypto_xchacha20_ctr(u8 *cipher_text, const u8 *plain_text,
-                          size_t text_size,
-                          const u8 key[32], const u8 nonce[24], u64 ctr)
+u64 crypto_xchacha20_ctr(u8 *cipher_text, const u8 *plain_text,
+                         size_t text_size,
+                         const u8 key[32], const u8 nonce[24], u64 ctr)
 {
     u8 sub_key[32];
     crypto_hchacha20(sub_key, key, nonce);
-    crypto_chacha20_ctr(cipher_text, plain_text, text_size,
-                        sub_key, nonce+16, ctr);
+    ctr = crypto_chacha20_ctr(cipher_text, plain_text, text_size,
+                              sub_key, nonce+16, ctr);
     WIPE_BUFFER(sub_key);
+    return ctr;
 }
 
 void crypto_chacha20(u8 *cipher_text, const u8 *plain_text, size_t text_size,

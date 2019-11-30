@@ -228,24 +228,24 @@ void crypto_ietf_chacha20(uint8_t       *cipher_text,
                           size_t         text_size,
                           const uint8_t  key[32],
                           const uint8_t  nonce[12]);
-void crypto_chacha20_ctr(uint8_t       *cipher_text,
-                         const uint8_t *plain_text,
-                         size_t         text_size,
-                         const uint8_t  key[32],
-                         const uint8_t  nonce[8],
-                         uint64_t       ctr);
-void crypto_xchacha20_ctr(uint8_t       *cipher_text,
-                          const uint8_t *plain_text,
-                          size_t         text_size,
-                          const uint8_t  key[32],
-                          const uint8_t  nonce[24],
-                          uint64_t       ctr);
-void crypto_ietf_chacha20_ctr(uint8_t       *cipher_text,
+uint64_t crypto_chacha20_ctr(uint8_t       *cipher_text,
+                             const uint8_t *plain_text,
+                             size_t         text_size,
+                             const uint8_t  key[32],
+                             const uint8_t  nonce[8],
+                             uint64_t       ctr);
+uint64_t crypto_xchacha20_ctr(uint8_t       *cipher_text,
                               const uint8_t *plain_text,
                               size_t         text_size,
                               const uint8_t  key[32],
-                              const uint8_t  nonce[12],
-                              uint32_t       ctr);
+                              const uint8_t  nonce[24],
+                              uint64_t       ctr);
+uint32_t crypto_ietf_chacha20_ctr(uint8_t       *cipher_text,
+                                  const uint8_t *plain_text,
+                                  size_t         text_size,
+                                  const uint8_t  key[32],
+                                  const uint8_t  nonce[12],
+                                  uint32_t       ctr);
 
 
 // Poly 1305
