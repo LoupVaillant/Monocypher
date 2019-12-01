@@ -53,13 +53,20 @@ int crypto_ed25519_check(const uint8_t  signature [64],
                          const uint8_t  public_key[32],
                          const uint8_t *message, size_t message_size);
 
-// Init functions for the incremental interface
+// Incremental interface
 void crypto_ed25519_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
                                          const uint8_t secret_key[32],
                                          const uint8_t public_key[32]);
+#define crypto_ed25519_sign_update crypto_sign_update
+#define crypto_ed25519_sign_init_second_pass crypto_sign_init_second_pass
+// use crypto_ed25519_sign_update() again.
+#define crypto_ed25519_sign_final crypto_sign_final
+
 void crypto_ed25519_check_init(crypto_check_ctx_abstract *ctx,
                                const uint8_t signature[64],
                                const uint8_t public_key[32]);
+#define crypto_ed25519_check_update crypto_check_update
+#define crypto_ed25519_check_final crypto_check_final
 
 
 #endif // ED25519_H
