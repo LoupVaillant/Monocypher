@@ -86,9 +86,7 @@ static u64 x25519(void)
     u8 out[32] = {9};
 
     TIMING_START {
-        if (crypto_x25519(out, out, in)) {
-            printf("Monocypher x25519 rejected public key\n");
-        }
+        crypto_x25519(out, out, in);
     }
     TIMING_END;
 }
