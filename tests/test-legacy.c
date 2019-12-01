@@ -4,7 +4,6 @@
 #include "monocypher.h"
 #include "deprecated/chacha20.h"
 #include "deprecated/aead-incr.h"
-#include "sha512.h"
 #include "utils.h"
 #include "vectors.h"
 
