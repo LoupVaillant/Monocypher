@@ -577,31 +577,29 @@ static int p_eddsa_incremental()
 {
     int status = 0;
     FOR (i, 0, MESSAGE_SIZE) {
-        RANDOM_INPUT(message, MESSAGE_SIZE);
+        RANDOM_INPUT(msg, MESSAGE_SIZE);
         RANDOM_INPUT(sk, 32);
         u8 pk      [32];  crypto_sign_public_key(pk, sk);
-        u8 sig_mono[64];  crypto_sign(sig_mono, sk, pk, message, MESSAGE_SIZE);
+        u8 sig_mono[64];  crypto_sign(sig_mono, sk, pk, msg, MESSAGE_SIZE);
         u8 sig_incr[64];
         {
-            crypto_sign_blake2b_ctx   ctx;
-            crypto_sign_ctx_abstract *ctx_ptr = (void*)&ctx;
-            crypto_sign_init_first_pass (ctx_ptr, sk, pk);
-            crypto_sign_update          (ctx_ptr, message    , i);
-            crypto_sign_update          (ctx_ptr, message + i, MESSAGE_SIZE - i);
-            crypto_sign_init_second_pass(ctx_ptr);
-            crypto_sign_update          (ctx_ptr, message    , i);
-            crypto_sign_update          (ctx_ptr, message + i, MESSAGE_SIZE - i);
-            crypto_sign_final           (ctx_ptr, sig_incr);
+            crypto_sign_blake2b_ctx ctx;
+            crypto_sign_init_first_pass ((void*)&ctx, sk, pk);
+            crypto_sign_update          ((void*)&ctx, msg  , i);
+            crypto_sign_update          ((void*)&ctx, msg+i, MESSAGE_SIZE-i);
+            crypto_sign_init_second_pass((void*)&ctx);
+            crypto_sign_update          ((void*)&ctx, msg  , i);
+            crypto_sign_update          ((void*)&ctx, msg+i, MESSAGE_SIZE-i);
+            crypto_sign_final           ((void*)&ctx, sig_incr);
         }
         status |= memcmp(sig_mono, sig_incr, 64);
-        status |= crypto_check(sig_mono, pk, message, MESSAGE_SIZE);
+        status |= crypto_check(sig_mono, pk, msg, MESSAGE_SIZE);
         {
-            crypto_check_blake2b_ctx  ctx;
-            crypto_check_ctx_abstract*ctx_ptr=(void*)&ctx;
-            crypto_check_init  (ctx_ptr, sig_incr, pk);
-            crypto_check_update(ctx_ptr, message    , i);
-            crypto_check_update(ctx_ptr, message + i, MESSAGE_SIZE - i);
-            status |= crypto_check_final(ctx_ptr);
+            crypto_check_blake2b_ctx ctx;
+            crypto_check_init  ((void*)&ctx, sig_incr, pk);
+            crypto_check_update((void*)&ctx, msg  , i);
+            crypto_check_update((void*)&ctx, msg+i, MESSAGE_SIZE-i);
+            status |= crypto_check_final((void*)&ctx);
         }
     }
     printf("%s: EdDSA (incremental)\n", status != 0 ? "FAILED" : "OK");

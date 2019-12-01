@@ -2014,13 +2014,12 @@ void crypto_sign(u8        signature[64],
                  const u8  public_key[32],
                  const u8 *message, size_t message_size)
 {
-    crypto_sign_blake2b_ctx   ctx;
-    crypto_sign_ctx_abstract *ctx_ptr = (void*)&ctx;
-    crypto_sign_init_first_pass (ctx_ptr, secret_key, public_key);
-    crypto_sign_update          (ctx_ptr, message, message_size);
-    crypto_sign_init_second_pass(ctx_ptr);
-    crypto_sign_update          (ctx_ptr, message, message_size);
-    crypto_sign_final           (ctx_ptr, signature);
+    crypto_sign_blake2b_ctx ctx;
+    crypto_sign_init_first_pass ((void*)&ctx, secret_key, public_key);
+    crypto_sign_update          ((void*)&ctx, message, message_size);
+    crypto_sign_init_second_pass((void*)&ctx);
+    crypto_sign_update          ((void*)&ctx, message, message_size);
+    crypto_sign_final           ((void*)&ctx, signature);
 }
 
 void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
@@ -2081,10 +2080,9 @@ int crypto_check(const u8  signature[64],
                  const u8 *message, size_t message_size)
 {
     crypto_check_blake2b_ctx   ctx;
-    crypto_check_ctx_abstract *ctx_ptr = (void*)&ctx;
-    crypto_check_init(ctx_ptr, signature, public_key);
-    crypto_check_update(ctx_ptr, message, message_size);
-    return crypto_check_final(ctx_ptr);
+    crypto_check_init((void*)&ctx, signature, public_key);
+    crypto_check_update((void*)&ctx, message, message_size);
+    return crypto_check_final((void*)&ctx);
 }
 
 ////////////////////
