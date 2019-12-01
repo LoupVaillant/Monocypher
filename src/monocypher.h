@@ -19,7 +19,7 @@ typedef struct {
     void (*update)(void *ctx, const uint8_t *message, size_t message_size);
     void (*final )(void *ctx, uint8_t *hash);
     size_t ctx_size;
-} crypto_hash_vtable;
+} crypto_sign_vtable;
 
 // Do not rely on the size or contents of any of the types below,
 // they may change without notice.
@@ -44,7 +44,7 @@ typedef struct {
 
 // Signatures (EdDSA)
 typedef struct {
-    const crypto_hash_vtable *hash;
+    const crypto_sign_vtable *hash;
     uint8_t buf[96];
     uint8_t pk [32];
 } crypto_sign_ctx_abstract;
@@ -126,7 +126,7 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
                                  const uint8_t      *key, size_t key_size);
 
 // vtable for signatures
-extern const crypto_hash_vtable crypto_blake2b_vtable;
+extern const crypto_sign_vtable crypto_blake2b_vtable;
 
 
 // Password key derivation (Argon2 i)
@@ -191,15 +191,15 @@ int crypto_check_final  (crypto_check_ctx_abstract *ctx);
 // Custom hash interface
 void crypto_sign_public_key_custom_hash(uint8_t       public_key[32],
                                         const uint8_t secret_key[32],
-                                        const crypto_hash_vtable *hash);
+                                        const crypto_sign_vtable *hash);
 void crypto_sign_init_first_pass_custom_hash(crypto_sign_ctx_abstract *ctx,
                                              const uint8_t secret_key[32],
                                              const uint8_t public_key[32],
-                                             const crypto_hash_vtable *hash);
+                                             const crypto_sign_vtable *hash);
 void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
                                    const uint8_t signature[64],
                                    const uint8_t public_key[32],
-                                   const crypto_hash_vtable *hash);
+                                   const crypto_sign_vtable *hash);
 
 ////////////////////////////
 /// Low level primitives ///

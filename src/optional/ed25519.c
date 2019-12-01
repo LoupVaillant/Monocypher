@@ -220,7 +220,7 @@ static void sha512_vtable_final(void *ctx, u8 *h)
     crypto_sha512_final(&((crypto_sign_sha512_ctx*)ctx)->hash, h);
 }
 
-const crypto_hash_vtable crypto_sha512_vtable = {
+const crypto_sign_vtable crypto_sha512_vtable = {
     crypto_sha512,
     sha512_vtable_init,
     sha512_vtable_update,

@@ -34,7 +34,7 @@ void crypto_sha512_final (crypto_sha512_ctx *ctx, uint8_t hash[64]);
 void crypto_sha512(uint8_t *out,const uint8_t *message, size_t message_size);
 
 // vtable for signatures
-extern const crypto_hash_vtable crypto_sha512_vtable;
+extern const crypto_sign_vtable crypto_sha512_vtable;
 
 
 // Ed25519

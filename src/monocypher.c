@@ -647,7 +647,7 @@ static void blake2b_vtable_final(void *ctx, u8 *h)
     crypto_blake2b_final(&((crypto_sign_ctx*)ctx)->hash, h);
 }
 
-const crypto_hash_vtable crypto_blake2b_vtable = {
+const crypto_sign_vtable crypto_blake2b_vtable = {
     crypto_blake2b,
     blake2b_vtable_init,
     blake2b_vtable_update,
@@ -1914,7 +1914,7 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 
 void crypto_sign_public_key_custom_hash(u8       public_key[32],
                                         const u8 secret_key[32],
-                                        const crypto_hash_vtable *hash)
+                                        const crypto_sign_vtable *hash)
 {
     u8 a[64];
     hash->hash(a, secret_key, 32);
@@ -1935,7 +1935,7 @@ void crypto_sign_public_key(u8 public_key[32], const u8 secret_key[32])
 void crypto_sign_init_first_pass_custom_hash(crypto_sign_ctx_abstract *ctx,
                                              const u8 secret_key[32],
                                              const u8 public_key[32],
-                                             const crypto_hash_vtable *hash)
+                                             const crypto_sign_vtable *hash)
 {
     ctx->hash  = hash; // set vtable
     u8 *a      = ctx->buf;
@@ -2025,7 +2025,7 @@ void crypto_sign(u8        signature[64],
 void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
                                    const u8 signature[64],
                                    const u8 public_key[32],
-                                   const crypto_hash_vtable  *hash)
+                                   const crypto_sign_vtable *hash)
 {
     ctx->hash = hash; // set vtable
     FOR (i, 0, 64) { ctx->buf[i] = signature [i]; }
