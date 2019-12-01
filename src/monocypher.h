@@ -37,8 +37,7 @@ typedef struct {
     void (*init  )(void *ctx);
     void (*update)(void *ctx, const uint8_t *message, size_t message_size);
     void (*final )(void *ctx, uint8_t *hash);
-    ptrdiff_t offset;
-    size_t    ctx_size;
+    size_t ctx_size;
 } crypto_hash_vtable;
 
 typedef struct {

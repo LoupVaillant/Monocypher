@@ -632,13 +632,27 @@ void crypto_blake2b(u8 hash[64], const u8 *message, size_t message_size)
     crypto_blake2b_general(hash, 64, 0, 0, message, message_size);
 }
 
+static void blake2b_vtable_init(void *ctx)
+{
+    crypto_blake2b_init(&((crypto_sign_blake2b_ctx*)ctx)->hash);
+}
+
+static void blake2b_vtable_update(void *ctx, const u8 *m, size_t s)
+{
+    crypto_blake2b_update(&((crypto_sign_blake2b_ctx*)ctx)->hash, m, s);
+}
+
+static void blake2b_vtable_final(void *ctx, u8 *h)
+{
+    crypto_blake2b_final(&((crypto_sign_blake2b_ctx*)ctx)->hash, h);
+}
+
 const crypto_hash_vtable crypto_blake2b_vtable = {
-    (void (*)(u8*, const u8*, size_t)  )crypto_blake2b,
-    (void (*)(void*)                   )crypto_blake2b_init,
-    (void (*)(void*, const u8*, size_t))crypto_blake2b_update,
-    (void (*)(void*, u8*)              )crypto_blake2b_final,
-    offsetof(crypto_sign_blake2b_ctx, hash),
-    sizeof  (crypto_sign_blake2b_ctx),
+    crypto_blake2b,
+    blake2b_vtable_init,
+    blake2b_vtable_update,
+    blake2b_vtable_final,
+    sizeof (crypto_sign_blake2b_ctx),
 };
 
 ////////////////
@@ -1941,8 +1955,8 @@ void crypto_sign_init_first_pass_custom_hash(crypto_sign_ctx_abstract *ctx,
     // An actual random number would work just fine, and would save us
     // the trouble of hashing the message twice.  If we did that
     // however, the user could fuck it up and reuse the nonce.
-    ctx->hash->init  ((char*)ctx + ctx->hash->offset);
-    ctx->hash->update((char*)ctx + ctx->hash->offset, prefix , 32);
+    ctx->hash->init  (ctx);
+    ctx->hash->update(ctx, prefix , 32);
 }
 
 void crypto_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
@@ -1956,14 +1970,14 @@ void crypto_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
 void crypto_sign_update(crypto_sign_ctx_abstract *ctx,
                         const u8 *msg, size_t msg_size)
 {
-    ctx->hash->update((char*)ctx + ctx->hash->offset, msg, msg_size);
+    ctx->hash->update(ctx, msg, msg_size);
 }
 
 void crypto_sign_init_second_pass(crypto_sign_ctx_abstract *ctx)
 {
     u8 *r        = ctx->buf + 32;
     u8 *half_sig = ctx->buf + 64;
-    ctx->hash->final((char*)ctx + ctx->hash->offset, r);
+    ctx->hash->final(ctx, r);
     reduce(r);
 
     // first half of the signature = "random" nonce times the base point
@@ -1974,9 +1988,9 @@ void crypto_sign_init_second_pass(crypto_sign_ctx_abstract *ctx)
 
     // Hash R, the public key, and the message together.
     // It cannot be done in parallel with the first hash.
-    ctx->hash->init  ((char*)ctx + ctx->hash->offset);
-    ctx->hash->update((char*)ctx + ctx->hash->offset, half_sig, 32);
-    ctx->hash->update((char*)ctx + ctx->hash->offset, ctx->pk , 32);
+    ctx->hash->init  (ctx);
+    ctx->hash->update(ctx, half_sig, 32);
+    ctx->hash->update(ctx, ctx->pk , 32);
 }
 
 void crypto_sign_final(crypto_sign_ctx_abstract *ctx, u8 signature[64])
@@ -1985,7 +1999,7 @@ void crypto_sign_final(crypto_sign_ctx_abstract *ctx, u8 signature[64])
     u8 *r        = ctx->buf + 32;
     u8 *half_sig = ctx->buf + 64;
     u8 h_ram[64];
-    ctx->hash->final((char*)ctx + ctx->hash->offset, h_ram);
+    ctx->hash->final(ctx, h_ram);
     reduce(h_ram);
     FOR (i, 0, 32) {
         signature[i] = half_sig[i];
@@ -2017,9 +2031,9 @@ void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
     ctx->hash = hash; // set vtable
     FOR (i, 0, 64) { ctx->buf[i] = signature [i]; }
     FOR (i, 0, 32) { ctx->pk [i] = public_key[i]; }
-    ctx->hash->init  ((char*)ctx + ctx->hash->offset);
-    ctx->hash->update((char*)ctx + ctx->hash->offset, signature , 32);
-    ctx->hash->update((char*)ctx + ctx->hash->offset, public_key, 32);
+    ctx->hash->init  (ctx);
+    ctx->hash->update(ctx, signature , 32);
+    ctx->hash->update(ctx, public_key, 32);
 }
 
 void crypto_check_init(crypto_check_ctx_abstract *ctx,
@@ -2033,7 +2047,7 @@ void crypto_check_init(crypto_check_ctx_abstract *ctx,
 void crypto_check_update(crypto_check_ctx_abstract *ctx,
                          const u8 *msg, size_t msg_size)
 {
-    ctx->hash->update((char*)ctx + ctx->hash->offset, msg, msg_size);
+    ctx->hash->update(ctx, msg, msg_size);
 }
 
 int crypto_check_final(crypto_check_ctx_abstract *ctx)
@@ -2050,7 +2064,7 @@ int crypto_check_final(crypto_check_ctx_abstract *ctx)
     }
     {
         u8 tmp[64];
-        ctx->hash->final((char*)ctx + ctx->hash->offset, tmp);
+        ctx->hash->final(ctx, tmp);
         reduce(tmp);
         FOR (i, 0, 32) { // the extra copy saves 32 bytes of stack
             h_ram[i] = tmp[i];
