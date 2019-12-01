@@ -207,17 +207,17 @@ void crypto_sha512(u8 *hash, const u8 *message, size_t message_size)
 
 static void sha512_vtable_init(void *ctx)
 {
-    crypto_sha512_init(&((crypto_sign_sha512_ctx*)ctx)->hash);
+    crypto_sha512_init(&((crypto_sign_ed25519_ctx*)ctx)->hash);
 }
 
 static void sha512_vtable_update(void *ctx, const u8 *m, size_t s)
 {
-    crypto_sha512_update(&((crypto_sign_sha512_ctx*)ctx)->hash, m, s);
+    crypto_sha512_update(&((crypto_sign_ed25519_ctx*)ctx)->hash, m, s);
 }
 
 static void sha512_vtable_final(void *ctx, u8 *h)
 {
-    crypto_sha512_final(&((crypto_sign_sha512_ctx*)ctx)->hash, h);
+    crypto_sha512_final(&((crypto_sign_ed25519_ctx*)ctx)->hash, h);
 }
 
 const crypto_sign_vtable crypto_sha512_vtable = {
@@ -225,7 +225,7 @@ const crypto_sign_vtable crypto_sha512_vtable = {
     sha512_vtable_init,
     sha512_vtable_update,
     sha512_vtable_final,
-    sizeof(crypto_sign_sha512_ctx),
+    sizeof(crypto_sign_ed25519_ctx),
 };
 
 ///////////////
@@ -260,7 +260,7 @@ void crypto_ed25519_sign(u8        signature [64],
                          const u8  public_key[32],
                          const u8 *message, size_t message_size)
 {
-    crypto_sign_sha512_ctx ctx;
+    crypto_sign_ed25519_ctx ctx;
     crypto_ed25519_sign_init_first_pass ((void*)&ctx, secret_key, public_key);
     crypto_ed25519_sign_update          ((void*)&ctx, message, message_size);
     crypto_ed25519_sign_init_second_pass((void*)&ctx);
@@ -273,7 +273,7 @@ int crypto_ed25519_check(const u8  signature [64],
                          const u8  public_key[32],
                          const u8 *message, size_t message_size)
 {
-    crypto_check_sha512_ctx ctx;
+    crypto_check_ed25519_ctx ctx;
     crypto_ed25519_check_init((void*)&ctx, signature, public_key);
     crypto_ed25519_check_update((void*)&ctx, message, message_size);
     return crypto_ed25519_check_final((void*)&ctx);

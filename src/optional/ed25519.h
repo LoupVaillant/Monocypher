@@ -22,8 +22,8 @@ typedef struct {
 typedef struct {
     crypto_sign_ctx_abstract ctx;
     crypto_sha512_ctx        hash;
-} crypto_sign_sha512_ctx;
-typedef crypto_sign_sha512_ctx crypto_check_sha512_ctx;
+} crypto_sign_ed25519_ctx;
+typedef crypto_sign_ed25519_ctx crypto_check_ed25519_ctx;
 
 // SHA 512
 // -------
