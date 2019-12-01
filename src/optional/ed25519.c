@@ -225,7 +225,7 @@ const crypto_hash_vtable crypto_sha512_vtable = {
     sha512_vtable_init,
     sha512_vtable_update,
     sha512_vtable_final,
-    sizeof (crypto_sign_sha512_ctx),
+    sizeof(crypto_sign_sha512_ctx),
 };
 
 ///////////////
