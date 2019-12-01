@@ -8,8 +8,9 @@ SONAME=libmonocypher.so.3
 
 VERSION=__git__
 
-ifdef LINK_ED25519
+ifdef USE_ED25519
 LINK_ED25519=lib/ed25519.o
+INSTALL_ED25519=cp src/optional/ed25519.h $(DESTDIR)/$(PREFIX)/include
 endif
 
 .PHONY: all library static-library dynamic-library                     \
@@ -26,6 +27,7 @@ install: library src/monocypher.h install-doc
 	mkdir -p $(PKGCONFIG)
 	cp -P lib/libmonocypher.a lib/libmonocypher.so* $(DESTDIR)/$(PREFIX)/lib
 	cp src/monocypher.h $(DESTDIR)/$(PREFIX)/include
+	$(INSTALL_ED25519)
 	@echo "Creating $(PKGCONFIG)/monocypher.pc"
 	@echo "prefix=/$(PREFIX)"                > $(PKGCONFIG)/monocypher.pc
 	@echo 'exec_prefix=$${prefix}'          >> $(PKGCONFIG)/monocypher.pc

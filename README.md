@@ -150,21 +150,16 @@ and c25519 (the default is `-O3 march=native`):
 Customisation
 -------------
 
-Monocypher has two preprocessor flags: `ED25519_SHA512` and
-`BLAKE2_NO_UNROLLING`, which are activated by compiling monocypher.c
-with the options `-DED25519_SHA512` and `-DBLAKE2_NO_UNROLLING`
-respectively.
+Monocypher has optional compatibility with Ed25519. To have that, add
+`ed25519.h` and `ed25519.h` provided in `src/optional` to your project.
+If you're using the makefile, define the `USE_ED25519` variable to link
+it to monocypher.a and monocypher.so:
 
-The `-DED25519_SHA512` option is a compatibility feature for public key
-signatures.  The default is EdDSA with Curve25519 and Blake2b.
-Activating the option replaces it by Ed25519 (EdDSA with Curve25519 and
-SHA-512).  When this option is activated, you will need to link the
-final program with a suitable SHA-512 implementation.  You can use the
-`sha512.c` and `sha512.h` files provided in `src/optional`.  The
-makefile does this linking automatically whenever the `$CFLAGS` variable
-contains the `-DED25519_SHA512` option. For instance:
+    $ make USE_ED25519=true
 
-    $ make CFLAGS="-O2 -DED25519_SHA512"
+Monocypher also has the `BLAKE2_NO_UNROLLING` preprocessor flag, which
+is activated by compiling monocypher.c with the `-DBLAKE2_NO_UNROLLING`
+option.
 
 The `-DBLAKE2_NO_UNROLLING` option is a performance tweak.  By default,
 Monocypher unrolls the Blake2b inner loop, because doing so is over 25%
