@@ -10,7 +10,18 @@
 /// Type definitions ///
 ////////////////////////
 
-// Do not rely on the size or content on any of those types,
+// Vtable for EdDSA with a custom hash.
+// Instantiate it to define a custom hash.
+// Its size, contents, and layout, are part of the public API.
+typedef struct {
+    void (*hash)(uint8_t hash[64], const uint8_t *message, size_t message_size);
+    void (*init  )(void *ctx);
+    void (*update)(void *ctx, const uint8_t *message, size_t message_size);
+    void (*final )(void *ctx, uint8_t *hash);
+    size_t ctx_size;
+} crypto_hash_vtable;
+
+// Do not rely on the size or contents of any of the types below,
 // they may change without notice.
 
 // Poly1305
@@ -32,14 +43,6 @@ typedef struct {
 } crypto_blake2b_ctx;
 
 // Signatures (EdDSA)
-typedef struct {
-    void (*hash)(uint8_t hash[64], const uint8_t *message, size_t message_size);
-    void (*init  )(void *ctx);
-    void (*update)(void *ctx, const uint8_t *message, size_t message_size);
-    void (*final )(void *ctx, uint8_t *hash);
-    size_t ctx_size;
-} crypto_hash_vtable;
-
 typedef struct {
     const crypto_hash_vtable *hash;
     uint8_t buf[96];
