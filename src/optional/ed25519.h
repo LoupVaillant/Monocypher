@@ -20,6 +20,11 @@ typedef struct {
 } crypto_sha512_ctx;
 
 typedef struct {
+    uint8_t key[64];
+    crypto_sha512_ctx ctx;
+} crypto_hmac_ctx;
+
+typedef struct {
     crypto_sign_ctx_abstract ctx;
     crypto_sha512_ctx        hash;
 } crypto_sign_ed25519_ctx;
@@ -31,10 +36,22 @@ void crypto_sha512_init  (crypto_sha512_ctx *ctx);
 void crypto_sha512_update(crypto_sha512_ctx *ctx,
                           const uint8_t *message, size_t  message_size);
 void crypto_sha512_final (crypto_sha512_ctx *ctx, uint8_t hash[64]);
-void crypto_sha512(uint8_t *out,const uint8_t *message, size_t message_size);
+void crypto_sha512(uint8_t *hash, const uint8_t *message, size_t message_size);
 
 // vtable for signatures
 extern const crypto_sign_vtable crypto_sha512_vtable;
+
+
+// HMAC SHA 512
+// ------------
+void crypto_hmac_init(crypto_hmac_ctx *ctx,
+                      const uint8_t *key, size_t key_size);
+void crypto_hmac_update(crypto_hmac_ctx *ctx,
+                        const uint8_t *message, size_t  message_size);
+void crypto_hmac_final(crypto_hmac_ctx *ctx, uint8_t hmac[64]);
+void crypto_hmac(uint8_t *hmac,
+                 const uint8_t *key    , size_t key_size,
+                 const uint8_t *message, size_t message_size);
 
 
 // Ed25519
