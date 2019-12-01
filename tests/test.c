@@ -105,10 +105,7 @@ static void x25519(const vector in[], vector *out)
 {
     const vector *scalar = in;
     const vector *point  = in + 1;
-    int report   = crypto_x25519(out->buf, scalar->buf, point->buf);
-    int not_zero = zerocmp(out->buf, out->size);
-    if ( not_zero &&  report) printf("FAILURE: x25519 false all_zero report\n");
-    if (!not_zero && !report) printf("FAILURE: x25519 failed to report zero\n");
+    crypto_x25519(out->buf, scalar->buf, point->buf);
 }
 
 static void x25519_pk(const vector in[], vector *out)

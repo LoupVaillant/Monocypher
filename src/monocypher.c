@@ -1289,9 +1289,9 @@ static int scalar_bit(const u8 s[32], int i) {
 /// X-25519 /// Taken from SUPERCOP's ref10 implementation.
 ///////////////
 
-int crypto_x25519(u8       raw_shared_secret[32],
-                  const u8 your_secret_key  [32],
-                  const u8 their_public_key [32])
+void crypto_x25519(u8       raw_shared_secret[32],
+                   const u8 your_secret_key  [32],
+                   const u8 their_public_key [32])
 {
     // computes the scalar product
     fe x1;
@@ -1343,10 +1343,6 @@ int crypto_x25519(u8       raw_shared_secret[32],
     WIPE_BUFFER(x2);  WIPE_BUFFER(z2);
     WIPE_BUFFER(x3);  WIPE_BUFFER(z3);
     WIPE_BUFFER(t0);  WIPE_BUFFER(t1);
-
-    // Returns -1 if the output is all zero
-    // (happens with some malicious public keys)
-    return -1 - zerocmp32(raw_shared_secret);
 }
 
 void crypto_x25519_public_key(u8       public_key[32],
@@ -2088,13 +2084,12 @@ int crypto_check(const u8  signature[64],
 ////////////////////
 /// Key exchange ///
 ////////////////////
-int crypto_key_exchange(u8       shared_key[32],
-                        const u8 your_secret_key [32],
-                        const u8 their_public_key[32])
+void crypto_key_exchange(u8       shared_key[32],
+                         const u8 your_secret_key [32],
+                         const u8 their_public_key[32])
 {
-    int status = crypto_x25519(shared_key, your_secret_key, their_public_key);
+    crypto_x25519(shared_key, your_secret_key, their_public_key);
     crypto_hchacha20(shared_key, shared_key, zero);
-    return status;
 }
 
 ////////////////////////////////

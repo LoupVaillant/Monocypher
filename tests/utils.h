@@ -36,8 +36,6 @@ void print_vector(const u8 *buf, size_t size);
 void print_number(u64 n);
 void* alloc(size_t size);
 
-int zerocmp(const u8 *p, size_t n);
-
 int vector_test(void (*f)(const vector[], vector*),
                 const char *name, size_t nb_inputs,
                 size_t nb_vectors, u8 **vectors, size_t *sizes);

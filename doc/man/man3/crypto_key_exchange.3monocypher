@@ -7,7 +7,7 @@
 .Nd Elliptic Curve Diffie-Hellman key exchange
 .Sh SYNOPSIS
 .In monocypher.h
-.Ft int
+.Ft void
 .Fo crypto_key_exchange
 .Fa "uint8_t shared_key[32]"
 .Fa "const uint8_t your_secret_key[32]"
@@ -50,16 +50,11 @@ with
 .Fn crypto_key_exchange_public_key .
 .El
 .Sh RETURN VALUES
-Some public keys force the shared key to a known constant.
 .Fn crypto_key_exchange
-returns -1 if it detects such a public key, otherwise it returns 0.
-This never happens with legitimate public keys.
+and
+.Fn crypto_key_exchange_public_key
+return nothing.
 .Pp
-.Sy The return value has been deprecated .
-.Fn crypto_key_exchange
-will return
-.Vt void
-starting with the next major release of Monocypher.
 Some poorly designed protocols require to test for
 .Dq contributory
 behaviour, which ensures that no untrusted party forces the shared
@@ -67,9 +62,6 @@ secret to a known constant.
 Protocols should instead be designed in such a way that no such check
 is necessary, namely by authenticating the other party or exchanging
 keys over a trusted channel.
-.Pp
-.Fn crypto_key_exchange_public_key
-returns nothing.
 .Sh EXAMPLES
 Generate a public key from a randomly generated secret key:
 .Bd -literal -offset indent

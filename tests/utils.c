@@ -81,14 +81,6 @@ void* alloc(size_t size)
     return buf;
 }
 
-int zerocmp(const u8 *p, size_t n)
-{
-    FOR (i, 0, n) {
-        if (p[i] != 0) { return -1; }
-    }
-    return 0;
-}
-
 int vector_test(void (*f)(const vector[], vector*),
                 const char *name, size_t nb_inputs,
                 size_t nb_vectors, u8 **vectors, size_t *sizes)

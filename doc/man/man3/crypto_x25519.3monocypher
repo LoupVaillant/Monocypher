@@ -7,7 +7,7 @@
 .Nd X25519 key exchange
 .Sh SYNOPSIS
 .In monocypher.h
-.Ft int
+.Ft void
 .Fo crypto_x25519
 .Fa "uint8_t raw_shared_secret[32]"
 .Fa "const uint8_t your_secret_key[32]"
@@ -56,17 +56,11 @@ random number generator).
 The public key of the other party.
 .El
 .Sh RETURN VALUES
-Some public keys force the shared key to a known constant.
-.Fn crypto_x225519
-returns -1 if it detects such a public key, otherwise it
-returns 0.
-This never happens with legitimate public keys.
-.Pp
-.Sy The return value has been deprecated .
 .Fn crypto_x25519
-will return
-.Vt void
-starting with the next major release of Monocypher.
+and
+.Fn crypto_x25519_public_key
+return nothing.
+.Pp
 Some poorly designed protocols require to test for
 .Dq contributory
 behaviour, which ensures that no untrusted party forces the shared
@@ -74,9 +68,6 @@ secret to a known constant.
 Protocols should instead be designed in such a way that no such check
 is necessary, namely by authenticating the other party or exchanging
 keys over a trusted channel.
-.Pp
-.Fn crypto_x25519_public_key
-returns nothing.
 .Sh EXAMPLES
 Generate a pair of shared keys with your secret key and their public
 key.

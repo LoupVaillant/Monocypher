@@ -149,9 +149,9 @@ void crypto_argon2i_general(uint8_t       *hash,      uint32_t hash_size,// >= 4
 // Key exchange (x25519 + HChacha20)
 // ---------------------------------
 #define crypto_key_exchange_public_key crypto_x25519_public_key
-int crypto_key_exchange(uint8_t       shared_key      [32],
-                        const uint8_t your_secret_key [32],
-                        const uint8_t their_public_key[32]);
+void crypto_key_exchange(uint8_t       shared_key      [32],
+                         const uint8_t your_secret_key [32],
+                         const uint8_t their_public_key[32]);
 
 
 // Signatures (EdDSA with curve25519 + Blake2b)
@@ -269,8 +269,8 @@ void crypto_poly1305_final (crypto_poly1305_ctx *ctx, uint8_t mac[16]);
 // -------
 void crypto_x25519_public_key(uint8_t       public_key[32],
                               const uint8_t secret_key[32]);
-int crypto_x25519(uint8_t       raw_shared_secret[32],
-                  const uint8_t your_secret_key  [32],
-                  const uint8_t their_public_key [32]);
+void crypto_x25519(uint8_t       raw_shared_secret[32],
+                   const uint8_t your_secret_key  [32],
+                   const uint8_t their_public_key [32]);
 
 #endif // MONOCYPHER_H
