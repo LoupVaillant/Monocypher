@@ -226,7 +226,7 @@ u32 crypto_ietf_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
     input[13] = load32_le(nonce);
     input[14] = load32_le(nonce + 4);
     input[15] = load32_le(nonce + 8);
-    ctr = chacha20_core(input, cipher_text, plain_text, text_size);
+    ctr = (u32)chacha20_core(input, cipher_text, plain_text, text_size);
     WIPE_BUFFER(input);
     return ctr;
 }
