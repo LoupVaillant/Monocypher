@@ -634,17 +634,17 @@ void crypto_blake2b(u8 hash[64], const u8 *message, size_t message_size)
 
 static void blake2b_vtable_init(void *ctx)
 {
-    crypto_blake2b_init(&((crypto_sign_blake2b_ctx*)ctx)->hash);
+    crypto_blake2b_init(&((crypto_sign_ctx*)ctx)->hash);
 }
 
 static void blake2b_vtable_update(void *ctx, const u8 *m, size_t s)
 {
-    crypto_blake2b_update(&((crypto_sign_blake2b_ctx*)ctx)->hash, m, s);
+    crypto_blake2b_update(&((crypto_sign_ctx*)ctx)->hash, m, s);
 }
 
 static void blake2b_vtable_final(void *ctx, u8 *h)
 {
-    crypto_blake2b_final(&((crypto_sign_blake2b_ctx*)ctx)->hash, h);
+    crypto_blake2b_final(&((crypto_sign_ctx*)ctx)->hash, h);
 }
 
 const crypto_hash_vtable crypto_blake2b_vtable = {
@@ -652,7 +652,7 @@ const crypto_hash_vtable crypto_blake2b_vtable = {
     blake2b_vtable_init,
     blake2b_vtable_update,
     blake2b_vtable_final,
-    sizeof (crypto_sign_blake2b_ctx),
+    sizeof(crypto_sign_ctx),
 };
 
 ////////////////
@@ -2014,7 +2014,7 @@ void crypto_sign(u8        signature[64],
                  const u8  public_key[32],
                  const u8 *message, size_t message_size)
 {
-    crypto_sign_blake2b_ctx ctx;
+    crypto_sign_ctx ctx;
     crypto_sign_init_first_pass ((void*)&ctx, secret_key, public_key);
     crypto_sign_update          ((void*)&ctx, message, message_size);
     crypto_sign_init_second_pass((void*)&ctx);
@@ -2079,7 +2079,7 @@ int crypto_check(const u8  signature[64],
                  const u8  public_key[32],
                  const u8 *message, size_t message_size)
 {
-    crypto_check_blake2b_ctx   ctx;
+    crypto_check_ctx   ctx;
     crypto_check_init((void*)&ctx, signature, public_key);
     crypto_check_update((void*)&ctx, message, message_size);
     return crypto_check_final((void*)&ctx);

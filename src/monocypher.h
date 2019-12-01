@@ -50,8 +50,8 @@ typedef crypto_sign_ctx_abstract crypto_check_ctx_abstract;
 typedef struct {
     crypto_sign_ctx_abstract ctx;
     crypto_blake2b_ctx       hash;
-} crypto_sign_blake2b_ctx;
-typedef crypto_sign_blake2b_ctx crypto_check_blake2b_ctx;
+} crypto_sign_ctx;
+typedef crypto_sign_ctx crypto_check_ctx;
 
 ////////////////////////////
 /// High level interface ///
