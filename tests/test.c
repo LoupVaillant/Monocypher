@@ -82,6 +82,13 @@ static void sha512(const vector in[], vector *out)
     crypto_sha512(out->buf, in->buf, in->size);
 }
 
+static void hmac_sha512(const vector in[], vector *out)
+{
+    const vector *key = in;
+    const vector *msg = in +1;
+    crypto_hmac(out->buf, key->buf, key->size, msg->buf, msg->size);
+}
+
 static void argon2i(const vector in[], vector *out)
 {
     u64 nb_blocks     = load64_le(in[0].buf);
@@ -661,6 +668,7 @@ int main(int argc, char *argv[])
     status |= TEST(aead_ietf     , 4);
     status |= TEST(blake2b       , 2);
     status |= TEST(sha512        , 1);
+    status |= TEST(hmac_sha512   , 2);
     status |= TEST(argon2i       , 6);
     status |= TEST(x25519        , 2);
     status |= TEST(x25519_pk     , 1);

@@ -20,7 +20,7 @@ typedef struct {
 } crypto_sha512_ctx;
 
 typedef struct {
-    uint8_t key[64];
+    uint8_t key[128];
     crypto_sha512_ctx ctx;
 } crypto_hmac_ctx;
 

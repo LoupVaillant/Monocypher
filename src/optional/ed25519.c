@@ -233,17 +233,18 @@ const crypto_sign_vtable crypto_sha512_vtable = {
 ////////////////////
 void crypto_hmac_init(crypto_hmac_ctx *ctx, const u8 *key, size_t key_size)
 {
-    if (key_size <= 64) {
-        FOR (i, 0, key_size)  { ctx->key[i] = key[i]; }
-        FOR (i, key_size, 64) { ctx->key[i] = 0;      }
-    } else {
+    // hash key if it is too long
+    if (key_size > 128) {
         crypto_sha512(ctx->key, key, key_size);
+        key      = ctx->key;
+        key_size = 64;
     }
-    FOR (i, 0, 64) {
-        ctx->key[i] ^= 0x36;
-    }
+    // Compute inner key: padded key XOR 0x36
+    FOR (i, 0, key_size)   { ctx->key[i] = key[i] ^ 0x36; }
+    FOR (i, key_size, 128) { ctx->key[i] =          0x36; }
+    // Start computing inner hash
     crypto_sha512_init  (&ctx->ctx);
-    crypto_sha512_update(&ctx->ctx, ctx->key, 64);
+    crypto_sha512_update(&ctx->ctx, ctx->key, 128);
 }
 
 void crypto_hmac_update(crypto_hmac_ctx *ctx,
@@ -254,14 +255,17 @@ void crypto_hmac_update(crypto_hmac_ctx *ctx,
 
 void crypto_hmac_final(crypto_hmac_ctx *ctx, u8 hmac[64])
 {
+    // Finish computing inner hash
     crypto_sha512_final(&ctx->ctx, hmac);
-    FOR (i, 0, 64) {
+    // Compute outer key: padded key XOR 0x5c
+    FOR (i, 0, 128) {
         ctx->key[i] ^= 0x36 ^ 0x5c;
     }
+    // Compute outer hash
     crypto_sha512_init  (&ctx->ctx);
-    crypto_sha512_update(&ctx->ctx, ctx->key , 64);
+    crypto_sha512_update(&ctx->ctx, ctx->key , 128);
     crypto_sha512_update(&ctx->ctx, hmac, 64);
-    crypto_sha512_final (&ctx->ctx, hmac);
+    crypto_sha512_final (&ctx->ctx, hmac); // outer hash
     WIPE_CTX(ctx);
 }
 

@@ -4,7 +4,7 @@ CFLAGS = -pedantic -Wall -Wextra
 .PHONY: all clean
 
 VEC     = chacha20    hchacha20  xchacha20     aead_ietf poly1305 \
-          blake2b     sha512     argon2i                          \
+          blake2b     sha512     hmac_sha512   argon2i            \
           edDSA       edDSA_pk   ed_25519      ed_25519_check     \
           x25519      x25519_pk  key_exchange
 #          monokex_xk1 monokex_x
@@ -59,6 +59,7 @@ xchacha20.all.vec     : xchacha20.vec
 aead_ietf.all.vec     : aead_ietf.vec
 blake2b.all.vec       : blake2b.vec
 sha512.all.vec        : sha512.vec
+hmac_sha512.all.vec   : hmac_sha512.vec vectors/hmac_sha512
 argon2i.all.vec       : argon2i.vec     vectors/argon2i
 edDSA.all.vec         : edDSA.vec
 edDSA_pk.all.vec      : edDSA_pk.vec
