@@ -459,6 +459,56 @@ static int p_sha512_overlap()
     return status;
 }
 
+// Tests that hashing bit by bit yields the same hash than hashing all
+// at once. (for hmac)
+static int p_hmac_sha512()
+{
+#undef INPUT_SIZE
+#define INPUT_SIZE (SHA_512_BLOCK_SIZE * 4 - 32) // total input size
+    int status = 0;
+    FOR (i, 0, INPUT_SIZE) {
+        // outputs
+        u8 hash_chunk[64];
+        u8 hash_whole[64];
+        // inputs
+        RANDOM_INPUT(key  , 32);
+        RANDOM_INPUT(input, INPUT_SIZE);
+
+        // Authenticate bit by bit
+        crypto_hmac_ctx ctx;
+        crypto_hmac_init(&ctx, key, 32);
+        crypto_hmac_update(&ctx, input    , i);
+        crypto_hmac_update(&ctx, input + i, INPUT_SIZE - i);
+        crypto_hmac_final(&ctx, hash_chunk);
+
+        // Authenticate all at once
+        crypto_hmac(hash_whole, key, 32, input, INPUT_SIZE);
+
+        // Compare the results (must be the same)
+        status |= memcmp(hash_chunk, hash_whole, 64);
+    }
+    printf("%s: HMAC SHA-512 (incremental)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
+// Tests that the input and output buffers of crypto_sha_512 can overlap.
+static int p_hmac_sha512_overlap()
+{
+#undef INPUT_SIZE
+#define INPUT_SIZE (SHA_512_BLOCK_SIZE + (2 * 64)) // total input size
+    int status = 0;
+    FOR (i, 0, SHA_512_BLOCK_SIZE + 64) {
+        u8 hash [64];
+        RANDOM_INPUT(key  , 32);
+        RANDOM_INPUT(input, INPUT_SIZE);
+        crypto_hmac(hash   , key, 32, input + 64, SHA_512_BLOCK_SIZE);
+        crypto_hmac(input+i, key, 32, input + 64, SHA_512_BLOCK_SIZE);
+        status |= memcmp(hash, input + i, 64);
+    }
+    printf("%s: HMAC SHA-512 (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 static int p_argon2i_easy()
 {
     int   status    = 0;
@@ -693,6 +743,8 @@ int main(int argc, char *argv[])
     status |= p_blake2b_overlap();
     status |= p_sha512();
     status |= p_sha512_overlap();
+    status |= p_hmac_sha512();
+    status |= p_hmac_sha512_overlap();
     status |= p_argon2i_easy();
     status |= p_argon2i_overlap();
     status |= p_eddsa_roundtrip();
