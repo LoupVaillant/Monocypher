@@ -72,7 +72,7 @@ static const u64 K[80] = {
 
 static void sha512_compress(crypto_sha512_ctx *ctx)
 {
-    u64 *w = ctx->w;
+    u64 w[80];
     FOR(i,  0, 16) { w[i] = ctx->input[i]; }
     FOR(i, 16, 80) { w[i] = (lit_sigma1(w[i- 2]) + w[i- 7] +
                              lit_sigma0(w[i-15]) + w[i-16]); }

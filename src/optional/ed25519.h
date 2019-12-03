@@ -12,7 +12,6 @@
 // Do not rely on the size or content on any of those types,
 // they may change without notice.
 typedef struct {
-    uint64_t w[80]; // work area
     uint64_t hash[8];
     uint64_t input[16];
     uint64_t input_size[2];
