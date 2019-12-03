@@ -3,7 +3,7 @@
 
 static void test(size_t key_size, size_t msg_size)
 {
-    RANDOM_INPUT(key, 128);
+    RANDOM_INPUT(key, 256);
     RANDOM_INPUT(msg, 256);
     u8 tag[64];
 
