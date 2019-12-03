@@ -72,21 +72,33 @@ static const u64 K[80] = {
 
 static void sha512_compress(crypto_sha512_ctx *ctx)
 {
-    u64 w[80];
-    FOR(i,  0, 16) { w[i] = ctx->input[i]; }
-    FOR(i, 16, 80) { w[i] = (lit_sigma1(w[i- 2]) + w[i- 7] +
-                             lit_sigma0(w[i-15]) + w[i-16]); }
-
     u64 a = ctx->hash[0];    u64 b = ctx->hash[1];
     u64 c = ctx->hash[2];    u64 d = ctx->hash[3];
     u64 e = ctx->hash[4];    u64 f = ctx->hash[5];
     u64 g = ctx->hash[6];    u64 h = ctx->hash[7];
-    FOR(i, 0, 80) {
-        u64 t1 = big_sigma1(e) + ch (e, f, g) + h + K[i] + w[i];
+
+    FOR (j, 0, 16) {
+        u64 in = K[j] + ctx->input[j];
+        u64 t1 = big_sigma1(e) + ch (e, f, g) + h + in;
         u64 t2 = big_sigma0(a) + maj(a, b, c);
         h = g;  g = f;  f = e;  e = d  + t1;
         d = c;  c = b;  b = a;  a = t1 + t2;
     }
+    size_t i16 = 0;
+    FOR(i, 1, 5) {
+        i16 += 16;
+        FOR (j, 0, 16) {
+            ctx->input[j] += lit_sigma1(ctx->input[(j- 2) & 15]);
+            ctx->input[j] += lit_sigma0(ctx->input[(j-15) & 15]);
+            ctx->input[j] +=            ctx->input[(j- 7) & 15];
+            u64 in = K[i16 + j] + ctx->input[j];
+            u64 t1 = big_sigma1(e) + ch (e, f, g) + h + in;
+            u64 t2 = big_sigma0(a) + maj(a, b, c);
+            h = g;  g = f;  f = e;  e = d  + t1;
+            d = c;  c = b;  b = a;  a = t1 + t2;
+        }
+    }
+
     ctx->hash[0] += a;    ctx->hash[1] += b;
     ctx->hash[2] += c;    ctx->hash[3] += d;
     ctx->hash[4] += e;    ctx->hash[5] += f;
