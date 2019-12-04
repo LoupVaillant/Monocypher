@@ -209,7 +209,7 @@ void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 hash[64])
     WIPE_CTX(ctx);
 }
 
-void crypto_sha512(u8 *hash, const u8 *message, size_t message_size)
+void crypto_sha512(u8 hash[64], const u8 *message, size_t message_size)
 {
     crypto_sha512_ctx ctx;
     crypto_sha512_init  (&ctx);
@@ -281,7 +281,7 @@ void crypto_hmac_final(crypto_hmac_ctx *ctx, u8 hmac[64])
     WIPE_CTX(ctx);
 }
 
-void crypto_hmac(u8 *hmac, const u8 *key, size_t key_size,
+void crypto_hmac(u8 hmac[64], const u8 *key, size_t key_size,
                  const u8 *message, size_t message_size)
 {
     crypto_hmac_ctx ctx;
