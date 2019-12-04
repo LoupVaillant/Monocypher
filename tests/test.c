@@ -86,7 +86,7 @@ static void hmac_sha512(const vector in[], vector *out)
 {
     const vector *key = in;
     const vector *msg = in +1;
-    crypto_hmac(out->buf, key->buf, key->size, msg->buf, msg->size);
+    crypto_hmac_sha512(out->buf, key->buf, key->size, msg->buf, msg->size);
 }
 
 static void argon2i(const vector in[], vector *out)
@@ -475,14 +475,14 @@ static int p_hmac_sha512()
         RANDOM_INPUT(input, INPUT_SIZE);
 
         // Authenticate bit by bit
-        crypto_hmac_ctx ctx;
-        crypto_hmac_init(&ctx, key, 32);
-        crypto_hmac_update(&ctx, input    , i);
-        crypto_hmac_update(&ctx, input + i, INPUT_SIZE - i);
-        crypto_hmac_final(&ctx, hash_chunk);
+        crypto_hmac_sha512_ctx ctx;
+        crypto_hmac_sha512_init(&ctx, key, 32);
+        crypto_hmac_sha512_update(&ctx, input    , i);
+        crypto_hmac_sha512_update(&ctx, input + i, INPUT_SIZE - i);
+        crypto_hmac_sha512_final(&ctx, hash_chunk);
 
         // Authenticate all at once
-        crypto_hmac(hash_whole, key, 32, input, INPUT_SIZE);
+        crypto_hmac_sha512(hash_whole, key, 32, input, INPUT_SIZE);
 
         // Compare the results (must be the same)
         status |= memcmp(hash_chunk, hash_whole, 64);
@@ -501,8 +501,8 @@ static int p_hmac_sha512_overlap()
         u8 hash [64];
         RANDOM_INPUT(key  , 32);
         RANDOM_INPUT(input, INPUT_SIZE);
-        crypto_hmac(hash   , key, 32, input + 64, SHA_512_BLOCK_SIZE);
-        crypto_hmac(input+i, key, 32, input + 64, SHA_512_BLOCK_SIZE);
+        crypto_hmac_sha512(hash   , key, 32, input + 64, SHA_512_BLOCK_SIZE);
+        crypto_hmac_sha512(input+i, key, 32, input + 64, SHA_512_BLOCK_SIZE);
         status |= memcmp(hash, input + i, 64);
     }
     printf("%s: HMAC SHA-512 (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
