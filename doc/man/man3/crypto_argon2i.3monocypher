@@ -124,8 +124,8 @@ and
 .Fa nb_iterations
 parameters, it should first be decided how long the computation should
 take.
-For user authentication, we recommend somewhere between half a second
-(convenient) and several seconds (paranoid).
+For user authentication, values somewhere between half a second
+(convenient) and several seconds (paranoid) are recommended.
 The computation should use as much memory as can be spared.
 .Pp
 Since parameter selection depends on your hardware, some trial and error

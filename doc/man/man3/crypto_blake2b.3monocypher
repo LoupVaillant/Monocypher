@@ -132,16 +132,16 @@ initialisation with
 .Fn crypto_blake2b_general_init
 or
 .Fn crypto_blake2b_init ,
-where we set up a context with the hashing parameters;
+which sets up a context with the hashing parameters;
 .It
 update with
 .Fn crypto_blake2b_update ,
-where we hash the message chunk by chunk, and keep the intermediary
+which hashes the message chunk by chunk, and keep the intermediary
 result in the context;
 .It
 and finalisation with
 .Fn crypto_blake2b_final ,
-where we produce the final hash.
+which produces the final hash.
 The
 .Ft crypto_blake2b_ctx
 is automatically wiped upon finalisation.

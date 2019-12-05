@@ -78,16 +78,16 @@ This interface uses three steps:
 .It
 initialisation with
 .Fn crypto_sha512_init ,
-where we set up a context with the hashing parameters;
+which sets up a context with the hashing parameters;
 .It
 update with
 .Fn crypto_sha512_update ,
-where we hash the message chunk by chunk, and keep the intermediary
+which hashes the message chunk by chunk, and keep the intermediary
 result in the context;
 .It
 and finalisation with
 .Fn crypto_sha512_final ,
-where we produce the final hash.
+which produces the final hash.
 The
 .Ft crypto_sha512_ctx
 is automatically wiped upon finalisation.
