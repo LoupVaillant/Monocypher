@@ -1,4 +1,4 @@
-.Dd December 28, 2017
+.Dd December 2, 2019
 .Dt CRYPTO_CHACHA20_ENCRYPT 3MONOCYPHER
 .Os
 .Sh NAME
@@ -7,7 +7,7 @@
 .Nm crypto_chacha20_x_init ,
 .Nm crypto_chacha20_stream ,
 .Nm crypto_chacha20_set_ctr
-.Nd Chacha20 and XChacha20 encryption
+.Nd deprecated Chacha20 and XChacha20 encryption functions
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
@@ -41,247 +41,50 @@
 .Fa "uint64_t ctr"
 .Fc
 .Sh DESCRIPTION
-These functions provide an incremental interface for the Chacha20
-encryption primitive.
+These functions provided an incremental interface for the Chacha20
+cipher.
+They are deprecated in favor of
+.Xr crypto_chacha20 3monocypher ,
+.Xr crypto_chacha20_ctr 3monocypher ,
+.Xr crypto_xchacha20 3monocypher , and
+.Xr crypto_xchacha20_ctr 3monocypher .
 .Pp
-Chacha20 is a low-level primitive.
-Consider using authenticated encryption, implemented by
-.Xr crypto_lock 3monocypher .
+For encryption, you can achieve an identical effect
+as the deprecated functions by using
+.Xr crypto_chacha20_ctr 3monocypher
+or
+.Xr crypto_xchacha20_ctr 3monocypher .
+Care needs to be taken with regards to handling the counter value
+when migrating old code to use the new functions.
+The new functions
+.Em always return next counter value .
+This means that input ciphertexts or plaintexts
+whose lengths are not exactly multiples of 64 bytes
+advance the counter, even though there is theoretically some space left
+in a Chacha20 block.
+New applications should design their code so that either
+the protocl is not reliant on the counter covering the entire text
+(e.g. by cutting input into independent chunks) or
+inputs are always such that their lengths are multiples of 64 bytes
+(e.g. by buffering input until 64 bytes have been obtained).
 .Pp
-The arguments are:
-.Bl -tag -width Ds
-.It Fa key
-A 32-byte secret key.
-.It Fa nonce
-An 8-byte or 24-byte number, used only once with any given key.
-It does not need to be secret or random, but it does have to be unique.
-Repeating a nonce with the same key reveals the XOR of two different
-messages, which allows decryption.
-24-byte nonces can be selected at random.
-8-byte nonces
-.Em cannot .
-They are too small, and the same nonce may be selected twice by
-accident.
-See
-.Xr intro 3monocypher
-for advice about generating random numbers (use the operating system's
-random number generator).
-.It Fa plain_text
-The message to encrypt.
-It is allowed to be
-.Dv NULL ,
-in which case it will be interpreted as an all zero input.
-.Fa cipher_text
-will then contain the raw Chacha20 stream.
-.It Fa cipher_text
-The encrypted message.
-.It Fa text_size
-Length of both
-.Fa plain_text
-and
-.Fa cipher_text ,
-in bytes.
-.It Fa stream
-The raw Chacha20 stream.
-.It Fa stream_size
-Length of
-.Fa stream ,
-in bytes.
-.It Fa ctr
-The number of 64-byte blocks since the beginning of the stream.
-.El
-.Pp
-The
-.Fa key
-and
-.Fa nonce
-buffers may overlap.
-.Fa plain_text
-and
-.Fa cipher_text
-must either be the same buffer (for in-place encryption), or
-non-overlapping.
-.Pp
-.Fn crypto_chacha20_init
-initialises the
-.Vt crypto_chacha_ctx
-context.
-It uses an 8-byte nonce, which is too small to be selected at random.
-Use a counter.
-.Pp
-.Fn crypto_chacha20_x_init
-initialises the
-.Vt crypto_chacha_ctx
-context.
-It uses a 24-byte nonce, which is big enough to be selected at random.
-.Pp
-.Fn crypto_chacha20_x_init
-is recommended over
-.Fn crypto_chacha20_init .
-The ability to use random nonces makes it easier to use securely, and
-the performance hit is negligible in practice.
-.Pp
-The following functions need an initialised context to work properly.
-Calling them with an uninitialised context triggers undefined
-behaviour.
-.Pp
-.Fn crypto_chacha20_encrypt
-encrypts
-.Fa plain_text
-by XORing it with a pseudo-random stream of
-numbers, seeded by the provided
-.Vt crypto_chacha_ctx
-context.
-You may call
-.Fn crypto_chacha20_encrypt
-repeatedly with the same context struct to encrypt a message
-incrementally.
-The
-.Fa plain_text
-pointer is allowed to be
-.Dv NULL ,
-in which case it will be interpreted as an all zero input.
-.Pp
-Since XOR is its own inverse, decryption is the same operation as
-encryption.
-To decrypt the cipher text, encrypt it again with the same key and nonce.
-You will likely want to wipe the key and context when you are done with
-encryption or decryption.
-Use
-.Xr crypto_wipe 3monocypher
-to wipe them.
-.Pp
-.Fn crypto_chacha20_stream
-is the same as
-.Fn crypto_chacha20_encrypt
-with
-.Fa plain_text
-being
-.Dv NULL .
-This is useful as a user space random number generator.
-While
-.Sy this must not be used as a cryptographic random number generator ,
-it can be handy outside of a security context.
-Deterministic procedural generation and reproducible property-based
-tests come to mind.
-.Pp
-.Fn crypto_chacha20_set_ctr
-resets the internal counter of the
-.Vt crypto_chacha_ctx
-to the value specified in
-.Fa ctr .
-Resuming the encryption will use the stream at the block
-.Fa ctr
-(which is the byte
-.Ql ctr \(mu 64 ) .
-This can be used to encrypt (or decrypt) part of a long message, or to
-implement some AEAD constructions such as the one described in RFC
-8439.
-Be careful when using this not to accidentally reuse parts of the
-random stream as that would destroy confidentiality.
+To obtain the raw Chacha20 stream previously provided by
+.Fn crypto_chacha20_stream ,
+pass
+.Dv NULL
+to 
+.Xr crypto_chacha20
+as plaintext.
 .Sh RETURN VALUES
 These functions return nothing.
-.Sh EXAMPLES
-Simple encryption:
-.Bd -literal -offset indent
-const uint8_t key        [ 32]; /* Secret random key              */
-const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
-const uint8_t plain_text [500]; /* Message to be encrypted        */
-uint8_t       cipher_text[500]; /* Will be the encrypted message  */
-crypto_chacha_ctx ctx;
-crypto_chacha20_x_init(&ctx, key, nonce);
-crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 500);
-/* Wipe secrets if they are no longer needed */
-crypto_wipe(key,        32);
-crypto_wipe(&ctx,       sizeof(ctx));
-crypto_wipe(plain_text, 500);
-.Ed
-.Pp
-To decrypt the above:
-.Bd -literal -offset indent
-const uint8_t key        [ 32]; /* Same key as above              */
-const uint8_t nonce      [ 24]; /* Same nonce as above            */
-const uint8_t cipher_text[500]; /* Encrypted message              */
-uint8_t plain_text       [500]; /* Will be the decrypted message  */
-crypto_chacha_ctx ctx;
-crypto_chacha20_x_init(&ctx, key, nonce);
-crypto_chacha20_encrypt(&ctx, plain_text, cipher_text, 500);
-/* Wipe secrets if they are no longer needed */
-crypto_wipe(key,  32);
-crypto_wipe(&ctx, sizeof(ctx));
-/* The plain text likely needs to be processed before you wipe it */
-crypto_wipe(plain_text, 500);
-.Ed
-.Pp
-Incremental encryption:
-.Bd -literal -offset indent
-const uint8_t key        [ 32]; /* Secret random key              */
-const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
-const uint8_t plain_text [500]; /* Message to be encrypted        */
-uint8_t       cipher_text[500]; /* Will be the encrypted message  */
-crypto_chacha_ctx ctx;
-crypto_chacha20_x_init(&ctx, key, nonce);
-for(int i = 0; i < 500; i += 100) {
-    crypto_chacha20_encrypt(&ctx, cipher_text+i, plain_text+i, 100);
-}
-/* Wipe secrets if they are no longer needed */
-crypto_wipe(key,        32);
-crypto_wipe(&ctx,       sizeof(ctx));
-crypto_wipe(plain_text, 500);
-.Ed
-.Pp
-Simple encryption with a small,
-.Em not
-random nonce:
-.Bd -literal -offset indent
-const uint8_t key        [ 32]; /* Secret, random key             */
-const uint8_t nonce      [  8]; /* Unique nonce (NOT random)      */
-const uint8_t plain_text [500]; /* Message to be encrypted        */
-uint8_t       cipher_text[500]; /* Will be the encrypted message  */
-crypto_chacha_ctx ctx;
-crypto_chacha20_init(&ctx, key, nonce);
-crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 500);
-/* Wipe secrets if they are no longer needed */
-crypto_wipe(key,        32);
-crypto_wipe(&ctx,       sizeof(ctx));
-crypto_wipe(plain_text, 500);
-.Ed
-.Pp
-Encryption by jumping around (do not do that, this is only meant to show
-how
-.Fn crypto_chacha20_set_ctr
-works):
-.Bd -literal -offset indent
-const uint8_t key        [ 32]; /* Secret random key              */
-const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
-const uint8_t plain_text [500]; /* Message to be encrypted        */
-uint8_t       cipher_text[500]; /* Will be the encrypted message  */
-crypto_chacha_ctx ctx;
-crypto_chacha20_x_init(&ctx, key, nonce);
-/* Encrypt the second part of the message first... */
-crypto_chacha20_set_ctr(&ctx, 3);
-crypto_chacha20_encrypt(&ctx,
-                        cipher_text + (3 * 64),
-                        plain_text  + (3 * 64),
-                        500         - (3 * 64));
-/* ...then encrypt the first part */
-crypto_chacha20_set_ctr(&ctx, 0);
-crypto_chacha20_encrypt(&ctx, cipher_text, plain_text, 3 * 64);
-/* Wipe secrets if they are no longer needed */
-crypto_wipe(key,        32);
-crypto_wipe(&ctx,       sizeof(ctx));
-crypto_wipe(plain_text, 500);
-.Ed
 .Sh SEE ALSO
+.Xr crypto_chacha20 3monocypher ,
+.Xr crypto_chacha20_ctr 3monocypher ,
+.Xr crypto_xchacha20 3monocypher ,
+.Xr crypto_xchacha20_ctr 3monocypher ,
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
-.Sh STANDARDS
-These functions implement Chacha20 and XChacha20.
-Chacha20 is described in RFC 8439.
-XChacha20 derives from Chacha20 the same way XSalsa20 derives from
-Salsa20, and benefits from the same security reduction (proven secure
-as long as Chacha20 itself is secure).
 .Sh HISTORY
 The
 .Fn crypto_chacha20_encrypt ,
@@ -293,40 +96,5 @@ was added in Monocypher 0.2.
 and
 .Fn crypto_chacha20_set_ctr
 were added in Monocypher 1.0.
-.Sh SECURITY CONSIDERATIONS
-.Ss Encrypted does not mean secure
-Chacha20 only protects against eavesdropping, not forgeries.
-Most applications need protection against forgeries to be properly
-secure.
-To ensure the integrity of a message, use Blake2b in keyed mode, or
-authenticated encryption; see
-.Xr crypto_blake2b 3monocypher
-and
-.Xr crypto_lock 3monocypher
-.Ss Nonce reuse
-Repeating a nonce with the same key exposes the XOR of two or more
-plain text messages, effectively destroying confidentiality.
-.Pp
-For the same reason,
-.Sy do not select small nonces at random .
-The
-.Fn crypto_chacha20_init
-nonce spans only 64 bits, which is small enough to trigger accidental
-reuses.
-A counter should be used instead.
-If multiple parties send out messages, Each can start with an initial
-nonce of 0, 1 .. n-1 respectively, and increment them by n for each
-new message.
-Make sure the counters never wrap around.
-.Ss Secure random number generation
-Do not use these functions as a cryptographic random number generator.
-Always use the operating system's random number generator for
-cryptographic purposes, see
-.Xr intro 3monocypher .
-.Ss Protection against side channels
-Secrets should not dwell in memory longer than needed.
-Use
-.Xr crypto_wipe 3monocypher
-to erase secrets you no longer need.
-For Chacha20, this means the context, the key, and in some cases the
-plain text itself.
+They were deprecated in Monocypher 3.0.0
+and will be removed in Monocypher 4.0.0.

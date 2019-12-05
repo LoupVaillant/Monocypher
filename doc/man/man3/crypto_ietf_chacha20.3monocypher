@@ -1,0 +1,82 @@
+.Dd December 2, 2019
+.Dt CRYPTO_IETF_CHACHA20 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm crypto_ietf_chacha20 ,
+.Nm crypto_ietf_chacha20_ctr
+.Nd IETF Chacha20 encryption functions
+.Sh SYNOPSIS
+.In monocypher.h
+.Ft void
+.Fo crypto_ietf_chacha20
+.Fa "uint8_t *cipher_text"
+.Fa "const uint8_t *plain_text"
+.Fa "size_t text_size"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[12]"
+.Fc
+.Ft void
+.Fo crypto_ietf_chacha20_ctr
+.Fa "uint8_t *cipher_text"
+.Fa "const uint8_t *plain_text"
+.Fa "size_t text_size"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[12]"
+.Fa "const uint32_t ctr"
+.Fc
+.Sh DESCRIPTION
+These functions provide an interface for the Chacha20 encryption
+primitive as specified by the IETF in RFC 8439.
+They are provided strictly for compatibility with existing systems
+or strict standards compliance.
+New programs are strongly encouraged to use
+.Xr crypto_xchacha20
+instead.
+.Pp
+Chacha20 is a low-level primitive.
+Consider using authenticated encryption, implemented by
+.Xr crypto_lock 3monocypher .
+.Pp
+The
+.Fn crypto_ietf_chacha20
+and
+.Fn crypto_ietf_chacha20_ctr
+functions behave the same as
+.Xr crypto_chacha20
+and
+.Xr crypto_chacha20_ctr ,
+respectively,
+but use differently-sized nonce and counter values.
+The nonce encompasses 12 bytes and the counter is correspondingly
+reduced to 4 bytes.
+The short counter limits a single pair of key and nonce to 256 GiB of
+data.
+A nonce of 12 bytes is
+.Em just barely too short
+to be safely chosen at random;
+use a message counter instead.
+RFC 8439 also permits linear feedback shift registers to generate
+nonces.
+.Sh RETURN VALUES
+.Fn crypto_ietf_chacha20
+returns nothing.
+.Fn crypto_ietf_chacha20_ctr
+functions return the next
+.Fa ctr
+to use with the same key and nonce values;
+this is always
+.Fa text_size
+divided by 64;
+plus one if there was a remainder.
+.Sh SEE ALSO
+.Xr crypto_chacha20 3monocypher ,
+.Xr crypto_lock 3monocypher ,
+.Xr crypto_wipe 3monocypher ,
+.Xr intro 3monocypher
+.Sh STANDARDS
+These functions implement Chacha20 as described in RFC 8439.
+.Sh HISTORY
+.Fn crypto_ietf_chacha20
+and
+.Fn crypto_ietf_chacha20_ctr
+were added in Monocypher 3.0.0.

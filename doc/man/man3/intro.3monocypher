@@ -1,4 +1,4 @@
-.Dd March 6, 2019
+.Dd December 4, 2019
 .Dt INTRO 3MONOCYPHER
 .Os
 .Sh NAME
@@ -13,7 +13,6 @@ key derivation, key exchange, and public key signatures.
 and
 .Xr crypto_unlock 3monocypher
 use the Chacha20 cipher and the Poly1305 one time authenticator.
-An incremental interface is also available.
 .Pp
 Chacha20 is a stream cipher based on a cryptographic hash function.
 It runs efficiently on a wide variety of hardware, and unlike AES
@@ -22,6 +21,15 @@ naturally runs in constant time on all hardware.
 Poly1305 is a one time authenticator, derived from Carter & Wegman
 universal hashing.
 It is very fast and very simple.
+.Pp
+For specialised needs,
+.Xr crypto_chacha20 3monocypher
+and
+.Xr crypto_poly1305 3monocypher
+are available to implement constructions involving them.
+Whenever possible,
+.Xr crypto_lock 3monocypher
+should be preferred, however.
 .Ss Hashing
 .Xr crypto_blake2b 3monocypher
 implements the Blake2b hash.
@@ -46,7 +54,11 @@ and
 implement EdDSA, with Curve25519 and Blake2b.
 This is the same as the more famous Ed25519, with SHA-512 replaced by
 the faster and more secure Blake2b.
-Ed25519 (EdDSA with SHA-512), is supported as a compilation option.
+.Pp
+For highly specialised needs,
+it is possible to use a custom hash function with EdDSA;
+see
+.Xr crypto_sign_init_first_pass_custom_hash 3monocypher .
 .Ss Constant time comparison
 .Xr crypto_verify16 3monocypher ,
 .Xr crypto_verify32 3monocypher ,
@@ -59,6 +71,16 @@ They should be used to compare secrets to prevent timing attacks.
 wipes a buffer.
 It is meant to erase secrets when they are no longer needed, to reduce
 the chances of leaks.
+.Ss Optional code
+If Monocypher was compiled and installed with
+.Dv USE_ED25519 ,
+SHA-512 functions become available as well.
+See
+.Xr crypto_ed25519_sign 3monocypher ,
+.Xr crypto_ed25519_sign_init_first_pass 3monocypher ,
+.Xr crypto_sha512 3monocypher ,
+and
+.Xr crypto_hmac_sha512 3monocypher .
 .Sh SEE ALSO
 .Xr crypto_argon2i 3monocypher ,
 .Xr crypto_argon2i_general 3monocypher ,
@@ -68,16 +90,13 @@ the chances of leaks.
 .Xr crypto_blake2b_general_init 3monocypher ,
 .Xr crypto_blake2b_init 3monocypher ,
 .Xr crypto_blake2b_update 3monocypher ,
-.Xr crypto_chacha20_encrypt 3monocypher ,
-.Xr crypto_chacha20_H 3monocypher ,
-.Xr crypto_chacha20_init 3monocypher ,
-.Xr crypto_chacha20_set_ctr 3monocypher ,
-.Xr crypto_chacha20_stream 3monocypher ,
-.Xr crypto_chacha20_x_init 3monocypher ,
+.Xr crypto_chacha20 3monocypher ,
+.Xr crypto_chacha20_ctr 3monocypher ,
 .Xr crypto_check 3monocypher ,
 .Xr crypto_check_final 3monocypher ,
 .Xr crypto_check_init 3monocypher ,
 .Xr crypto_check_update 3monocypher ,
+.Xr crypto_hchacha20 3monocypher ,
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_lock_aead 3monocypher ,
@@ -93,6 +112,7 @@ the chances of leaks.
 .Xr crypto_sign 3monocypher ,
 .Xr crypto_sign_final 3monocypher ,
 .Xr crypto_sign_init_first_pass 3monocypher ,
+.Xr crypto_sign_init_first_pass_custom_hash 3monocypher ,
 .Xr crypto_sign_init_second_pass 3monocypher ,
 .Xr crypto_sign_public_key 3monocypher ,
 .Xr crypto_sign_update 3monocypher ,
@@ -108,7 +128,9 @@ the chances of leaks.
 .Xr crypto_verify64 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr crypto_x25519 3monocypher ,
-.Xr crypto_x25519_public_key 3monocypher
+.Xr crypto_x25519_public_key 3monocypher ,
+.Xr crypto_xchacha20 3monocypher ,
+.Xr crypto_xchacha20_ctr 3monocypher
 .Sh SECURITY CONSIDERATIONS
 Using cryptography securely is difficult.
 Flaws that never manifest under normal use might be exploited by a
@@ -117,7 +139,8 @@ Cryptographic libraries are easy to misuse.
 Even Monocypher allows a number of fatal mistakes.
 .Pp
 Users should follow a formal introduction to cryptography.
-We currently recommend the https://www.crypto101.io/ online course.
+We currently recommend the
+.Lk https://www.crypto101.io/ "Crypto 101 online course" .
 .Ss Random number generation
 Use the facilities of your operating system.
 Avoid user space random number generators.
@@ -178,8 +201,12 @@ destroy all security.
 .Pp
 The Poly1305 authenticator, X25519, and EdDSA use multiplication.
 Some older processors do not multiply in constant time.
-If the target platform is something other than x86, x86_64, ARM or
-ARM64, double check how it handles multiplication.
+If the target platform is something other than Intel or AMD x86_64,
+double check how it handles multiplication.
+In particular,
+.Em ARM Cortex-M CPUs may lack constant-time multiplication .
+Some VIA Nano x86 and x86_64 CPUs may lack constant-time multiplication
+as well.
 .Ss Data compression
 Encryption does not hide the length of the input plaintext.
 Most compression algorithms work by using fewer bytes to encode

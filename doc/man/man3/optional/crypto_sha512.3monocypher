@@ -1,0 +1,142 @@
+.Dd December 5, 2019
+.Dt CRYPTO_SHA512 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm crypto_sha512 ,
+.Nm crypto_sha512_init ,
+.Nm crypto_sha512_update ,
+.Nm crypto_sha512_final
+.Nd cryptographic hashing with the SHA-512 algorithm
+.Sh SYNOPSIS
+.In monocypher.h
+.Ft void
+.Fo crypto_sha512
+.Fa "uint8_t hash[64]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft void
+.Fo crypto_sha512_init
+.Fa "crypto_sha512_ctx *ctx"
+.Fc
+.Ft void
+.Fo crypto_sha512_update
+.Fa "crypto_sha512_ctx *ctx"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft void
+.Fo crypto_sha512_final
+.Fa "crypto_sha512_ctx *ctx"
+.Fa "uint8_t hash[64]"
+.Fc
+.Sh DESCRIPTION
+SHA-512 is a cryptographically secure hash,
+provided to enable compatibility with other cryptographic systems.
+It is generally recommended to use
+.Xr crypto_blake2b 3monocypher
+instead,
+as it both performs faster on x86_64 CPUs and
+lacks many of the pitfalls of SHA-512.
+.Pp
+SHA-512 is
+.Em vulnerable to length extension attacks ;
+using it as a message authentication code (MAC) algorithm or keyed hash
+requires precautions.
+The
+.Xr crypto_hmac_sha512 3monocypher
+family of functions provides HMAC with SHA-512.
+Use
+.Xr crypto_verify64 3monocypher
+to compare MACs created this way.
+.Pp
+The arguments are:
+.Bl -tag -width Ds
+.It Fa hash
+The output hash,
+which is always 64 bytes long.
+.It Fa message
+The message to hash.
+May overlap with
+.Fa hash .
+May be
+.Dv NULL
+if
+.Fa message_size
+is 0.
+.It Fa message_size
+Length of
+.Fa message ,
+in bytes.
+.El
+.Pp
+An incremental interface is provided.
+It is useful for handling streams of data or
+large files without using too much memory.
+This interface uses three steps:
+.Bl -bullet
+.It
+initialisation with
+.Fn crypto_sha512_init ,
+which sets up a context with the hashing parameters;
+.It
+update with
+.Fn crypto_sha512_update ,
+which hashes the message chunk by chunk, and keep the intermediary
+result in the context;
+.It
+and finalisation with
+.Fn crypto_sha512_final ,
+which produces the final hash.
+The
+.Ft crypto_sha512_ctx
+is automatically wiped upon finalisation.
+.El
+.Pp
+.Fn crypto_sha512
+is a convenience function that
+performs
+.Fn crypto_sha512_init ,
+.Fn crypto_sha512_update ,
+and
+.Fn crypto_sha512_final .
+.Sh RETURN VALUES
+These functions return nothing.
+.Sh EXAMPLES
+Hashing a message all at once:
+.Bd -literal -offset indent
+uint8_t hash   [ 64]; /* Output hash (64 bytes) */
+uint8_t message[500]; /* Message to hash        */
+crypto_sha512(hash, message, 500);
+.Ed
+.Pp
+Hashing a message incrementally:
+.Bd -literal -offset indent
+uint8_t hash   [ 64]; /* Output hash (64 bytes) */
+uint8_t message[500]; /* Message to hash        */
+crypto_sha512_ctx ctx;
+crypto_sha512_init(&ctx);
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_sha512_update(&ctx, message + i, 100);
+}
+crypto_sha512_final(&ctx, hash);
+.Ed
+.Sh SEE ALSO
+.Xr crypto_blake2b 3monocypher ,
+.Xr crypto_hmac_sha512 3monocypher ,
+.Xr crypto_lock 3monocypher ,
+.Xr intro 3monocypher
+.Sh STANDARDS
+These functions implement SHA-512, described in RFC 6234 and
+the Federal Information Processing Standard (FIPS) 180-4.
+.Sh HISTORY
+The
+.Fn crypto_sha512 ,
+.Fn crypto_sha512_init ,
+.Fn crypto_sha512_update ,
+and
+.Fn crypto_sha512_final
+functions first appeared in Monocypher 0.3;
+they were not intended for use outside Monocypher itself and thus
+undocumented.
+They became part of the official API in Monocypher 3.0.0.

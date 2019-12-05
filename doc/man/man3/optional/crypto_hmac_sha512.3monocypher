@@ -1,0 +1,162 @@
+.Dd December 5, 2019
+.Dt CRYPTO_HMAC_SHA512 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm crypto_hmac_sha512 ,
+.Nm crypto_hmac_sha512_init ,
+.Nm crypto_hmac_sha512_update ,
+.Nm crypto_hmac_sha512_final
+.Nd cryptographic hash-based message authentication code with SHA-512
+.Sh SYNOPSIS
+.In monocypher.h
+.Ft void
+.Fo crypto_hmac_sha512
+.Fa "uint8_t hmac[64]"
+.Fa "const uint8_t *key"
+.Fa "size_t key_size"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft void
+.Fo crypto_hmac_sha512_init
+.Fa "crypto_hmac_sha512_ctx *ctx"
+.Fa "const uint8_t *key"
+.Fa "size_t key_size"
+.Fc
+.Ft void
+.Fo crypto_hmac_sha512_update
+.Fa "crypto_hmac_sha512_ctx *ctx"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft void
+.Fo crypto_hmac_sha512_final
+.Fa "crypto_hmac_sha512_ctx *ctx"
+.Fa "uint8_t hmac[64]"
+.Fc
+.Sh DESCRIPTION
+HMAC with SHA-512 is a cryptographically secure message authentication
+code (MAC),
+provided to enable compatibility with other cryptographic systems.
+It is generally recommended to use
+.Xr crypto_blake2b_general 3monocypher
+instead,
+as it performs faster on x86_64 CPUs.
+.Pp
+The arguments are:
+.Bl -tag -width Ds
+.It Fa hmac
+The output MAC,
+which is always 64 bytes long.
+.It Fa key
+Some secret key.
+One cannot predict the final hash without it.
+Users may want to wipe the key with
+.Xr crypto_wipe 3monocypher
+once they are done with it.
+.It Fa key_size
+Length of
+.Fa key ,
+in bytes.
+32 is a good default.
+Keys longer than 128 bytes will be reduced to 64 bytes by hashing
+the key with SHA-512.
+.It Fa message
+The message to compute the HMAC for.
+May overlap with
+.Fa hmac .
+May be
+.Dv NULL
+if
+.Fa message_size
+is 0.
+.It Fa message_size
+Length of
+.Fa message ,
+in bytes.
+.El
+.Pp
+An incremental interface is provided.
+It is useful for handling streams of data or
+large files without using too much memory.
+This interface uses three steps:
+.Bl -bullet
+.It
+initialisation with
+.Fn crypto_hmac_sha512_init ,
+which sets up a context with the hashing parameters;
+.It
+update with
+.Fn crypto_hmac_sha512_update ,
+which hashes the message chunk by chunk, and keep the intermediary
+result in the context;
+.It
+and finalisation with
+.Fn crypto_hmac_sha512_final ,
+which produces the final hash.
+The
+.Ft crypto_hmac_sha512_ctx
+is automatically wiped upon finalisation.
+.El
+.Pp
+.Fn crypto_hmac_sha512
+is a convenience function that
+performs
+.Fn crypto_hmac_sha512_init ,
+.Fn crypto_hmac_sha512_update ,
+and
+.Fn crypto_hmac_sha512_final .
+.Pp
+Use
+.Xr crypto_verify64 3monocypher
+to compare MACs.
+.Sh RETURN VALUES
+These functions return nothing.
+.Sh EXAMPLES
+Computing a message authentication code all at once:
+.Bd -literal -offset indent
+uint8_t hash   [ 64]; /* Output hash  (between 1 and 64 bytes) */
+uint8_t key    [ 32]; /* Optional key (between 0 and 64 bytes) */
+uint8_t message[500]; /* Message to hash                       */
+crypto_hmac_sha512(hash, 64, key, 32, message, 500);
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(message, 500);
+crypto_wipe(key, 32);
+.Ed
+.Pp
+Computing a message authentication code incrementally:
+.Bd -literal -offset indent
+uint8_t hash   [ 64]; /* Output hash  (between 1 and 64 bytes) */
+uint8_t key    [ 32]; /* Optional key (between 0 and 64 bytes) */
+uint8_t message[500]; /* Message to hash                       */
+crypto_hmac_sha512_ctx ctx;
+crypto_hmac_sha512_init(&ctx, 64, key, 32);
+/* Wipe the key */
+crypto_wipe(key, 32);
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_hmac_sha512_update(&ctx, message + i, 100);
+    /* Wipe secrets if they are no longer needed */
+    crypto_wipe(message + i, 100);
+}
+crypto_hmac_sha512_final(&ctx, hash);
+.Ed
+.Sh SEE ALSO
+.Xr crypto_blake2b 3monocypher ,
+.Xr crypto_lock 3monocypher ,
+.Xr crypto_poly1305 3monocypher ,
+.Xr crypto_sha512 3monocypher ,
+.Xr intro 3monocypher
+.Sh STANDARDS
+These functions implement HMAC with SHA-512.
+HMAC and SHA-512 itself are described in RFC 6234;
+SHA-512 is also described in the Federal Information Processing Standard
+(FIPS) 180-4;
+HMAC is also described in FIPS 198-1.
+.Sh HISTORY
+The
+.Fn crypto_hmac_sha512 ,
+.Fn crypto_hmac_sha512_init ,
+.Fn crypto_hmac_sha512_update ,
+and
+.Fn crypto_hmac_sha512_final
+functions first appeared in Monocypher 3.0.0.

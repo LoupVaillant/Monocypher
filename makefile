@@ -44,7 +44,10 @@ install: library src/monocypher.h install-doc
 
 install-doc:
 	mkdir -p $(MAN_DIR)
-	cp -r doc/man/man3/*.3monocypher $(MAN_DIR)
+	cp -PR doc/man/man3/*.3monocypher $(MAN_DIR)
+ifdef USE_ED25519
+	cp -PR doc/man/man3/optional/*.3monocypher $(MAN_DIR)
+endif
 
 pkg-config-libhydrogen:
 	mkdir -p $(PKGCONFIG)

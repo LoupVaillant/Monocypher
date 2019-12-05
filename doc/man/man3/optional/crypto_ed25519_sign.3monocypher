@@ -1,0 +1,73 @@
+.Dd December 3, 2019
+.Dt CRYPTO_ED25519_SIGN 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm crypto_ed25519_sign ,
+.Nm crypto_ed25519_check ,
+.Nm crypto_ed25519_sign_public_key
+.Nd public key signatures
+.Sh SYNOPSIS
+.In monocypher.h
+.Ft void
+.Fo crypto_ed25519_sign_public_key
+.Fa "uint8_t public_key[32]"
+.Fa "const uint8_t secret_key[32]"
+.Fc
+.Ft void
+.Fo crypto_ed25519_sign
+.Fa "uint8_t signature[64]"
+.Fa "const uint8_t secret_key[32]"
+.Fa "const uint8_t public_key[32]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_ed25519_check
+.Fa "const uint8_t signature[64]"
+.Fa "const uint8_t public_key[32]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Sh DESCRIPTION
+The
+.Fn crypto_ed25519_sign
+and
+.Fn crypto_ed25519_check
+functions provide Ed25519 public key signatures and verification
+with SHA-512 as the underlying hash function;
+they are interoperable with other Ed25519 implementations.
+If you have no interoperability requirements, prefer
+.Xr crypto_sign 3monocypher .
+.Pp
+The arguments and security considerations are the same as those
+described in
+.Xr crypto_sign 3monocypher .
+.Pp
+An incremental interface is available; see
+.Xr crypto_ed25519_sign_init_first_pass 3monocypher .
+.Sh RETURN VALUES
+.Fn crypto_ed25519_sign_public_key
+and
+.Fn crypto_ed25519_sign
+return nothing.
+.Pp
+.Fn crypto_ed25519_check
+returns 0 for legitimate messages and -1 for forgeries.
+.Sh SEE ALSO
+.Xr crypto_check 3monocypher ,
+.Xr crypto_key_exchange 3monocypher ,
+.Xr crypto_lock 3monocypher ,
+.Xr crypto_sha512 3monocypher ,
+.Xr intro 3monocypher
+.Sh STANDARDS
+These functions implement Ed25519 as described in RFC 8032.
+.Sh HISTORY
+The
+.Fn crypto_ed25519_sign ,
+.Fn crypto_ed25519_check ,
+and
+.Fn crypto_ed25519_sign_public_key
+functions appeared in Monocypher 3.0.0.
+They replace recompilation of Monocypher with the
+.Dv ED25519_SHA512
+preprocessor definition.
