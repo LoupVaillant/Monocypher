@@ -151,9 +151,9 @@ Customisation
 -------------
 
 Monocypher has optional compatibility with Ed25519. To have that, add
-`ed25519.h` and `ed25519.c` provided in `src/optional` to your project.
-If you're using the makefile, define the `USE_ED25519` variable to link
-it to monocypher.a and monocypher.so:
+`monocypher-ed25519.h` and `monocypher-ed25519.c` provided in
+`src/optional` to your project.  If you're using the makefile, define
+the `USE_ED25519` variable to link it to monocypher.a and monocypher.so:
 
     $ make USE_ED25519=true
 

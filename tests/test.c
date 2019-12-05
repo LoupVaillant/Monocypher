@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "monocypher.h"
-#include "ed25519.h"
+#include "monocypher-ed25519.h"
 #include "utils.h"
 #include "vectors.h"
 

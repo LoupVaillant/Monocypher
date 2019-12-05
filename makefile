@@ -9,8 +9,8 @@ SONAME=libmonocypher.so.3
 VERSION=__git__
 
 ifdef USE_ED25519
-LINK_ED25519=lib/ed25519.o
-INSTALL_ED25519=cp src/optional/ed25519.h $(DESTDIR)/$(PREFIX)/include
+LINK_ED25519=lib/monocypher-ed25519.o
+INSTALL_ED25519=cp src/optional/monocypher-ed25519.h $(DESTDIR)/$(PREFIX)/include
 endif
 
 .PHONY: all library static-library dynamic-library                     \
@@ -101,16 +101,17 @@ lib/libmonocypher.so: lib/$(SONAME)
 lib/$(SONAME): lib/monocypher.o $(LINK_ED25519)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $^
-lib/ed25519.o   : src/optional/ed25519.c     src/optional/ed25519.h
+lib/monocypher-ed25519.o: src/optional/monocypher-ed25519.c \
+                          src/optional/monocypher-ed25519.h
 lib/chacha20.o  : src/deprecated/chacha20.c  src/deprecated/chacha20.h
 lib/aead-incr.o : src/deprecated/aead-incr.c src/deprecated/aead-incr.h
 lib/monocypher.o: src/monocypher.c src/monocypher.h
-lib/monocypher.o lib/ed25519.o lib/chacha20.o lib/aead-incr.o:
+lib/monocypher.o lib/monocypher-ed25519.o lib/chacha20.o lib/aead-incr.o:
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ $<
 
 # Test & speed libraries
-TEST_COMMON = tests/utils.h src/monocypher.h src/optional/ed25519.h
+TEST_COMMON = tests/utils.h src/monocypher.h src/optional/monocypher-ed25519.h
 TEST_LEGACY = $(TEST_COMMON) src/deprecated/chacha20.h src/deprecated/aead-incr.h
 SPEED       = tests/speed
 lib/utils.o          :tests/utils.c
@@ -139,16 +140,15 @@ lib/speed-hydrogen.o:$(SPEED)/speed-hydrogen.c $(TEST_COMMON) $(SPEED)/speed.h
             -fPIC -c -o $@ $<
 
 C25519=         c25519 edsign ed25519 morph25519 fprime f25519 sha512
-C25519_SOURCE=  $(patsubst %, tests/externals/c25519/%.c, $(C25519))
-C25519_HEADERS= $(patsubst %, tests/externals/c25519/%.h, $(C25519))
+C25519_H=       $(patsubst %, tests/externals/c25519/%.h, $(C25519))
 C25519_OBJECTS= $(patsubst %, lib/c25519/%.o,             $(C25519))
-lib/c25519/c25519.o    : tests/externals/c25519/c25519.c      $(C25519_HEADERS)
-lib/c25519/ed25519.o   : tests/externals/c25519/ed25519.c     $(C25519_HEADERS)
-lib/c25519/edsign.o    : tests/externals/c25519/edsign.c      $(C25519_HEADERS)
-lib/c25519/f25519.o    : tests/externals/c25519/f25519.c      $(C25519_HEADERS)
-lib/c25519/fprime.o    : tests/externals/c25519/fprime.c      $(C25519_HEADERS)
-lib/c25519/morph25519.o: tests/externals/c25519/morph25519.c  $(C25519_HEADERS)
-lib/c25519/sha512.o    : tests/externals/c25519/sha512.c      $(C25519_HEADERS)
+lib/c25519/c25519.o    : tests/externals/c25519/c25519.c             $(C25519_H)
+lib/c25519/ed25519.o   : tests/externals/c25519/monocypher-ed25519.c $(C25519_H)
+lib/c25519/edsign.o    : tests/externals/c25519/edsign.c             $(C25519_H)
+lib/c25519/f25519.o    : tests/externals/c25519/f25519.c             $(C25519_H)
+lib/c25519/fprime.o    : tests/externals/c25519/fprime.c             $(C25519_H)
+lib/c25519/morph25519.o: tests/externals/c25519/morph25519.c         $(C25519_H)
+lib/c25519/sha512.o    : tests/externals/c25519/sha512.c             $(C25519_H)
 $(C25519_OBJECTS):
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -I tests/externals/c25519/ -c -o $@ $<
@@ -163,9 +163,9 @@ lib/speed-c25519.o:$(SPEED)/speed-c25519.c \
 
 # test & speed executables
 TEST_OBJ=  lib/utils.o lib/monocypher.o
-test.out       : lib/test.o        $(TEST_OBJ) lib/ed25519.o
+test.out       : lib/test.o        $(TEST_OBJ) lib/monocypher-ed25519.o
 test-legacy.out: lib/test-legacy.o $(TEST_OBJ) lib/chacha20.o lib/aead-incr.o
-speed.out      : lib/speed.o       $(TEST_OBJ) lib/ed25519.o
+speed.out      : lib/speed.o       $(TEST_OBJ) lib/monocypher-ed25519.o
 test.out test-legacy.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
 speed-sodium.out: lib/speed-sodium.o lib/utils.o
