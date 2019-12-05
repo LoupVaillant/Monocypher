@@ -1,0 +1,107 @@
+.Dd December 3, 2019
+.Dt CRYPTO_ED25519_SIGN_INIT_FIRST_PASS 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm crypto_ed25519_sign_init_first_pass ,
+.Nm crypto_ed25519_sign_update ,
+.Nm crypto_ed25519_sign_final ,
+.Nm crypto_ed25519_sign_init_second_pass ,
+.Nm crypto_ed25519_check_init ,
+.Nm crypto_ed25519_check_update ,
+.Nm crypto_ed25519_check_final
+.Nd incremental public key signatures
+.Sh SYNOPSIS
+.In monocypher.h
+.Ft void
+.Fo crypto_ed25519_sign_init_first_pass
+.Fa "crypto_ed25519_sign_ctx *ctx"
+.Fa "const uint8_t secret_key[32]"
+.Fa "const uint8_t public_key[32]"
+.Fc
+.Ft void
+.Fo crypto_ed25519_sign_update
+.Fa "crypto_ed25519_sign_ctx *ctx"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft void
+.Fo crypto_ed25519_sign_final
+.Fa "crypto_ed25519_sign_ctx *ctx"
+.Fa "uint8_t signature[64]"
+.Fc
+.Ft void
+.Fo crypto_ed25519_sign_init_second_pass
+.Fa "crypto_ed25519_sign_ctx *ctx"
+.Fc
+.Ft void
+.Fo crypto_ed25519_check_init
+.Fa "crypto_ed25519_check_ctx *ctx"
+.Fa "const uint8_t signature[64]"
+.Fa "const uint8_t public_key[32]"
+.Fc
+.Ft void
+.Fo crypto_ed25519_check_update
+.Fa "crypto_ed25519_check_ctx *ctx"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_ed25519_check_final
+.Fa "crypto_ed25519_check_ctx *ctx"
+.Fc
+.Sh DESCRIPTION
+These functions are variants of
+.Xr crypto_ed25519_sign 3monocypher
+and
+.Xr crypto_ed25519_check 3monocypher .
+Prefer those simpler functions if possible.
+.Pp
+These functions provide Ed25519 public key signatures and verification
+with SHA-512 as the underlying hash function;
+they are interoperable with other Ed25519 implementations.
+If you have no interoperability requirements, prefer
+.Xr crypto_sign 3monocypher .
+.Pp
+The arguments, security considerations and semantics are the same as
+those described in
+.Xr crypto_sign_init_first_pass 3monocypher
+and
+.Xr crypto_sign 3monocypher .
+.Sh RETURN VALUES
+.Fn crypto_ed25519_sign_init_first_pass ,
+.Fn crypto_ed25519_sign_init_second_pass ,
+.Fn crypto_ed25519_sign_update ,
+.Fn crypto_ed25519_sign_final ,
+.Fn crypto_ed25519_check_init
+and
+.Fn crypto_ed25519_check_update
+return nothing.
+.Pp
+.Fn crypto_ed25519_check_final
+returns 0 for legitimate messages and -1 for forgeries.
+.Sh SEE ALSO
+.Xr crypto_blake2b 3monocypher ,
+.Xr crypto_key_exchange 3monocypher ,
+.Xr crypto_lock 3monocypher ,
+.Xr crypto_ed25519_sign 3monocypher ,
+.Xr crypto_sign 3monocypher ,
+.Xr crypto_sign_init_first_pass 3monocypher ,
+.Xr crypto_sha512 3monocypher ,
+.Xr crypto_wipe 3monocypher ,
+.Xr intro 3monocypher
+.Sh STANDARDS
+These functions implement Ed25519 as described in RFC 8032.
+.Sh HISTORY
+The
+.Fn crypto_ed25519_sign_init_first_pass ,
+.Fn crypto_ed25519_sign_update ,
+.Fn crypto_ed25519_sign_final ,
+.Fn crypto_ed25519_sign_init_second_pass ,
+.Fn crypto_ed25519_check_init ,
+.Fn crypto_ed25519_check_update ,
+and
+.Fn crypto_ed25519_check_final
+functions first appeared in Monocypher 3.0.0.
+They replace recompilation of Monocypher with the
+.Dv ED25519_SHA512
+preprocessor definition.
