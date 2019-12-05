@@ -139,7 +139,8 @@ Cryptographic libraries are easy to misuse.
 Even Monocypher allows a number of fatal mistakes.
 .Pp
 Users should follow a formal introduction to cryptography.
-We currently recommend the https://www.crypto101.io/ online course.
+We currently recommend the
+.Lk https://www.crypto101.io/ "Crypto 101 online course" .
 .Ss Random number generation
 Use the facilities of your operating system.
 Avoid user space random number generators.
