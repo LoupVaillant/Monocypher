@@ -8,7 +8,7 @@
 .Nm crypto_sha512_final
 .Nd cryptographic hashing with the SHA-512 algorithm
 .Sh SYNOPSIS
-.In monocypher.h
+.In monocypher-ed25519.h
 .Ft void
 .Fo crypto_sha512
 .Fa "uint8_t hash[64]"

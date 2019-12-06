@@ -108,7 +108,7 @@ and
 .Fa final
 members.
 .It Fa init
-Function that initialises the hash context an outer signing context.
+Function that initialises the hash context of an outer signing context.
 .It Fa update
 Function that updates the hash context of an outer signing context.
 It must be able to handle message sizes of at least 32 bytes.
@@ -207,6 +207,7 @@ main(void)
     struct outer_ctx ctx;
     crypto_sign_init_first_pass_custom_hash((void*)&ctx,
                                             sk, NULL, &my_vtable);
+    crypto_wipe(sk, sizeof(sk));
     crypto_sign_update(          (void*)&ctx, msg, sizeof(msg));
     crypto_sign_init_second_pass((void*)&ctx);
     crypto_sign_update(          (void*)&ctx, msg, sizeof(msg));

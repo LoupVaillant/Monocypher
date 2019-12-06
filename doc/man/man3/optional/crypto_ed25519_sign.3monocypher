@@ -7,7 +7,7 @@
 .Nm crypto_ed25519_sign_public_key
 .Nd public key signatures
 .Sh SYNOPSIS
-.In monocypher.h
+.In monocypher-ed25519.h
 .Ft void
 .Fo crypto_ed25519_sign_public_key
 .Fa "uint8_t public_key[32]"

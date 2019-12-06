@@ -95,8 +95,11 @@ and
 .Xr crypto_check 3monocypher ,
 .Xr crypto_check_final 3monocypher ,
 .Xr crypto_check_init 3monocypher ,
+.Xr crypto_check_init_custom_hash 3monocypher ,
 .Xr crypto_check_update 3monocypher ,
 .Xr crypto_hchacha20 3monocypher ,
+.Xr crypto_ietf_chacha20 3monocypher ,
+.Xr crypto_ietf_chacha20_ctr 3monocypher ,
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_lock_aead 3monocypher ,
@@ -115,6 +118,7 @@ and
 .Xr crypto_sign_init_first_pass_custom_hash 3monocypher ,
 .Xr crypto_sign_init_second_pass 3monocypher ,
 .Xr crypto_sign_public_key 3monocypher ,
+.Xr crypto_sign_public_key_custom_hash 3monocypher ,
 .Xr crypto_sign_update 3monocypher ,
 .Xr crypto_unlock 3monocypher ,
 .Xr crypto_unlock_aead 3monocypher ,
@@ -131,6 +135,24 @@ and
 .Xr crypto_x25519_public_key 3monocypher ,
 .Xr crypto_xchacha20 3monocypher ,
 .Xr crypto_xchacha20_ctr 3monocypher
+.Ss Optional code
+.Xr crypto_ed25519_check 3monocypher ,
+.Xr crypto_ed25519_check_init 3monocypher ,
+.Xr crypto_ed25519_check_update 3monocypher ,
+.Xr crypto_ed25519_check_final 3monocypher ,
+.Xr crypto_ed25519_public_key 3monocypher ,
+.Xr crypto_ed25519_sign 3monocypher ,
+.Xr crypto_ed25519_sign_init_first_pass 3monocypher ,
+.Xr crypto_ed25519_sign_init_second_pass 3monocypher ,
+.Xr crypto_ed25519_sign_final 3monocypher ,
+.Xr crypto_hmac_sha512 3monocypher ,
+.Xr crypto_hmac_sha512_init 3monocypher ,
+.Xr crypto_hmac_sha512_update 3monocypher ,
+.Xr crypto_hmac_sha512_final 3monocypher
+.Xr crypto_sha512 3monocypher ,
+.Xr crypto_sha512_init 3monocypher ,
+.Xr crypto_sha512_update 3monocypher ,
+.Xr crypto_sha512_final 3monocypher
 .Sh SECURITY CONSIDERATIONS
 Using cryptography securely is difficult.
 Flaws that never manifest under normal use might be exploited by a
