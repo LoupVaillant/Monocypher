@@ -21,6 +21,6 @@
 tests/formal-analysis/*
 tests/formal-analysis
 *.tar.gz
-monocypher-*
+monocypher-*/
 doc/html/*.html
 tests/vectors.h
