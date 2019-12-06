@@ -8,7 +8,7 @@
 .Nm crypto_hmac_sha512_final
 .Nd cryptographic hash-based message authentication code with SHA-512
 .Sh SYNOPSIS
-.In monocypher.h
+.In monocypher-ed25519.h
 .Ft void
 .Fo crypto_hmac_sha512
 .Fa "uint8_t hmac[64]"
