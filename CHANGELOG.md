@@ -1,3 +1,20 @@
+3.0.0
+-----
+2019/12/09
+
+- Deprecated the incremental AEAD interface.
+- Deprecated the incremental Chacha20, added a direct interface.
+- Moved deprecated interfaces to a separate `src/deprecated` folder.
+- Removed the `ED25519_SHA512` preprocessor flag.
+- `crypto_x25519()` and `crypto_key_exchange()` now return `void`.
+- Added a custom hash interface to EdDSA.  Several instances of EdDSA
+  can share the same binary.
+- Added optional support for HMAC SHA-512
+- Moved all SHA-512 operations to `src/optional/ed25519.(h|c)`
+- Optional support for Ed25519 no longer requires a preprocessor flag.
+  Add `src/optional/ed25519.(h|c)` to your project instead.
+
+
 2.0.6
 -----
 2019/10/21
