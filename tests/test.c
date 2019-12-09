@@ -182,6 +182,11 @@ static void ed_25519(const vector in[], vector *out)
     }
 }
 
+static void ed_25519_pk(const vector in[], vector *out)
+{
+    crypto_ed25519_public_key(out->buf, in->buf);
+}
+
 static void ed_25519_check(const vector in[], vector *out)
 {
     const vector *public_k = in;
@@ -267,6 +272,37 @@ static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
 static int p_verify16(){ return p_verify(16, crypto_verify16); }
 static int p_verify32(){ return p_verify(32, crypto_verify32); }
 static int p_verify64(){ return p_verify(64, crypto_verify64); }
+
+static int p_chacha20_ctr()
+{
+    int status = 0;
+    RANDOM_INPUT(key  ,  32);
+    RANDOM_INPUT(nonce,  24);
+    RANDOM_INPUT(plain, 128);
+    u8 out_full[128];
+    u8 out1     [64];
+    u8 out2     [64];
+    crypto_chacha20    (out_full, plain     , 128, key, nonce);
+    crypto_chacha20_ctr(out1    , plain +  0,  64, key, nonce, 0);
+    crypto_chacha20_ctr(out2    , plain + 64,  64, key, nonce, 1);
+    status |= memcmp(out_full     , out1, 64);
+    status |= memcmp(out_full + 64, out2, 64);
+
+    crypto_ietf_chacha20    (out_full, plain     , 128, key, nonce);
+    crypto_ietf_chacha20_ctr(out1    , plain +  0,  64, key, nonce, 0);
+    crypto_ietf_chacha20_ctr(out2    , plain + 64,  64, key, nonce, 1);
+    status |= memcmp(out_full     , out1, 64);
+    status |= memcmp(out_full + 64, out2, 64);
+
+    crypto_xchacha20    (out_full, plain     , 128, key, nonce);
+    crypto_xchacha20_ctr(out1    , plain +  0,  64, key, nonce, 0);
+    crypto_xchacha20_ctr(out2    , plain + 64,  64, key, nonce, 1);
+    status |= memcmp(out_full     , out1, 64);
+    status |= memcmp(out_full + 64, out2, 64);
+
+    printf("%s: Chacha20 (ctr)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
 
 // Tests that Chacha20(nullptr) == Chacha20(all-zeroes)
 static int p_chacha20_stream()
@@ -741,6 +777,7 @@ int main(int argc, char *argv[])
     status |= TEST(edDSA         , 3);
     status |= TEST(edDSA_pk      , 1);
     status |= TEST(ed_25519      , 3);
+    status |= TEST(ed_25519_pk   , 1);
     status |= TEST(ed_25519_check, 3);
     status |= test_x25519();
 
@@ -749,6 +786,7 @@ int main(int argc, char *argv[])
     status |= p_verify16();
     status |= p_verify32();
     status |= p_verify64();
+    status |= p_chacha20_ctr();
     status |= p_chacha20_stream();
     status |= p_chacha20_same_ptr();
     status |= p_hchacha20();
