@@ -21,11 +21,11 @@
 tests/formal-analysis/*
 tests/formal-analysis
 *.tar.gz
-monocypher-*
+monocypher-*/
 lib*
 .git*
 release.sh
-tarball_ignore
+dist_ignore
 tests/gen*
 tests/externals/ed25519-donna*
 doc/man2html.sh

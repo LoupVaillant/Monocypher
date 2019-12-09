@@ -20,7 +20,7 @@ doc/man2html.sh
 rm -rf $FOLDER
 
 # copy everything except ignored files to the
-rsync -ad --exclude-from=tarball_ignore ./ $FOLDER
+rsync -ad --exclude-from=dist_ignore ./ $FOLDER
 
 # Replace version markers by the actual version number (from tags)
 find $FOLDER -type f -exec sed -i "s/__git__/$VERSION/g" \{\} \;

@@ -18,7 +18,7 @@ endif
         check test                                                     \
         speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519 \
         clean uninstall                                                \
-        tarball
+        dist
 
 all    : library
 install: library src/monocypher.h install-doc
@@ -201,4 +201,4 @@ tests/vectors.h:
 	exit 1
 
 dist: tests/vectors.h
-	./release.sh
+	./dist.sh
