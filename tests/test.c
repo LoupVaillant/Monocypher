@@ -29,6 +29,20 @@ static void chacha20(const vector in[], vector *out)
     }
 }
 
+static void ietf_chacha20(const vector in[], vector *out)
+{
+    const vector *key   = in;
+    const vector *nonce = in + 1;
+    const vector *plain = in + 2;
+    u32 ctr       = load32_le(in[3].buf);
+    u32 new_ctr   = crypto_ietf_chacha20_ctr(out->buf, plain->buf, plain->size,
+                                             key->buf, nonce->buf, ctr);
+    u32 nb_blocks = plain->size / 64 + (plain->size % 64 != 0);
+    if (new_ctr - ctr != nb_blocks) {
+        printf("FAILURE: IETF Chacha20 returned counter not correct: ");
+    }
+}
+
 static void hchacha20(const vector in[], vector *out)
 {
     const vector *key   = in;
@@ -46,7 +60,7 @@ static void xchacha20(const vector in[], vector *out)
                                          key->buf, nonce->buf, ctr);
     u64 nb_blocks = plain->size / 64 + (plain->size % 64 != 0);
     if (new_ctr - ctr != nb_blocks) {
-        printf("FAILURE: Chacha20 returned counter not correct: ");
+        printf("FAILURE: XChacha20 returned counter not correct: ");
     }
 }
 
@@ -712,6 +726,7 @@ int main(int argc, char *argv[])
     printf("\nTest against vectors");
     printf("\n--------------------\n");
     status |= TEST(chacha20      , 4);
+    status |= TEST(ietf_chacha20 , 4);
     status |= TEST(hchacha20     , 2);
     status |= TEST(xchacha20     , 4);
     status |= TEST(poly1305      , 2);

@@ -16,16 +16,17 @@ void store64_le(u8 out[8], u64 in)
     out[7] = (in >> 56) & 0xff;
 }
 
-u64 load64_le(const u8 s[8])
+u32 load32_le(const u8 s[4])
 {
     return (u64)s[0]
         | ((u64)s[1] <<  8)
         | ((u64)s[2] << 16)
-        | ((u64)s[3] << 24)
-        | ((u64)s[4] << 32)
-        | ((u64)s[5] << 40)
-        | ((u64)s[6] << 48)
-        | ((u64)s[7] << 56);
+        | ((u64)s[3] << 24);
+}
+
+u64 load64_le(const u8 s[8])
+{
+    return load32_le(s) | ((u64)load32_le(s+4) << 32);
 }
 
 // Must be seeded with a nonzero value.
