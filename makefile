@@ -142,13 +142,13 @@ lib/speed-hydrogen.o:$(SPEED)/speed-hydrogen.c $(TEST_COMMON) $(SPEED)/speed.h
 C25519=         c25519 edsign ed25519 morph25519 fprime f25519 sha512
 C25519_H=       $(patsubst %, tests/externals/c25519/%.h, $(C25519))
 C25519_OBJECTS= $(patsubst %, lib/c25519/%.o,             $(C25519))
-lib/c25519/c25519.o    : tests/externals/c25519/c25519.c             $(C25519_H)
-lib/c25519/ed25519.o   : tests/externals/c25519/monocypher-ed25519.c $(C25519_H)
-lib/c25519/edsign.o    : tests/externals/c25519/edsign.c             $(C25519_H)
-lib/c25519/f25519.o    : tests/externals/c25519/f25519.c             $(C25519_H)
-lib/c25519/fprime.o    : tests/externals/c25519/fprime.c             $(C25519_H)
-lib/c25519/morph25519.o: tests/externals/c25519/morph25519.c         $(C25519_H)
-lib/c25519/sha512.o    : tests/externals/c25519/sha512.c             $(C25519_H)
+lib/c25519/c25519.o    : tests/externals/c25519/c25519.c     $(C25519_H)
+lib/c25519/ed25519.o   : tests/externals/c25519/ed25519.c    $(C25519_H)
+lib/c25519/edsign.o    : tests/externals/c25519/edsign.c     $(C25519_H)
+lib/c25519/f25519.o    : tests/externals/c25519/f25519.c     $(C25519_H)
+lib/c25519/fprime.o    : tests/externals/c25519/fprime.c     $(C25519_H)
+lib/c25519/morph25519.o: tests/externals/c25519/morph25519.c $(C25519_H)
+lib/c25519/sha512.o    : tests/externals/c25519/sha512.c     $(C25519_H)
 $(C25519_OBJECTS):
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -I tests/externals/c25519/ -c -o $@ $<
