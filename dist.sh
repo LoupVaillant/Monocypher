@@ -6,10 +6,8 @@ VERSION=`git describe --tags`
 FOLDER=monocypher-$VERSION
 TARBALL=$FOLDER.tar.gz
 
-# Run the tests before we do anything.  It's not enough (we ought to run
-# the tests from the tarball itself, including the TIS interpreter), but
-# it should prevent the most egregious errors.
-tests/test.sh
+# Generate the test vectors.
+(cd tests/gen/ make)
 
 # Generate documentation for users who don't have mandoc
 doc/man2html.sh
@@ -37,3 +35,17 @@ tar -cvzf $TARBALL $FOLDER
 
 # Remove the temporary folder
 rm -rf $FOLDER
+
+# Run tests in the tarball, to make sure we didn't screw up anything
+# important.  We're missing the TIS interpreter run, but that's a good
+# quick check.
+tar -xzf $TARBALL
+cd $FOLDER   # Extracting from the tarball, just to make sure
+tests/test.sh
+make clean
+make speed
+make speed-sodium
+make speed-tweetnacl
+make speed-hydrogen
+make speed-c25519
+make
