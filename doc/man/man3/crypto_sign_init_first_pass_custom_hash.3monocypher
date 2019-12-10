@@ -1,4 +1,4 @@
-.Dd December 3, 2019
+.Dd December 10, 2019
 .Dt CRYPTO_SIGN_INIT_FIRST_PASS_CUSTOM_HASH 3MONOCYPHER
 .Os
 .Sh NAME
@@ -36,10 +36,12 @@ They provide the ability to replace the EdDSA hash function with any
 user-provided hash function.
 .Pp
 .Sy This is a highly advanced feature .
+Interoperability of public key signatures
+with other cryptographic libraries can normally be achieved by using
 .Xr crypto_ed25519_sign 3monocypher
 or
 .Xr crypto_ed25519_sign_init_first_pass 3monocypher
-handle interoperability issues regarding public key signatures.
+already.
 This interface is exposed only for completeness and to handle special
 situations
 (e.g. to use the hash function of the future winner of the NIST
@@ -60,7 +62,7 @@ typedef struct {
     void (*init  )(void *ctx);
     void (*update)(void *ctx, const uint8_t *message,
                    size_t message_size);
-    void (*final )(void *ctx, uint8_t *hash);
+    void (*final )(void *ctx, uint8_t hash[64]);
     size_t ctx_size;
 } crypto_sign_vtable;
 .Ed
@@ -97,7 +99,9 @@ The fields of
 are:
 .Bl -tag -width Ds
 .It Fa hash
-Function that generates a 64-byte hash for a given message.
+Function that computes a 64-byte hash for a given message
+and writes the computed hash to
+.Fa hash .
 The output length
 .Em must
 be exactly 64 bytes.
@@ -113,7 +117,12 @@ Function that initialises the hash context of an outer signing context.
 Function that updates the hash context of an outer signing context.
 It must be able to handle message sizes of at least 32 bytes.
 .It Fa final
-Function that finalises the hash context of an outer signing context.
+Function that finalises the hash context of an outer signing context
+and writes the computed hash to
+.Fa hash .
+The output length
+.Em must
+be exactly 64 bytes.
 This function should wipe the hash context with
 .Xr crypto_wipe 3monocypher
 if it contains pointers to objects outside the outer signing context.

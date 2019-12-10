@@ -10,9 +10,9 @@
 - Added a custom hash interface to EdDSA.  Several instances of EdDSA
   can share the same binary.
 - Added optional support for HMAC SHA-512
-- Moved all SHA-512 operations to `src/optional/ed25519.(h|c)`
+- Moved all SHA-512 operations to `src/optional/monocypher-ed25519.(h|c)`
 - Optional support for Ed25519 no longer requires a preprocessor flag.
-  Add `src/optional/ed25519.(h|c)` to your project instead.
+  Add `src/optional/monocypher-ed25519.(h|c)` to your project instead.
 
 
 2.0.6

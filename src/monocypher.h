@@ -17,7 +17,7 @@ typedef struct {
     void (*hash)(uint8_t hash[64], const uint8_t *message, size_t message_size);
     void (*init  )(void *ctx);
     void (*update)(void *ctx, const uint8_t *message, size_t message_size);
-    void (*final )(void *ctx, uint8_t *hash);
+    void (*final )(void *ctx, uint8_t hash[64]);
     size_t ctx_size;
 } crypto_sign_vtable;
 
