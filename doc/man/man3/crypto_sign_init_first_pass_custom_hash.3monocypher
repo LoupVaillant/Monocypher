@@ -36,10 +36,12 @@ They provide the ability to replace the EdDSA hash function with any
 user-provided hash function.
 .Pp
 .Sy This is a highly advanced feature .
+Interoperability of public key signatures
+with other cryptographic libraries can normally be achieved by using
 .Xr crypto_ed25519_sign 3monocypher
 or
 .Xr crypto_ed25519_sign_init_first_pass 3monocypher
-handle interoperability issues regarding public key signatures.
+already.
 This interface is exposed only for completeness and to handle special
 situations
 (e.g. to use the hash function of the future winner of the NIST
