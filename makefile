@@ -119,10 +119,16 @@ lib/test.o           :tests/test.c               $(TEST_COMMON) tests/vectors.h
 lib/test-legacy.o    :tests/test-legacy.c        $(TEST_LEGACY) tests/vectors.h
 lib/speed.o          :$(SPEED)/speed.c           $(TEST_COMMON) $(SPEED)/speed.h
 lib/speed-tweetnacl.o:$(SPEED)/speed-tweetnacl.c $(TEST_COMMON) $(SPEED)/speed.h
-lib/utils.o lib/test.o lib/test-legacy.o lib/speed.o lib/speed-tweetnacl.o:
+lib/utils.o lib/test.o lib/test-legacy.o lib/speed.o:
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS)                                        \
-            -I src -I src/optional -I tests -I tests/externals \
+	$(CC) $(CFLAGS)                     \
+            -I src -I src/optional -I tests \
+            -fPIC -c -o $@ $<
+
+lib/speed-tweetnacl.o:
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS)                                                  \
+            -I src -I src/optional -I tests -I tests/externals/tweetnacl \
             -fPIC -c -o $@ $<
 
 lib/speed-sodium.o:$(SPEED)/speed-sodium.c $(TEST_COMMON) $(SPEED)/speed.h
@@ -176,7 +182,8 @@ speed-hydrogen.out: lib/speed-hydrogen.o lib/utils.o
 	$(CC) $(CFLAGS) -o $@ $^              \
             `pkg-config --cflags libhydrogen` \
             `pkg-config --libs   libhydrogen`
-lib/tweetnacl.o: tests/externals/tweetnacl.c tests/externals/tweetnacl.h
+lib/tweetnacl.o: tests/externals/tweetnacl/tweetnacl.c \
+                 tests/externals/tweetnacl/tweetnacl.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 speed-tweetnacl.out: lib/speed-tweetnacl.o lib/tweetnacl.o lib/utils.o
 speed-c25519.out   : lib/speed-c25519.o $(C25519_OBJECTS) lib/utils.o
