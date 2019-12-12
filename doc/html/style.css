@@ -1,4 +1,57 @@
 /*
+ * This file is dual-licensed.  Choose whichever licence you want from
+ * the two licences listed below.
+ *
+ * The first licence is a regular 2-clause BSD licence.  The second licence
+ * is the CC-0 from Creative Commons. It is intended to release Monocypher
+ * to the public domain.  The BSD licence serves as a fallback option.
+ *
+ * SPDX-License-Identifier: BSD-2-Clause OR CC0-1.0
+ *
+ * ------------------------------------------------------------------------
+ *
+ * Copyright (c) 2017-2019, Loup Vaillant
+ * All rights reserved.
+ *
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the
+ *    distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * ------------------------------------------------------------------------
+ *
+ * Written in 2017-2019 by Loup Vaillant
+ *
+ * To the extent possible under law, the author(s) have dedicated all copyright
+ * and related neighboring rights to this software to the public domain
+ * worldwide.  This software is distributed without any warranty.
+ *
+ * You should have received a copy of the CC0 Public Domain Dedication along
+ * with this software.  If not, see
+ * <https://creativecommons.org/publicdomain/zero/1.0/>
+ */
+
+/*
  * This file has been engineered to be compatible with both older mandoc and
  * newer mandoc.
  *
@@ -6,7 +59,7 @@
  * Em/Sy/Li/Pp.
  * The classes here account for that and are duplicated as necessary.
  *
- * The formatting was taken from mandoc.css @ 1.14.3. Changes:
+ * The formatting was taken from mandoc.css (mandoc 1.14.5). Assorted changes:
  * - Liberation Sans was added to the font-family in body.
  * - added to body:
  *   margin: 1em auto; max-width: 40em; padding: 0 .62em; font-size: 1.1em;
@@ -18,46 +71,13 @@
  * Much of the markup that got moved to CSS (e.g. .Ft) was pure HTML in older
  * versions (<i class="ftype">) so that few adjustments are necessary.
  *
- * Licensing terms of mandoc, which includes mandoc.css, follow:
+ * Upstream mandoc.css was placed in the public domain in CVS revision 1.39:
  * ----------------------------------------------------------------------------
- * With the exceptions noted below, all code and documentation
- * contained in the mandoc toolkit is protected by the Copyright
- * of the following developers:
- *
- * Copyright (c) 2008-2012, 2014 Kristaps Dzonsons <kristaps@bsd.lv>
- * Copyright (c) 2010-2017 Ingo Schwarze <schwarze@openbsd.org>
- * Copyright (c) 2009, 2010, 2011, 2012 Joerg Sonnenberger <joerg@netbsd.org>
- * Copyright (c) 2013 Franco Fichtner <franco@lastsummer.de>
- * Copyright (c) 2014 Baptiste Daroussin <bapt@freebsd.org>
- * Copyright (c) 2016 Ed Maste <emaste@freebsd.org>
- * Copyright (c) 2017 Michael Stapelberg <stapelberg@debian.org>
- * Copyright (c) 1999, 2004 Marc Espie <espie@openbsd.org>
- * Copyright (c) 1998, 2004, 2010 Todd C. Miller <Todd.Miller@courtesan.com>
- * Copyright (c) 2008, 2017 Otto Moerbeek <otto@drijf.net>
- * Copyright (c) 2004 Ted Unangst <tedu@openbsd.org>
- * Copyright (c) 1994 Christos Zoulas <christos@netbsd.org>
- * Copyright (c) 2003, 2007, 2008, 2014 Jason McIntyre <jmc@openbsd.org>
- *
- * See the individual source files for information about who contributed
- * to which file during which years.
- *
- *
- * The mandoc distribution as a whole is distributed by its developers
- * under the following license:
- *
- * Permission to use, copy, modify, and distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ * Written by Ingo Schwarze <schwarze@openbsd.org>.
+ * I place this file into the public domain.
+ * Permission to use, copy, modify, and distribute it for any purpose
+ * with or without fee is hereby granted, without any conditions.
  * ----------------------------------------------------------------------------
- * No contributor information was found at the head of mandoc.css.
  */
 body { margin: 1em auto;
        max-width: 40em;
