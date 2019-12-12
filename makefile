@@ -2,7 +2,8 @@ CC=gcc -std=gnu99 # speed tests don't work with -std=cxx, they need the POSIX ex
 CFLAGS= -pedantic -Wall -Wextra -O3 -march=native
 DESTDIR=
 PREFIX=usr/local
-PKGCONFIG=$(DESTDIR)/$(PREFIX)/lib/pkgconfig
+LIBDIR=$(PREFIX)/lib
+PKGCONFIG=$(DESTDIR)/$(LIBDIR)/pkgconfig
 MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
 SONAME=libmonocypher.so.3
 
@@ -23,15 +24,15 @@ endif
 all    : library
 install: library src/monocypher.h install-doc
 	mkdir -p $(DESTDIR)/$(PREFIX)/include
-	mkdir -p $(DESTDIR)/$(PREFIX)/lib
+	mkdir -p $(DESTDIR)/$(LIBDIR)
 	mkdir -p $(PKGCONFIG)
-	cp -P lib/libmonocypher.a lib/libmonocypher.so* $(DESTDIR)/$(PREFIX)/lib
+	cp -P lib/libmonocypher.a lib/libmonocypher.so* $(DESTDIR)/$(LIBDIR)
 	cp src/monocypher.h $(DESTDIR)/$(PREFIX)/include
 	$(INSTALL_ED25519)
 	@echo "Creating $(PKGCONFIG)/monocypher.pc"
 	@echo "prefix=/$(PREFIX)"                > $(PKGCONFIG)/monocypher.pc
 	@echo 'exec_prefix=$${prefix}'          >> $(PKGCONFIG)/monocypher.pc
-	@echo 'libdir=$${exec_prefix}/lib'      >> $(PKGCONFIG)/monocypher.pc
+	@echo 'libdir=$(LIBDIR)'                >> $(PKGCONFIG)/monocypher.pc
 	@echo 'includedir=$${prefix}/include'   >> $(PKGCONFIG)/monocypher.pc
 	@echo ''                                >> $(PKGCONFIG)/monocypher.pc
 	@echo 'Name: monocypher'                >> $(PKGCONFIG)/monocypher.pc
@@ -75,8 +76,8 @@ clean:
 	rm -f  *.out
 
 uninstall:
-	rm -f $(DESTDIR)/$(PREFIX)/lib/libmonocypher.a
-	rm -f $(DESTDIR)/$(PREFIX)/lib/libmonocypher.so*
+	rm -f $(DESTDIR)/$(LIBDIR)/libmonocypher.a
+	rm -f $(DESTDIR)/$(LIBDIR)/libmonocypher.so*
 	rm -f $(DESTDIR)/$(PREFIX)/include/monocypher.h
 	rm -f $(PKGCONFIG)/monocypher.pc
 	rm -f $(MAN_DIR)/*.3monocypher
@@ -100,7 +101,7 @@ lib/libmonocypher.so: lib/$(SONAME)
 	ln -sf `basename $<` $@
 lib/$(SONAME): lib/monocypher.o $(LINK_ED25519)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $^
+	$(CC) $(CFLAGS) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $^
 lib/monocypher-ed25519.o: src/optional/monocypher-ed25519.c \
                           src/optional/monocypher-ed25519.h
 lib/chacha20.o  : src/deprecated/chacha20.c  src/deprecated/chacha20.h
