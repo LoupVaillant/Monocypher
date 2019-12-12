@@ -100,7 +100,7 @@ lib/libmonocypher.so: lib/$(SONAME)
 	ln -sf `basename $<` $@
 lib/$(SONAME): lib/monocypher.o $(LINK_ED25519)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $^
+	$(CC) $(CFLAGS) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $^
 lib/monocypher-ed25519.o: src/optional/monocypher-ed25519.c \
                           src/optional/monocypher-ed25519.h
 lib/chacha20.o  : src/deprecated/chacha20.c  src/deprecated/chacha20.h
