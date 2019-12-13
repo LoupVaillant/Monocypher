@@ -36,7 +36,7 @@ When using direct interfaces like
 .Xr crypto_lock 3monocypher ,
 these context structs are invisible to you.
 They are exposed in incremental interfaces like
-.Xr crypto_lock_init 3monocypher .
+.Xr crypto_blake2b_init 3monocypher .
 The original key buffer does not get automatically wiped.
 When using incremental interfaces, you may want to wipe the original key
 buffers immediately after calling the respective init function.
