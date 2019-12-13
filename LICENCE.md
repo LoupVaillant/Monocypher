@@ -1,14 +1,19 @@
-Monocypher is dual-licensed.  Choose whichever you want.
+Monocypher as a whole is dual-licensed.  Choose whichever licence you
+want from the two licences listed below.
 
 The first licence is a regular 2-clause BSD licence.  The second licence
 is the CC-0 from Creative Commons. It is intended to release Monocypher
-to the public domain.  The BSD licence serves as a fallback.
+to the public domain.  The BSD licence serves as a fallback option.
 
+See the individual files for specific information about who contributed
+to what file during which years.  See below for special notes.
 
 Licence 1 (2-clause BSD)
 ------------------------
 
 Copyright (c) 2017-2019, Loup Vaillant
+Copyright (c) 2017-2018, Michael Savage
+Copyright (c) 2017-2019, Fabio Scotoni
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -160,3 +165,9 @@ rights.
    - Affirmer understands and acknowledges that Creative Commons is not
      a party to this document and has no duty or obligation with respect
      to this CC0 or use of the Work.
+
+Special notes
+-------------
+
+The files in `text/externals/` were placed in the public domain by
+their respective authors.  See the `AUTHORS.md` files in each directory.
