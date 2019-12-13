@@ -153,9 +153,6 @@ and
 .It Fa ad_size
 Length of the additional data, in bytes.
 .El
-.Pp
-An incremental interface is available; see
-.Xr crypto_lock_init 3monocypher .
 .Sh RETURN VALUES
 .Fn crypto_lock
 and
@@ -241,7 +238,6 @@ crypto_wipe(key, 32);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_key_exchange 3monocypher ,
-.Xr crypto_lock_init 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
