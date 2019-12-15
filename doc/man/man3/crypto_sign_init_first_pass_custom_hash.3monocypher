@@ -223,7 +223,7 @@ main(void)
     crypto_sign_final(           (void*)&ctx, mine);
 
     if (crypto_verify64(theirs, mine) != 0) {
-        fprintf(stderr, "theirs != mine\en");
+        fprintf(stderr, "theirs != mine\n");
         return 1;
     }
     puts("ok");
