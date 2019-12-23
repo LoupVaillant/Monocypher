@@ -169,5 +169,5 @@ rights.
 Special notes
 -------------
 
-The files in `text/externals/` were placed in the public domain by
+The files in `tests/externals/` were placed in the public domain by
 their respective authors.  See the `AUTHORS.md` files in each directory.
