@@ -28,4 +28,4 @@ release.sh
 dist_ignore
 tests/gen*
 tests/externals/ed25519-donna*
-doc/man2html.sh
+doc/*.sh
