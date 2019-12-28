@@ -243,7 +243,7 @@ const uint8_t key        [ 32]; /* Secret random key              */
 const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
 const uint8_t plain_text [500]; /* Message to be encrypted        */
 uint8_t       cipher_text[500]; /* Will be the encrypted message  */
-crypto_xchacha20_encrypt(cipher_text, plain_text, 500, key, nonce);
+crypto_xchacha20(cipher_text, plain_text, 500, key, nonce);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 crypto_wipe(plain_text, 500);
@@ -251,11 +251,11 @@ crypto_wipe(plain_text, 500);
 .Pp
 To decrypt the above:
 .Bd -literal -offset indent
-const uint8_t key        [ 32]; /* Same key as above              */
-const uint8_t nonce      [ 24]; /* Same nonce as above            */
-const uint8_t cipher_text[500]; /* Encrypted message              */
-uint8_t plain_text       [500]; /* Will be the decrypted message  */
-crypto_xchacha20_encrypt(cipher_text, plain_text, 500, key, nonce);
+const uint8_t key  [ 32]; /* Same key as above              */
+const uint8_t nonce[ 24]; /* Same nonce as above            */
+uint8_t plain_text [500]; /* Will be the decrypted message  */
+uint8_t cipher_text[500]; /* Encrypted message              */
+crypto_xchacha20(cipher_text, plain_text, 500, key, nonce);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,  32);
 /* The plain text likely needs to be processed before you wipe it */
@@ -269,15 +269,16 @@ const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
 const uint8_t plain_text [500]; /* Message to be encrypted        */
 uint8_t       cipher_text[500]; /* Will be the encrypted message  */
 uint64_t      ctr;              /* Block counter */
-for(int i = 0; i < 500; i += 64) {
-    ctr = crypto_xchacha20_ctr(&ctx, cipher_text+i, plain_text+i,
-                               64, ctr);
+int i;
+for(i = 0; i < 500; i += 64) {
+    ctr = crypto_xchacha20_ctr(cipher_text+i, plain_text+i, 64,
+                               key, nonce, ctr);
 }
 /* Process data that didn't fit into 64 byte pieces */
-crypto_xchacha20_ctr(&ctx,
-                     cipher_text+500-(i-64),
+crypto_xchacha20_ctr(cipher_text+500-(i-64),
                      plain_text+500-(i-64),
-                     500-(i-64), ctr);
+                     500-(i-64),
+                     key, nonce, ctr);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 crypto_wipe(plain_text, 500);
@@ -293,14 +294,12 @@ const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
 const uint8_t plain_text [500]; /* Message to be encrypted        */
 uint8_t       cipher_text[500]; /* Will be the encrypted message  */
 /* Encrypt the second part of the message first... */
-crypto_chacha20(&ctx,
-                cipher_text + (3 * 64),
+crypto_chacha20(cipher_text + (3 * 64),
                 plain_text  + (3 * 64),
                 500         - (3 * 64),
-                key, nonce, 3);
+                key, nonce);
 /* ...then encrypt the first part */
-crypto_chacha20(&ctx, cipher_text, plain_text, 3 * 64,
-                key, nonce, 0);
+crypto_chacha20(cipher_text, plain_text, 3 * 64, key, nonce);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 crypto_wipe(plain_text, 500);
