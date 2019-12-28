@@ -71,7 +71,7 @@ for f in man/man3/*.3monocypher man/man3/optional/*.3monocypher; do
 	# and can't be tested like this
 	if [ ! -h "$f" ] && [ "$f" != "man/man3/crypto_sign_init_first_pass_custom_hash.3monocypher" ]; then
 		echo "// $f"
-		sed -n "/^\.Bd/,/^\.Ed/p" < $f | sed "s/\.Bd.*/{/" | sed "s/\.Ed/}/"
+		cat "$f" | sed -n "/^\.Bd/,/^\.Ed/p" | sed "s/\.Bd.*/{/" | sed "s/\.Ed/}/"
 	fi
 done
 
