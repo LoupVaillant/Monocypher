@@ -66,13 +66,15 @@ void arc4random_buf(void*, size_t);
 int main() {
 END
 
-for f in man/man3/*.3monocypher man/man3/optional/*.3monocypher; do
-	# crypto_sign_init_first_pass_custom_hash examples are more complicated
-	# and can't be tested like this
-	if [ ! -h "$f" ] && [ "$f" != "man/man3/crypto_sign_init_first_pass_custom_hash.3monocypher" ]; then
-		echo "// $f"
-		cat "$f" | sed -n "/^\.Bd/,/^\.Ed/p" | sed "s/\.Bd.*/{/" | sed "s/\.Ed/}/"
-	fi
+for f in man/man3/*.3monocypher man/man3/optional/*.3monocypher
+do
+    # crypto_sign_init_first_pass_custom_hash examples are more complicated
+    # and can't be tested like this
+    if [ ! -h "$f" ] && [ "$f" != "man/man3/crypto_sign_init_first_pass_custom_hash.3monocypher" ]
+    then
+        echo "// $f"
+        cat "$f" | sed -n "/^\.Bd/,/^\.Ed/p" | sed "s/\.Bd.*/{/" | sed "s/\.Ed/}/"
+    fi
 done
 
 echo "}"
