@@ -77,4 +77,5 @@ do
     fi
 done
 
+echo "return 0;"
 echo "}"
