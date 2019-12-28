@@ -8,9 +8,9 @@ cat << END
 
 typedef struct SHA2_CTX { } SHA2_CTX;
 void SHA512Init(SHA2_CTX*);
-void SHA512Update(SHA2_CTX*, void*, size_t);
-void SHA512Final(uint8_ *, SHA2_CTX*);
-void arc4random_buf(void *, size_t);
+void SHA512Update(SHA2_CTX*, const void*, size_t);
+void SHA512Final(uint8_t*, SHA2_CTX*);
+void arc4random_buf(void*, size_t);
 
 int main() {
 END
