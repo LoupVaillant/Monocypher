@@ -38,7 +38,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2019 by Fabio Scotoni
+.\" Written in 2019 by Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -48,7 +48,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd December 12, 2019
+.Dd December 28, 2019
 .Dt CRYPTO_SIGN_INIT_FIRST_PASS_CUSTOM_HASH 3MONOCYPHER
 .Os
 .Sh NAME
@@ -255,12 +255,11 @@ int
 main(void)
 {
     uint8_t theirs[64], mine[64];
-    uint8_t sk[32];
+    uint8_t sk[32] = {0x01, 0x02, 0x03, 0x04};
     const uint8_t msg[] = {
         0x00, 0x01, 0x02, 0x04
     };
 
-    arc4random_buf(sk, sizeof(sk));
     crypto_ed25519_sign(theirs, sk, NULL, msg, sizeof(msg));
 
     struct outer_ctx ctx;
