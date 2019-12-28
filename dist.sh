@@ -12,6 +12,7 @@
 # ------------------------------------------------------------------------
 #
 # Copyright (c) 2019, Loup Vaillant
+# Copyright (c) 2019, Fabio Scotoni
 # All rights reserved.
 #
 #
