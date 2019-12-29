@@ -41,7 +41,7 @@
 #
 # ------------------------------------------------------------------------
 #
-# Written in 2017 and 2019 by Loup Vaillant and Fabio Scotoni
+# Written in 2019 by Michael Savage
 #
 # To the extent possible under law, the author(s) have dedicated all copyright
 # and related neighboring rights to this software to the public domain
