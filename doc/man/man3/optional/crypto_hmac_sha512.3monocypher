@@ -172,7 +172,7 @@ Computing a message authentication code all at once:
 uint8_t hash   [ 64]; /* Output hash  (between 1 and 64 bytes) */
 uint8_t key    [ 32]; /* Optional key (between 0 and 64 bytes) */
 uint8_t message[500]; /* Message to hash                       */
-crypto_hmac_sha512(hash, 64, key, 32, message, 500);
+crypto_hmac_sha512(hash, key, 32, message, 500);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(message, 500);
 crypto_wipe(key, 32);
@@ -184,7 +184,7 @@ uint8_t hash   [ 64]; /* Output hash  (between 1 and 64 bytes) */
 uint8_t key    [ 32]; /* Optional key (between 0 and 64 bytes) */
 uint8_t message[500]; /* Message to hash                       */
 crypto_hmac_sha512_ctx ctx;
-crypto_hmac_sha512_init(&ctx, 64, key, 32);
+crypto_hmac_sha512_init(&ctx, key, 32);
 /* Wipe the key */
 crypto_wipe(key, 32);
 for (size_t i = 0; i < 500; i += 100) {
