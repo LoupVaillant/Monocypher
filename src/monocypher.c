@@ -369,10 +369,9 @@ static void poly_block(crypto_poly1305_ctx *ctx)
 // (re-)initialises the input counter and input buffer
 static void poly_clear_c(crypto_poly1305_ctx *ctx)
 {
-    ctx->c[0]  = 0;
-    ctx->c[1]  = 0;
-    ctx->c[2]  = 0;
-    ctx->c[3]  = 0;
+    FOR (i, 0, 4) {
+        ctx->c[i] = 0;
+    }
     ctx->c_idx = 0;
 }
 
