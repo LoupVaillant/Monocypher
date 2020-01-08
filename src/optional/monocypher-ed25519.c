@@ -376,11 +376,12 @@ void crypto_ed25519_sign(u8        signature [64],
                          const u8 *message, size_t message_size)
 {
     crypto_sign_ed25519_ctx ctx;
-    crypto_ed25519_sign_init_first_pass ((void*)&ctx, secret_key, public_key);
-    crypto_ed25519_sign_update          ((void*)&ctx, message, message_size);
-    crypto_ed25519_sign_init_second_pass((void*)&ctx);
-    crypto_ed25519_sign_update          ((void*)&ctx, message, message_size);
-    crypto_ed25519_sign_final           ((void*)&ctx, signature);
+    crypto_sign_ctx_abstract *actx = (crypto_sign_ctx_abstract*)&ctx;
+    crypto_ed25519_sign_init_first_pass (actx, secret_key, public_key);
+    crypto_ed25519_sign_update          (actx, message, message_size);
+    crypto_ed25519_sign_init_second_pass(actx);
+    crypto_ed25519_sign_update          (actx, message, message_size);
+    crypto_ed25519_sign_final           (actx, signature);
 
 }
 
@@ -389,8 +390,8 @@ int crypto_ed25519_check(const u8  signature [64],
                          const u8 *message, size_t message_size)
 {
     crypto_check_ed25519_ctx ctx;
-    crypto_ed25519_check_init((void*)&ctx, signature, public_key);
-    crypto_ed25519_check_update((void*)&ctx, message, message_size);
-    return crypto_ed25519_check_final((void*)&ctx);
+    crypto_check_ctx_abstract *actx = (crypto_check_ctx_abstract*)&ctx;
+    crypto_ed25519_check_init  (actx, signature, public_key);
+    crypto_ed25519_check_update(actx, message, message_size);
+    return crypto_ed25519_check_final(actx);
 }
-
