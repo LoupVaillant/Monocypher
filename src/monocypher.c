@@ -844,14 +844,12 @@ static void g_xor(block *result, const block *x, const block *y, block *tmp)
 // Unary version of the compression function.
 // The missing argument is implied zero.
 // Does the transformation in place.
-static void unary_g(block *work_block)
+static void unary_g(block *work_block, block *tmp)
 {
     // work_block == R
-    block tmp;
-    copy_block(&tmp, work_block); // tmp        = R
-    g_rounds(work_block);         // work_block = Z
-    xor_block(work_block, &tmp);  // work_block = Z ^ R
-    wipe_block(&tmp);
+    copy_block(tmp, work_block); // tmp        = R
+    g_rounds  (work_block);      // work_block = Z
+    xor_block (work_block, tmp); // work_block = Z ^ R
 }
 
 // Argon2i uses a kind of stream cipher to determine which reference
@@ -886,8 +884,10 @@ static void gidx_refresh(gidx_ctx *ctx)
 
     // Shuffle the block thus: ctx->b = G((G(ctx->b, zero)), zero)
     // (G "square" function), to get cheap pseudo-random numbers.
-    unary_g(&ctx->b);
-    unary_g(&ctx->b);
+    block tmp;
+    unary_g(&ctx->b, &tmp);
+    unary_g(&ctx->b, &tmp);
+    wipe_block(&tmp);
 }
 
 static void gidx_init(gidx_ctx *ctx,
