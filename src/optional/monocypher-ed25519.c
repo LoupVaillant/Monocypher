@@ -382,7 +382,6 @@ void crypto_ed25519_sign(u8        signature [64],
     crypto_ed25519_sign_init_second_pass(actx);
     crypto_ed25519_sign_update          (actx, message, message_size);
     crypto_ed25519_sign_final           (actx, signature);
-
 }
 
 int crypto_ed25519_check(const u8  signature [64],

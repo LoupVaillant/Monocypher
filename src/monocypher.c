@@ -1502,7 +1502,8 @@ static void ge_tobytes(u8 s[32], const ge *h)
     WIPE_BUFFER(y);
 }
 
-// Variable time! s must not be secret!
+// Variable time! Inputs must not be secret!
+// => Use only to *check* signatures.
 static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
 {
     static const fe d = {
@@ -1561,9 +1562,11 @@ static void ge_cache(ge_cached *c, const ge *p)
     fe_mul (c->T2, p->T, D2  );
 }
 
+// Internal buffers are not wiped! Inputs must not be secret!
+// => Use only to *check* signatures.
 static void ge_add(ge *s, const ge *p, const ge_cached *q)
 {
-    fe a, b; // not used to process secrets, no need to wipe
+    fe a, b;
     fe_add(a   , p->Y, p->X );
     fe_sub(b   , p->Y, p->X );
     fe_mul(a   , a   , q->Yp);
@@ -1583,6 +1586,8 @@ static void ge_add(ge *s, const ge *p, const ge_cached *q)
     fe_mul(s->Z, a   , b   );
 }
 
+// Internal buffers are not wiped! Inputs must not be secret!
+// => Use only to *check* signatures.
 static void ge_sub(ge *s, const ge *p, const ge_cached *q)
 {
     ge_cached neg;
@@ -2043,7 +2048,7 @@ void crypto_sign_final(crypto_sign_ctx_abstract *ctx, u8 signature[64])
     u8 *a        = ctx->buf;
     u8 *r        = ctx->buf + 32;
     u8 *half_sig = ctx->buf + 64;
-    u8 h_ram[64];
+    u8  h_ram[64];
     ctx->hash->final(ctx, h_ram);
     reduce(h_ram);
     FOR (i, 0, 32) {
@@ -2197,11 +2202,13 @@ int crypto_unlock_aead(u8       *plain_text,
     WIPE_BUFFER(auth_key);
     if (crypto_verify16(mac, real_mac)) {
         WIPE_BUFFER(sub_key);
+        WIPE_BUFFER(real_mac);
         return -1;
     }
     crypto_chacha20_ctr(plain_text, cipher_text, text_size,
                         sub_key, nonce + 16, 1);
     WIPE_BUFFER(sub_key);
+    WIPE_BUFFER(real_mac);
     return 0;
 }
 
