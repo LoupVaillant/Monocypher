@@ -1006,7 +1006,7 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
 
     // fill (then re-fill) the rest of the blocks
     block tmp;
-    gidx_ctx ctx;
+    gidx_ctx ctx; // public information, no need to wipe
     FOR_T (u32, pass_number, 0, nb_iterations) {
         int first_pass = pass_number == 0;
 
@@ -1032,7 +1032,6 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
             }
         }
     }
-    wipe_block(&ctx.b);
     wipe_block(&tmp);
     // hash the very last block with H' into the output hash
     u8 final_block[1024];
