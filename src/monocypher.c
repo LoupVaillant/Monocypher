@@ -41,7 +41,7 @@
 //
 // ------------------------------------------------------------------------
 //
-// Written in 2017-2019 by Loup Vaillant
+// Written in 2017-2020 by Loup Vaillant
 //
 // To the extent possible under law, the author(s) have dedicated all copyright
 // and related neighboring rights to this software to the public domain
