@@ -11,7 +11,7 @@
 //
 // ------------------------------------------------------------------------
 //
-// Copyright (c) 2017-2019, Loup Vaillant
+// Copyright (c) 2017-2020, Loup Vaillant
 // All rights reserved.
 //
 //
