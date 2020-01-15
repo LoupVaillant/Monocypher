@@ -1127,6 +1127,7 @@ static void fe_frombytes(fe h, const u8 s[32])
     FE_CARRY;
 }
 
+// multiply a field element by a signed 32-bit integer
 static void fe_mul_small(fe h, const fe f, i32 g)
 {
     i64 t0 = f[0] * (i64) g;  i64 t1 = f[1] * (i64) g;
@@ -1226,6 +1227,7 @@ static void fe_sq(fe h, const fe f)
     CARRY;
 }
 
+// h = 2 * (f^2)
 static void fe_sq2(fe h, const fe f)
 {
     fe_sq(h, f);
@@ -1322,6 +1324,7 @@ static int fe_isnonzero(const fe f)
     return isnonzero;
 }
 
+// trim a scalar for scalar multiplication
 static void trim_scalar(u8 s[32])
 {
     s[ 0] &= 248;
@@ -1329,6 +1332,7 @@ static void trim_scalar(u8 s[32])
     s[31] |= 64;
 }
 
+// get bit from scalar at position i
 static int scalar_bit(const u8 s[32], int i) {
     if (i < 0) { return 0; } // handle -1 for sliding windows
     return (s[i>>3] >> (i&7)) & 1;
@@ -1410,6 +1414,7 @@ static const  i64 L[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
                             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10};
 
+// r = x mod L (little-endian)
 static void modL(u8 *r, i64 x[64])
 {
     for (unsigned i = 63; i >= 32; i--) {
@@ -1437,7 +1442,7 @@ static void modL(u8 *r, i64 x[64])
     }
 }
 
-// Reduces a hash modulo L (little endian)
+// Reduces a 64-byte hash modulo L (little endian)
 static void reduce(u8 r[64])
 {
     i64 x[64];
@@ -1474,7 +1479,7 @@ static int is_above_L(const u8 a[32])
     return 1;
 }
 
-// Point in a twisted Edwards curve,
+// Point (group element, ge) in a twisted Edwards curve,
 // in extended projective coordinates.
 // x = X/Z, y = Y/Z, T = XY/Z
 typedef struct { fe X;  fe Y;  fe Z; fe T;  } ge;
@@ -1502,6 +1507,11 @@ static void ge_tobytes(u8 s[32], const ge *h)
     WIPE_BUFFER(y);
 }
 
+// h = -s, where s is a point encoded in 32 bytes
+// ge_double_scalarmult_vartime() performs addition, but the algorithm it is
+// used for requires subtraction; thus we negate s on load so that we can do
+// addition in ge_double_scalarmult_vartime() later.
+//
 // Variable time! Inputs must not be secret!
 // => Use only to *check* signatures.
 static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
@@ -1509,11 +1519,11 @@ static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
     static const fe d = {
         -10913610, 13857413, -15372611, 6949391, 114729,
         -8787816, -6275908, -3247719, -18696448, -12055116
-    } ;
+    };
     static const fe sqrtm1 = {
         -32595792, -7943725, 9377950, 3500415, 12389472,
         -272473, -25146209, -2005654, 326686, 11406482
-    } ;
+    };
     fe u, v, v3; // no secret, no wipe
     fe_frombytes(h->Y, s);
     fe_1(h->Z);
@@ -1760,6 +1770,8 @@ static int slide_step(slide_ctx *ctx, int width, int i, const u8 scalar[32])
 #define B_W_WIDTH 5 // Affects the size of the binary
 #define P_W_SIZE  (1<<(P_W_WIDTH-2))
 
+// P = [b]B + [p]P, where B is the base point
+//
 // Variable time! Internal buffers are not wiped! Inputs must not be secret!
 // => Use only to *check* signatures.
 static void ge_double_scalarmult_vartime(ge *P, const u8 p[32], const u8 b[32])
@@ -1906,6 +1918,7 @@ static const fe comb_T2[16] = {
      -7350198, 21035059, -14970947, 25910190, 11122681},
 };
 
+// p = [scalar]B, where B is the base point
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
     // 5-bits signed comb, from Mike Hamburg's
@@ -2001,7 +2014,8 @@ void crypto_sign_init_first_pass_custom_hash(crypto_sign_ctx_abstract *ctx,
         }
     }
 
-    // Constructs the "random" nonce from the secret key and message.
+    // Deterministic part of EdDSA: Construct a nonce by hashing the message
+    // instead of generating a random number.
     // An actual random number would work just fine, and would save us
     // the trouble of hashing the message twice.  If we did that
     // however, the user could fuck it up and reuse the nonce.
