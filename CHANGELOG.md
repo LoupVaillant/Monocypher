@@ -1,6 +1,6 @@
 3.0.0
 -----
-2019/12/09
+2020/01/19
 
 - Deprecated the incremental AEAD interface.
 - Deprecated the incremental Chacha20, added a direct interface.
