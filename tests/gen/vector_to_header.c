@@ -113,4 +113,5 @@ int main(int argc, char** argv)
         printf("%s_%d_size, ", prefix, i);
     }
     printf("};\n");
+    return 0;
 }
