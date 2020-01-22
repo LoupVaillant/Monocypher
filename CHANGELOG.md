@@ -4,6 +4,7 @@
 
 - Deprecated the incremental AEAD interface.
 - Deprecated the incremental Chacha20, added a direct interface.
+- Added IETF Chacha20 (96-bit nonce), as described in RFC 8439.
 - Moved deprecated interfaces to a separate `src/deprecated` folder.
 - Removed the `ED25519_SHA512` preprocessor flag.
 - `crypto_x25519()` and `crypto_key_exchange()` now return `void`.
