@@ -1817,6 +1817,23 @@ static void ge_double_scalarmult_vartime(ge *P, const u8 p[32], const u8 b[32])
     }
 }
 
+// R_check = s[B] - [h_ram](-pk), where B is the base point
+//
+// Variable time! Internal buffers are not wiped! Inputs must not be secret!
+// => Use only to *check* signatures.
+static int ge_r_check(u8 R_check[32], u8 s[32], u8 h_ram[32], u8 pk[32])
+{
+    ge A;
+    if (ge_frombytes_neg_vartime(&A, pk) || // A = -pk
+        is_above_L(s)) { // prevent s malleability
+        return -1;
+    }
+    ge_double_scalarmult_vartime(&A, h_ram, s); // A = [s]B + [h_ram]A
+    ge_tobytes(R_check, &A);                    // R_check = A
+    return 0;
+    // No secret, no wipe
+}
+
 // 5-bit signed comb in cached format (Niels coordinates, Z=1)
 static const ge_precomp b_comb[16] = {
     {{2615675,9989699,17617367,-13953520,-8802803,
@@ -2115,28 +2132,16 @@ void crypto_check_update(crypto_check_ctx_abstract *ctx,
 
 int crypto_check_final(crypto_check_ctx_abstract *ctx)
 {
-    ge  A;
-    u8 *h_ram   = ctx->pk; // save stack space
-    u8 *R_check = ctx->pk; // save stack space
-    u8 *R       = ctx->buf;                      // R
-    u8 *s       = ctx->buf + 32;                 // s
-    ge *diff    = &A;                            // -A is overwritten...
-    if (ge_frombytes_neg_vartime(&A, ctx->pk) ||
-        is_above_L(s)) { // prevent s malleability
+    u8 h_ram[64];
+    ctx->hash->final(ctx, h_ram);
+    reduce(h_ram);
+    u8 *R       = ctx->buf;      // R
+    u8 *s       = ctx->buf + 32; // s
+    u8 *R_check = ctx->pk;       // overwrite ctx->pk to save stack space
+    if (ge_r_check(R_check, s, h_ram, ctx->pk)) {
         return -1;
     }
-    {
-        u8 tmp[64];
-        ctx->hash->final(ctx, tmp);
-        reduce(tmp);
-        FOR (i, 0, 32) { // the extra copy saves 32 bytes of stack
-            h_ram[i] = tmp[i];
-        }
-    }
-    ge_double_scalarmult_vartime(&A, h_ram, s);  // ...here
-    ge_tobytes(R_check, diff);                   // R_check = s*B - h_ram*A
-    return crypto_verify32(R, R_check);          // R == R_check ? OK : fail
-    // No secret, no wipe
+    return crypto_verify32(R, R_check); // R == R_check ? OK : fail
 }
 
 int crypto_check(const u8  signature[64],
