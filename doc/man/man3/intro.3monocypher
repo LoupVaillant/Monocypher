@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2018 Michael Savage
-.\" Copyright (c) 2017, 2019 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2019 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd December 12, 2019
+.Dd February 5, 2020
 .Dt INTRO 3MONOCYPHER
 .Os
 .Sh NAME
@@ -59,7 +59,7 @@
 .Sh DESCRIPTION
 Monocypher is a cryptographic library.
 It provides functions for authenticated encryption, hashing, password
-key derivation, key exchange, and public key signatures.
+hashing and key derivation, key exchange, and public key signatures.
 .Ss Authenticated encryption
 .Xr crypto_lock 3monocypher
 and
@@ -88,9 +88,11 @@ implements the Blake2b hash.
 Blake2b combines the security of SHA-3 and the speed of MD5.
 It is immune to length extension attacks and provides a keyed mode
 that makes it a safe, easy to use authenticator.
-.Ss Password key derivation
+.Ss Password hashing and key derivation
 .Xr crypto_argon2i 3monocypher
-implements the Argon2i resource intensive hash algorithm.
+implements the Argon2i resource intensive hash algorithm,
+which can be used to hash passwords for storage and to derive keys
+from passwords.
 Argon2 won the password hashing competition in 2015.
 Unlike Scrypt, Argon2i is immune to timing attacks.
 .Ss Key exchange
