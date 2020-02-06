@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2018 Michael Savage
-.\" Copyright (c) 2017, 2019 Fabio Scotoni
+.\" Copyright (c) 2017, 2020 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2019 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd December 12, 2019
+.Dd February 5, 2020
 .Dt CRYPTO_BLAKE2B 3MONOCYPHER
 .Os
 .Sh NAME
@@ -104,6 +104,11 @@
 BLAKE2b is a fast cryptographically secure hash, based on the ideas of
 Chacha20.
 It is faster than MD5, yet just as secure as SHA-3.
+However, BLAKE2b itself
+.Sy is not suitable for hashing passwords and deriving keys from them ;
+use the
+.Xr crypto_argon2i 3monocypher
+family of functions for that purpose instead.
 .Pp
 BLAKE2b is immune to length extension attacks, and as such does not
 require any specific precautions, such as using the HMAC algorithm.
@@ -276,3 +281,18 @@ Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .
 Make sure your inputs are correct.
+.Sh SECURITY CONSIDERATIONS
+BLAKE2b is a general-purpose cryptographic hash function;
+this means that it is not suited for hashing passwords and deriving
+cryptographic keys from passwords in particular.
+While cryptographic keys usually have hundreds of bits of entropy,
+passwords are often much less complex.
+When storing passwords as hashes or when deriving keys from them,
+the goal is normally to prevent attackers from quickly iterating all
+possible passwords.
+Because passwords tend to be simple,
+it is important to artificially slow down attackers by using especially
+computationally difficult hashing algorithms.
+Monocypher therefore provides
+.Xr crypto_argon2i 3monocypher
+for password hashing and deriving keys from passwords.
