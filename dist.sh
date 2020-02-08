@@ -80,7 +80,13 @@ find $FOLDER -type f -exec sed -i "s/__git__/$VERSION/g" \{\} \;
 sed -i '/tests\/vectors.h:/,$d' $FOLDER/makefile
 
 # Remove contributor notes from the README
-sed -i '/Contributor notes/,$d' $FOLDER/README.md
+sed -e '/Contributor notes/,$d' \
+    -e '1,/^---$/d' \
+    -i $FOLDER/README.md
+sed -e '1i\
+Monocypher\
+----------' \
+    -i $FOLDER/README.md
 
 # Make the actual tarball
 tar -cvzf $TARBALL $FOLDER

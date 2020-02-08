@@ -1,5 +1,16 @@
-Monocypher
-----------
+Monocypher (Developer Edition)
+------------------------------
+
+_(This is the bleeding edge, not yet released version.  If you just want
+to use Monocypher, grab the [latest version][latest], or download the
+[source][] and [header][] files directly. If you want to contribute, see
+the notes at the end.)_
+
+[source]: https://monocypher.org/download/monocypher.c
+[header]: https://monocypher.org/download/monocypher.h
+[latest]: https://monocypher.org/download/monocypher-latest.tar.gz
+
+---
 
 Monocypher is an easy to use, easy to deploy, auditable crypto library
 written in portable C.  It approaches the size of [TweetNaCl][] and the
