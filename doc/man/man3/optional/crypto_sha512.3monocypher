@@ -88,8 +88,9 @@ It is generally recommended to use
 instead,
 as it both performs faster on x86_64 CPUs and
 lacks many of the pitfalls of SHA-512.
-However, SHA-512 itself
-.Sy is not suitable for hashing passwords and deriving keys from them ;
+.Pp
+Note that SHA-512 itself is not suitable for hashing passwords and
+deriving keys from them;
 use the
 .Xr crypto_argon2i 3monocypher
 family of functions for that purpose instead.

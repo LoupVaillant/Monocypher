@@ -104,8 +104,9 @@
 BLAKE2b is a fast cryptographically secure hash, based on the ideas of
 Chacha20.
 It is faster than MD5, yet just as secure as SHA-3.
-However, BLAKE2b itself
-.Sy is not suitable for hashing passwords and deriving keys from them ;
+.Pp
+Note that BLAKE2b itself is not suitable for hashing passwords and
+deriving keys from them;
 use the
 .Xr crypto_argon2i 3monocypher
 family of functions for that purpose instead.
