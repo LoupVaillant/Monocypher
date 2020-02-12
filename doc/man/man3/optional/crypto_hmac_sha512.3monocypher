@@ -162,7 +162,7 @@ the
 .Xr crypto_verify64 3monocypher ,
 .Xr crypto_verify32 3monocypher ,
 and
-.Xr crypto_verify16 3monocypher .
+.Xr crypto_verify16 3monocypher
 functions can be used to to compare (possibly truncated) MACs.
 .Sh RETURN VALUES
 These functions return nothing.
