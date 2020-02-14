@@ -941,11 +941,12 @@ static u32 gidx_next(gidx_ctx *ctx)
     u32 start_pos  = first_pass ? 0 : next_slice;
 
     // Generate offset from J1 (no need for J2, there's only one lane)
-    u64 j1         = ctx->b.a[index] & 0xffffffff; // pseudo-random number
-    u64 x          = (j1 * j1)       >> 32;
-    u64 y          = (area_size * x) >> 32;
-    u64 z          = (area_size - 1) - y;
-    return (start_pos + z) % ctx->nb_blocks;
+    u64 j1  = ctx->b.a[index] & 0xffffffff; // pseudo-random number
+    u64 x   = (j1 * j1)       >> 32;
+    u64 y   = (area_size * x) >> 32;
+    u64 z   = (area_size - 1) - y;
+    u64 ref = start_pos + z;                // ref < 2 * nb_blocks
+    return ref < ctx->nb_blocks ? ref : ref - ctx->nb_blocks;
 }
 
 // Main algorithm
