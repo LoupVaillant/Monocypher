@@ -163,8 +163,8 @@ static void sha512_set_input(crypto_sha512_ctx *ctx, u8 input)
             ctx->input[i] = 0;
         }
     }
-    size_t word = ctx->input_idx / 8;
-    size_t byte = ctx->input_idx % 8;
+    size_t word = ctx->input_idx >> 3;
+    size_t byte = ctx->input_idx &  7;
     ctx->input[word] |= (u64)input << (8 * (7 - byte));
 }
 
