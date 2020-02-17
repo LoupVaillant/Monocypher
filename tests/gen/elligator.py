@@ -67,12 +67,7 @@ def print_little(n):
     print(':')
 
 def binary(b):
-    l = []
-    while b > 0:
-        l.append(b % 2)
-        b //= 2
-    l.reverse()
-    return l
+    return [int(c) for c in list(format(b, 'b'))]
 
 def exp(a, b):
     """
