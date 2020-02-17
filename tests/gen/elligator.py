@@ -1,26 +1,27 @@
-#!/usr/bin/env sage
-
-import sys
-from sage.all import *
+#! /usr/bin/python3
 
 # Curve25519 constants
-p = 2^255 - 19 # prime field (note that p % 8 == 5)
+p = 2**255 - 19 # prime field (note that p % 8 == 5)
 A = 486662
 # B = 1
 # chosen non-square = 2
 
 def print_little(n):
     """prints a field element in little endian"""
-    str = ""
     m = n % p
     for _ in range(32):
-        byte = m % 256
-        if   byte == 0: str += '00'
-        elif byte < 16: str += '0' + hex(byte)
-        else          : str +=       hex(byte)
+        print(format(m % 256, '02x'), end='')
         m //= 256
     if m != 0: raise ValueError('number is too big!!')
-    print(str + ':')
+    print(':')
+
+def binary(b):
+    l = []
+    while b > 0:
+        l.append(b % 2)
+        b //= 2
+    l.reverse()
+    return l
 
 def exp(a, b):
     """
@@ -28,9 +29,9 @@ def exp(a, b):
     b must be positive
     """
     d = 1
-    for i in list(Integer.binary(b)):
+    for i in binary(b):
         d = (d*d) % p
-        if Integer(i) == 1:
+        if i == 1:
             d = (d*a) % p
     return d
 
@@ -58,10 +59,10 @@ def sqrt(n):
 
 # Elligator 2
 def hash_to_curve(r):
-    w = (-A * invert(1 + 2 * r^2)  ) % p
-    e = (chi(w^3 + A*w^2 + w)      ) % p
-    u = (e*w - (1-e)*A//2          ) % p
-    v = (-e * sqrt(u^3 + A*u^2 + u)) % p
+    w = (-A * invert(1 + 2 * r**2)   ) % p
+    e = (chi(w**3 + A*w**2 + w)      ) % p
+    u = (e*w - (1-e)*A//2            ) % p
+    v = (-e * sqrt(u**3 + A*u**2 + u)) % p
     return (u, v)
 
 def can_curve_to_hash(point):
@@ -89,20 +90,20 @@ def point_add(a, b):
 
 def trim(scalar):
     trimmed = scalar - scalar % 8
-    trimmed = trimmed % 2^254
-    trimmed = trimmed + 2^254
+    trimmed = trimmed % 2**254
+    trimmed = trimmed + 2**254
     return trimmed
 
 def scalarmult(point, scalar):
     acc = (0, 1)
-    for i in list(Integer.binary(trim(scalar))):
+    for i in binary(trim(scalar)):
         acc = point_add(acc, acc)
-        if Integer(i) == 1:
+        if i == 1:
             acc = point_add(acc, point)
     return acc
 
 eby = (4 * invert(5)) % p
-ebx = sqrt((eby^2 - 1) * invert(1 + d * eby^2))
+ebx = sqrt((eby**2 - 1) * invert(1 + d * eby**2))
 edwards_base = (ebx, eby)
 
 def scalarbase(scalar):
@@ -146,6 +147,6 @@ def full_cycle_check(scalar):
 private = 0
 for v in range(20):
     for i in range(32):
-        private += (v+i) * 2^(8*i)
+        private += (v+i) * 2**(8*i)
     print('')
     full_cycle_check(private)
