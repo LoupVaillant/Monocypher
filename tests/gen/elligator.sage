@@ -94,8 +94,6 @@ def trim(scalar):
     return trimmed
 
 def scalarmult(point, scalar):
-    x = point[0]
-    y = point[1]
     acc = (0, 1)
     for i in list(Integer.binary(trim(scalar))):
         acc = point_add(acc, acc)
