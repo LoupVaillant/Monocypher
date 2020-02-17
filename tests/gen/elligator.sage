@@ -106,7 +106,7 @@ ebx = sqrt((eby^2 - 1) * invert(1 + d * eby^2))
 edwards_base = (ebx, eby)
 
 def scalarbase(scalar):
-    return scalarmult(etwards_base, scalar)
+    return scalarmult(edwards_base, scalar)
 
 # conversion to Montgomery
 # (u, v) = ((1+y)/(1-y), sqrt(-486664)*u/x)
@@ -120,7 +120,7 @@ def from_edwards(point):
 
 # entire key generation chain
 def private_to_hash(scalar):
-    xy = scalarmult(edwards_base, private)
+    xy = scalarbase(private)
     uv = from_edwards(xy)
     if can_curve_to_hash(uv):
         return curve_to_hash(uv)
@@ -128,7 +128,7 @@ def private_to_hash(scalar):
 
 def full_cycle_check(scalar):
     print_little(scalar)
-    xy = scalarmult(edwards_base, private)
+    xy = scalarbase(private)
     uv = from_edwards(xy)
     h  = private_to_hash(scalar)
     print_little(uv[0])
