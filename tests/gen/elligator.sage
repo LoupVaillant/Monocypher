@@ -20,7 +20,7 @@ def print_little(n):
         else          : str +=       hex(byte)
         m //= 256
     if m != 0: raise ValueError('number is too big!!')
-    print str + ':'
+    print(str + ':')
 
 def exp(a, b):
     """
@@ -136,18 +136,18 @@ def full_cycle_check(scalar):
     print_little(uv[0])
     print_little(uv[1])
     if h == None:
-        print '00:'     # Failure
-        print '00:'     # dummy value for the hash
+        print('00:')    # Failure
+        print('00:')    # dummy value for the hash
     else:
-        print '01:'     # Success
+        print('01:')    # Success
         print_little(h) # actual value for the hash
         c = hash_to_curve(h)
         if c != uv:
-            print 'Round trip failure'
+            print('Round trip failure')
 
 private = 0
 for v in range(20):
     for i in range(32):
         private += (v+i) * 2^(8*i)
-    print ''
+    print('')
     full_cycle_check(private)
