@@ -69,21 +69,8 @@ def print_little(n):
 def binary(b):
     return [int(c) for c in list(format(b, 'b'))]
 
-def exp(a, b):
-    """
-    a^b mod p
-    b must be positive
-    """
-    d = 1
-    for i in binary(b):
-        d = (d*d) % p
-        if i == 1:
-            d = (d*a) % p
-    return d
-
-def invert(n):
-    """Modular invert of n"""
-    return exp(n, p-2)
+def exp(a, b): return pow(a, b, p)
+def invert(n): return exp(n, p-2)
 
 def m_abs(n):
     """Modular absolute value of n, to canonicalise square roots."""
