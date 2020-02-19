@@ -133,14 +133,13 @@ for i in range(50):
     if hh != h.abs() : raise ValueError('h != hh')
     if pp != ppp     : raise ValueError('pp != ppp')
 
-
 # Edwards (Edwards25519)
 # -x^2 + y^2 = 1 + d*x^2*y^2
 d = fe(-121665) / fe(121666)
 
 def point_add(a, b):
-    x1    = a[0];  y1 = a[1];
-    x2    = b[0];  y2 = b[1];
+    x1 = a[0];  y1 = a[1];
+    x2 = b[0];  y2 = b[1];
     denum = d*x1*x2*y1*y2
     x     = (x1*y2 + x2*y1) / (fe(1) + denum)
     y     = (y1*y2 + x1*x2) / (fe(1) - denum)
@@ -210,3 +209,53 @@ for v in range(20):
         private += (v+i) * 2**(8*i)
     print('')
     full_cycle_check(private)
+
+# fast point addition & scalar multiplication with affine coordinates:
+# x = X/Z, y = Y/Z. We can multiply Z instead of dividing X and Y.
+# The goal is to test the merging of the final inversion
+# with the exponentiations required for curve_to_hash
+def fast_point_add(a, b):
+    x1 = a[0];  y1 = a[1];  z1 = a[2];
+    x2 = b[0];  y2 = b[1];  z2 = b[2];
+    denum = d*x1*x2*y1*y2
+    z1z2  = z1 * z2
+    z1z22 = z1z2**2
+    xt    = z1z2 * (x1*y2 + x2*y1)
+    yt    = z1z2 * (y1*y2 + x1*x2)
+    zx    = z1z22 + denum
+    zy    = z1z22 - denum
+    return (xt*zy, yt*zx, zx*zy)
+
+def fast_scalarmult(point, scalar):
+    affine  = (point[0], point[1], fe(1))
+    acc     = (fe(0), fe(1), fe(1))
+    trimmed = trim(scalar)
+    binary  = [int(c) for c in list(format(trimmed, 'b'))]
+    for i in binary:
+        acc = fast_point_add(acc, acc)
+        if i == 1:
+            acc = fast_point_add(acc, affine)
+    return acc
+
+def fast_scalarbase(scalar):
+    return fast_scalarmult(edwards_base, scalar)
+
+# Explicit formula for hash_to_curve
+# We don't need the v coordinate for X25519, so it is omited
+def explicit_hash_to_curve(r):
+    w = fe(2) * r**2  # fe_sq2()
+    w = w + fe(1)
+    w = w.invert()
+    w = w * A
+    w = -w
+    e = A + w
+    e = e * w
+    e = e + fe(1)
+    e = e * w
+    e = chi(e)
+    t = A // 2  # constant
+    u = fe(1) - e
+    u = u * t
+    w = e * w
+    u = w - u
+    return u
