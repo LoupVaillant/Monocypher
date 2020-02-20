@@ -175,7 +175,7 @@ def from_edwards(point):
     x = point[0]
     y = point[1]
     u = (fe(1) + y) / (fe(1) - y)
-    v = (sqrt(fe(-486664)) * u / x).abs()
+    v = (sqrt(fe(-486664)) * u / x)
     return (u, v)
 
 # entire key generation chain
