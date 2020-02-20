@@ -240,6 +240,17 @@ def fast_scalarmult(point, scalar):
 def fast_scalarbase(scalar):
     return fast_scalarmult(edwards_base, scalar)
 
+def fast_from_edwards(point):
+    sqA = sqrt(fe(-486664)) # constant
+    x = point[0]
+    y = point[1]
+    z = point[2]
+    u  = z + y
+    zu = z - y
+    v  = u * z * sqA
+    zv = zu * x
+    return (u*zv, v*zu, zu*zv)
+
 # Explicit formula for hash_to_curve
 # We don't need the v coordinate for X25519, so it is omited
 def explicit_hash_to_curve(r):
