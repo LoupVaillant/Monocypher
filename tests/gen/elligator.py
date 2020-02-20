@@ -111,8 +111,8 @@ def hash_to_curve(r):
     return (u, v)
 
 def can_curve_to_hash(point):
-    x = point[0]
-    return x != -A and is_square(-fe(2) * x * (x + A))
+    u = point[0]
+    return u != -A and is_square(-fe(2) * u * (u + A))
 
 def curve_to_hash(point):
     if not can_curve_to_hash(point):
