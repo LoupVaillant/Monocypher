@@ -179,29 +179,22 @@ def from_edwards(point):
     return (u, v)
 
 # entire key generation chain
-def private_to_hash(scalar):
-    xy = scalarbase(scalar)
-    uv = from_edwards(xy)
-    if can_curve_to_hash(uv):
-        return curve_to_hash(uv)
-    return None
-
 def full_cycle_check(scalar):
     fe(scalar).print()
     xy = scalarbase(scalar)
     uv = from_edwards(xy)
-    h  = private_to_hash(scalar)
     uv[0].print()
     uv[1].print()
-    if h is None:
-        print('00:')    # Failure
-        print('00:')    # dummy value for the hash
-    else:
+    if can_curve_to_hash(uv):
+        h = curve_to_hash(uv)
         print('01:')    # Success
         h.print()       # actual value for the hash
         c = hash_to_curve(h)
         if c != uv:
             print('Round trip failure')
+    else:
+        print('00:')    # Failure
+        print('00:')    # dummy value for the hash
 
 private = 0
 for v in range(20):
