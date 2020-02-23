@@ -178,51 +178,6 @@ def from_edwards(point):
     v = (sqrt(fe(-486664)) * u / x)
     return (u, v)
 
-# entire key generation chain
-def full_cycle_check(scalar, u):
-    fe(scalar).print()
-    xy = scalarbase(scalar)
-    uv = from_edwards(xy)
-    if (uv[0] != u): raise ValueError('Test vector failure')
-    uv[0].print()
-    uv[1].print()
-    if can_curve_to_hash(uv):
-        h = curve_to_hash(uv)
-        print('01:')    # Success
-        h.print()       # actual value for the hash
-        c = hash_to_curve(h)
-        if c != uv: raise ValueError('Round trip failure')
-    else:
-        print('00:')    # Failure
-        print('00:')    # dummy value for the hash
-
-# read test vectors:
-def read_vector(vector): # vector: little endian hex number
-    cut = vector[:64]    # remove final ':' character
-    acc = 0              # final sum
-    pos = 1              # power of 256
-    for b in bytes.fromhex(cut):
-        acc += b * pos
-        pos *= 256
-    return acc
-
-def read_test_vectors():
-    vectors = []
-    with open("x25519_pk.all.vec") as f:
-        lines = [x.strip() for x in f.readlines() if x.strip()]
-        for i in range(len(lines) // 2):
-            private = read_vector(lines[i*2    ])
-            public  = read_vector(lines[i*2 + 1])
-            vectors.append((private, fe(public)))
-    return vectors
-
-vectors = read_test_vectors()
-for v in vectors:
-    private = v[0]
-    public  = v[1]
-    print('')
-    full_cycle_check(private, public)
-
 # fast point addition & scalar multiplication with affine coordinates:
 # x = X/Z, y = Y/Z. We can multiply Z instead of dividing X and Y.
 # The goal is to test the merging of the final inversion
@@ -283,3 +238,49 @@ def explicit_hash_to_curve(r):
     w = e * w
     u = w - u
     return u
+
+# entire key generation chain
+def full_cycle_check(scalar, u):
+    fe(scalar).print()
+    xy = scalarbase(scalar)
+    uv = from_edwards(xy)
+    if (uv[0] != u): raise ValueError('Test vector failure')
+    uv[0].print()
+    uv[1].print()
+    if can_curve_to_hash(uv):
+        h = curve_to_hash(uv)
+        print('01:')    # Success
+        h.print()       # actual value for the hash
+        c = hash_to_curve(h)
+        if c != uv: raise ValueError('Round trip failure')
+    else:
+        print('00:')    # Failure
+        print('00:')    # dummy value for the hash
+
+# read test vectors:
+def read_vector(vector): # vector: little endian hex number
+    cut = vector[:64]    # remove final ':' character
+    acc = 0              # final sum
+    pos = 1              # power of 256
+    for b in bytes.fromhex(cut):
+        acc += b * pos
+        pos *= 256
+    return acc
+
+def read_test_vectors():
+    vectors = []
+    with open("x25519_pk.all.vec") as f:
+        lines = [x.strip() for x in f.readlines() if x.strip()]
+        for i in range(len(lines) // 2):
+            private = read_vector(lines[i*2    ])
+            public  = read_vector(lines[i*2 + 1])
+            vectors.append((private, fe(public)))
+    return vectors
+
+vectors = read_test_vectors()
+for v in vectors:
+    private = v[0]
+    public  = v[1]
+    print('')
+    full_cycle_check(private, public)
+
