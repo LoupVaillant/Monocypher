@@ -247,7 +247,9 @@ def full_cycle_check(scalar, u):
         print('01:')    # Success
         h.print()       # actual value for the hash
         c = hash_to_curve(h)
-        if c != uv: raise ValueError('Round trip failure')
+        u = explicit_hash_to_curve(h)
+        if u != c[0]: raise ValueError('Incorrect explicit_hash_to_curve()')
+        if c != uv  : raise ValueError('Round trip failure')
     else:
         print('00:')    # Failure
         print('00:')    # dummy value for the hash
