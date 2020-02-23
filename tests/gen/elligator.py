@@ -212,6 +212,25 @@ def fast_from_edwards(point):
     div = (zu * zv).invert()
     return (u*zv*div, v*zu*div)
 
+def pow_p58(f): return f ** ((p-5)//8)
+sqrt_half  = (fe(-1) / fe(2)) ** ((p+3)//8)
+chi_minus2 = chi(fe(-2))
+
+def fast_curve_to_hash(point):
+    u = point[0]
+    v = point[1]
+    c   = pow_p58(u * (u+A)**7)
+    sq1 = u    * (u+A)**3  * c    * sqrt_half
+    sq2 = u**3 * (u+A)**25 * c**7 * sqrt_half
+    sqv = u**2 * (u+A)**14 * c**4 * chi_minus2
+    if (sqv == fe(-1)):
+        return None
+    if fe(2) * (u + A) * sq1**2 + u      != fe(0): sq1 = (sq1 * sqrt1)
+    if fe(2) *  u      * sq2**2 + u + A  != fe(0): sq2 = (sq2 * sqrt1)
+    sq1 = sq1.abs()
+    sq2 = sq2.abs()
+    return sq1 if v.is_positive() else sq2
+
 # Explicit formula for hash_to_curve
 # We don't need the v coordinate for X25519, so it is omited
 def explicit_hash_to_curve(r):
@@ -243,7 +262,9 @@ def full_cycle_check(scalar, u):
     uv[0].print()
     uv[1].print()
     if can_curve_to_hash(uv):
-        h = curve_to_hash(uv)
+        h  = curve_to_hash(uv)
+        fh = fast_curve_to_hash(uv)
+        if h != fh: raise ValueError('Incorrect fast_curve_to_hash()')
         print('01:')    # Success
         h.print()       # actual value for the hash
         c = hash_to_curve(h)
