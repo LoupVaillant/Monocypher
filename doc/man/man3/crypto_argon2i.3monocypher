@@ -239,7 +239,7 @@ This example shows how to hash a password with the recommended baseline
 parameters:
 .Bd -literal -offset indent
 uint8_t        hash[32];                    /* Output hash     */
-const uint8_t *password;                    /* User's password */
+uint8_t       *password;                    /* User's password */
 uint8_t        password_size;               /* Password length */
 const uint8_t  salt[16];                    /* Random salt     */
 const uint32_t nb_blocks = 100000;          /* 100 megabytes   */
