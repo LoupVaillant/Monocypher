@@ -69,11 +69,11 @@ class fe:
 
     def __eq__(self, other): return self.val % self.p == other.val % self.p
     def __ne__(self, other): return self.val % self.p != other.val % self.p
-    def isPositive(self)   : return self.val % self.p <= (p-1) // 2
+    def is_positive(self)  : return self.val % self.p <= (p-1) // 2
 
     def abs(self):
-        if self.isPositive(): return  self
-        else                : return -self
+        if self.is_positive(): return  self
+        else                 : return -self
 
     def print(self):
         """prints a field element in little endian"""
@@ -121,8 +121,8 @@ def curve_to_hash(point):
     v   = point[1]
     sq1 = sqrt(-u     / (fe(2) * (u+A)))
     sq2 = sqrt(-(u+A) / (fe(2) * u    ))
-    if v.isPositive(): return sq1
-    else             : return sq2
+    if v.is_positive(): return sq1
+    else              : return sq2
 
 # round trip test
 for i in range(50):
