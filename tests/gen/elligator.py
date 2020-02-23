@@ -51,6 +51,8 @@
 # with this software.  If not, see
 # <https://creativecommons.org/publicdomain/zero/1.0/>
 
+import sys # stdin
+
 class fe:
     """Prime field over 2^255 - 19"""
     p = 2**255 - 19
@@ -287,12 +289,11 @@ def read_vector(vector): # vector: little endian hex number
 
 def read_test_vectors():
     vectors = []
-    with open("x25519_pk.all.vec") as f:
-        lines = [x.strip() for x in f.readlines() if x.strip()]
-        for i in range(len(lines) // 2):
-            private = read_vector(lines[i*2    ])
-            public  = read_vector(lines[i*2 + 1])
-            vectors.append((private, fe(public)))
+    lines = [x.strip() for x in sys.stdin.readlines() if x.strip()]
+    for i in range(len(lines) // 2):
+        private = read_vector(lines[i*2    ])
+        public  = read_vector(lines[i*2 + 1])
+        vectors.append((private, fe(public)))
     return vectors
 
 vectors = read_test_vectors()
