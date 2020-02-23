@@ -124,15 +124,6 @@ def curve_to_hash(point):
     if v.is_positive(): return sq1
     else              : return sq2
 
-# round trip test
-for i in range(50):
-    h   = fe(1234567890 * i).invert() # "random" hash
-    pp  = hash_to_curve(h)
-    hh  = curve_to_hash(pp)
-    ppp = hash_to_curve(hh)
-    if hh != h.abs() : raise ValueError('h != hh')
-    if pp != ppp     : raise ValueError('pp != ppp')
-
 # Edwards (Edwards25519)
 # -x^2 + y^2 = 1 + d*x^2*y^2
 d = fe(-121665) / fe(121666)
