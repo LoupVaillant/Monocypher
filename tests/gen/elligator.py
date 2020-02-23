@@ -208,16 +208,18 @@ def fast_scalarmult(point, scalar):
 def fast_scalarbase(scalar):
     return fast_scalarmult(edwards_base, scalar)
 
+sqrt_mA2 = sqrt(fe(-486664)) # sqrt(-(A+2))
+
 def fast_from_edwards(point):
-    sqA = sqrt(fe(-486664)) # constant
     x = point[0]
     y = point[1]
     z = point[2]
-    u  = z + y
-    zu = z - y
-    v  = u * z * sqA
-    zv = zu * x
-    return (u*zv, v*zu, zu*zv)
+    u   = z + y
+    zu  = z - y
+    v   = u * z * sqrt_mA2
+    zv  = zu * x
+    div = (zu * zv).invert()
+    return (u*zv*div, v*zu*div)
 
 # Explicit formula for hash_to_curve
 # We don't need the v coordinate for X25519, so it is omited
@@ -242,9 +244,11 @@ def explicit_hash_to_curve(r):
 # entire key generation chain
 def full_cycle_check(scalar, u):
     fe(scalar).print()
-    xy = scalarbase(scalar)
-    uv = from_edwards(xy)
-    if (uv[0] != u): raise ValueError('Test vector failure')
+    uv  = from_edwards(scalarbase(scalar))
+    fuv = fast_from_edwards(fast_scalarbase(scalar))
+    if fuv[0] != uv[0]: raise ValueError('Incorrect fast u')
+    if fuv[1] != uv[1]: raise ValueError('Incorrect fast v')
+    if uv [0] != u    : raise ValueError('Test vector failure')
     uv[0].print()
     uv[1].print()
     if can_curve_to_hash(uv):
