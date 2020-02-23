@@ -229,9 +229,8 @@ def fast_curve_to_hash(point):
         return None
     if fe(2) * (u + A) * sq1**2 + u      != fe(0): sq1 = (sq1 * sqrt1)
     if fe(2) *  u      * sq2**2 + u + A  != fe(0): sq2 = (sq2 * sqrt1)
-    sq1 = sq1.abs()
-    sq2 = sq2.abs()
-    return sq1 if v.is_positive() else sq2
+    sq = sq1 if v.is_positive() else sq2
+    return sq.abs()
 
 # Explicit formula for hash_to_curve
 # We don't need the v coordinate for X25519, so it is omited
