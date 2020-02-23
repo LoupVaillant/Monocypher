@@ -299,6 +299,6 @@ vectors = read_test_vectors()
 for v in vectors:
     private = v[0]
     public  = v[1]
-    print('')
     full_cycle_check(private, public)
+    print('')
 
