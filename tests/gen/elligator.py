@@ -232,6 +232,52 @@ def fast_curve_to_hash(point):
     sq = sq1 if v.is_positive() else sq2
     return sq.abs()
 
+# Explicit formula for curve_to_hash
+def explicit_curve_to_hash(point):
+    u = point[0]
+    v = point[1]
+    ua  = u + A
+    t1  = ua**2     #  2ua
+    sq1 = t1  * ua  #  3ua
+    t2  = t1**2     #  4ua
+    t1  = t2  * sq1 #  7ua
+    sq2 = t1**2     # 14ua
+    c   = pow_p58(u * t1)
+    t3  = c**2      #  2c
+    t4  = t3**2     #  4c
+    t5  = u**2      #  2u
+    sqv = t5  * sq2
+    sqv = sqv * t4
+    sqv = sqv * chi_minus2
+    if (sqv == fe(-1)): # not constant time, don't have a choice
+        return None
+    sq1 = u   * sq1
+    sq1 = sq1 * c
+    sq1 = sq1 * sqrt_half
+    t5  = u   * t5 #  3u
+    t3  = c   * t3 #  3c
+    c   = t4  * t3 #  7c
+    sq2 = sq2 * t1 # 21ua
+    sq2 = sq2 * t2 # 25ua
+    sq2 = t5  * sq2
+    sq2 = sq2 * c
+    sq2 = sq2 * sqrt_half
+    t1  = sq1 * sqrt1
+    sqv = fe(2) * sq1**2
+    sqv = sqv * ua
+    sqv = sqv + u
+    if sqv != fe(0)         : sq1 = t1  # constant time move
+    t2  = sq2 * sqrt1
+    sqv = fe(2) * sq2**2
+    sqv = sqv * u
+    sqv = sqv + ua
+    if sqv != fe(0)         : sq2 = t2  # constant time move
+    if not v  .is_positive(): sq1 = sq2 # constant time move
+    t1 = -sq1
+    if not sq1.is_positive(): sq1 = t1  # constant time move
+    # wipe temporaries: ua, c, sq1, sq2, sqv, t1, t2, t3, t4, t5
+    return sq1
+
 # Explicit formula for hash_to_curve
 # We don't need the v coordinate for X25519, so it is omited
 def explicit_hash_to_curve(r):
@@ -265,7 +311,9 @@ def full_cycle_check(scalar, u):
     if can_curve_to_hash(uv):
         h  = curve_to_hash(uv)
         fh = fast_curve_to_hash(uv)
-        if h != fh: raise ValueError('Incorrect fast_curve_to_hash()')
+        eh = explicit_curve_to_hash(uv)
+        if fh != h: raise ValueError('Incorrect fast_curve_to_hash()')
+        if eh != h: raise ValueError('Incorrect explicit_curve_to_hash()')
         print('01:')    # Success
         h.print()       # actual value for the hash
         c = hash_to_curve(h)
@@ -273,6 +321,10 @@ def full_cycle_check(scalar, u):
         if u != c[0]: raise ValueError('Incorrect explicit_hash_to_curve()')
         if c != uv  : raise ValueError('Round trip failure')
     else:
+        fh = fast_curve_to_hash(uv)
+        eh = explicit_curve_to_hash(uv)
+        if not (fh is None): raise ValueError('Fast Curve to Hash did not fail')
+        if not (eh is None): raise ValueError('Explicit Curve to Hash did not fail')
         print('00:')    # Failure
         print('00:')    # dummy value for the hash
 
