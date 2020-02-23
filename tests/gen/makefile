@@ -57,7 +57,7 @@ CFLAGS = -pedantic -Wall -Wextra
 VEC     = chacha20  hchacha20  xchacha20    ietf_chacha20 aead_ietf      \
           poly1305  blake2b    sha512       hmac_sha512   argon2i        \
           edDSA     edDSA_pk   ed_25519     ed_25519_pk   ed_25519_check \
-          x25519    x25519_pk  key_exchange
+          x25519    x25519_pk  key_exchange elligator
 VEC2    = $(patsubst %, %.all.vec, $(VEC))
 HEADERS = $(patsubst %, %.h.vec  , $(VEC))
 VECTORS = ../vectors.h
@@ -67,6 +67,9 @@ all: $(VECTORS)
 clean:
 	rm -f *.out *.vec *.o
 	rm -f $(VECTORS)
+
+elligator.vec: elligator.py x25519_pk.all.vec
+	./$< <x25519_pk.all.vec >$@
 
 %.vec: %.out
 	./$< > $@
@@ -118,6 +121,7 @@ ed_25519.all.vec      : ed_25519.vec
 ed_25519_pk.all.vec   : ed_25519_pk.vec
 ed_25519_check.all.vec:                 vectors/ed_25519_check
 key_exchange.all.vec  :                 vectors/key_exchange
+elligator.all.vec     : elligator.vec
 $(VEC2):
 	mkdir -p $(@D)
 	cat $^ > $@
