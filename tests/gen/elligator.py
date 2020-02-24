@@ -278,6 +278,8 @@ def explicit_curve_to_hash(point):
     # wipe temporaries: ua, c, sq1, sq2, sqv, t1, t2, t3, t4, t5
     return sq1
 
+half_A = A // 2
+
 # Explicit formula for hash_to_curve
 # We don't need the v coordinate for X25519, so it is omited
 def explicit_hash_to_curve(r):
@@ -291,9 +293,8 @@ def explicit_hash_to_curve(r):
     e = e + fe(1)
     e = e * w
     e = chi(e)
-    t = A // 2  # constant
     u = fe(1) - e
-    u = u * t
+    u = u * half_A
     w = e * w
     u = w - u
     return u
