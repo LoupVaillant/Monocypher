@@ -170,7 +170,7 @@ returns 0 for legitimate messages and -1 for forgeries.
 .Sh EXAMPLES
 Sign a message:
 .Bd -literal -offset indent
-const uint8_t sk       [ 32]; /* Secret key            */
+uint8_t       sk       [ 32]; /* Secret key            */
 const uint8_t pk       [ 32]; /* Public key (optional) */
 const uint8_t message  [500]; /* Message to sign       */
 uint8_t       signature[ 64]; /* Output signature      */

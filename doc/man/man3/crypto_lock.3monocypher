@@ -228,9 +228,9 @@ does not need to be wiped if the decryption fails.
 .Sh EXAMPLES
 Encryption:
 .Bd -literal -offset indent
-const uint8_t key        [32];  /* Random, secret session key  */
+uint8_t       key        [32];  /* Random, secret session key  */
 const uint8_t nonce      [24];  /* Use only once per key       */
-const uint8_t plain_text [500]; /* Secret message              */
+uint8_t       plain_text [500]; /* Secret message              */
 uint8_t       mac        [16];  /* Message authentication code */
 uint8_t       cipher_text[500]; /* Encrypted message           */
 crypto_lock(mac, cipher_text, key, nonce, plain_text, 500);
@@ -242,7 +242,7 @@ crypto_wipe(key, 32);
 .Pp
 To decrypt the above:
 .Bd -literal -offset indent
-const uint8_t key        [32];  /* Same as the above         */
+uint8_t       key        [32];  /* Same as the above         */
 const uint8_t nonce      [24];  /* Same as the above         */
 const uint8_t cipher_text[500]; /* Encrypted message         */
 const uint8_t mac        [16];  /* Received from the network */
@@ -261,7 +261,7 @@ crypto_wipe(key, 32);
 .Pp
 In-place encryption:
 .Bd -literal -offset indent
-const uint8_t key  [32];  /* Random, secret session key  */
+uint8_t       key  [32];  /* Random, secret session key  */
 const uint8_t nonce[24];  /* Use only once per key       */
 uint8_t       text [500]; /* Secret message              */
 uint8_t       mac  [16];  /* Message authentication code */
@@ -273,7 +273,7 @@ crypto_wipe(key, 32);
 .Pp
 In-place decryption:
 .Bd -literal -offset indent
-const uint8_t  key  [32];  /* Same as the above         */
+uint8_t        key  [32];  /* Same as the above         */
 const uint8_t  nonce[24];  /* Same as the above         */
 const uint8_t  mac  [16];  /* Received from the network */
 uint8_t        text [500]; /* Message to decrypt        */
