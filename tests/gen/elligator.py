@@ -72,6 +72,7 @@ class fe:
     def __eq__(self, other): return self.val % self.p == other.val % self.p
     def __ne__(self, other): return self.val % self.p != other.val % self.p
     def is_positive(self)  : return self.val % self.p <= (p-1) // 2
+    def is_negative(self)  : return self.val % self.p >  (p-1) // 2
 
     def abs(self):
         if self.is_positive(): return  self
@@ -98,7 +99,7 @@ def is_square(n): return n == fe(0) or chi(n) == fe(1)
 sqrt1 = ((fe(2)**((p-1) // 4)) * fe(-1)**((p+3) // 8)).abs()
 
 def sqrt(n):
-    if not(is_square(n)) : raise ValueError('Not a square!')
+    if not is_square(n) : raise ValueError('Not a square!')
     root = n**((p+3) // 8)
     if root * root != n: root = (root * sqrt1)
     if root * root != n: raise ValueError('Should be a square!!')
@@ -266,15 +267,15 @@ def explicit_curve_to_hash(point):
     sqv = fe(2) * sq1**2
     sqv = sqv * ua
     sqv = sqv + u
-    if sqv != fe(0)         : sq1 = t1  # constant time move
+    if sqv != fe(0)     : sq1 = t1  # constant time move
     t2  = sq2 * sqrt1
     sqv = fe(2) * sq2**2
     sqv = sqv * u
     sqv = sqv + ua
-    if sqv != fe(0)         : sq2 = t2  # constant time move
-    if not v  .is_positive(): sq1 = sq2 # constant time move
+    if sqv != fe(0)     : sq2 = t2  # constant time move
+    if v  .is_negative(): sq1 = sq2 # constant time move
     t1 = -sq1
-    if not sq1.is_positive(): sq1 = t1  # constant time move
+    if sq1.is_negative(): sq1 = t1  # constant time move
     # wipe temporaries: ua, c, sq1, sq2, sqv, t1, t2, t3, t4, t5
     return sq1
 
@@ -311,6 +312,7 @@ def full_cycle_check(scalar, u):
     uv[1].print()
     if can_curve_to_hash(uv):
         h  = curve_to_hash(uv)
+        if h.is_negative(): raise ValueError('Non Canonical representative')
         fh = fast_curve_to_hash(uv)
         eh = explicit_curve_to_hash(uv)
         if fh != h: raise ValueError('Incorrect fast_curve_to_hash()')
