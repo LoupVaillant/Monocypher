@@ -117,8 +117,8 @@ keys over a trusted channel.
 .Sh EXAMPLES
 Generate a public key from a randomly generated secret key:
 .Bd -literal -offset indent
-const uint8_t sk[32]; /* Random secret key */
-uint8_t       pk[32]; /* Public key        */
+uint8_t sk[32]; /* Random secret key */
+uint8_t pk[32]; /* Public key        */
 crypto_key_exchange_public_key(pk, sk);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(sk, 32);
@@ -130,7 +130,7 @@ key.
 key and their secret key.)
 .Bd -literal -offset indent
 const uint8_t their_pk  [32]; /* Their public key   */
-const uint8_t your_sk   [32]; /* Your secret key    */
+uint8_t       your_sk   [32]; /* Your secret key    */
 uint8_t       shared_key[32]; /* Shared session key */
 crypto_key_exchange(shared_key, your_sk, their_pk);
 /* Wipe secrets if they are no longer needed */

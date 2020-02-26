@@ -126,7 +126,7 @@ key.
 (This can help nonce management for full duplex communications.)
 .Bd -literal -offset indent
 const uint8_t their_pk     [32]; /* Their public key          */
-const uint8_t your_sk      [32]; /* Your secret key           */
+uint8_t       your_sk      [32]; /* Your secret key           */
 uint8_t       shared_secret[32]; /* Shared secret (NOT a key) */
 crypto_x25519(shared_secret, your_sk, their_pk);
 /* Wipe secrets if they are no longer needed */

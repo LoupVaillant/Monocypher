@@ -277,6 +277,7 @@ main(void)
         return 1;
     }
     puts("ok");
+    return 0;
 }
 .Ed
 .Sh SEE ALSO

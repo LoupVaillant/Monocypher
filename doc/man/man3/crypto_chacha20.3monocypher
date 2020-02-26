@@ -239,9 +239,9 @@ plus one if there was a remainder.
 .Sh EXAMPLES
 Simple encryption:
 .Bd -literal -offset indent
-const uint8_t key        [ 32]; /* Secret random key              */
+uint8_t       key        [ 32]; /* Secret random key              */
 const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
-const uint8_t plain_text [500]; /* Message to be encrypted        */
+uint8_t       plain_text [500]; /* Message to be encrypted        */
 uint8_t       cipher_text[500]; /* Will be the encrypted message  */
 crypto_xchacha20(cipher_text, plain_text, 500, key, nonce);
 /* Wipe secrets if they are no longer needed */
@@ -251,7 +251,7 @@ crypto_wipe(plain_text, 500);
 .Pp
 To decrypt the above:
 .Bd -literal -offset indent
-const uint8_t key  [ 32]; /* Same key as above              */
+uint8_t       key  [ 32]; /* Same key as above              */
 const uint8_t nonce[ 24]; /* Same nonce as above            */
 uint8_t plain_text [500]; /* Will be the decrypted message  */
 uint8_t cipher_text[500]; /* Encrypted message              */
@@ -264,9 +264,9 @@ crypto_wipe(plain_text, 500);
 .Pp
 Incremental encryption (in blocks of 64 bytes):
 .Bd -literal -offset indent
-const uint8_t key        [ 32]; /* Secret random key              */
+uint8_t       key        [ 32]; /* Secret random key              */
 const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
-const uint8_t plain_text [500]; /* Message to be encrypted        */
+uint8_t       plain_text [500]; /* Message to be encrypted        */
 uint8_t       cipher_text[500]; /* Will be the encrypted message  */
 uint64_t      ctr;              /* Block counter */
 int i;
@@ -289,9 +289,9 @@ how
 .Fn crypto_xchacha20_ctr
 works):
 .Bd -literal -offset indent
-const uint8_t key        [ 32]; /* Secret random key              */
+uint8_t       key        [ 32]; /* Secret random key              */
 const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
-const uint8_t plain_text [500]; /* Message to be encrypted        */
+uint8_t       plain_text [500]; /* Message to be encrypted        */
 uint8_t       cipher_text[500]; /* Will be the encrypted message  */
 /* Encrypt the second part of the message first... */
 crypto_chacha20(cipher_text + (3 * 64),

@@ -152,7 +152,7 @@ returns 0 for legitimate messages and -1 for forgeries.
 .Sh EXAMPLES
 Generate a public key from a random secret key:
 .Bd -literal -offset indent
-const uint8_t sk[32]; /* Random secret key   */
+uint8_t       sk[32]; /* Random secret key   */
 uint8_t       pk[32]; /* Matching public key */
 crypto_sign_public_key(pk, sk);
 /* Wipe the secret key if it is no longer needed */
@@ -161,7 +161,7 @@ crypto_wipe(sk, 32);
 .Pp
 Sign a message:
 .Bd -literal -offset indent
-const uint8_t sk       [ 32]; /* Your secret key     */
+uint8_t       sk       [ 32]; /* Your secret key     */
 const uint8_t pk       [ 32]; /* Matching public key */
 const uint8_t message  [500]; /* Message to sign     */
 uint8_t       signature[ 64];
