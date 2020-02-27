@@ -135,52 +135,17 @@ def curve_to_hash(point):
 # -x^2 + y^2 = 1 + d*x^2*y^2
 d = fe(-121665) / fe(121666)
 
-def point_add(a, b):
-    x1 = a[0];  y1 = a[1];
-    x2 = b[0];  y2 = b[1];
-    denum = d*x1*x2*y1*y2
-    x     = (x1*y2 + x2*y1) / (fe(1) + denum)
-    y     = (y1*y2 + x1*x2) / (fe(1) - denum)
-    return (x, y)
-
 def trim(scalar):
     trimmed = scalar - scalar % 8
     trimmed = trimmed % 2**254
     trimmed = trimmed + 2**254
     return trimmed
 
-def scalarmult(point, scalar):
-    acc     = (fe(0), fe(1))
-    trimmed = trim(scalar)
-    binary  = [int(c) for c in list(format(trimmed, 'b'))]
-    for i in binary:
-        acc = point_add(acc, acc)
-        if i == 1:
-            acc = point_add(acc, point)
-    return acc
-
-eby = fe(4) / fe(5)
-ebx = sqrt((eby**2 - fe(1)) / (fe(1) + d * eby**2))
-edwards_base = (ebx, eby)
-
-def scalarbase(scalar):
-    return scalarmult(edwards_base, scalar)
-
-# conversion to Montgomery
-# (u, v) = ((1+y)/(1-y), sqrt(-486664)*u/x)
-# (x, y) = (sqrt(-486664)*u/v, (u-1)/(u+1))
-def from_edwards(point):
-    x = point[0]
-    y = point[1]
-    u = (fe(1) + y) / (fe(1) - y)
-    v = (sqrt(fe(-486664)) * u / x)
-    return (u, v)
-
 # fast point addition & scalar multiplication with affine coordinates:
 # x = X/Z, y = Y/Z. We can multiply Z instead of dividing X and Y.
 # The goal is to test the merging of the final inversion
 # with the exponentiations required for curve_to_hash
-def fast_point_add(a, b):
+def point_add(a, b):
     x1 = a[0];  y1 = a[1];  z1 = a[2];
     x2 = b[0];  y2 = b[1];  z2 = b[2];
     denum = d*x1*x2*y1*y2
@@ -192,23 +157,30 @@ def fast_point_add(a, b):
     zy    = z1z22 - denum
     return (xt*zy, yt*zx, zx*zy)
 
-def fast_scalarmult(point, scalar):
+def scalarmult(point, scalar):
     affine  = (point[0], point[1], fe(1))
     acc     = (fe(0), fe(1), fe(1))
     trimmed = trim(scalar)
     binary  = [int(c) for c in list(format(trimmed, 'b'))]
     for i in binary:
-        acc = fast_point_add(acc, acc)
+        acc = point_add(acc, acc)
         if i == 1:
-            acc = fast_point_add(acc, affine)
+            acc = point_add(acc, affine)
     return acc
 
-def fast_scalarbase(scalar):
-    return fast_scalarmult(edwards_base, scalar)
+eby = fe(4) / fe(5)
+ebx = sqrt((eby**2 - fe(1)) / (fe(1) + d * eby**2))
+edwards_base = (ebx, eby)
+
+def scalarbase(scalar):
+    return scalarmult(edwards_base, scalar)
 
 sqrt_mA2 = sqrt(fe(-486664)) # sqrt(-(A+2))
 
-def fast_from_edwards(point):
+# conversion to Montgomery
+# (u, v) = ((1+y)/(1-y), sqrt(-486664)*u/x)
+# (x, y) = (sqrt(-486664)*u/v, (u-1)/(u+1))
+def from_edwards(point):
     x = point[0]
     y = point[1]
     z = point[2]
@@ -301,11 +273,8 @@ half_A = A // 2
 # entire key generation chain
 def full_cycle_check(scalar, u):
     fe(scalar).print()
-    uv  = from_edwards(scalarbase(scalar))
-    fuv = fast_from_edwards(fast_scalarbase(scalar))
-    if fuv[0] != uv[0]: raise ValueError('Incorrect fast u')
-    if fuv[1] != uv[1]: raise ValueError('Incorrect fast v')
-    if uv [0] != u    : raise ValueError('Test vector failure')
+    uv = from_edwards(scalarbase(scalar))
+    if uv [0] != u: raise ValueError('Test vector failure')
     uv[0].print()
     uv[1].print()
     if can_curve_to_hash(uv):
