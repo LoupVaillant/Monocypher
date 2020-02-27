@@ -90,7 +90,6 @@ class fe:
 # Curve25519 constants
 p = fe.p
 A = fe(486662)
-# chosen non-square: 2
 # B = 1
 
 def chi      (n): return n**((p-1)//2)
@@ -106,8 +105,13 @@ def sqrt(n):
     return root.abs()
 
 # Elligator 2
+
+# Arbitrary non square, typically chosen to minimise computation.
+# 2 and sqrt(-1) both work fairly well
+non_square = fe(2) # that's what standards seem to agree upon
+
 def hash_to_curve(r):
-    w = -A / (fe(1) + fe(2) * r**2)
+    w = -A / (fe(1) + non_square * r**2)
     e = chi(w**3 + A*w**2 + w)
     u = e*w - (fe(1)-e)*(A//2)
     v = -e * sqrt(u**3 + A*u**2 + u)
@@ -115,15 +119,15 @@ def hash_to_curve(r):
 
 def can_curve_to_hash(point):
     u = point[0]
-    return u != -A and is_square(-fe(2) * u * (u + A))
+    return u != -A and is_square(-non_square * u * (u + A))
 
 def curve_to_hash(point):
     if not can_curve_to_hash(point):
         raise ValueError('cannot curve to hash')
     u   = point[0]
     v   = point[1]
-    sq1 = sqrt(-u     / (fe(2) * (u+A)))
-    sq2 = sqrt(-(u+A) / (fe(2) * u    ))
+    sq1 = sqrt(-u     / (non_square * (u+A)))
+    sq2 = sqrt(-(u+A) / (non_square * u    ))
     if v.is_positive(): return sq1
     else              : return sq2
 
@@ -228,7 +232,7 @@ def invsqrt(x):
     return isr, is_square
 
 def fast_hash_to_curve(q):
-    u = fe(2)
+    u = non_square
     ufactor = -u * sqrt1
     ufactor_sqrt = sqrt(ufactor)
 
@@ -269,7 +273,7 @@ def fast_hash_to_curve(q):
     return (x, y)
 
 def fast_curve_to_hash(point):
-    u = fe(2)
+    u = non_square
     ufactor = -u * sqrt1
     ufactor_sqrt = sqrt(ufactor)
 
