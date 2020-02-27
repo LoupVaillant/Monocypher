@@ -48,7 +48,9 @@ redesigned monocypher.org style sheets.
 Mike Pechkin and André Maroneze found bugs in earlier versions of
 Monocypher.
 
-Andrew Moon clarified carry propagation in modular arithmetic.
+Andrew Moon clarified carry propagation in modular arithmetic, and
+provided advice and code that significantly simplified and improved
+Elligator2 mappings.
 
 Mike Hamburg explained comb algorithms, including the signed
 all-bits-set comb described in his 2012 paper, Fast and compact

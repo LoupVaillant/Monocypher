@@ -11,7 +11,7 @@
 #
 # ------------------------------------------------------------------------
 #
-# Copyright (c) 2020, Loup Vaillant
+# Copyright (c) 2020, Loup Vaillant and Andrew Moon
 # All rights reserved.
 #
 #
@@ -41,7 +41,7 @@
 #
 # ------------------------------------------------------------------------
 #
-# Written in 2020 by Loup Vaillant
+# Written in 2020 by Loup Vaillant and Andrew Moon
 #
 # To the extent possible under law, the author(s) have dedicated all copyright
 # and related neighboring rights to this software to the public domain
