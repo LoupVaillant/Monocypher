@@ -100,11 +100,38 @@ A = fe(486662)
 ###############
 # Square root #
 ###############
+
+# Legendre symbol:
+# -  0 if n is zero
+# -  1 if n is a non-zero square
+# - -1 if n is not a square
+# We take for granted that n^((p-1)/2) does what we want
 def chi      (n): return n**((p-1)//2)
 def is_square(n): return n == fe(0) or chi(n) == fe(1)
 
-sqrtm1 = ((fe(2)**((p-1) // 4)) * fe(-1)**((p+3) // 8)).abs()
+# square root of -1
+sqrtm1 = (fe(2)**((p-1) // 4)).abs()
+if sqrtm1 * sqrtm1 != fe(-1): raise ValueError('Wrong sqrtm1')
 
+# The square root of n, if n is a square.
+#
+# Note that p is congruent to 5 modulo 8, so (p+3)/8 is an integer.
+# If n is zero, then n^((p+3)/8) is zero (zero is its own square root).
+# Otherwise:
+# (n^((p+3)/8))^4 = n^((p+3)/2)
+# (n^((p+3)/8))^4 = n^((p-1)/2) * n^2
+# (n^((p+3)/8))^4 = chi(n)      * n^2 -- chi(n) == 1
+# (n^((p+3)/8))^4 = n^2               -- because n is a non-zero square
+# (n^((p+3)/8))^2 = n or -n
+# case n:
+#   (n^((p+3)/8))^2 = n
+#    n^((p+3)/8)    = sqrt(n) or -sqrt(n)
+# case -n:
+#             (n^((p+3)/8))^2 = -n
+#       -1  * (n^((p+3)/8))^2 =  n
+#  sqrt(-1) *  n^((p+3)/8)    = sqrt(n) or -sqrt(n)
+#
+# We then choose the positive square root, between 0 and (p-1)/2
 def sqrt(n):
     if not is_square(n) : raise ValueError('Not a square!')
     root = n**((p+3) // 8)
@@ -146,6 +173,9 @@ def point_add(a, b):
     zy    = z1z22 - denum
     return (xt*zy, yt*zx, zx*zy)
 
+# scalar multiplication:
+# point + point + ... + point, scalar times
+# (using a double and add ladder for speed)
 def scalarmult(point, scalar):
     affine  = (point[0], point[1], fe(1))
     acc     = (fe(0), fe(1), fe(1))
@@ -157,10 +187,12 @@ def scalarmult(point, scalar):
             acc = point_add(acc, affine)
     return acc
 
+# edwards base point
 eby = fe(4) / fe(5)
 ebx = sqrt((eby**2 - fe(1)) / (fe(1) + d * eby**2))
 edwards_base = (ebx, eby)
 
+# scalar multiplication of the base point
 def scalarbase(scalar):
     return scalarmult(edwards_base, scalar)
 
@@ -180,6 +212,7 @@ def from_edwards(point):
     div = (zu * zv).invert() # now we have to divide
     return (u*zv*div, v*zu*div)
 
+# Generates an X25519 public key from the given private key.
 def x25519_public_key(private_key):
     return from_edwards(scalarbase(private_key))
 
@@ -187,10 +220,19 @@ def x25519_public_key(private_key):
 # Elligator 2 (reference) #
 ###########################
 
-# Arbitrary non square, typically chosen to minimise computation.
-# 2 and sqrt(-1) both work fairly well
-non_square = fe(2) # that's what standards seem to agree upon
+# Elligator: Elliptic-curve points indistinguishable from uniform random strings
+# by Daniel J. Bernstein, Mike Hamburg, Anna Krasnova, and Tanja Lange
+# 2013
 
+# Arbitrary non square, typically chosen to minimise computation.
+# 2 and sqrt(-1) both work fairly well, but 2 seems to be more popular.
+# We stick to 2 for compatibility.
+non_square = fe(2)
+
+# Representative to curve point, straight from the paper.
+
+# Unlike the paper, curve coordinates are called (u, v) to follow
+# established conventions. Thus, "v" in the paper is called "w" here.
 def hash_to_curve(r):
     w = -A / (fe(1) + non_square * r**2)
     e = chi(w**3 + A*w**2 + w)
@@ -198,10 +240,12 @@ def hash_to_curve(r):
     v = -e * sqrt(u**3 + A*u**2 + u)
     return (u, v)
 
+# Test whether a point has a representative, straight from the paper.
 def can_curve_to_hash(point):
     u = point[0]
     return u != -A and is_square(-non_square * u * (u + A))
 
+# Computes the representative of a point, straight from the paper.
 def curve_to_hash(point):
     if not can_curve_to_hash(point):
         raise ValueError('cannot curve to hash')
@@ -215,6 +259,62 @@ def curve_to_hash(point):
 #####################
 # Elligator2 (fast) #
 #####################
+
+# Inverse square root.
+# Returns sqrt(1/x)        if x is square.
+# Returns sqrt(sqrt(-1)/x) if x is not a square.
+# We assume x is not zero
+# We do not guarantee the sign of the square root.
+#
+# Notes:
+# let quartic = x^((p-1)/4)
+#
+# x^((p-1)/2) = chi(x)
+# quartic^2   = chi(x)
+# quartic     = sqrt(chi(x))
+# quartic     = 1 or -1 or sqrt(-1) or -sqrt(-1)
+#
+# Note that x is a square if quartic is 1 or -1
+# There are 4 cases to consider:
+#
+# if   quartic         = 1  (x is a square)
+# then x^((p-1)/4)     = 1
+#      x^((p-5)/4) * x = 1
+#      x^((p-5)/4)     = 1/x
+#      x^((p-5)/8)     = sqrt(1/x) or -sqrt(1/x)
+#
+# if   quartic                = -1  (x is a square)
+# then x^((p-1)/4)            = -1
+#      x^((p-5)/4) * x        = -1
+#      x^((p-5)/4)            = -1/x
+#      x^((p-5)/8)            = sqrt(-1)   / sqrt(x)
+#      x^((p-5)/8) * sqrt(-1) = sqrt(-1)^2 / sqrt(x)
+#      x^((p-5)/8) * sqrt(-1) = -1/sqrt(x)
+#      x^((p-5)/8) * sqrt(-1) = -sqrt(1/x) or sqrt(1/x)
+#
+# if   quartic         = sqrt(-1)  (x is not a square)
+# then x^((p-1)/4)     = sqrt(-1)
+#      x^((p-5)/4) * x = sqrt(-1)
+#      x^((p-5)/4)     = sqrt(-1)/x
+#      x^((p-5)/8)     = sqrt(sqrt(-1)/x) or -sqrt(sqrt(-1)/x)
+#
+# Note that the product of two non-squares is always a square:
+#   For any non-squares a and b, chi(a) = -1 and chi(b) = -1.
+#   Since chi(x) = x^((p-1)/2), chi(a)*chi(b) = chi(a*b) = 1.
+#   Therefore a*b is a square.
+#
+#   Since sqrt(-1) and x are both non-squares, their product is a
+#   square, and we can compute their square root.
+#
+# if   quartic                = -sqrt(-1)  (x is not a square)
+# then x^((p-1)/4)            = -sqrt(-1)
+#      x^((p-5)/4) * x        = -sqrt(-1)
+#      x^((p-5)/4)            = -sqrt(-1)/x
+#      x^((p-5)/8)            = sqrt(-sqrt(-1)/x)
+#      x^((p-5)/8)            = sqrt( sqrt(-1)/x) * sqrt(-1)
+#      x^((p-5)/8) * sqrt(-1) = sqrt( sqrt(-1)/x) * sqrt(-1)^2
+#      x^((p-5)/8) * sqrt(-1) = sqrt( sqrt(-1)/x) * -1
+#      x^((p-5)/8) * sqrt(-1) = -sqrt(sqrt(-1)/x) or sqrt(sqrt(-1)/x)
 def invsqrt(x):
     isr = x**((p - 5) // 8)
     quartic = x * isr**2
