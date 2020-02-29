@@ -101,6 +101,11 @@ Your public key, generated from
 with
 .Fn crypto_key_exchange_public_key .
 .El
+.Pp
+.Fa shared_key
+and
+.Fa your_secret_key
+may overlap if the secret is no longer required.
 .Sh RETURN VALUES
 .Fn crypto_key_exchange
 and
