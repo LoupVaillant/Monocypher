@@ -11,6 +11,7 @@
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
 .\" Copyright (c) 2017, 2019 Fabio Scotoni
+.\" Copyright (c) 2020 Richard Walmsley
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +41,8 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2019 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2020 by Loup Vaillant, Michael Savage, Fabio Scotoni and
+.\" Richard Walmsley
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -106,6 +108,11 @@ for advice about generating random bytes (use the operating system's
 random number generator).
 .It Fa their_public_key
 The public key of the other party.
+.Pp
+.Fa raw_shared_secret
+and
+.Fa your_secret_key
+may overlap if your secret is no longer required.
 .El
 .Sh RETURN VALUES
 .Fn crypto_x25519

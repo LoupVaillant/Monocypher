@@ -9,7 +9,7 @@
 //
 // ------------------------------------------------------------------------
 //
-// Copyright (c) 2017-2019, Loup Vaillant
+// Copyright (c) 2017-2020, Loup Vaillant and Richard Walmsley
 // All rights reserved.
 //
 //
@@ -39,7 +39,7 @@
 //
 // ------------------------------------------------------------------------
 //
-// Written in 2017-2019 by Loup Vaillant
+// Written in 2017-2020 by Loup Vaillant and Richard Walmsley
 //
 // To the extent possible under law, the author(s) have dedicated all copyright
 // and related neighboring rights to this software to the public domain
@@ -660,6 +660,42 @@ static int p_argon2i_overlap()
     return status;
 }
 
+// Tests that the shared key and secret key buffers of crypto_x25519 can overlap.
+static int p_x25519_overlap()
+{
+    int status = 0;
+    FOR (i, 0, 62) {
+        u8 overlapping[94];
+        u8 seperate[32];
+        RANDOM_INPUT(sk, 32);
+        RANDOM_INPUT(pk, 32);
+        memcpy(overlapping + 31, sk, 32);
+        crypto_x25519(overlapping + i, overlapping + 31, pk);
+        crypto_x25519(seperate, sk, pk);
+        status |= memcmp(seperate, overlapping + i, 32);
+    }
+    printf("%s: x25519 (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
+// Tests that the shared key and secret key buffers of crypto_key_exchange can overlap.
+static int p_key_exchange_overlap()
+{
+    int status = 0;
+    FOR (i, 0, 62) {
+        u8 overlapping[94];
+        u8 seperate[32];
+        RANDOM_INPUT(sk, 32);
+        RANDOM_INPUT(pk, 32);
+        memcpy(overlapping + 31, sk, 32);
+        crypto_key_exchange(overlapping + i, overlapping + 31, pk);
+        crypto_key_exchange(seperate, sk, pk);
+        status |= memcmp(seperate, overlapping + i, 32);
+    }
+    printf("%s: key_exchange (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 static int p_eddsa_roundtrip()
 {
 #define MESSAGE_SIZE 30
@@ -853,6 +889,8 @@ int main(int argc, char *argv[])
     status |= p_hmac_sha512_overlap();
     status |= p_argon2i_easy();
     status |= p_argon2i_overlap();
+    status |= p_x25519_overlap();
+    status |= p_key_exchange_overlap();
     status |= p_eddsa_roundtrip();
     status |= p_eddsa_random();
     status |= p_eddsa_overlap();
