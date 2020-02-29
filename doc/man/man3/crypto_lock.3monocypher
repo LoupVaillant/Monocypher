@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2017, 2019 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2019 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd December 12, 2019
+.Dd February 29, 2020
 .Dt CRYPTO_LOCK 3MONOCYPHER
 .Os
 .Sh NAME
@@ -226,6 +226,21 @@ attacker's interference.
 .Fa plain_text
 does not need to be wiped if the decryption fails.
 .Sh EXAMPLES
+The following examples assume that a function called
+.Fn random_bytes
+exists.
+It fills the given buffer with cryptographically secure random
+bytes
+(see
+.Xr intro 3monocypher
+for some advice on how to accomplish this yourself).
+The function has this prototype:
+.Ft void
+.Fo random_bytes
+.Fa "uint8_t *buf"
+.Fa "size_t len"
+.Fc
+.Pp
 Encryption:
 .Bd -literal -offset indent
 uint8_t       key        [32];  /* Random, secret session key  */
@@ -233,11 +248,14 @@ const uint8_t nonce      [24];  /* Use only once per key       */
 uint8_t       plain_text [500]; /* Secret message              */
 uint8_t       mac        [16];  /* Message authentication code */
 uint8_t       cipher_text[500]; /* Encrypted message           */
+random_bytes(key, 32);
 crypto_lock(mac, cipher_text, key, nonce, plain_text, 500);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(plain_text, 500);
 crypto_wipe(key, 32);
-/* Transmit cipher_text, nonce, and mac over the network */
+/* Transmit cipher_text, nonce, and mac over the network,
+ * store them in a file, etc.
+ */
 .Ed
 .Pp
 To decrypt the above:
@@ -253,10 +271,12 @@ if (crypto_unlock(plain_text, key, nonce, mac, cipher_text, 500)) {
      * and abort the decryption.
      */
     crypto_wipe(key, 32);
+} else {
+    /* ...do something with the decrypted text here... */
+    /* Finally, wipe secrets if they are no longer needed */
+    crypto_wipe(plain_text, 500);
+    crypto_wipe(key, 32);
 }
-/* Wipe secrets if they are no longer needed */
-crypto_wipe(plain_text, 500);
-crypto_wipe(key, 32);
 .Ed
 .Pp
 In-place encryption:
@@ -265,10 +285,13 @@ uint8_t       key  [32];  /* Random, secret session key  */
 const uint8_t nonce[24];  /* Use only once per key       */
 uint8_t       text [500]; /* Secret message              */
 uint8_t       mac  [16];  /* Message authentication code */
+random_bytes(key, 32);
 crypto_lock(mac, text, key, nonce, text, 500);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key, 32);
-/* Transmit text, nonce, and mac over the network */
+/* Transmit cipher_text, nonce, and mac over the network,
+ * store them in a file, etc.
+ */
 .Ed
 .Pp
 In-place decryption:
@@ -283,10 +306,12 @@ if (crypto_unlock(text, key, nonce, mac, text, 500)) {
      * and abort the decryption.
      */
     crypto_wipe(key, 32);
+} else {
+    /* ...do something with the decrypted text here... */
+    /* Finally, wipe secrets if they are no longer needed */
+    crypto_wipe(text, 500);
+    crypto_wipe(key, 32);
 }
-/* Wipe secrets if they are no longer needed */
-crypto_wipe(text, 500);
-crypto_wipe(key, 32);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_key_exchange 3monocypher ,

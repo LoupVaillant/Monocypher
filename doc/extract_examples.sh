@@ -12,6 +12,7 @@
 # ------------------------------------------------------------------------
 #
 # Copyright (c) 2019 Michael Savage
+# Copyright (c) 2020 Fabio Scotoni
 # All rights reserved.
 #
 #
@@ -41,7 +42,7 @@
 #
 # ------------------------------------------------------------------------
 #
-# Written in 2019 by Michael Savage
+# Written in 2019-2020 by Michael Savage and Fabio Scotoni
 #
 # To the extent possible under law, the author(s) have dedicated all copyright
 # and related neighboring rights to this software to the public domain
@@ -62,6 +63,11 @@ void SHA512Init(SHA2_CTX*);
 void SHA512Update(SHA2_CTX*, const void*, size_t);
 void SHA512Final(uint8_t*, SHA2_CTX*);
 void arc4random_buf(void*, size_t);
+
+static void random_bytes(uint8_t *buf, size_t len)
+{
+    arc4random_buf(buf, len);
+}
 
 int main() {
 END
