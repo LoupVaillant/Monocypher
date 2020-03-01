@@ -458,7 +458,7 @@ static int p_poly1305_overlap()
         crypto_poly1305(input+i, input + 16, POLY1305_BLOCK_SIZE, key);
         status |= memcmp(mac, input + i, 16);
     }
-    printf("%s: Poly1305 (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: Poly1305 (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -508,7 +508,7 @@ static int p_blake2b_overlap()
         crypto_blake2b(input+i, input + 64, BLAKE2B_BLOCK_SIZE);
         status |= memcmp(hash, input + i, 64);
     }
-    printf("%s: Blake2b (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: Blake2b (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -556,7 +556,7 @@ static int p_sha512_overlap()
         crypto_sha512(input+i, input + 64, SHA_512_BLOCK_SIZE);
         status |= memcmp(hash, input + i, 64);
     }
-    printf("%s: Sha512 (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: Sha512 (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -606,7 +606,7 @@ static int p_hmac_sha512_overlap()
         crypto_hmac_sha512(input+i, key, 32, input + 64, SHA_512_BLOCK_SIZE);
         status |= memcmp(hash, input + i, 64);
     }
-    printf("%s: HMAC SHA-512 (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: HMAC SHA-512 (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -656,7 +656,7 @@ static int p_argon2i_overlap()
     }
     free(work_area);
     free(clean_work_area);
-    printf("%s: Argon2i (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: Argon2i (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -674,7 +674,7 @@ static int p_x25519_overlap()
         crypto_x25519(seperate, sk, pk);
         status |= memcmp(seperate, overlapping + i, 32);
     }
-    printf("%s: x25519 (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: x25519 (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -692,7 +692,7 @@ static int p_key_exchange_overlap()
         crypto_key_exchange(seperate, sk, pk);
         status |= memcmp(seperate, overlapping + i, 32);
     }
-    printf("%s: key_exchange (overlaping i/o)\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: key_exchange (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
