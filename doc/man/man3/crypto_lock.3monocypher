@@ -226,32 +226,28 @@ attacker's interference.
 .Fa plain_text
 does not need to be wiped if the decryption fails.
 .Sh EXAMPLES
-The following examples assume that a function called
-.Fn random_bytes
-exists.
-It fills the given buffer with cryptographically secure random
-bytes
-(see
+The following examples assume the existence of
+.Fn arc4random_buf ,
+which fills the given buffer with cryptographically secure random bytes.
+If
+.Fn arc4random_buf
+does not exist on your system, see
 .Xr intro 3monocypher
-for some advice on how to accomplish this yourself).
-The function has this prototype:
-.Ft void
-.Fo random_bytes
-.Fa "uint8_t *buf"
-.Fa "size_t len"
-.Fc
+for advice about how to generate cryptographically secure random bytes.
 .Pp
 Encryption:
 .Bd -literal -offset indent
-uint8_t       key        [32];  /* Random, secret session key  */
-const uint8_t nonce      [24];  /* Use only once per key       */
-uint8_t       plain_text [500]; /* Secret message              */
-uint8_t       mac        [16];  /* Message authentication code */
-uint8_t       cipher_text[500]; /* Encrypted message           */
-random_bytes(key, 32);
-crypto_lock(mac, cipher_text, key, nonce, plain_text, 500);
+uint8_t key        [32];    /* Random, secret session key  */
+uint8_t nonce      [24];    /* Use only once per key       */
+uint8_t plain_text [12] = "Lorem ipsum"; /* Secret message */
+uint8_t mac        [16];    /* Message authentication code */
+uint8_t cipher_text[12];              /* Encrypted message */
+arc4random_buf(key,   32);
+arc4random_buf(nonce, 24);
+crypto_lock(mac, cipher_text, key, nonce, plain_text,
+        sizeof(plain_text));
 /* Wipe secrets if they are no longer needed */
-crypto_wipe(plain_text, 500);
+crypto_wipe(plain_text, 12);
 crypto_wipe(key, 32);
 /* Transmit cipher_text, nonce, and mac over the network,
  * store them in a file, etc.
@@ -260,12 +256,12 @@ crypto_wipe(key, 32);
 .Pp
 To decrypt the above:
 .Bd -literal -offset indent
-uint8_t       key        [32];  /* Same as the above         */
-const uint8_t nonce      [24];  /* Same as the above         */
-const uint8_t cipher_text[500]; /* Encrypted message         */
-const uint8_t mac        [16];  /* Received from the network */
-uint8_t       plain_text [500]; /* Secret message            */
-if (crypto_unlock(plain_text, key, nonce, mac, cipher_text, 500)) {
+uint8_t       key        [32]; /* Same as the above        */
+uint8_t       nonce      [24]; /* Same as the above        */
+const uint8_t cipher_text[12]; /* Encrypted message        */
+const uint8_t mac        [16]; /* Received along with text */
+uint8_t       plain_text [12]; /* Secret message           */
+if (crypto_unlock(plain_text, key, nonce, mac, cipher_text, 12)) {
     /* The message is corrupted.
      * Wipe key if it is no longer needed,
      * and abort the decryption.
@@ -274,19 +270,20 @@ if (crypto_unlock(plain_text, key, nonce, mac, cipher_text, 500)) {
 } else {
     /* ...do something with the decrypted text here... */
     /* Finally, wipe secrets if they are no longer needed */
-    crypto_wipe(plain_text, 500);
+    crypto_wipe(plain_text, 12);
     crypto_wipe(key, 32);
 }
 .Ed
 .Pp
 In-place encryption:
 .Bd -literal -offset indent
-uint8_t       key  [32];  /* Random, secret session key  */
-const uint8_t nonce[24];  /* Use only once per key       */
-uint8_t       text [500]; /* Secret message              */
-uint8_t       mac  [16];  /* Message authentication code */
-random_bytes(key, 32);
-crypto_lock(mac, text, key, nonce, text, 500);
+uint8_t key  [32];    /* Random, secret session key  */
+uint8_t nonce[24];    /* Use only once per key       */
+uint8_t text [12] = "Lorem ipsum"; /* Secret message */
+uint8_t mac  [16];    /* Message authentication code */
+arc4random_buf(key,   32);
+arc4random_buf(nonce, 24);
+crypto_lock(mac, text, key, nonce, text, 12);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key, 32);
 /* Transmit cipher_text, nonce, and mac over the network,
@@ -296,11 +293,11 @@ crypto_wipe(key, 32);
 .Pp
 In-place decryption:
 .Bd -literal -offset indent
-uint8_t        key  [32];  /* Same as the above         */
-const uint8_t  nonce[24];  /* Same as the above         */
-const uint8_t  mac  [16];  /* Received from the network */
-uint8_t        text [500]; /* Message to decrypt        */
-if (crypto_unlock(text, key, nonce, mac, text, 500)) {
+uint8_t        key  [32]; /* Same as the above             */
+const uint8_t  nonce[24]; /* Same as the above             */
+const uint8_t  mac  [16]; /* Received from along with text */
+uint8_t        text [12]; /* Message to decrypt            */
+if (crypto_unlock(text, key, nonce, mac, text, 12)) {
     /* The message is corrupted.
      * Wipe key if it is no longer needed,
      * and abort the decryption.
@@ -309,7 +306,7 @@ if (crypto_unlock(text, key, nonce, mac, text, 500)) {
 } else {
     /* ...do something with the decrypted text here... */
     /* Finally, wipe secrets if they are no longer needed */
-    crypto_wipe(text, 500);
+    crypto_wipe(text, 12);
     crypto_wipe(key, 32);
 }
 .Ed
