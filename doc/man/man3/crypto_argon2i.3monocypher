@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2018 Michael Savage
-.\" Copyright (c) 2017, 2019 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2019 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd December 12, 2019
+.Dd March 2, 2020
 .Dt CRYPTO_ARGON2I 3MONOCYPHER
 .Os
 .Sh NAME
@@ -235,26 +235,39 @@ Must be zero if there is no additional data.
 .Sh RETURN VALUES
 These functions return nothing.
 .Sh EXAMPLES
+The following example assumes the existence of
+.Fn arc4random_buf ,
+which fills the given buffer with cryptographically secure random bytes.
+If
+.Fn arc4random_buf
+does not exist on your system, see
+.Xr intro 3monocypher
+for advice about how to generate cryptographically secure random bytes.
+.Pp
 This example shows how to hash a password with the recommended baseline
 parameters:
 .Bd -literal -offset indent
 uint8_t        hash[32];                    /* Output hash     */
-uint8_t       *password;                    /* User's password */
-uint8_t        password_size;               /* Password length */
-const uint8_t  salt[16];                    /* Random salt     */
+char          *password = "Okay Password!"; /* User's password */
+uint32_t       password_size = 14;          /* Password length */
+uint8_t        salt[16];                    /* Random salt     */
 const uint32_t nb_blocks = 100000;          /* 100 megabytes   */
 const uint32_t nb_iterations = 3;           /* 3 iterations    */
 void *work_area = malloc(nb_blocks * 1024); /* Work area       */
 if (work_area == NULL) {
     /* Handle malloc() failure */
+    /* Wipe secrets if they are no longer needed */
+    crypto_wipe(password, password_size);
+} else {
+    arc4random_buf(salt, 16);
+    crypto_argon2i(hash, 32,
+                   work_area, nb_blocks, nb_iterations,
+                   (uint8_t *)password, password_size,
+                   salt, 16);
+    /* Wipe secrets if they are no longer needed */
+    crypto_wipe(password, password_size);
+    free(work_area);
 }
-crypto_argon2i(hash, 32,
-               work_area, nb_blocks, nb_iterations,
-               password, password_size,
-               salt, 16);
-/* Wipe secrets if they are no longer needed */
-crypto_wipe(password, password_size);
-free(work_area);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,

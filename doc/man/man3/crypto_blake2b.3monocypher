@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 5, 2020
+.Dd March 2, 2020
 .Dt CRYPTO_BLAKE2B 3MONOCYPHER
 .Os
 .Sh NAME
@@ -214,28 +214,38 @@ This is considered a good default.
 .Sh RETURN VALUES
 These functions return nothing.
 .Sh EXAMPLES
+The following examples assume the existence of
+.Fn arc4random_buf ,
+which fills the given buffer with cryptographically secure random bytes.
+If
+.Fn arc4random_buf
+does not exist on your system, see
+.Xr intro 3monocypher
+for advice about how to generate cryptographically secure random bytes.
+.Pp
 Hashing a message all at once:
 .Bd -literal -offset indent
-uint8_t hash   [ 64]; /* Output hash (64 bytes) */
-uint8_t message[500]; /* Message to hash        */
-crypto_blake2b(hash, message, 500);
+uint8_t hash   [64]; /* Output hash (64 bytes)          */
+uint8_t message[12] = "Lorem ipsum"; /* Message to hash */
+crypto_blake2b(hash, message, 12);
 .Ed
 .Pp
 Computing a message authentication code all at once:
 .Bd -literal -offset indent
-uint8_t hash   [ 64]; /* Output hash  (between 1 and 64 bytes) */
-uint8_t key    [ 32]; /* Optional key (between 0 and 64 bytes) */
-uint8_t message[500]; /* Message to hash                       */
-crypto_blake2b_general(hash, 64, key, 32, message, 500);
+uint8_t hash   [64]; /* Output hash  (between 1 and 64 bytes)  */
+uint8_t key    [32]; /* Key          (between 1 and 64 bytes)  */
+uint8_t message[11] = "Lorem ipsu"; /* Message to authenticate */
+arc4random_buf(key, 32);
+crypto_blake2b_general(hash, 64, key, 32, message, 11);
 /* Wipe secrets if they are no longer needed */
-crypto_wipe(message, 500);
+crypto_wipe(message, 11);
 crypto_wipe(key, 32);
 .Ed
 .Pp
-Hashing a message incrementally:
+Hashing a message incrementally (without a key):
 .Bd -literal -offset indent
 uint8_t hash   [ 64]; /* Output hash (64 bytes) */
-uint8_t message[500]; /* Message to hash        */
+uint8_t message[500] = {1}; /* Message to hash  */
 crypto_blake2b_ctx ctx;
 crypto_blake2b_init(&ctx);
 for (size_t i = 0; i < 500; i += 100) {
@@ -247,9 +257,10 @@ crypto_blake2b_final(&ctx, hash);
 Computing a message authentication code incrementally:
 .Bd -literal -offset indent
 uint8_t hash   [ 64]; /* Output hash  (between 1 and 64 bytes) */
-uint8_t key    [ 32]; /* Optional key (between 0 and 64 bytes) */
-uint8_t message[500]; /* Message to hash                       */
+uint8_t key    [ 32]; /* Key          (between 1 and 64 bytes) */
+uint8_t message[500] = {1}; /* Message to authenticate         */
 crypto_blake2b_ctx ctx;
+arc4random_buf(key, 32);
 crypto_blake2b_general_init(&ctx, 64, key, 32);
 /* Wipe the key */
 crypto_wipe(key, 32);

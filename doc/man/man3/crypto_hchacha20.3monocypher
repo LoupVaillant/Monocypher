@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2019 Fabio Scotoni
+.\" Copyright (c) 2019-2020 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2019 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd December 12, 2019
+.Dd March 2, 2020
 .Dt CRYPTO_HCHACHA20 3MONOCYPHER
 .Os
 .Sh NAME
@@ -92,11 +92,21 @@ X25519 shared secrets have enough entropy.
 .Sh RETURN VALUES
 This function returns nothing.
 .Sh EXAMPLES
+The following example assumes the existence of
+.Fn arc4random_buf ,
+which fills the given buffer with cryptographically secure random bytes.
+If
+.Fn arc4random_buf
+does not exist on your system, see
+.Xr intro 3monocypher
+for advice about how to generate cryptographically secure random bytes.
+.Pp
 Simple hash:
 .Bd -literal -offset indent
 uint8_t key[32]; /* Must have enough entropy           */
 uint8_t in [16]; /* Does not have to be random         */
 uint8_t out[32]; /* Will be random iff the above holds */
+arc4random_buf(key, 32);
 crypto_hchacha20(out, key, in);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key, 32);

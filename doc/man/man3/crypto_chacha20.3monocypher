@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2018 Michael Savage
-.\" Copyright (c) 2017, 2019 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2019 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd December 4, 2019
+.Dd March 2, 2020
 .Dt CRYPTO_CHACHA20 3MONOCYPHER
 .Os
 .Sh NAME
@@ -237,12 +237,23 @@ this is always
 divided by 64;
 plus one if there was a remainder.
 .Sh EXAMPLES
+The following examples assume the existence of
+.Fn arc4random_buf ,
+which fills the given buffer with cryptographically secure random bytes.
+If
+.Fn arc4random_buf
+does not exist on your system, see
+.Xr intro 3monocypher
+for advice about how to generate cryptographically secure random bytes.
+.Pp
 Simple encryption:
 .Bd -literal -offset indent
-uint8_t       key        [ 32]; /* Secret random key              */
-const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
-uint8_t       plain_text [500]; /* Message to be encrypted        */
-uint8_t       cipher_text[500]; /* Will be the encrypted message  */
+uint8_t key        [ 32]; /* Secret random key              */
+uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
+uint8_t plain_text [500] = {1}; /* Secret message           */
+uint8_t cipher_text[500]; /* Encrypted message              */
+arc4random_buf(key,   32);
+arc4random_buf(nonce, 24);
 crypto_xchacha20(cipher_text, plain_text, 500, key, nonce);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
@@ -251,25 +262,27 @@ crypto_wipe(plain_text, 500);
 .Pp
 To decrypt the above:
 .Bd -literal -offset indent
-uint8_t       key  [ 32]; /* Same key as above              */
-const uint8_t nonce[ 24]; /* Same nonce as above            */
-uint8_t plain_text [500]; /* Will be the decrypted message  */
-uint8_t cipher_text[500]; /* Encrypted message              */
+uint8_t       key        [ 32]; /* Same key as above        */
+const uint8_t nonce      [ 24]; /* Same nonce as above      */
+uint8_t       plain_text [500]; /* Message to decrypt       */
+uint8_t       cipher_text[500]; /* Secret message           */
 crypto_xchacha20(cipher_text, plain_text, 500, key, nonce);
 /* Wipe secrets if they are no longer needed */
-crypto_wipe(key,  32);
+crypto_wipe(key,        32);
 /* The plain text likely needs to be processed before you wipe it */
-crypto_wipe(plain_text, 500);
+crypto_wipe(plain_text, 12);
 .Ed
 .Pp
 Incremental encryption (in blocks of 64 bytes):
 .Bd -literal -offset indent
-uint8_t       key        [ 32]; /* Secret random key              */
-const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
-uint8_t       plain_text [500]; /* Message to be encrypted        */
-uint8_t       cipher_text[500]; /* Will be the encrypted message  */
-uint64_t      ctr;              /* Block counter */
-int i;
+uint8_t  key        [ 32]; /* Secret random key              */
+uint8_t  nonce      [ 24]; /* Unique nonce (possibly random) */
+uint8_t  plain_text [500]; /* Secret message                 */
+uint8_t  cipher_text[500]; /* Encrypted message              */
+uint64_t ctr = 0;          /* Block counter                  */
+unsigned int i;
+arc4random_buf(key,   32);
+arc4random_buf(nonce, 24);
 for(i = 0; i < 500; i += 64) {
     ctr = crypto_xchacha20_ctr(cipher_text+i, plain_text+i, 64,
                                key, nonce, ctr);
@@ -289,17 +302,19 @@ how
 .Fn crypto_xchacha20_ctr
 works):
 .Bd -literal -offset indent
-uint8_t       key        [ 32]; /* Secret random key              */
-const uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
-uint8_t       plain_text [500]; /* Message to be encrypted        */
-uint8_t       cipher_text[500]; /* Will be the encrypted message  */
+uint8_t key        [ 32]; /* Secret random key              */
+uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
+uint8_t plain_text [500] = {1}; /* Message to be encrypted  */
+uint8_t cipher_text[500]; /* Will be the encrypted message  */
+arc4random_buf(key,   32);
+arc4random_buf(nonce, 24);
 /* Encrypt the second part of the message first... */
-crypto_chacha20(cipher_text + (3 * 64),
-                plain_text  + (3 * 64),
-                500         - (3 * 64),
-                key, nonce);
+crypto_xchacha20_ctr(cipher_text + (3 * 64),
+                     plain_text  + (3 * 64),
+                     500         - (3 * 64),
+                     key, nonce, 3);
 /* ...then encrypt the first part */
-crypto_chacha20(cipher_text, plain_text, 3 * 64, key, nonce);
+crypto_xchacha20_ctr(cipher_text, plain_text, 3 * 64, key, nonce, 0);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 crypto_wipe(plain_text, 500);
