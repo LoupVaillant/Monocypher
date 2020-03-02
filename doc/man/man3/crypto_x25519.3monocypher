@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2017, 2019 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2019 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd December 12, 2019
+.Dd March 2, 2020
 .Dt CRYPTO_X25519 3MONOCYPHER
 .Os
 .Sh NAME
@@ -121,6 +121,15 @@ Protocols should instead be designed in such a way that no such check
 is necessary, namely by authenticating the other party or exchanging
 keys over a trusted channel.
 .Sh EXAMPLES
+The following example assumes the existence of
+.Fn arc4random_buf ,
+which fills the given buffer with cryptographically secure random bytes.
+If
+.Fn arc4random_buf
+does not exist on your system, see
+.Xr intro 3monocypher
+for advice about how to generate cryptographically secure random bytes.
+.Pp
 Generate a pair of shared keys with your secret key and their public
 key.
 (This can help nonce management for full duplex communications.)
@@ -128,6 +137,7 @@ key.
 const uint8_t their_pk     [32]; /* Their public key          */
 uint8_t       your_sk      [32]; /* Your secret key           */
 uint8_t       shared_secret[32]; /* Shared secret (NOT a key) */
+arc4random_buf(your_sk, 32);
 crypto_x25519(shared_secret, your_sk, their_pk);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(your_sk, 32);
