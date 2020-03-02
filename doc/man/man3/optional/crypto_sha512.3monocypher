@@ -161,15 +161,15 @@ These functions return nothing.
 .Sh EXAMPLES
 Hashing a message all at once:
 .Bd -literal -offset indent
-uint8_t hash   [ 64]; /* Output hash (64 bytes) */
-uint8_t message[500]; /* Message to hash        */
-crypto_sha512(hash, message, 500);
+uint8_t hash   [64]; /* Output hash (64 bytes)          */
+uint8_t message[12] = "Lorem ipsum"; /* Message to hash */
+crypto_sha512(hash, message, 12);
 .Ed
 .Pp
 Hashing a message incrementally:
 .Bd -literal -offset indent
 uint8_t hash   [ 64]; /* Output hash (64 bytes) */
-uint8_t message[500]; /* Message to hash        */
+uint8_t message[500] = {1}; /* Message to hash  */
 crypto_sha512_ctx ctx;
 crypto_sha512_init(&ctx);
 for (size_t i = 0; i < 500; i += 100) {
