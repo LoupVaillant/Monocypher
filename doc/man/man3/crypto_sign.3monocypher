@@ -173,7 +173,7 @@ Sign a message:
 .Bd -literal -offset indent
 uint8_t       sk       [32]; /* Secret key from above          */
 const uint8_t pk       [32]; /* Matching public key            */
-const uint8_t message  [10] = "Lorem ipsu"; /* Message to sign */
+const uint8_t message  [11] = "Lorem ipsu"; /* Message to sign */
 uint8_t       signature[64];
 crypto_sign(signature, sk, pk, message, 10);
 /* Wipe the secret key if it is no longer needed */
@@ -183,7 +183,7 @@ crypto_wipe(sk, 32);
 Check the above:
 .Bd -literal -offset indent
 const uint8_t pk       [32]; /* Their public key              */
-const uint8_t message  [10] = "Lorem ipsu"; /* Signed message */
+const uint8_t message  [11] = "Lorem ipsu"; /* Signed message */
 const uint8_t signature[64]; /* Signature to check            */
 if (crypto_check(signature, pk, message, 10)) {
     /* Message is corrupted, abort processing */
