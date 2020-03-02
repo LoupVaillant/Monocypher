@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2017, 2019 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2019 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd December 12, 2019
+.Dd March 2, 2020
 .Dt CRYPTO_SIGN 3MONOCYPHER
 .Os
 .Sh NAME
@@ -150,10 +150,20 @@ return nothing.
 .Fn crypto_check
 returns 0 for legitimate messages and -1 for forgeries.
 .Sh EXAMPLES
+The following examples assume the existence of
+.Fn arc4random_buf ,
+which fills the given buffer with cryptographically secure random bytes.
+If
+.Fn arc4random_buf
+does not exist on your system, see
+.Xr intro 3monocypher
+for advice about how to generate cryptographically secure random bytes.
+.Pp
 Generate a public key from a random secret key:
 .Bd -literal -offset indent
 uint8_t       sk[32]; /* Random secret key   */
 uint8_t       pk[32]; /* Matching public key */
+arc4random_buf(sk, 32);
 crypto_sign_public_key(pk, sk);
 /* Wipe the secret key if it is no longer needed */
 crypto_wipe(sk, 32);
@@ -161,21 +171,21 @@ crypto_wipe(sk, 32);
 .Pp
 Sign a message:
 .Bd -literal -offset indent
-uint8_t       sk       [ 32]; /* Your secret key     */
-const uint8_t pk       [ 32]; /* Matching public key */
-const uint8_t message  [500]; /* Message to sign     */
-uint8_t       signature[ 64];
-crypto_sign(signature, sk, pk, message, 500);
+uint8_t       sk       [32]; /* Secret key from above          */
+const uint8_t pk       [32]; /* Matching public key            */
+const uint8_t message  [10] = "Lorem ipsu"; /* Message to sign */
+uint8_t       signature[64];
+crypto_sign(signature, sk, pk, message, 10);
 /* Wipe the secret key if it is no longer needed */
 crypto_wipe(sk, 32);
 .Ed
 .Pp
 Check the above:
 .Bd -literal -offset indent
-const uint8_t pk       [ 32]; /* Their public key   */
-const uint8_t message  [500]; /* Signed message     */
-const uint8_t signature[ 64]; /* Signature to check */
-if (crypto_check(signature, pk, message, 500)) {
+const uint8_t pk       [32]; /* Their public key              */
+const uint8_t message  [10] = "Lorem ipsu"; /* Signed message */
+const uint8_t signature[64]; /* Signature to check            */
+if (crypto_check(signature, pk, message, 10)) {
     /* Message is corrupted, abort processing */
 } else {
     /* Message is genuine */
