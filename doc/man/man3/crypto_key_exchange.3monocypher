@@ -11,6 +11,7 @@
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
 .\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
+.\" Copyright (c) 2020 Richard Walmsley
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +41,8 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2020 by Loup Vaillant, Michael Savage, Fabio Scotoni and
+.\" Richard Walmsley
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -101,6 +103,11 @@ Your public key, generated from
 with
 .Fn crypto_key_exchange_public_key .
 .El
+.Pp
+.Fa shared_key
+and
+.Fa your_secret_key
+may overlap if the secret is no longer required.
 .Sh RETURN VALUES
 .Fn crypto_key_exchange
 and

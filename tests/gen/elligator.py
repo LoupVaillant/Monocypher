@@ -223,6 +223,7 @@ def x25519_public_key(private_key):
 # Elligator: Elliptic-curve points indistinguishable from uniform random strings
 # by Daniel J. Bernstein, Mike Hamburg, Anna Krasnova, and Tanja Lange
 # 2013
+# https://elligator.cr.yp.to/
 
 # Arbitrary non square, typically chosen to minimise computation.
 # 2 and sqrt(-1) both work fairly well, but 2 seems to be more popular.
