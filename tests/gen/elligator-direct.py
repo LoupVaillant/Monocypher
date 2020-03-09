@@ -52,14 +52,10 @@
 # <https://creativecommons.org/publicdomain/zero/1.0/>
 
 from elligator import fe
-from elligator import x25519_public_key
-from elligator import can_curve_to_hash
 from elligator import curve_to_hash
-from elligator import fast_curve_to_hash
 from elligator import hash_to_curve
 from elligator import fast_hash_to_curve
 from elligator import p
-from sys       import stdin
 from random    import randrange
 
 def direct(r1):
