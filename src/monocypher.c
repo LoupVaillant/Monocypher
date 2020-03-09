@@ -1345,6 +1345,11 @@ static int fe_isequal(const fe f, const fe g)
     return 1 - isdifferent;
 }
 
+static const fe sqrtm1 = {
+    -32595792, -7943725, 9377950, 3500415, 12389472,
+    -272473, -25146209, -2005654, 326686, 11406482
+};
+
 //def invsqrt(x):
 //    isr = x**((p - 5) // 8)
 //    quartic = x * isr**2
@@ -1554,11 +1559,6 @@ static void ge_tobytes(u8 s[32], const ge *h)
     WIPE_BUFFER(x);
     WIPE_BUFFER(y);
 }
-
-static const fe sqrtm1 = {
-    -32595792, -7943725, 9377950, 3500415, 12389472,
-    -272473, -25146209, -2005654, 326686, 11406482
-};
 
 // h = -s, where s is a point encoded in 32 bytes
 // ge_double_scalarmult_vartime() performs addition, but the algorithm it is
