@@ -1567,7 +1567,7 @@ static void ge_tobytes(u8 s[32], const ge *h)
 
 // h = s, where s is a point encoded in 32 bytes
 //
-// Variable time! Inputs must not be secret!
+// Variable time! Internal buffers are not wiped! Inputs must not be secret!
 // => Use only to *check* signatures.
 //
 // From the specifications:
