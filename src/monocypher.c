@@ -2268,8 +2268,16 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
     static const fe A2  = {12721188, 3529, 0, 0, 0, 0, 0, 0, 0, 0};
     static const fe one = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+    // Representatives are encoded in 254 bits.
+    // The two most significant ones are random padding that must be ignored.
+    u8 clamped[32];
+    FOR (i, 0, 32) {
+        clamped[i] = hash[i];
+    }
+    clamped[31] &= 0x3f;
+
     fe r, u, t1, t2, t3;
-    fe_frombytes(r, hash);
+    fe_frombytes(r, clamped);
     fe_sq2(t1, r);
     fe_add(u, t1, one);
     fe_sq (t2, u);
