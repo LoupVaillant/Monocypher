@@ -1565,15 +1565,12 @@ static void ge_tobytes(u8 s[32], const ge *h)
     WIPE_BUFFER(y);
 }
 
-// h = -s, where s is a point encoded in 32 bytes
-// ge_double_scalarmult_vartime() performs addition, but the algorithm it is
-// used for requires subtraction; thus we negate s on load so that we can do
-// addition in ge_double_scalarmult_vartime() later.
+// h = s, where s is a point encoded in 32 bytes
 //
 // Variable time! Inputs must not be secret!
 // => Use only to *check* signatures.
 //
-// By the specifications:
+// From the specifications:
 //   The encoding of s contains y and the sign of x
 //   x = sqrt((y^2 - 1) / (d*y^2 + 1))
 // In extended coordinates:
@@ -1595,9 +1592,7 @@ static void ge_tobytes(u8 s[32], const ge *h)
 //   isr = invsqrt(num * den)  // abort if not square
 //   x   = num * isr
 // Finally, negate x if its sign is not as specified.
-// (Though here we negate it *if* it is as specified, because we are
-// merging parsing and negation)
-static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
+static int ge_frombytes_vartime(ge *h, const u8 s[32])
 {
     static const fe d = { // −121665 / 121666
         -10913610, 13857413, -15372611, 6949391, 114729,
@@ -1616,7 +1611,7 @@ static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
         return -1;             // Not on the curve, Abort
     }
     fe_mul(h->X, tmp, h->X);   // x = sqrt((y^2 - 1) / (d*y^2 + 1))
-    if (fe_isodd(h->X) == (s[31] >> 7)) { // != would have meant not negating
+    if (fe_isodd(h->X) != (s[31] >> 7)) {
         fe_neg(h->X, h->X);
     }
     fe_mul(h->T, h->X, h->Y);
@@ -1877,21 +1872,22 @@ static void ge_double_scalarmult_vartime(ge *P, const u8 p[32], const u8 b[32])
     }
 }
 
-// R_check = s[B] - [h_ram](-pk), where B is the base point
+// R_check = s[B] - h_ram[pk], where B is the base point
 //
 // Variable time! Internal buffers are not wiped! Inputs must not be secret!
 // => Use only to *check* signatures.
 static int ge_r_check(u8 R_check[32], u8 s[32], u8 h_ram[32], u8 pk[32])
 {
-    ge A;
-    if (ge_frombytes_neg_vartime(&A, pk) || // A = -pk
-        is_above_L(s)) { // prevent s malleability
+    ge A; // not secret, not wiped
+    if (ge_frombytes_vartime(&A, pk) ||         // A = pk
+        is_above_L(s)) {                        // prevent s malleability
         return -1;
     }
-    ge_double_scalarmult_vartime(&A, h_ram, s); // A = [s]B + [h_ram]A
+    fe_neg(A.X, A.X);
+    fe_neg(A.T, A.T);                           // A = -pk
+    ge_double_scalarmult_vartime(&A, h_ram, s); // A = [s]B - [h_ram]pk
     ge_tobytes(R_check, &A);                    // R_check = A
     return 0;
-    // No secret, no wipe
 }
 
 // 5-bit signed comb in cached format (Niels coordinates, Z=1)
