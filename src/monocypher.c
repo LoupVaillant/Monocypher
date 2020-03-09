@@ -1572,42 +1572,51 @@ static void ge_tobytes(u8 s[32], const ge *h)
 //
 // Variable time! Inputs must not be secret!
 // => Use only to *check* signatures.
+//
+// By the specifications:
+//   The encoding of s contains y and the sign of x
+//   x = sqrt((y^2 - 1) / (d*y^2 + 1))
+// In extended coordinates:
+//   X = x, Y = y, Z = 1, T = x*y
+//
+//    Note that num * den is a square iff num / den is a square
+//    If num * den is not a square, the point was not on the curve.
+// From the above:
+//   Let num =   y^2 - 1
+//   Let den = d*y^2 + 1
+//   x = sqrt((y^2 - 1) / (d*y^2 + 1))
+//   x = sqrt(num / den)
+//   x = sqrt(num^2 / (num * den))
+//   x = num * sqrt(1 / (num * den))
+//
+// Therefore, we can just compute:
+//   num =   y^2 - 1
+//   den = d*y^2 + 1
+//   isr = invsqrt(num * den)  // abort if not square
+//   x   = num * isr
+// Finally, negate x if its sign is not as specified.
+// (Though here we negate it *if* it is as specified, because we are
+// merging parsing and negation)
 static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
 {
-    static const fe d = {
+    static const fe d = { // −121665 / 121666
         -10913610, 13857413, -15372611, 6949391, 114729,
         -8787816, -6275908, -3247719, -18696448, -12055116
     };
-    fe u, v, v3; // no secret, no wipe
+    fe tmp; // no secret, no wipe
     fe_frombytes(h->Y, s);
     fe_1(h->Z);
-    fe_sq(u, h->Y);            // y^2
-    fe_mul(v, u, d);
-    fe_sub(u, u, h->Z);        // u = y^2-1
-    fe_add(v, v, h->Z);        // v = dy^2+1
-
-    fe_sq(v3, v);
-    fe_mul(v3, v3, v);         // v3 = v^3
-    fe_sq(h->X, v3);
-    fe_mul(h->X, h->X, v);
-    fe_mul(h->X, h->X, u);     // x = uv^7
-
-    fe_pow22523(h->X, h->X);   // x = (uv^7)^((q-5)/8)
-    fe_mul(h->X, h->X, v3);
-    fe_mul(h->X, h->X, u);     // x = uv^3(uv^7)^((q-5)/8)
-
-    fe vxx, check; // no secret, no wipe
-    fe_sq(vxx, h->X);
-    fe_mul(vxx, vxx, v);
-    fe_sub(check, vxx, u);     // vx^2-u
-    if (fe_isnonzero(check)) {
-        fe_add(check, vxx, u); // vx^2+u
-        if (fe_isnonzero(check)) {
-            return -1;
-        }
-        fe_mul(h->X, h->X, sqrtm1);
+    fe_sq (tmp , h->Y);        // tmp =   y^2
+    fe_mul(h->X, tmp , d   );  // x   = d*y^2
+    fe_sub(tmp , tmp , h->Z);  // tmp =   y^2 - 1
+    fe_add(h->X, h->X, h->Z);  // x   = d*y^2 + 1
+    fe_mul(h->X, tmp , h->X);  // x   = (y^2 - 1) * (d*y^2 + 1)
+    int is_square = invsqrt(h->X, h->X);
+    if (!is_square) {
+        return -1;             // Not on the curve, Abort
     }
-    if (fe_isodd(h->X) == (s[31] >> 7)) {
+    fe_mul(h->X, tmp, h->X);   // x = sqrt((y^2 - 1) / (d*y^2 + 1))
+    if (fe_isodd(h->X) == (s[31] >> 7)) { // != would have meant not negating
         fe_neg(h->X, h->X);
     }
     fe_mul(h->T, h->X, h->Y);
