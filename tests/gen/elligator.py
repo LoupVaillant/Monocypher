@@ -394,19 +394,19 @@ ufactor = -non_square * sqrtm1
 vfactor = sqrt(ufactor)
 
 def fast_hash_to_curve(r):
-    t1  = r**2 * non_square   # r1
-    t2  = t1 + fe(1)          # r2
-    t3  = t2**2
-    t4 = (A**2 * t1 - t3) * A # numerator
-    t1 = t3 * t2              # denominator
-    t1, is_square = invsqrt(t4 * t1)
+    t1 = r**2 * non_square    # r1
+    u  = t1 + fe(1)           # r2
+    t2 = u**2
+    t3 = (A**2 * t1 - t2) * A # numerator
+    t1 = t2 * u               # denominator
+    t1, is_square = invsqrt(t3 * t1)
     u  = r**2 * ufactor
     v  = r    * vfactor
     if is_square: u = fe(1)
     if is_square: v = fe(1)
-    v   = v * t4 * t1
+    v  = v * t3 * t1
     t1 = t1**2
-    u   = u * -A * t4 * t3 * t1
+    u  = u * -A * t3 * t2 * t1
     if is_square != v.is_negative(): # XOR
         v = -v
     return (u, v)
