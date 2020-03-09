@@ -2309,7 +2309,7 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
     fe_tobytes(curve, u);
     WIPE_BUFFER(t1);  WIPE_BUFFER(r);
     WIPE_BUFFER(t2);  WIPE_BUFFER(u);
-    WIPE_BUFFER(t3);
+    WIPE_BUFFER(t3);  WIPE_BUFFER(clamped);
 }
 
 int crypto_curve_to_hash(uint8_t hash[32], const uint8_t curve[32])
