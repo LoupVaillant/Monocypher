@@ -864,6 +864,23 @@ static int p_elligator_direct_msb()
     return status;
 }
 
+static int p_elligator_direct_overlap()
+{
+    int status = 0;
+    FOR (i, 0, 62) {
+        u8 overlapping[94];
+        u8 seperate[32];
+        RANDOM_INPUT(r, 32);
+        memcpy(overlapping + 31, r, 32);
+        crypto_elligator2_direct(overlapping + i, overlapping + 31);
+        crypto_elligator2_direct(seperate, r);
+        status |= memcmp(seperate, overlapping + i, 32);
+    }
+    printf("%s: elligator direct (overlapping i/o)\n",
+           status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 #define TEST(name, nb_inputs) vector_test(name, #name, nb_inputs, \
                                           nb_##name##_vectors,    \
                                           name##_vectors,         \
@@ -927,6 +944,7 @@ int main(int argc, char *argv[])
     status |= p_eddsa_incremental();
     status |= p_aead();
     status |= p_elligator_direct_msb();
+    status |= p_elligator_direct_overlap();
     printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
     return status;
 }
