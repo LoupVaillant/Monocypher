@@ -287,6 +287,11 @@ static int test_x25519()
     return status;
 }
 
+static void elligator_dir(const vector in[], vector *out)
+{
+    crypto_elligator2_direct(out->buf, in->buf);
+}
+
 //////////////////////////////
 /// Self consistency tests ///
 //////////////////////////////
@@ -835,6 +840,30 @@ static int p_aead()
     return status;
 }
 
+// Elligator direct mapping must ignore the most significant bits
+static int p_elligator_direct_msb()
+{
+    int status = 0;
+    FOR (i, 0, 20) {
+        RANDOM_INPUT(r, 32);
+        u8 r1[32];  memcpy(r1, r, 32);  r1[31] = (r[31] & 0x3f) | 0x00;
+        u8 r2[32];  memcpy(r2, r, 32);  r2[31] = (r[31] & 0x3f) | 0x40;
+        u8 r3[32];  memcpy(r3, r, 32);  r3[31] = (r[31] & 0x3f) | 0x80;
+        u8 r4[32];  memcpy(r4, r, 32);  r4[31] = (r[31] & 0x3f) | 0xc0;
+        u8 u [32];  crypto_elligator2_direct(u , r );
+        u8 u1[32];  crypto_elligator2_direct(u1, r1);
+        u8 u2[32];  crypto_elligator2_direct(u2, r2);
+        u8 u3[32];  crypto_elligator2_direct(u3, r3);
+        u8 u4[32];  crypto_elligator2_direct(u4, r4);
+        status |= memcmp(u, u1, 32);
+        status |= memcmp(u, u2, 32);
+        status |= memcmp(u, u3, 32);
+        status |= memcmp(u, u4, 32);
+    }
+    printf("%s: elligator direct (msb)\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 #define TEST(name, nb_inputs) vector_test(name, #name, nb_inputs, \
                                           nb_##name##_vectors,    \
                                           name##_vectors,         \
@@ -869,6 +898,7 @@ int main(int argc, char *argv[])
     status |= TEST(ed_25519_pk   , 1);
     status |= TEST(ed_25519_check, 3);
     status |= test_x25519();
+    status |= TEST(elligator_dir , 1);
 
     printf("\nProperty based tests");
     printf("\n--------------------\n");
@@ -896,6 +926,7 @@ int main(int argc, char *argv[])
     status |= p_eddsa_overlap();
     status |= p_eddsa_incremental();
     status |= p_aead();
+    status |= p_elligator_direct_msb();
     printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
     return status;
 }
