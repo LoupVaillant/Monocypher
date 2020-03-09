@@ -1307,22 +1307,66 @@ static void fe_tobytes(u8 s[32], const fe h)
 }
 
 //  Parity check.  Returns 0 if even, 1 if odd
-static int fe_isnegative(const fe f)
+static int fe_isodd(const fe f)
 {
     u8 s[32];
     fe_tobytes(s, f);
-    u8 isneg = s[0] & 1;
+    u8 isodd = s[0] & 1;
     WIPE_BUFFER(s);
+    return isodd;
+}
+
+static int fe_isnegative(const fe f)
+{
+    fe tmp;
+    fe_add(tmp, f, f);
+    int isneg = fe_isodd(tmp);
+    WIPE_BUFFER(tmp);
     return isneg;
 }
 
+// Returns 0 if zero, 1 if non zero
 static int fe_isnonzero(const fe f)
 {
     u8 s[32];
     fe_tobytes(s, f);
     int isnonzero = zerocmp32(s);
     WIPE_BUFFER(s);
-    return isnonzero;
+    return -isnonzero;
+}
+
+// Returns 1 if equal, 0 of not equal
+static int fe_isequal(const fe f, const fe g)
+{
+    fe diff;
+    fe_sub(diff, f, g);
+    int isdifferent = fe_isnonzero(diff);
+    WIPE_BUFFER(diff);
+    return 1 - isdifferent;
+}
+
+//def invsqrt(x):
+//    isr = x**((p - 5) // 8)
+//    quartic = x * isr**2
+//    if quartic == fe(-1) or quartic == -sqrtm1:
+//        isr = isr * sqrtm1
+//    is_square = quartic == fe(1) or quartic == fe(-1)
+//    return isr, is_square
+static int invsqrt(fe isr, const fe x)
+{
+    fe check, quartic;
+    fe_copy(check, x);
+    fe_pow22523(isr, check);
+    fe_sq (quartic, isr);
+    fe_mul(quartic, quartic, check);
+    fe_1  (check);          int p1 = fe_isequal(quartic, check);
+    fe_neg(check, check );  int m1 = fe_isequal(quartic, check);
+    fe_neg(check, sqrtm1);  int ms = fe_isequal(quartic, check);
+    fe_mul(check, isr, sqrtm1);
+    fe_ccopy(isr, check, m1 | ms);
+    WIPE_BUFFER(quartic);
+    WIPE_BUFFER(check);
+    return p1 | m1;
 }
 
 // trim a scalar for scalar multiplication
@@ -1504,12 +1548,17 @@ static void ge_tobytes(u8 s[32], const ge *h)
     fe_mul(x, h->X, recip);
     fe_mul(y, h->Y, recip);
     fe_tobytes(s, y);
-    s[31] ^= fe_isnegative(x) << 7;
+    s[31] ^= fe_isodd(x) << 7;
 
     WIPE_BUFFER(recip);
     WIPE_BUFFER(x);
     WIPE_BUFFER(y);
 }
+
+static const fe sqrtm1 = {
+    -32595792, -7943725, 9377950, 3500415, 12389472,
+    -272473, -25146209, -2005654, 326686, 11406482
+};
 
 // h = -s, where s is a point encoded in 32 bytes
 // ge_double_scalarmult_vartime() performs addition, but the algorithm it is
@@ -1523,10 +1572,6 @@ static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
     static const fe d = {
         -10913610, 13857413, -15372611, 6949391, 114729,
         -8787816, -6275908, -3247719, -18696448, -12055116
-    };
-    static const fe sqrtm1 = {
-        -32595792, -7943725, 9377950, 3500415, 12389472,
-        -272473, -25146209, -2005654, 326686, 11406482
     };
     fe u, v, v3; // no secret, no wipe
     fe_frombytes(h->Y, s);
@@ -1557,7 +1602,7 @@ static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
         }
         fe_mul(h->X, h->X, sqrtm1);
     }
-    if (fe_isnegative(h->X) == (s[31] >> 7)) {
+    if (fe_isodd(h->X) == (s[31] >> 7)) {
         fe_neg(h->X, h->X);
     }
     fe_mul(h->T, h->X, h->Y);
@@ -2154,6 +2199,107 @@ int crypto_check(const u8  signature[64],
     crypto_check_init  (actx, signature, public_key);
     crypto_check_update(actx, message, message_size);
     return crypto_check_final(actx);
+}
+
+
+///////////////////
+/// Elligator 2 ///
+///////////////////
+
+// From the paper:
+// w = -A / (fe(1) + non_square * r^2)
+// e = chi(w^3 + A*w^2 + w)
+// u = e*w - (fe(1)-e)*(A//2)
+// v = -e * sqrt(u^3 + A*u^2 + u)
+//
+// We ignore v because we don't need it for X25519 (the Montgomery
+// ladder only uses u).
+//
+// Note that e is eiter 0, 1 or -1
+// if e = 0    u = 0  and v = 0
+// if e = 1    u = w
+// if e = -1   u = -w - A = w * non_square * r^2
+//
+// Let r1 = non_square * r^2
+// Let r2 = 1 + r1
+// Note that r2 cannot be zero, -1/non_square is not a square.
+// We can (tediously) verify that:
+//   w^3 + A*w^2 + w = (A^2*r1 - r2^2) * A / r2^3
+// Therefore:
+//   chi(w^3 + A*w^2 + w) = chi((A^2*r1 - r2^2) * (A / r2^3))
+//   chi(w^3 + A*w^2 + w) = chi((A^2*r1 - r2^2) * (A / r2^3)) * 1
+//   chi(w^3 + A*w^2 + w) = chi((A^2*r1 - r2^2) * (A / r2^3)) * chi(r2^6)
+//   chi(w^3 + A*w^2 + w) = chi((A^2*r1 - r2^2) * (A / r2^3)  *     r2^6)
+//   chi(w^3 + A*w^2 + w) = chi((A^2*r1 - r2^2) *  A * r2^3)
+// Corollary:
+//   e =  1 if (A^2*r1 - r2^2) *  A * r2^3) is a non-zero square
+//   e = -1 if (A^2*r1 - r2^2) *  A * r2^3) is not a square
+//   Note that w^3 + A*w^2 + w (and therefore e) can never be zero:
+//     w^3 + A*w^2 + w = w * (w^2 + A*w + 1)
+//     w^3 + A*w^2 + w = w * (w^2 + A*w + A^2/4 - A^2/4 + 1)
+//     w^3 + A*w^2 + w = w * (w + A/2)^2        - A^2/4 + 1)
+//     which is zero only if:
+//       w = 0                   (impossible)
+//       (w + A/2)^2 = A^2/4 - 1 (impossible, because A^2/4-1 is not a square)
+//
+// Let isr   = invsqrt((A^2*r1 - r2^2) *  A * r2^3)
+//     isr   = sqrt(1        / ((A^2*r1 - r2^2) *  A * r2^3)) if e =  1
+//     isr   = strt(sqrt(-1) / ((A^2*r1 - r2^2) *  A * r2^3)) if e = -1
+//
+// if e = 1
+//   let u1 = -A * (A^2*r1 - r2^2) * A * r2^2 * isr^2
+//       u1 = w
+//       u1 = u
+//
+// if e = -1
+//   let ufactor = -non_square * sqrt(-1) * r^2
+//   let vfactor = sqrt(ufactor)
+//   let u2 = -A * (A^2*r1 - r2^2) * A * r2^2 * isr^2 * ufactor
+//       u2 = w * -1 * -non_square * r^2
+//       u2 = w * non_square * r^2
+//       u2 = u
+void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
+{
+    static const fe ufactor = { // -sqrt(-1) * 2
+        -1917299, 15887451, -18755900, -7000830, -24778944,
+        544946, -16816446, 4011309, -653372, 10741468,
+    };
+    static const fe A   = {486662, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    static const fe A2  = {12721188, 3529, 0, 0, 0, 0, 0, 0, 0, 0};
+    static const fe one = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+    fe r, u, t1, t2, t3;
+    fe_frombytes(r, hash);
+    fe_sq2(t1, r);
+    fe_add(u, t1, one);
+    fe_sq (t2, u);
+    fe_mul(t3, A2, t1);
+    fe_sub(t3, t3, t2);
+    fe_mul(t3, t3, A);
+    fe_mul(t1, t2, u);
+    fe_mul(t1, t3, t1);
+    int is_square = invsqrt(t1, t1);
+    fe_sq(u, r);
+    fe_mul(u, u, ufactor);
+    fe_ccopy(u, one, is_square);
+    fe_sq (t1, t1);
+    fe_mul(u, u, A);
+    fe_mul(u, u, t3);
+    fe_mul(u, u, t2);
+    fe_mul(u, u, t1);
+    fe_neg(u, u);
+    fe_tobytes(curve, u);
+    WIPE_BUFFER(t1);  WIPE_BUFFER(r);
+    WIPE_BUFFER(t2);  WIPE_BUFFER(u);
+    WIPE_BUFFER(t3);
+}
+
+int crypto_curve_to_hash(uint8_t hash[32], const uint8_t curve[32])
+{
+    FOR (i, 0, 32) {
+        hash[i] = curve[i];
+    }
+    return -1;
 }
 
 ////////////////////
