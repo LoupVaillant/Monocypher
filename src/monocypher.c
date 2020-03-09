@@ -1316,6 +1316,11 @@ static int fe_isodd(const fe f)
     return isodd;
 }
 
+// Returns 0 if f <= (p-1)/2, 1 otherwise.
+// "Positive" means between 0 and (p-1)/2
+// "Negative" means between (p+1)/2 and p-1
+// Since p is odd (2^255 - 19), the sign is easily tested by leveraging
+// overflow: for any f in [0..p[, (2*f)%p is odd iff 2*f > p
 static int fe_isnegative(const fe f)
 {
     fe tmp;
@@ -1335,7 +1340,7 @@ static int fe_isnonzero(const fe f)
     return -isnonzero;
 }
 
-// Returns 1 if equal, 0 of not equal
+// Returns 1 if equal, 0 if not equal
 static int fe_isequal(const fe f, const fe g)
 {
     fe diff;
