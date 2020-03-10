@@ -1567,7 +1567,7 @@ static void ge_tobytes(u8 s[32], const ge *h)
 
 // h = s, where s is a point encoded in 32 bytes
 //
-// Variable time! Internal buffers are not wiped! Inputs must not be secret!
+// Variable time!  Inputs must not be secret!
 // => Use only to *check* signatures.
 //
 // From the specifications:
@@ -1598,19 +1598,18 @@ static int ge_frombytes_vartime(ge *h, const u8 s[32])
         -10913610, 13857413, -15372611, 6949391, 114729,
         -8787816, -6275908, -3247719, -18696448, -12055116
     };
-    fe tmp; // no secret, no wipe
     fe_frombytes(h->Y, s);
     fe_1(h->Z);
-    fe_sq (tmp , h->Y);        // tmp =   y^2
-    fe_mul(h->X, tmp , d   );  // x   = d*y^2
-    fe_sub(tmp , tmp , h->Z);  // tmp =   y^2 - 1
-    fe_add(h->X, h->X, h->Z);  // x   = d*y^2 + 1
-    fe_mul(h->X, tmp , h->X);  // x   = (y^2 - 1) * (d*y^2 + 1)
+    fe_sq (h->T, h->Y);        // t =   y^2
+    fe_mul(h->X, h->T, d   );  // x = d*y^2
+    fe_sub(h->T, h->T, h->Z);  // t =   y^2 - 1
+    fe_add(h->X, h->X, h->Z);  // x = d*y^2 + 1
+    fe_mul(h->X, h->T, h->X);  // x = (y^2 - 1) * (d*y^2 + 1)
     int is_square = invsqrt(h->X, h->X);
     if (!is_square) {
-        return -1;             // Not on the curve, Abort
+        return -1;             // Not on the curve, abort
     }
-    fe_mul(h->X, tmp, h->X);   // x = sqrt((y^2 - 1) / (d*y^2 + 1))
+    fe_mul(h->X, h->T, h->X);  // x = sqrt((y^2 - 1) / (d*y^2 + 1))
     if (fe_isodd(h->X) != (s[31] >> 7)) {
         fe_neg(h->X, h->X);
     }
@@ -2307,6 +2306,7 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
     fe_mul(u, u, t1);
     fe_neg(u, u);
     fe_tobytes(curve, u);
+
     WIPE_BUFFER(t1);  WIPE_BUFFER(r);
     WIPE_BUFFER(t2);  WIPE_BUFFER(u);
     WIPE_BUFFER(t3);  WIPE_BUFFER(clamped);
