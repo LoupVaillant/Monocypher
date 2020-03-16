@@ -68,8 +68,8 @@ clean:
 	rm -f *.out *.vec *.o
 	rm -f $(VECTORS)
 
-elligator_inv.vec: elligator-inverse.py elligator.py x25519_pk.all.vec
-	./$< <x25519_pk.all.vec >$@
+elligator_inv.vec: elligator-inverse.py elligator.py elligator_scalarmult.py
+	./$< >$@
 elligator_dir.vec: elligator-direct.py elligator.py
 	./$< >$@
 

@@ -52,60 +52,55 @@
 # <https://creativecommons.org/publicdomain/zero/1.0/>
 
 from elligator import fe
-from elligator import x25519_public_key
 from elligator import can_curve_to_hash
 from elligator import curve_to_hash
 from elligator import fast_curve_to_hash
 from elligator import hash_to_curve
-from elligator import fast_hash_to_curve
-from sys       import stdin
 
-# Test a full round trip, and print the relevant test vectors
-def full_cycle_check(private_key, u):
-    fe(private_key).print()
-    uv = x25519_public_key(private_key)
-    if uv [0] != u: raise ValueError('Test vector failure')
-    uv[0].print()
-    uv[1].print()
-    if can_curve_to_hash(uv):
-        h  = curve_to_hash(uv)
-        if h.is_negative(): raise ValueError('Non Canonical representative')
-        fh = fast_curve_to_hash(uv)
-        if fh != h: raise ValueError('Incorrect fast_curve_to_hash()')
-        print('01:')    # Success
-        h.print()       # actual value for the hash
-        c = hash_to_curve(h)
-        f = fast_hash_to_curve(h)
-        if f != c   : raise ValueError('Incorrect fast_hash_to_curve()')
-        if c != uv  : raise ValueError('Round trip failure')
-    else:
-        fh = fast_curve_to_hash(uv)
-        if not (fh is None): raise ValueError('Fast Curve to Hash did not fail')
-        print('00:')    # Failure
-        print('00:')    # dummy value for the hash
+from elligator_scalarmult import scalarmult
+from elligator_scalarmult import print_scalar
 
-# read test vectors:
-def read_vector(vector): # vector: little endian hex number
-    cut = vector[:64]    # remove final ':' character
-    acc = 0              # final sum
-    pos = 1              # power of 256
-    for b in bytes.fromhex(cut):
-        acc += b * pos
-        pos *= 256
-    return acc
+from random import randrange
 
-def read_test_vectors():
-    vectors = []
-    lines = [x.strip() for x in stdin.readlines() if x.strip()]
-    for i in range(len(lines) // 2):
-        private = read_vector(lines[i*2    ])
-        public  = read_vector(lines[i*2 + 1])
-        vectors.append((private, fe(public)))
-    return vectors
+def private_to_hash(scalar, tweak):
+    cofactor      = tweak % 8     ; tweak = tweak // 8
+    v_is_negative = tweak % 2 == 1; tweak = tweak // 2
+    msb           = tweak * 2**254
+    u             = scalarmult(scalar, cofactor)
+    r1 = None
+    if can_curve_to_hash(u):
+        r1 = curve_to_hash(u, v_is_negative)
+    r2 = fast_curve_to_hash(u, v_is_negative)
+    if r1 != r2: raise ValueError('Incoherent hash_to_curve')
+    if r1 is None:
+        return None
+    if r1.val > 2**254: raise ValueError('Representative too big')
+    u2, v2 = hash_to_curve(r1)
+    if u2 != u: raise ValueError('Round trip failure')
+    return r1.val + msb
 
-vectors = read_test_vectors()
-for v in vectors:
-    private = v[0]
-    public  = v[1]
-    full_cycle_check(private, public)
-    print('')
+# All possible failures
+for tweak in range(2**4):
+    while True:
+        scalar = randrange(0, 2**256)
+        r      = private_to_hash(scalar, tweak)
+        if r is None:
+            print_scalar(scalar)
+            print(format(tweak, '02x') + ":")
+            print('ff:') # Failure
+            print('00:') # dummy value for the hash
+            print()
+            break
+
+# All possible successes
+for tweak in range(2**6):
+    while True:
+        scalar = randrange(0, 2**256)
+        r      = private_to_hash(scalar, tweak)
+        if r is not None:
+            print_scalar(scalar)
+            print(format(tweak, '02x') + ":")
+            print('00:') # Success
+            print_scalar(r)
+            print()
+            break

@@ -1316,20 +1316,6 @@ static int fe_isodd(const fe f)
     return isodd;
 }
 
-// Returns 0 if f <= (p-1)/2, 1 otherwise.
-// "Positive" means between 0 and (p-1)/2
-// "Negative" means between (p+1)/2 and p-1
-// Since p is odd (2^255 - 19), the sign is easily tested by leveraging
-// overflow: for any f in [0..p[, (2*f)%p is odd iff 2*f > p
-static int fe_isnegative(const fe f)
-{
-    fe tmp;
-    fe_add(tmp, f, f);
-    int isneg = fe_isodd(tmp);
-    WIPE_BUFFER(tmp);
-    return isneg;
-}
-
 // Returns 0 if zero, 1 if non zero
 static int fe_isnonzero(const fe f)
 {
@@ -1617,12 +1603,13 @@ static int ge_frombytes_vartime(ge *h, const u8 s[32])
     return 0;
 }
 
+static const fe D2 = { // - 2 * 121665 / 121666
+    -21827239, -5839606, -30745221, 13898782, 229458,
+    15978800, -12551817, -6495438, 29715968, 9444199
+};
+
 static void ge_cache(ge_cached *c, const ge *p)
 {
-    static const fe D2 = { // - 2 * 121665 / 121666
-        -21827239, -5839606, -30745221, 13898782, 229458,
-        15978800, -12551817, -6495438, 29715968, 9444199
-    };
     fe_add (c->Yp, p->Y, p->X);
     fe_sub (c->Ym, p->Y, p->X);
     fe_copy(c->Z , p->Z      );
@@ -2215,6 +2202,8 @@ int crypto_check(const u8  signature[64],
 /// Elligator 2 ///
 ///////////////////
 
+static const fe A = {486662};
+
 // From the paper:
 // w = -A / (fe(1) + non_square * r^2)
 // e = chi(w^3 + A*w^2 + w)
@@ -2273,7 +2262,6 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
         -1917299, 15887451, -18755900, -7000830, -24778944,
         544946, -16816446, 4011309, -653372, 10741468,
     };
-    static const fe A   = {486662, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     static const fe A2  = {12721188, 3529, 0, 0, 0, 0, 0, 0, 0, 0};
     static const fe one = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -2312,12 +2300,129 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
     WIPE_BUFFER(t3);  WIPE_BUFFER(clamped);
 }
 
-int crypto_curve_to_hash(uint8_t hash[32], const uint8_t curve[32])
+
+// Compute the representative of a point (defined by the secret key and
+// tweak), if possible. If not it does nothing and returns -1
+// The tweak comprises 3 parts:
+// - Bits 4-5: random padding
+// - Bit  3  : sign of the v coordinate (0 if positive, 1 if negative)
+// - Bits 0-2: cofactor
+// The bits 6-7 are ignored.
+//
+// Note that to ensure the representative is fully random, we do *not*
+// clear the cofactor.
+int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key [32], u8 tweak)
 {
+    static const fe lop_x = {
+        21352778, 5345713, 4660180, -8347857, 24143090,
+        14568123, 30185756, -12247770, -33528939, 8345319,
+    };
+    static const fe lop_y = {
+        -6952922, -1265500, 6862341, -7057498, -4037696,
+        -5447722, 31680899, -15325402, -19365852, 1569102,
+    };
+
+    u8 scalar[32];
     FOR (i, 0, 32) {
-        hash[i] = curve[i];
+        scalar[i] = secret_key[i];
     }
-    return -1;
+    trim_scalar(scalar);
+    ge pk;
+    ge_scalarmult_base(&pk, scalar);
+
+    // Select low order point
+    // We're computing the [cofactor]lop scalar multiplication, where:
+    //   cofactor = tweak & 7.
+    //   lop      = (lop_x, lop_y)
+    //   lop_x    = sqrt((sqrt(d + 1) + 1) / d)
+    //   lop_y    = -lop_x * sqrtm1
+    // Notes:
+    // - A (single) Montgomery ladder would be twice as slow.
+    // - An actual scalar multiplication would hurt performance.
+    // - A full table lookup would take more code.
+    int a = (tweak >> 2) & 1;
+    int b = (tweak >> 1) & 1;
+    int c = (tweak >> 0) & 1;
+    fe t1, t2, t3;
+    fe_0(t1);
+    fe_ccopy(t1, sqrtm1, b);
+    fe_ccopy(t1, lop_x , c);
+    fe_neg  (t3, t1);
+    fe_ccopy(t1, t3, a);
+    fe_1(t2);
+    fe_0(t3);
+    fe_ccopy(t2, t3   , b);
+    fe_ccopy(t2, lop_y, c);
+    fe_neg  (t3, t2);
+    fe_ccopy(t2, t3, a^b);
+    ge_precomp low_order_point;
+    fe_add(low_order_point.Yp, t2, t1);
+    fe_sub(low_order_point.Ym, t2, t1);
+    fe_mul(low_order_point.T2, t2, t1);
+    fe_mul(low_order_point.T2, low_order_point.T2, D2);
+
+    // Add low order point to the public key
+    ge_madd(&pk, &pk, &low_order_point, t1, t2);
+
+    // Convert to Montgomery u coordinate (we ignore the sign)
+    fe_add(t1, pk.Z, pk.Y);
+    fe_sub(t2, pk.Z, pk.Y);
+    fe_invert(t2, t2);
+    fe_mul(t1, t1, t2);
+
+    // Convert to representative
+    // From the paper:
+    // Let sq = -non_square * u * (u+A)
+    // if sq is not a square, or u = -A, there is no mapping
+    // Assuming there is a mapping:
+    //   if v is positive: r = sqrt(-(u+A) / u)
+    //   if v is negative: r = sqrt(-u / (u+A))
+    //
+    // We compute isr = invsqrt(-non_square * u * (u+A))
+    // if it wasn't a non-zero square, abort.
+    // else, isr = sqrt(-1 / (non_square * u * (u+A))
+    //
+    // This causes us to abort if u is zero, even though we shouldn't. This
+    // never happens in practice, because (i) a random point in the curve has
+    // a negligible chance of being zero, and (ii) scalar multiplication with
+    // a trimmed scalar *never* yields zero.
+    //
+    // Since:
+    //   isr * (u+A) = sqrt(-1     / (non_square * u * (u+A)) * (u+A)
+    //   isr * (u+A) = sqrt(-(u+A) / (non_square * u * (u+A))
+    // and:
+    //   isr = u = sqrt(-1 / (non_square * u * (u+A)) * u
+    //   isr = u = sqrt(-u / (non_square * u * (u+A))
+    // Therefore:
+    //   if v is positive: r = isr * (u+A)
+    //   if v is negative: r = isr * u
+    fe_add(t2, t1, A);
+    fe_mul(t3, t1, t2);
+    fe_mul_small(t3, t3, -2);
+    int is_square = invsqrt(t3, t3);
+    if (!is_square) {
+        // The only variable time bit.  This ultimately reveals how many
+        // tries it took us to find a representable key.
+        // This does not affect security as long as we try keys at random.
+        WIPE_BUFFER(t1);  WIPE_BUFFER(scalar);
+        WIPE_BUFFER(t2);  WIPE_CTX(&pk);
+        WIPE_BUFFER(t3);  WIPE_CTX(&low_order_point);
+        return -1;
+    }
+    fe_ccopy(t1, t2, (tweak >> 3) & 1);
+    fe_mul  (t3, t1, t3);
+    fe_add  (t1, t3, t3);
+    fe_neg  (t2, t3);
+    fe_ccopy(t3, t2, fe_isodd(t1));
+    fe_tobytes(hash, t3);
+
+    // Pad with two random bits
+    hash[31] |= (tweak << 2) & 0xc0;
+
+    WIPE_BUFFER(t1);  WIPE_BUFFER(scalar);
+    WIPE_BUFFER(t2);  WIPE_CTX(&pk);
+    WIPE_BUFFER(t3);  WIPE_CTX(&low_order_point);
+    return 0;
 }
 
 ////////////////////

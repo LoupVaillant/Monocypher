@@ -254,8 +254,9 @@ void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
 
 // Elligator 2
 // -----------
-void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash [32]);
-
+void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32]);
+int crypto_elligator2_inverse(uint8_t hash[32], const uint8_t secret_key[32],
+                              uint8_t tweak);
 
 ////////////////////////////
 /// Low level primitives ///

@@ -292,6 +292,20 @@ static void elligator_dir(const vector in[], vector *out)
     crypto_elligator2_direct(out->buf, in->buf);
 }
 
+static void elligator_inv(const vector in[], vector *out)
+{
+    const vector *sk = in;
+    u8  tweak   = in[1].buf[0];
+    u8  failure = in[2].buf[0];
+    int check   = crypto_elligator2_inverse(out->buf, sk->buf, tweak);
+    if ((u8)check != failure) {
+        fprintf(stderr, "Elligator inverse map: failure mismatch\n");
+    }
+    if (check) {
+        out->buf[0] = 0;
+    }
+}
+
 //////////////////////////////
 /// Self consistency tests ///
 //////////////////////////////
@@ -916,6 +930,7 @@ int main(int argc, char *argv[])
     status |= TEST(ed_25519_check, 3);
     status |= test_x25519();
     status |= TEST(elligator_dir , 1);
+    status |= TEST(elligator_inv , 3);
 
     printf("\nProperty based tests");
     printf("\n--------------------\n");

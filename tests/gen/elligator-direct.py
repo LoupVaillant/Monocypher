@@ -61,7 +61,7 @@ from random    import randrange
 def direct(r1):
     q1 = hash_to_curve(r1)
     q2 = fast_hash_to_curve(r1)
-    r2 = curve_to_hash(q1)
+    r2 = curve_to_hash(q1[0], q1[1].is_negative())
     if q1 != q2: raise ValueError('Incorrect fast_hash_to_curve')
     if r1 != r2: raise ValueError('Round trip failure')
     r1   .print()

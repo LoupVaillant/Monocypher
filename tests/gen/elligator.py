@@ -137,81 +137,6 @@ def sqrt(n):
     if root * root != n: raise ValueError('Should be a square!!')
     return root.abs()
 
-#########################
-# scalar multiplication #
-#########################
-# Clamp the scalar.
-# % 8 stops subgroup attacks
-# Clearing bit 255 and setting bit 254 facilitates constant time ladders.
-def trim(scalar):
-    trimmed = scalar - scalar % 8
-    trimmed = trimmed % 2**254
-    trimmed = trimmed + 2**254
-    return trimmed
-
-# Edwards25519 equation (d defined below):
-# -x^2 + y^2 = 1 + d*x^2*y^2
-d = fe(-121665) / fe(121666)
-
-# Point addition:
-# denum = d*x1*x2*y1*y2
-# x     = (x1*y2 + x2*y1) / (1 + denum)
-# y     = (y1*y2 + x1*x2) / (1 - denum)
-# To avoid divisions, we use affine coordinates: x = X/Z, y = Y/Z.
-# We can multiply Z instead of dividing X and Y.
-def point_add(a, b):
-    x1, y1, z1 = a
-    x2, y2, z2 = b
-    denum = d*x1*x2*y1*y2
-    z1z2  = z1 * z2
-    z1z22 = z1z2**2
-    xt    = z1z2 * (x1*y2 + x2*y1)
-    yt    = z1z2 * (y1*y2 + x1*x2)
-    zx    = z1z22 + denum
-    zy    = z1z22 - denum
-    return (xt*zy, yt*zx, zx*zy)
-
-# scalar multiplication:
-# point + point + ... + point, scalar times
-# (using a double and add ladder for speed)
-def scalarmult(point, scalar):
-    affine  = (point[0], point[1], fe(1))
-    acc     = (fe(0), fe(1), fe(1))
-    trimmed = trim(scalar)
-    binary  = [int(c) for c in list(format(trimmed, 'b'))]
-    for i in binary:
-        acc = point_add(acc, acc)
-        if i == 1:
-            acc = point_add(acc, affine)
-    return acc
-
-# edwards base point
-eby = fe(4) / fe(5)
-ebx = sqrt((eby**2 - fe(1)) / (fe(1) + d * eby**2))
-edwards_base = (ebx, eby)
-
-# scalar multiplication of the base point
-def scalarbase(scalar):
-    return scalarmult(edwards_base, scalar)
-
-sqrt_mA2 = sqrt(fe(-486664)) # sqrt(-(A+2))
-
-# conversion to Montgomery
-# (u, v) = ((1+y)/(1-y), sqrt(-486664)*u/x)
-# (x, y) = (sqrt(-486664)*u/v, (u-1)/(u+1))
-def from_edwards(point):
-    x, y, z = point
-    u   = z + y
-    zu  = z - y
-    v   = u * z * sqrt_mA2
-    zv  = zu * x
-    div = (zu * zv).invert() # now we have to divide
-    return (u*zv*div, v*zu*div)
-
-# Generates an X25519 public key from the given private key.
-def x25519_public_key(private_key):
-    return from_edwards(scalarbase(private_key))
-
 ###########################
 # Elligator 2 (reference) #
 ###########################
@@ -238,19 +163,17 @@ def hash_to_curve(r):
     return (u, v)
 
 # Test whether a point has a representative, straight from the paper.
-def can_curve_to_hash(point):
-    u = point[0]
+def can_curve_to_hash(u):
     return u != -A and is_square(-non_square * u * (u+A))
 
 # Computes the representative of a point, straight from the paper.
-def curve_to_hash(point):
-    if not can_curve_to_hash(point):
+def curve_to_hash(u, v_is_negative):
+    if not can_curve_to_hash(u):
         raise ValueError('cannot curve to hash')
-    u, v = point
     sq1  = sqrt(-u     / (non_square * (u+A)))
     sq2  = sqrt(-(u+A) / (non_square * u    ))
-    if v.is_positive(): return sq1
-    else              : return sq2
+    if v_is_negative: return sq2
+    else            : return sq1
 
 #####################
 # Elligator2 (fast) #
@@ -434,14 +357,13 @@ def fast_hash_to_curve(r):
 # Therefore:
 #   if v is positive: r = isr * (u+A)
 #   if v is negative: r = isr * u
-def fast_curve_to_hash(point):
-    u, v = point
+def fast_curve_to_hash(u, v_is_negative):
     t = u + A
     r = -non_square * u * t
     isr, is_square = invsqrt(r)
     if not is_square:
         return None
-    if v.is_positive(): t = u
-    r = t * isr
+    if v_is_negative: u = t
+    r = u * isr
     r = r.abs()
     return r
