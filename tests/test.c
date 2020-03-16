@@ -917,6 +917,28 @@ static int p_elligator_inverse_overlap()
     return status;
 }
 
+static int p_elligator_x25519()
+{
+    int status = 0;
+    int i = 0;
+    while (i < 64) {
+        RANDOM_INPUT(sk1, 33);
+        RANDOM_INPUT(sk2, 32);
+        u8 r[32];
+        if (crypto_elligator2_inverse(r, sk1, i)) {
+            continue;
+        }
+        u8 pkr[32];  crypto_elligator2_direct(pkr, r);
+        u8 pk1[32];  crypto_x25519_public_key(pk1, sk1);
+        u8 e1 [32];  crypto_x25519(e1, sk2, pk1);
+        u8 e2 [32];  crypto_x25519(e2, sk2, pkr);
+        status |= memcmp(e1, e2, 32);
+        i++;
+    }
+    printf("%s: elligator x25519\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 #define TEST(name, nb_inputs) vector_test(name, #name, nb_inputs, \
                                           nb_##name##_vectors,    \
                                           name##_vectors,         \
@@ -983,6 +1005,7 @@ int main(int argc, char *argv[])
     status |= p_elligator_direct_msb();
     status |= p_elligator_direct_overlap();
     status |= p_elligator_inverse_overlap();
+    status |= p_elligator_x25519();
     printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
     return status;
 }
