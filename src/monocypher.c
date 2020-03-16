@@ -2300,7 +2300,6 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
     WIPE_BUFFER(t3);  WIPE_BUFFER(clamped);
 }
 
-
 // Compute the representative of a point (defined by the secret key and
 // tweak), if possible. If not it does nothing and returns -1
 // The tweak comprises 3 parts:
@@ -2310,7 +2309,36 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
 // The bits 6-7 are ignored.
 //
 // Note that to ensure the representative is fully random, we do *not*
-// clear the cofactor.
+// clear the cofactor. It is otherwise compatible with X25519 (once
+// converted with crypto_elligator2_direct()).
+//
+// This compatibility was achieved by clamping the scalar, like we do
+// with regular X25519 key exchanges.  The cost is a very small bias in
+// key distribution.
+//
+// Recall that Curve25519 has order C = 2^255 + e, with e < 2^128 (not
+// to be confused with the prime order of the main subgroup, L, which is
+// 8 times less than that).
+//
+// Generating all points would require us to multiply a point of order C
+// (the base point plus any point of order 8) by all scalars from 0 to
+// C-1.  Clamping limits us to scalars between 2^254 and 2^255 - 1. But
+// since we also negate the resulting point at random, we also cover
+// scalars from -2^255 + 1 to -2^254 (which modulo C is congruent to e+1
+// to 2^254 + e).
+//
+// In practice:
+// - Scalars from 0         to e + 1     are never generated
+// - Scalars from 2^255     to 2^255 + e are never generated
+// - Scalars from 2^254 + 1 to 2^254 + e are generated twice
+//
+// Since e < 2^128, detecting this bias requires observing over 2^100
+// representatives from a given source (this will never happen), *and*
+// recovering enough of the private key to determine that they do, or do
+// not, belong to the bias set (this practically requires solving
+// discrete logarithm, which is conjecturally intractable).
+//
+// In practice, this means the bias is impossible to detect.
 int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key[32], u8 tweak)
 {
     static const fe lop_x = {
