@@ -685,13 +685,13 @@ static int p_x25519_overlap()
     int status = 0;
     FOR (i, 0, 62) {
         u8 overlapping[94];
-        u8 seperate[32];
+        u8 separate[32];
         RANDOM_INPUT(sk, 32);
         RANDOM_INPUT(pk, 32);
         memcpy(overlapping + 31, sk, 32);
         crypto_x25519(overlapping + i, overlapping + 31, pk);
-        crypto_x25519(seperate, sk, pk);
-        status |= memcmp(seperate, overlapping + i, 32);
+        crypto_x25519(separate, sk, pk);
+        status |= memcmp(separate, overlapping + i, 32);
     }
     printf("%s: x25519 (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -703,13 +703,13 @@ static int p_key_exchange_overlap()
     int status = 0;
     FOR (i, 0, 62) {
         u8 overlapping[94];
-        u8 seperate[32];
+        u8 separate[32];
         RANDOM_INPUT(sk, 32);
         RANDOM_INPUT(pk, 32);
         memcpy(overlapping + 31, sk, 32);
         crypto_key_exchange(overlapping + i, overlapping + 31, pk);
-        crypto_key_exchange(seperate, sk, pk);
-        status |= memcmp(seperate, overlapping + i, 32);
+        crypto_key_exchange(separate, sk, pk);
+        status |= memcmp(separate, overlapping + i, 32);
     }
     printf("%s: key_exchange (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
@@ -883,14 +883,36 @@ static int p_elligator_direct_overlap()
     int status = 0;
     FOR (i, 0, 62) {
         u8 overlapping[94];
-        u8 seperate[32];
+        u8 separate[32];
         RANDOM_INPUT(r, 32);
         memcpy(overlapping + 31, r, 32);
         crypto_elligator2_direct(overlapping + i, overlapping + 31);
-        crypto_elligator2_direct(seperate, r);
-        status |= memcmp(seperate, overlapping + i, 32);
+        crypto_elligator2_direct(separate, r);
+        status |= memcmp(separate, overlapping + i, 32);
     }
     printf("%s: elligator direct (overlapping i/o)\n",
+           status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
+static int p_elligator_inverse_overlap()
+{
+    int status = 0;
+    FOR (i, 0, 62) {
+        u8 overlapping[94];
+        u8 separate[32];
+        RANDOM_INPUT(sk, 33);
+        u8 tweak = sk[32];
+        memcpy(overlapping + 31, sk, 32);
+        int a = crypto_elligator2_inverse(overlapping+i, overlapping+31, tweak);
+        int b = crypto_elligator2_inverse(separate, sk, tweak);
+        status |= a - b;
+        if (a == 0) {
+            // The buffers are the same only if written to to begin with
+            status |= memcmp(separate, overlapping + i, 32);
+        }
+    }
+    printf("%s: elligator inverse (overlapping i/o)\n",
            status != 0 ? "FAILED" : "OK");
     return status;
 }
@@ -960,6 +982,7 @@ int main(int argc, char *argv[])
     status |= p_aead();
     status |= p_elligator_direct_msb();
     status |= p_elligator_direct_overlap();
+    status |= p_elligator_inverse_overlap();
     printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
     return status;
 }
