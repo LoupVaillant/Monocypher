@@ -2311,7 +2311,7 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
 //
 // Note that to ensure the representative is fully random, we do *not*
 // clear the cofactor.
-int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key [32], u8 tweak)
+int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key[32], u8 tweak)
 {
     static const fe lop_x = {
         21352778, 5345713, 4660180, -8347857, 24143090,
