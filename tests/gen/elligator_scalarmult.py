@@ -57,9 +57,10 @@ from elligator import sqrtm1
 
 def print_scalar(scalar):
     """prints a scalar element in little endian"""
-    while scalar != 0:
+    for _ in range(32):
         print(format(scalar % 256, '02x'), end='')
         scalar //= 256
+    if scalar != 0: raise ValueError('number is too big!!')
     print(':')
 
 #########################################
