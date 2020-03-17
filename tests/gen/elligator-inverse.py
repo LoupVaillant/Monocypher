@@ -51,7 +51,6 @@
 # with this software.  If not, see
 # <https://creativecommons.org/publicdomain/zero/1.0/>
 
-from elligator import fe
 from elligator import can_curve_to_hash
 from elligator import curve_to_hash
 from elligator import fast_curve_to_hash

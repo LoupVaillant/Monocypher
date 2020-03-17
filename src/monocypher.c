@@ -2213,7 +2213,7 @@ static const fe A = {486662};
 // We ignore v because we don't need it for X25519 (the Montgomery
 // ladder only uses u).
 //
-// Note that e is eiter 0, 1 or -1
+// Note that e is either 0, 1 or -1
 // if e = 0    u = 0  and v = 0
 // if e = 1    u = w
 // if e = -1   u = -w - A = w * non_square * r^2

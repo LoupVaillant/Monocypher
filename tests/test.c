@@ -922,7 +922,7 @@ static int p_elligator_x25519()
     int status = 0;
     int i = 0;
     while (i < 64) {
-        RANDOM_INPUT(sk1, 33);
+        RANDOM_INPUT(sk1, 32);
         RANDOM_INPUT(sk2, 32);
         u8 r[32];
         if (crypto_elligator2_inverse(r, sk1, i)) {
