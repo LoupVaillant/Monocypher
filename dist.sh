@@ -58,9 +58,6 @@ VERSION=`git describe --tags`
 FOLDER=monocypher-$VERSION
 TARBALL=$FOLDER.tar.gz
 
-# Generate the test vectors.
-(cd tests/gen/ make)
-
 # Generate documentation for users who don't have mandoc
 doc/man2html.sh
 
