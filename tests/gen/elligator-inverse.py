@@ -62,9 +62,9 @@ from elligator_scalarmult import print_scalar
 from random import randrange
 
 def private_to_hash(scalar, tweak):
-    cofactor      = tweak % 8     ; tweak = tweak // 8
-    v_is_negative = tweak % 2 == 1; tweak = tweak // 2
-    msb           = tweak * 2**254
+    cofactor      = scalar % 8
+    v_is_negative = tweak % 2 == 1;
+    msb           = (tweak // 2**6) * 2**254
     u             = scalarmult(scalar, cofactor)
     r1 = None
     if can_curve_to_hash(u):
@@ -79,9 +79,10 @@ def private_to_hash(scalar, tweak):
     return r1.val + msb
 
 # All possible failures
-for tweak in range(2**4):
+for cofactor in range(8):
+    tweak = randrange(0, 256)
     while True:
-        scalar = randrange(0, 2**256)
+        scalar = randrange(0, 2**253) * 8 + cofactor
         r      = private_to_hash(scalar, tweak)
         if r is None:
             print_scalar(scalar)
@@ -92,14 +93,17 @@ for tweak in range(2**4):
             break
 
 # All possible successes
-for tweak in range(2**6):
-    while True:
-        scalar = randrange(0, 2**256)
-        r      = private_to_hash(scalar, tweak)
-        if r is not None:
-            print_scalar(scalar)
-            print(format(tweak, '02x') + ":")
-            print('00:') # Success
-            print_scalar(r)
-            print()
-            break
+for cofactor in range(8):
+    for sign in range(2):
+        for msb in range(4):
+            tweak = sign + randrange(0, 32) * 2 + msb * 64
+            while True:
+                scalar = randrange(0, 2**253) * 8 + cofactor
+                r      = private_to_hash(scalar, tweak)
+                if r is not None:
+                    print_scalar(scalar)
+                    print(format(tweak, '02x') + ":")
+                    print('00:') # Success
+                    print_scalar(r)
+                    print()
+                    break

@@ -2301,12 +2301,15 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
 }
 
 // Compute the representative of a point (defined by the secret key and
-// tweak), if possible. If not it does nothing and returns -1
-// The tweak comprises 3 parts:
-// - Bits 4-5: random padding
-// - Bit  3  : sign of the v coordinate (0 if positive, 1 if negative)
-// - Bits 0-2: cofactor
-// The bits 6-7 are ignored.
+// tweak), if possible.  If not it does nothing and returns -1.  Note
+// that the success of the operation depends only on the value of
+// secret_key.  The tweak parameter is used only when we succeed.
+//
+// The tweak should be a random byte.  Beyond that, its contents are an
+// implementation detail. Currently, the tweak comprises 2 parts:
+// - Bit  1  : sign of the v coordinate (0 if positive, 1 if negative)
+// - Bit  2-5: not used
+// - Bits 6-7: random padding
 //
 // Note that to ensure the representative is fully random, we do *not*
 // clear the cofactor. It is otherwise compatible with X25519 (once
@@ -2368,9 +2371,10 @@ int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key[32], u8 tweak)
     // - A (single) Montgomery ladder would be twice as slow.
     // - An actual scalar multiplication would hurt performance.
     // - A full table lookup would take more code.
-    int a = (tweak >> 2) & 1;
-    int b = (tweak >> 1) & 1;
-    int c = (tweak >> 0) & 1;
+    u8 cofactor = secret_key[0] & 7;
+    int a = (cofactor >> 2) & 1;
+    int b = (cofactor >> 1) & 1;
+    int c = (cofactor >> 0) & 1;
     fe t1, t2, t3;
     fe_0(t1);
     fe_ccopy(t1, sqrtm1, b);
@@ -2437,7 +2441,7 @@ int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key[32], u8 tweak)
         WIPE_BUFFER(t3);  WIPE_CTX(&low_order_point);
         return -1;
     }
-    fe_ccopy(t1, t2, (tweak >> 3) & 1);
+    fe_ccopy(t1, t2, tweak & 1);
     fe_mul  (t3, t1, t3);
     fe_add  (t1, t3, t3);
     fe_neg  (t2, t3);
@@ -2445,7 +2449,7 @@ int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key[32], u8 tweak)
     fe_tobytes(hash, t3);
 
     // Pad with two random bits
-    hash[31] |= (tweak << 2) & 0xc0;
+    hash[31] |= tweak & 0xc0;
 
     WIPE_BUFFER(t1);  WIPE_BUFFER(scalar);
     WIPE_BUFFER(t2);  WIPE_CTX(&pk);
@@ -2462,6 +2466,12 @@ void crypto_elligator2_key_pair(u8 hash[32], u8 secret_key[32], u8 seed[32])
     do {
         crypto_chacha20(buf, 0, 64, buf+32, zero);
     } while(crypto_elligator2_inverse(buf+32, buf, buf[32]));
+    // Note that buf[32] is not actually reused.  Either we loop one
+    // more time and buf[32] is used for the new seed, or we succeeded,
+    // and buf[32] is used as a tweak parameter.
+    //
+    // This is because the return value of crypto_elligator2_inverse()
+    // is independent from its tweak parameter.
 
     crypto_wipe(seed, 32);
     FOR (i, 0, 32) { hash      [i] = buf[i+32]; }
