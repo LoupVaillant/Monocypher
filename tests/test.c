@@ -939,6 +939,44 @@ static int p_elligator_x25519()
     return status;
 }
 
+static int p_elligator_key_pair()
+{
+    int status = 0;
+    FOR(i, 0, 32) {
+        RANDOM_INPUT(seed, 32);
+        RANDOM_INPUT(sk2 , 32);
+        u8 r  [32];
+        u8 sk1[32];  crypto_elligator2_key_pair(r, sk1, seed);
+        u8 pkr[32];  crypto_elligator2_direct(pkr, r);
+        u8 pk1[32];  crypto_x25519_public_key(pk1, sk1);
+        u8 e1 [32];  crypto_x25519(e1, sk2, pk1);
+        u8 e2 [32];  crypto_x25519(e2, sk2, pkr);
+        status |= memcmp(e1, e2, 32);
+    }
+
+    printf("%s: elligator key pair\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
+static int p_elligator_key_pair_overlap()
+{
+    int status = 0;
+    FOR (i, 0, 94) {
+        u8 over[158];
+        u8 sep [ 64];
+        RANDOM_INPUT(s1, 32);
+        u8 *s2 = over + 63;
+        memcpy(s2, s1, 32);
+        crypto_elligator2_key_pair(sep     , sep      + 32, s1);
+        crypto_elligator2_key_pair(over + i, over + i + 32, s2);
+        status |= memcmp(sep, over + i, 64);
+    }
+
+    printf("%s: elligator key pair (overlapping i/o)\n",
+           status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 #define TEST(name, nb_inputs) vector_test(name, #name, nb_inputs, \
                                           nb_##name##_vectors,    \
                                           name##_vectors,         \
@@ -1006,6 +1044,8 @@ int main(int argc, char *argv[])
     status |= p_elligator_direct_overlap();
     status |= p_elligator_inverse_overlap();
     status |= p_elligator_x25519();
+    status |= p_elligator_key_pair();
+    status |= p_elligator_key_pair_overlap();
     printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
     return status;
 }

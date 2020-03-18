@@ -2453,6 +2453,22 @@ int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key[32], u8 tweak)
     return 0;
 }
 
+void crypto_elligator2_key_pair(u8 hash[32], u8 secret_key[32], u8 seed[32])
+{
+    u8 buf[64];
+    FOR (i, 0, 32) {
+        buf[i + 32] = seed[i];
+    }
+    do {
+        crypto_chacha20(buf, 0, 64, buf+32, zero);
+    } while(crypto_elligator2_inverse(buf+32, buf, buf[32]));
+
+    crypto_wipe(seed, 32);
+    FOR (i, 0, 32) { hash      [i] = buf[i+32]; }
+    FOR (i, 0, 32) { secret_key[i] = buf[i   ]; }
+    WIPE_BUFFER(buf);
+}
+
 ////////////////////
 /// Key exchange ///
 ////////////////////
