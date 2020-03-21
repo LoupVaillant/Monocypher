@@ -56,18 +56,22 @@ from elligator import curve_to_hash
 from elligator import hash_to_curve
 from elligator import fast_hash_to_curve
 from elligator import p
+from elligator import print_raw
 from random    import randrange
 
-def direct(r1):
+def direct(r1, padding):
     q1 = hash_to_curve(r1)
     q2 = fast_hash_to_curve(r1)
     r2 = curve_to_hash(q1[0], q1[1].is_negative())
     if q1 != q2: raise ValueError('Incorrect fast_hash_to_curve')
     if r1 != r2: raise ValueError('Round trip failure')
-    r1   .print()
+    print_raw(r1.val + padding * 2**254)
     q1[0].print() # u coordinate only
     print()
 
-direct(fe(0)) # representative 0 maps to point (0, 0)
+direct(fe(0), 0) # representative 0 maps to point (0, 0)
+direct(fe(0), 1) # representative 0 maps to point (0, 0)
+direct(fe(0), 2) # representative 0 maps to point (0, 0)
+direct(fe(0), 3) # representative 0 maps to point (0, 0)
 for i in range(50):
-    direct(fe(randrange(0, (p-1)/2)))
+    direct(fe(randrange(0, (p-1)/2)), i % 4)
