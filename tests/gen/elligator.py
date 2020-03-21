@@ -88,6 +88,14 @@ class fe:
         if m != 0: raise ValueError('number is too big!!')
         print(':')
 
+def print_raw(raw):
+    """prints a raw element in little endian"""
+    for _ in range(32):
+        print(format(raw % 256, '02x'), end='')
+        raw //= 256
+    if raw != 0: raise ValueError('number is too big!!')
+    print(':')
+
 ########################
 # Curve25519 constants #
 ########################

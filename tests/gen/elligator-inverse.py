@@ -55,9 +55,9 @@ from elligator import can_curve_to_hash
 from elligator import curve_to_hash
 from elligator import fast_curve_to_hash
 from elligator import hash_to_curve
+from elligator import print_raw
 
 from elligator_scalarmult import scalarmult
-from elligator_scalarmult import print_scalar
 
 from random import randrange
 
@@ -85,7 +85,7 @@ for cofactor in range(8):
         scalar = randrange(0, 2**253) * 8 + cofactor
         r      = private_to_hash(scalar, tweak)
         if r is None:
-            print_scalar(scalar)
+            print_raw(scalar)
             print(format(tweak, '02x') + ":")
             print('ff:') # Failure
             print('00:') # dummy value for the hash
@@ -101,9 +101,9 @@ for cofactor in range(8):
                 scalar = randrange(0, 2**253) * 8 + cofactor
                 r      = private_to_hash(scalar, tweak)
                 if r is not None:
-                    print_scalar(scalar)
+                    print_raw(scalar)
                     print(format(tweak, '02x') + ":")
                     print('00:') # Success
-                    print_scalar(r)
+                    print_raw(r)
                     print()
                     break
