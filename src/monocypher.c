@@ -58,6 +58,7 @@
 /////////////////
 #define FOR_T(type, i, start, end) for (type i = (start); i < (end); i++)
 #define FOR(i, start, end)         FOR_T(size_t, i, start, end)
+#define COPY(dst, src, size)       FOR(i, 0, size) (dst)[i] = (src)[i]
 #define WIPE_CTX(ctx)              crypto_wipe(ctx   , sizeof(*(ctx)))
 #define WIPE_BUFFER(buffer)        crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)                  ((a) <= (b) ? (a) : (b))
@@ -603,9 +604,7 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
                                  const u8           *key, size_t key_size)
 {
     // initial hash
-    FOR (i, 0, 8) {
-        ctx->hash[i] = iv[i];
-    }
+    COPY(ctx->hash, iv, 8);
     ctx->hash[0] ^= 0x01010000 ^ (key_size << 8) ^ hash_size;
 
     ctx->input_offset[0] = 0;         // beginning of the input, no offset
@@ -1273,9 +1272,7 @@ static void fe_invert(fe out, const fe z)
 static void fe_tobytes(u8 s[32], const fe h)
 {
     i32 t[10];
-    FOR (i, 0, 10) {
-        t[i] = h[i];
-    }
+    COPY(t, h, 10);
     i32 q = (19 * t[9] + (((i32) 1) << 24)) >> 25;
     FOR (i, 0, 5) {
         q += t[2*i  ]; q >>= 26;
@@ -1435,9 +1432,7 @@ void crypto_x25519(u8       raw_shared_secret[32],
 {
     // restrict the possible scalar values
     u8 e[32];
-    FOR (i, 0, 32) {
-        e[i] = your_secret_key[i];
-    }
+    COPY(e, your_secret_key, 32);
     trim_scalar(e);
     scalarmult(raw_shared_secret, e, their_public_key, 255);
 
@@ -2074,9 +2069,7 @@ void crypto_sign_init_first_pass_custom_hash(crypto_sign_ctx_abstract *ctx,
     if (public_key == 0) {
         crypto_sign_public_key_custom_hash(ctx->pk, secret_key, ctx->hash);
     } else {
-        FOR (i, 0, 32) {
-            ctx->pk[i] = public_key[i];
-        }
+        COPY(ctx->pk, public_key, 32);
     }
 
     // Deterministic part of EdDSA: Construct a nonce by hashing the message
@@ -2130,9 +2123,7 @@ void crypto_sign_final(crypto_sign_ctx_abstract *ctx, u8 signature[64])
     u8  h_ram[64];
     ctx->hash->final(ctx, h_ram);
     reduce(h_ram);
-    FOR (i, 0, 32) {
-        signature[i] = half_sig[i];
-    }
+    COPY(signature, half_sig, 32);
     mul_add(signature + 32, h_ram, a, r); // s = h_ram * a + r
     WIPE_BUFFER(h_ram);
     crypto_wipe(ctx, ctx->hash->ctx_size);
@@ -2158,8 +2149,8 @@ void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
                                    const crypto_sign_vtable *hash)
 {
     ctx->hash = hash; // set vtable
-    FOR (i, 0, 64) { ctx->buf[i] = signature [i]; }
-    FOR (i, 0, 32) { ctx->pk [i] = public_key[i]; }
+    COPY(ctx->buf, signature , 64);
+    COPY(ctx->pk , public_key, 32);
     ctx->hash->init  (ctx);
     ctx->hash->update(ctx, signature , 32);
     ctx->hash->update(ctx, public_key, 32);
@@ -2275,9 +2266,7 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
     // Representatives are encoded in 254 bits.
     // The two most significant ones are random padding that must be ignored.
     u8 clamped[32];
-    FOR (i, 0, 32) {
-        clamped[i] = hash[i];
-    }
+    COPY(clamped, hash, 32);
     clamped[31] &= 0x3f;
 
     fe r, u, t1, t2, t3;
@@ -2361,9 +2350,7 @@ int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key[32], u8 tweak)
     };
 
     u8 scalar[32];
-    FOR (i, 0, 32) {
-        scalar[i] = secret_key[i];
-    }
+    COPY(scalar, secret_key, 32);
     trim_scalar(scalar);
     ge pk;
     ge_scalarmult_base(&pk, scalar);
@@ -2467,9 +2454,7 @@ int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key[32], u8 tweak)
 void crypto_elligator2_key_pair(u8 hash[32], u8 secret_key[32], u8 seed[32])
 {
     u8 buf[64];
-    FOR (i, 0, 32) {
-        buf[i + 32] = seed[i];
-    }
+    COPY(buf + 32, seed, 32);
     do {
         crypto_chacha20(buf, 0, 64, buf+32, zero);
     } while(crypto_elligator2_inverse(buf+32, buf, buf[32]));
@@ -2481,8 +2466,8 @@ void crypto_elligator2_key_pair(u8 hash[32], u8 secret_key[32], u8 seed[32])
     // is independent from its tweak parameter.
 
     crypto_wipe(seed, 32);
-    FOR (i, 0, 32) { hash      [i] = buf[i+32]; }
-    FOR (i, 0, 32) { secret_key[i] = buf[i   ]; }
+    COPY(hash      , buf + 32, 32);
+    COPY(secret_key, buf     , 32);
     WIPE_BUFFER(buf);
 }
 
@@ -2511,9 +2496,7 @@ void crypto_x25519_inverse(u8       blind_salt [32],
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
     };
     u8 scalar[32];
-    FOR (i, 0, 32) {
-        scalar[i] = private_key[i];
-    }
+    COPY(scalar, private_key, 32);
     trim_scalar(scalar);
     u8 inverse[32] = {1};
     for (int i = 252; i >= 0; i--) {
