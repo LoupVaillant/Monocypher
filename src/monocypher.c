@@ -109,6 +109,19 @@ static void store64_le(u8 out[8], u64 in)
     store32_le(out + 4, in >> 32);
 }
 
+static void load32_le_buf (u32 *dst, const u8 *src, size_t size) {
+    FOR(i, 0, size) { dst[i] = load32_le(src + i*4); }
+}
+static void load64_le_buf (u64 *dst, const u8 *src, size_t size) {
+    FOR(i, 0, size) { dst[i] = load64_le(src + i*8); }
+}
+static void store32_le_buf(u8 *dst, const u32 *src, size_t size) {
+    FOR(i, 0, size) { store32_le(dst + i*4, src[i]); }
+}
+static void store64_le_buf(u8 *dst, const u64 *src, size_t size) {
+    FOR(i, 0, size) { store64_le(dst + i*8, src[i]); }
+}
+
 static u64 rotr64(u64 x, u64 n) { return (x >> n) ^ (x << (64 - n)); }
 static u32 rotl32(u32 x, u32 n) { return (x << n) ^ (x >> (32 - n)); }
 
@@ -176,15 +189,8 @@ static void chacha20_rounds(u32 out[16], const u32 in[16])
 
 static void chacha20_init_key(u32 block[16], const u8 key[32])
 {
-    // constant
-    block[0] = load32_le((const u8*)"expa");
-    block[1] = load32_le((const u8*)"nd 3");
-    block[2] = load32_le((const u8*)"2-by");
-    block[3] = load32_le((const u8*)"te k");
-    // key
-    FOR (i, 0, 8) {
-        block[i+4] = load32_le(key + i*4);
-    }
+    load32_le_buf(block  , (const u8*)"expand 32-byte k", 4); // constant
+    load32_le_buf(block+4, key                          , 8); // key
 }
 
 static u64 chacha20_core(u32 input[16], u8 *cipher_text, const u8 *plain_text,
@@ -240,15 +246,11 @@ void crypto_hchacha20(u8 out[32], const u8 key[32], const u8 in [16])
     u32 block[16];
     chacha20_init_key(block, key);
     // input
-    FOR (i, 0, 4) {
-        block[i+12] = load32_le(in + i*4);
-    }
+    load32_le_buf(block + 12, in, 4);
     chacha20_rounds(block, block);
-    // prevents reversal of the rounds by revealing only half of the buffer.
-    FOR (i, 0, 4) {
-        store32_le(out      + i*4, block[i     ]); // constant
-        store32_le(out + 16 + i*4, block[i + 12]); // counter and nonce
-    }
+    // prevent reversal of the rounds by revealing only half of the buffer.
+    store32_le_buf(out   , block   , 4); // constant
+    store32_le_buf(out+16, block+12, 4); // counter and nonce
     WIPE_BUFFER(block);
 }
 
@@ -260,8 +262,7 @@ u64 crypto_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
     chacha20_init_key(input, key);
     input[12] = (u32) ctr;
     input[13] = (u32)(ctr >> 32);
-    input[14] = load32_le(nonce);
-    input[15] = load32_le(nonce + 4);
+    load32_le_buf(input+14, nonce, 2);
     ctr = chacha20_core(input, cipher_text, plain_text, text_size);
     WIPE_BUFFER(input);
     return ctr;
@@ -274,9 +275,7 @@ u32 crypto_ietf_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
     u32 input[16];
     chacha20_init_key(input, key);
     input[12] = (u32) ctr;
-    input[13] = load32_le(nonce);
-    input[14] = load32_le(nonce + 4);
-    input[15] = load32_le(nonce + 8);
+    load32_le_buf(input+13, nonce, 3);
     ctr = (u32)chacha20_core(input, cipher_text, plain_text, text_size);
     WIPE_BUFFER(input);
     return ctr;
@@ -401,9 +400,10 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
     ctx->c[4] = 1;
     poly_clear_c(ctx);
     // load r and pad (r has some of its bits cleared)
-    FOR (i, 0, 1) { ctx->r  [0] = load32_le(key           ) & 0x0fffffff; }
-    FOR (i, 1, 4) { ctx->r  [i] = load32_le(key + i*4     ) & 0x0ffffffc; }
-    FOR (i, 0, 4) { ctx->pad[i] = load32_le(key + i*4 + 16);              }
+    load32_le_buf(ctx->r  , key   , 4);
+    load32_le_buf(ctx->pad, key+16, 4);
+    FOR (i, 0, 1) { ctx->r[i] &= 0x0fffffff; }
+    FOR (i, 1, 4) { ctx->r[i] &= 0x0ffffffc; }
 }
 
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
@@ -418,9 +418,7 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
     // Process the message block by block
     size_t nb_blocks = message_size >> 4;
     FOR (i, 0, nb_blocks) {
-        FOR (j, 0, 4) {
-            ctx->c[j] = load32_le(message +  j*4);
-        }
+        load32_le_buf(ctx->c, message, 4);
         poly_block(ctx);
         message += 16;
     }
@@ -629,9 +627,7 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
     // Process the message block by block
     FOR (i, 0, message_size >> 7) { // number of blocks
         blake2b_end_block(ctx);
-        FOR (j, 0, 16) {
-            ctx->input[j] = load64_le(message + j*8);
-        }
+        load64_le_buf(ctx->input, message, 16);
         message += 128;
         ctx->input_idx = 128;
     }
@@ -650,9 +646,7 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
     blake2b_incr(ctx);        // update the input offset
     blake2b_compress(ctx, 1); // compress the last block
     size_t nb_words = ctx->hash_size >> 3;
-    FOR (i, 0, nb_words) {
-        store64_le(hash + i*8, ctx->hash[i]);
-    }
+    store64_le_buf(hash, ctx->hash, nb_words);
     FOR (i, nb_words << 3, ctx->hash_size) {
         hash[i] = (ctx->hash[i >> 3] >> (8 * (i & 7))) & 0xff;
     }
@@ -722,16 +716,12 @@ static void blake_update_32(crypto_blake2b_ctx *ctx, u32 input)
 
 static void load_block(block *b, const u8 bytes[1024])
 {
-    FOR (i, 0, 128) {
-        b->a[i] = load64_le(bytes + i*8);
-    }
+    load64_le_buf(b->a, bytes, 128);
 }
 
 static void store_block(u8 bytes[1024], const block *b)
 {
-    FOR (i, 0, 128) {
-        store64_le(bytes + i*8, b->a[i]);
-    }
+    store64_le_buf(bytes, b->a, 128);
 }
 
 static void copy_block(block *o,const block*in){FOR(i,0,128)o->a[i] = in->a[i];}
