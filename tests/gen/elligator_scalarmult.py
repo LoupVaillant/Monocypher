@@ -54,6 +54,7 @@
 from elligator import fe
 from elligator import sqrt
 from elligator import sqrtm1
+from elligator import A
 
 #########################################
 # scalar multiplication (Edwards space) #
@@ -130,24 +131,10 @@ def mt_scalarmult(u, scalar):
         if b == 1:
             x2, x3 = x3, x2
             z2, z3 = z3, z2
-        t0 = x3 - z3
-        t1 = x2 - z2
-        x2 = x2 + z2
-        z2 = x3 + z3
-        z3 = t0 * x2
-        z2 = z2 * t1
-        t0 = t1**2
-        t1 = x2**2
-        x3 = z3 + z2
-        z2 = z3 - z2
-        x2 = t1 * t0
-        t1 = t1 - t0
-        z2 = z2**2
-        z3 = t1 * fe(121666)
-        x3 = x3**2
-        t0 = t0 + z3
-        z3 = x1 * z2
-        z2 = t1 * t0
+        x3, z3 = ((x2*x3 - z2*z3)**2,
+                  (x2*z3 - z2*x3)**2 * x1)
+        x2, z2 = ((x2**2 - z2**2)**2,
+                  fe(4)*x2*z2*(x2**2 + A*x2*z2 + z2**2))
         if b == 1:
             x2, x3 = x3, x2
             z2, z3 = z3, z2
