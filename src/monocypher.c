@@ -59,6 +59,7 @@
 #define FOR_T(type, i, start, end) for (type i = (start); i < (end); i++)
 #define FOR(i, start, end)         FOR_T(size_t, i, start, end)
 #define COPY(dst, src, size)       FOR(i, 0, size) (dst)[i] = (src)[i]
+#define ZERO(buf, size)            FOR(i, 0, size) (buf)[i] = 0
 #define WIPE_CTX(ctx)              crypto_wipe(ctx   , sizeof(*(ctx)))
 #define WIPE_BUFFER(buffer)        crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)                  ((a) <= (b) ? (a) : (b))
@@ -137,9 +138,7 @@ static int zerocmp32(const u8 p[32])
 void crypto_wipe(void *secret, size_t size)
 {
     volatile u8 *v_secret = (u8*)secret;
-    FOR (i, 0, size) {
-        v_secret[i] = 0;
-    }
+    ZERO(v_secret, size);
 }
 
 /////////////////
@@ -370,9 +369,7 @@ static void poly_block(crypto_poly1305_ctx *ctx)
 // (re-)initialises the input counter and input buffer
 static void poly_clear_c(crypto_poly1305_ctx *ctx)
 {
-    FOR (i, 0, 4) {
-        ctx->c[i] = 0;
-    }
+    ZERO(ctx->c, 4);
     ctx->c_idx = 0;
 }
 
@@ -399,9 +396,7 @@ static void poly_update(crypto_poly1305_ctx *ctx,
 void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 {
     // Initial hash is zero
-    FOR (i, 0, 5) {
-        ctx->h[i] = 0;
-    }
+    ZERO(ctx->h, 5);
     // add 2^130 to every input block
     ctx->c[4] = 1;
     poly_clear_c(ctx);
@@ -571,9 +566,7 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 static void blake2b_set_input(crypto_blake2b_ctx *ctx, u8 input, size_t index)
 {
     if (index == 0) {
-        FOR (i, 0, 16) {
-            ctx->input[i] = 0;
-        }
+        ZERO(ctx->input, 16);
     }
     size_t word = index >> 3;
     size_t byte = index & 7;
@@ -715,9 +708,7 @@ typedef struct { u64 a[128]; } block;
 static void wipe_block(block *b)
 {
     volatile u64* a = b->a;
-    FOR (i, 0, 128) {
-        a[i] = 0;
-    }
+    ZERO(a, 128);
 }
 
 // updates a Blake2 hash with a 32 bit word, little endian.
@@ -879,7 +870,7 @@ static void gidx_refresh(gidx_ctx *ctx)
     ctx->b.a[4] = ctx->nb_iterations;
     ctx->b.a[5] = 1;  // type: Argon2i
     ctx->b.a[6] = ctx->ctr;
-    FOR (i, 7, 128) { ctx->b.a[i] = 0; } // ...then zero the rest out
+    ZERO(ctx->b.a + 7, 121); // ...then zero the rest out
 
     // Shuffle the block thus: ctx->b = G((G(ctx->b, zero)), zero)
     // (G "square" function), to get cheap pseudo-random numbers.
@@ -1041,9 +1032,7 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
 
     // wipe work area
     volatile u64 *p = (u64*)work_area;
-    FOR (i, 0, 128 * nb_blocks) {
-        p[i] = 0;
-    }
+    ZERO(p, 128 * nb_blocks);
 }
 
 void crypto_argon2i(u8       *hash,      u32 hash_size,
@@ -1070,8 +1059,8 @@ void crypto_argon2i(u8       *hash,      u32 hash_size,
 // field element
 typedef i32 fe[10];
 
-static void fe_0(fe h) {            FOR(i, 0, 10) h[i] = 0; }
-static void fe_1(fe h) { h[0] = 1;  FOR(i, 1, 10) h[i] = 0; }
+static void fe_0(fe h) {           ZERO(h  , 10); }
+static void fe_1(fe h) { h[0] = 1; ZERO(h+1,  9); }
 
 static void fe_copy(fe h,const fe f           ){FOR(i,0,10) h[i] =  f[i];      }
 static void fe_neg (fe h,const fe f           ){FOR(i,0,10) h[i] = -f[i];      }
@@ -1501,8 +1490,10 @@ static void reduce(u8 r[64])
 static void mul_add(u8 r[32], const u8 a[32], const u8 b[32], const u8 c[32])
 {
     i64 s[64];
-    FOR (i,  0, 32) { s[i] = (i64)(u64)c[i]; } // preserve unsigned
-    FOR (i, 32, 64) { s[i] = 0;              }
+    FOR (i, 0, 32) {
+        s[i] = (i64)(u64)c[i];  // preserve unsigned
+    }
+    ZERO(s + 32, 32);
     FOR (i,  0, 32) {
         FOR (j, 0, 32) {
             s[i+j] += a[i] * (u64)b[j];

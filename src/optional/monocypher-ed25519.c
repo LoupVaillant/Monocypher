@@ -57,6 +57,7 @@
 /// Utilities ///
 /////////////////
 #define FOR(i, min, max)     for (size_t i = min; i < max; i++)
+#define ZERO(buf, size)      FOR(i, 0, size) (buf)[i] = 0
 #define WIPE_CTX(ctx)        crypto_wipe(ctx   , sizeof(*(ctx)))
 #define MIN(a, b)            ((a) <= (b) ? (a) : (b))
 #define ALIGN(x, block_size) ((~(x) + 1) & ((block_size) - 1))
@@ -159,9 +160,7 @@ static void sha512_compress(crypto_sha512_ctx *ctx)
 static void sha512_set_input(crypto_sha512_ctx *ctx, u8 input)
 {
     if (ctx->input_idx == 0) {
-        FOR (i, 0, 16) {
-            ctx->input[i] = 0;
-        }
+        ZERO(ctx->input, 16);
     }
     size_t word = ctx->input_idx >> 3;
     size_t byte = ctx->input_idx &  7;
@@ -243,9 +242,7 @@ void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 hash[64])
     // compress penultimate block (if any)
     if (ctx->input_idx > 111) {
         sha512_compress(ctx);
-        FOR(i, 0, 14) {
-            ctx->input[i] = 0;
-        }
+        ZERO(ctx->input, 14);
     }
     // compress last block
     ctx->input[14] = ctx->input_size[0];
