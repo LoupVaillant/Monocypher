@@ -2247,7 +2247,7 @@ static const fe A = {486662};
 //       u2 = w * -1 * -non_square * r^2
 //       u2 = w * non_square * r^2
 //       u2 = u
-void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
+void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
 {
     static const fe ufactor = { // -sqrt(-1) * 2
         -1917299, 15887451, -18755900, -7000830, -24778944,
@@ -2259,7 +2259,7 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
     // Representatives are encoded in 254 bits.
     // The two most significant ones are random padding that must be ignored.
     u8 clamped[32];
-    COPY(clamped, hash, 32);
+    COPY(clamped, hidden, 32);
     clamped[31] &= 0x3f;
 
     fe r, u, t1, t2, t3;
@@ -2302,7 +2302,7 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
 //
 // Note that to ensure the representative is fully random, we do *not*
 // clear the cofactor. It is otherwise compatible with X25519 (once
-// converted with crypto_elligator2_direct()).
+// converted with crypto_hidden_to_curve()).
 //
 // This compatibility was achieved by clamping the scalar, like we do
 // with regular X25519 key exchanges.  The cost is a very small bias in
@@ -2331,7 +2331,7 @@ void crypto_elligator2_direct(uint8_t curve[32], const uint8_t hash[32])
 // discrete logarithm, which is conjecturally intractable).
 //
 // In practice, this means the bias is impossible to detect.
-int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key[32], u8 tweak)
+int crypto_private_to_hidden(u8 hidden[32], const u8 secret_key[32], u8 tweak)
 {
     static const fe lop_x = {
         21352778, 5345713, 4660180, -8347857, 24143090,
@@ -2433,10 +2433,10 @@ int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key[32], u8 tweak)
     fe_add  (t1, t3, t3);
     fe_neg  (t2, t3);
     fe_ccopy(t3, t2, fe_isodd(t1));
-    fe_tobytes(hash, t3);
+    fe_tobytes(hidden, t3);
 
     // Pad with two random bits
-    hash[31] |= tweak & 0xc0;
+    hidden[31] |= tweak & 0xc0;
 
     WIPE_BUFFER(t1);  WIPE_BUFFER(scalar);
     WIPE_BUFFER(t2);  WIPE_CTX(&pk);
@@ -2444,22 +2444,22 @@ int crypto_elligator2_inverse(u8 hash[32], const u8 secret_key[32], u8 tweak)
     return 0;
 }
 
-void crypto_elligator2_key_pair(u8 hash[32], u8 secret_key[32], u8 seed[32])
+void crypto_hidden_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
 {
     u8 buf[64];
     COPY(buf + 32, seed, 32);
     do {
         crypto_chacha20(buf, 0, 64, buf+32, zero);
-    } while(crypto_elligator2_inverse(buf+32, buf, buf[32]));
+    } while(crypto_private_to_hidden(buf+32, buf, buf[32]));
     // Note that buf[32] is not actually reused.  Either we loop one
     // more time and buf[32] is used for the new seed, or we succeeded,
     // and buf[32] is used as a tweak parameter.
     //
-    // This is because the return value of crypto_elligator2_inverse()
+    // This is because the return value of crypto_private_to_hidden()
     // is independent from its tweak parameter.
 
     crypto_wipe(seed, 32);
-    COPY(hash      , buf + 32, 32);
+    COPY(hidden    , buf + 32, 32);
     COPY(secret_key, buf     , 32);
     WIPE_BUFFER(buf);
 }

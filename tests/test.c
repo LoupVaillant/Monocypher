@@ -289,7 +289,7 @@ static int test_x25519()
 
 static void elligator_dir(const vector in[], vector *out)
 {
-    crypto_elligator2_direct(out->buf, in->buf);
+    crypto_hidden_to_curve(out->buf, in->buf);
 }
 
 static void elligator_inv(const vector in[], vector *out)
@@ -297,7 +297,7 @@ static void elligator_inv(const vector in[], vector *out)
     const vector *sk = in;
     u8  tweak   = in[1].buf[0];
     u8  failure = in[2].buf[0];
-    int check   = crypto_elligator2_inverse(out->buf, sk->buf, tweak);
+    int check   = crypto_private_to_hidden(out->buf, sk->buf, tweak);
     if ((u8)check != failure) {
         fprintf(stderr, "Elligator inverse map: failure mismatch\n");
     }
@@ -864,11 +864,11 @@ static int p_elligator_direct_msb()
         u8 r2[32];  memcpy(r2, r, 32);  r2[31] = (r[31] & 0x3f) | 0x40;
         u8 r3[32];  memcpy(r3, r, 32);  r3[31] = (r[31] & 0x3f) | 0x80;
         u8 r4[32];  memcpy(r4, r, 32);  r4[31] = (r[31] & 0x3f) | 0xc0;
-        u8 u [32];  crypto_elligator2_direct(u , r );
-        u8 u1[32];  crypto_elligator2_direct(u1, r1);
-        u8 u2[32];  crypto_elligator2_direct(u2, r2);
-        u8 u3[32];  crypto_elligator2_direct(u3, r3);
-        u8 u4[32];  crypto_elligator2_direct(u4, r4);
+        u8 u [32];  crypto_hidden_to_curve(u , r );
+        u8 u1[32];  crypto_hidden_to_curve(u1, r1);
+        u8 u2[32];  crypto_hidden_to_curve(u2, r2);
+        u8 u3[32];  crypto_hidden_to_curve(u3, r3);
+        u8 u4[32];  crypto_hidden_to_curve(u4, r4);
         status |= memcmp(u, u1, 32);
         status |= memcmp(u, u2, 32);
         status |= memcmp(u, u3, 32);
@@ -886,8 +886,8 @@ static int p_elligator_direct_overlap()
         u8 separate[32];
         RANDOM_INPUT(r, 32);
         memcpy(overlapping + 31, r, 32);
-        crypto_elligator2_direct(overlapping + i, overlapping + 31);
-        crypto_elligator2_direct(separate, r);
+        crypto_hidden_to_curve(overlapping + i, overlapping + 31);
+        crypto_hidden_to_curve(separate, r);
         status |= memcmp(separate, overlapping + i, 32);
     }
     printf("%s: elligator direct (overlapping i/o)\n",
@@ -904,8 +904,8 @@ static int p_elligator_inverse_overlap()
         RANDOM_INPUT(sk, 33);
         u8 tweak = sk[32];
         memcpy(overlapping + 31, sk, 32);
-        int a = crypto_elligator2_inverse(overlapping+i, overlapping+31, tweak);
-        int b = crypto_elligator2_inverse(separate, sk, tweak);
+        int a = crypto_private_to_hidden(overlapping+i, overlapping+31, tweak);
+        int b = crypto_private_to_hidden(separate, sk, tweak);
         status |= a - b;
         if (a == 0) {
             // The buffers are the same only if written to to begin with
@@ -925,10 +925,10 @@ static int p_elligator_x25519()
         RANDOM_INPUT(sk1, 32);
         RANDOM_INPUT(sk2, 32);
         u8 r[32];
-        if (crypto_elligator2_inverse(r, sk1, i)) {
+        if (crypto_private_to_hidden(r, sk1, i)) {
             continue;
         }
-        u8 pkr[32];  crypto_elligator2_direct(pkr, r);
+        u8 pkr[32];  crypto_hidden_to_curve(pkr, r);
         u8 pk1[32];  crypto_x25519_public_key(pk1, sk1);
         u8 e1 [32];  crypto_x25519(e1, sk2, pk1);
         u8 e2 [32];  crypto_x25519(e2, sk2, pkr);
@@ -946,8 +946,8 @@ static int p_elligator_key_pair()
         RANDOM_INPUT(seed, 32);
         RANDOM_INPUT(sk2 , 32);
         u8 r  [32];
-        u8 sk1[32];  crypto_elligator2_key_pair(r, sk1, seed);
-        u8 pkr[32];  crypto_elligator2_direct(pkr, r);
+        u8 sk1[32];  crypto_hidden_key_pair(r, sk1, seed);
+        u8 pkr[32];  crypto_hidden_to_curve(pkr, r);
         u8 pk1[32];  crypto_x25519_public_key(pk1, sk1);
         u8 e1 [32];  crypto_x25519(e1, sk2, pk1);
         u8 e2 [32];  crypto_x25519(e2, sk2, pkr);
@@ -967,8 +967,8 @@ static int p_elligator_key_pair_overlap()
         RANDOM_INPUT(s1, 32);
         u8 *s2 = over + 63;
         memcpy(s2, s1, 32);
-        crypto_elligator2_key_pair(sep     , sep      + 32, s1);
-        crypto_elligator2_key_pair(over + i, over + i + 32, s2);
+        crypto_hidden_key_pair(sep     , sep      + 32, s1);
+        crypto_hidden_key_pair(over + i, over + i + 32, s2);
         status |= memcmp(sep, over + i, 64);
     }
 
