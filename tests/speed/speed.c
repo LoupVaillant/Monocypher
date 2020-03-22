@@ -173,6 +173,17 @@ static u64 edDSA_check(void)
     TIMING_END;
 }
 
+static u64 x25519_inverse(void)
+{
+    u8 in [32] = {9};
+    u8 out[32] = {9};
+
+    TIMING_START {
+        crypto_x25519_inverse(out, out, in);
+    }
+    TIMING_END;
+}
+
 int main()
 {
     print("Chacha20            ",chacha20()     *MUL ,"megabytes  per second");
@@ -184,6 +195,7 @@ int main()
     print("x25519              ",x25519()            ,"exchanges  per second");
     print("EdDSA(sign)         ",edDSA_sign()        ,"signatures per second");
     print("EdDSA(check)        ",edDSA_check()       ,"checks     per second");
+    print("x25519 inverse      ",x25519_inverse()    ,"scalar inv per second");
     printf("\n");
     return 0;
 }

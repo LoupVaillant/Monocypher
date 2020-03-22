@@ -977,6 +977,44 @@ static int p_elligator_key_pair_overlap()
     return status;
 }
 
+static int p_x25519_inverse()
+{
+    int status = 0;
+    const u8 base [32] = {9};
+    // check round trip
+    FOR (i, 0, 50) {
+        RANDOM_INPUT(sk, 32);
+        u8 pk   [32];
+        u8 blind[32];
+        crypto_x25519_public_key(pk, sk);
+        crypto_x25519_inverse(blind, sk, pk);
+        status |= memcmp(blind, base, 32);
+    }
+
+    // check cofactor clearing
+    // (Multiplying by a low order point yields zero
+    u8 low_order[4][32] = {
+        {0}, {1},
+        {0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24,
+         0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b,
+         0x04, 0x44, 0x5c, 0xc4, 0x58, 0x1c, 0x8e, 0x86,
+         0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57,},
+        {0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae,
+         0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a,
+         0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd,
+         0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00,},
+    };
+    u8 zero[32] = {0};
+    FOR (i, 0, 32) {
+        u8 blind[32];
+        RANDOM_INPUT(sk, 32);
+        crypto_x25519_inverse(blind, sk, low_order[i%4]);
+        status |= memcmp(blind, zero, 32);
+    }
+    printf("%s: x25519_inverse\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 #define TEST(name, nb_inputs) vector_test(name, #name, nb_inputs, \
                                           nb_##name##_vectors,    \
                                           name##_vectors,         \
@@ -1046,6 +1084,7 @@ int main(int argc, char *argv[])
     status |= p_elligator_x25519();
     status |= p_elligator_key_pair();
     status |= p_elligator_key_pair_overlap();
+    status |= p_x25519_inverse();
     printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
     return status;
 }

@@ -1382,21 +1382,12 @@ static int scalar_bit(const u8 s[32], int i) {
 ///////////////
 /// X-25519 /// Taken from SUPERCOP's ref10 implementation.
 ///////////////
-
-void crypto_x25519(u8       raw_shared_secret[32],
-                   const u8 your_secret_key  [32],
-                   const u8 their_public_key [32])
+static void scalarmult(u8 q[32], const u8 scalar[32], const u8 p[32],
+                       size_t nb_bits)
 {
     // computes the scalar product
     fe x1;
-    fe_frombytes(x1, their_public_key);
-
-    // restrict the possible scalar values
-    u8 e[32];
-    FOR (i, 0, 32) {
-        e[i] = your_secret_key[i];
-    }
-    trim_scalar(e);
+    fe_frombytes(x1, p);
 
     // computes the actual scalar product (the result is in x2 and z2)
     fe x2, z2, x3, z3, t0, t1;
@@ -1406,9 +1397,9 @@ void crypto_x25519(u8       raw_shared_secret[32],
     fe_1(x2);        fe_0(z2); // "zero" point
     fe_copy(x3, x1); fe_1(z3); // "one"  point
     int swap = 0;
-    for (int pos = 254; pos >= 0; --pos) {
+    for (int pos = nb_bits-1; pos >= 0; --pos) {
         // constant time conditional swap before ladder step
-        int b = scalar_bit(e, pos);
+        int b = scalar_bit(scalar, pos);
         swap ^= b; // xor trick avoids swapping at the end of the loop
         fe_cswap(x2, x3, swap);
         fe_cswap(z2, z3, swap);
@@ -1431,12 +1422,26 @@ void crypto_x25519(u8       raw_shared_secret[32],
     // normalises the coordinates: x == X / Z
     fe_invert(z2, z2);
     fe_mul(x2, x2, z2);
-    fe_tobytes(raw_shared_secret, x2);
+    fe_tobytes(q, x2);
 
-    WIPE_BUFFER(x1);  WIPE_BUFFER(e );
-    WIPE_BUFFER(x2);  WIPE_BUFFER(z2);
-    WIPE_BUFFER(x3);  WIPE_BUFFER(z3);
-    WIPE_BUFFER(t0);  WIPE_BUFFER(t1);
+    WIPE_BUFFER(x1);
+    WIPE_BUFFER(x2);  WIPE_BUFFER(z2);  WIPE_BUFFER(t0);
+    WIPE_BUFFER(x3);  WIPE_BUFFER(z3);  WIPE_BUFFER(t1);
+}
+
+void crypto_x25519(u8       raw_shared_secret[32],
+                   const u8 your_secret_key  [32],
+                   const u8 their_public_key [32])
+{
+    // restrict the possible scalar values
+    u8 e[32];
+    FOR (i, 0, 32) {
+        e[i] = your_secret_key[i];
+    }
+    trim_scalar(e);
+    scalarmult(raw_shared_secret, e, their_public_key, 255);
+
+    WIPE_BUFFER(e);
 }
 
 void crypto_x25519_public_key(u8       public_key[32],
@@ -1450,10 +1455,12 @@ void crypto_x25519_public_key(u8       public_key[32],
 /// Ed25519 ///
 ///////////////
 
-static const  i64 L[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-                            0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10};
+static const  u8 L[32] = {
+    0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
+    0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10
+};
 
 // r = x mod L (little-endian)
 static void modL(u8 *r, i64 x[64])
@@ -2488,6 +2495,53 @@ void crypto_key_exchange(u8       shared_key[32],
 {
     crypto_x25519(shared_key, your_secret_key, their_public_key);
     crypto_hchacha20(shared_key, shared_key, zero);
+}
+
+//////////////////////
+/// Scalar divison ///
+//////////////////////
+void crypto_x25519_inverse(u8       blind_salt [32],
+                           const u8 private_key[32],
+                           const u8 curve_point[32])
+{
+    static const  u8 Lm2[32] = { // L - 2
+        0xeb, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
+        0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
+    };
+    u8 scalar[32];
+    FOR (i, 0, 32) {
+        scalar[i] = private_key[i];
+    }
+    trim_scalar(scalar);
+    u8 inverse[32] = {1};
+    for (int i = 252; i >= 0; i--) {
+        mul_add(inverse, inverse, inverse, zero);
+        if (scalar_bit(Lm2, i)) {
+            mul_add(inverse, inverse, scalar, zero);
+        }
+    }
+    // Clear the cofactor of inverse:
+    //   inverse <- inverse * (3*L + 1)
+    // The order of the curve being 8*L, we can simplify down to
+    //   inverse <- inverse + L * ((inverse*3) % 8)
+    //
+    // Before the operation, inverse < L.
+    // After the operation, inverse < 8*L.
+    // Therefore, inverse fits in 256 bits (32 bytes)
+    //
+    u32 mod8  = (inverse[0] * 3) & 7;
+    u32 carry = 0;
+    FOR (i , 0, 32) {
+        carry = carry + inverse[i] + L[i] * mod8;
+        inverse[i]  = (u8)carry;
+        carry >>= 8;
+    }
+    // Recall that 8*L < 2^256. However it is also very close to
+    // 2^255. If we spaned the ladder over 255 bits, random tests
+    // wouldn't catch the of-by-one error.
+    scalarmult(blind_salt, inverse, curve_point, 256);
 }
 
 ////////////////////////////////

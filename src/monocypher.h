@@ -332,4 +332,10 @@ void crypto_x25519(uint8_t       raw_shared_secret[32],
                    const uint8_t your_secret_key  [32],
                    const uint8_t their_public_key [32]);
 
+// scalar division
+// ---------------
+void crypto_x25519_inverse(uint8_t       blind_salt [32],
+                           const uint8_t private_key[32],
+                           const uint8_t curve_point[32]);
+
 #endif // MONOCYPHER_H
