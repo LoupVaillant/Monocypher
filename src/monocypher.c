@@ -1393,12 +1393,24 @@ static void scalarmult(u8 q[32], const u8 scalar[32], const u8 p[32],
 
         // Montgomery ladder step: replaces (P2, P3) by (P2*2, P2+P3)
         // with differential addition
-        fe_sub(t0, x3, z3);  fe_sub(t1, x2, z2);    fe_add(x2, x2, z2);
-        fe_add(z2, x3, z3);  fe_mul(z3, t0, x2);    fe_mul(z2, z2, t1);
-        fe_sq (t0, t1    );  fe_sq (t1, x2    );    fe_add(x3, z3, z2);
-        fe_sub(z2, z3, z2);  fe_mul(x2, t1, t0);    fe_sub(t1, t1, t0);
-        fe_sq (z2, z2    );  fe_mul121666(z3, t1);  fe_sq (x3, x3    );
-        fe_add(t0, t0, z3);  fe_mul(z3, x1, z2);    fe_mul(z2, t1, t0);
+        fe_sub(t0, x3, z3);
+        fe_sub(t1, x2, z2);
+        fe_add(x2, x2, z2);
+        fe_add(z2, x3, z3);
+        fe_mul(z3, t0, x2);
+        fe_mul(z2, z2, t1);
+        fe_sq (t0, t1    );
+        fe_sq (t1, x2    );
+        fe_add(x3, z3, z2);
+        fe_sub(z2, z3, z2);
+        fe_mul(x2, t1, t0);
+        fe_sub(t1, t1, t0);
+        fe_sq (z2, z2    );
+        fe_mul121666(z3, t1);
+        fe_sq (x3, x3    );
+        fe_add(t0, t0, z3);
+        fe_mul(z3, x1, z2);
+        fe_mul(z2, t1, t0);
     }
     // last swap is necessary to compensate for the xor trick
     // Note: after this swap, P3 == P2 + P1.
