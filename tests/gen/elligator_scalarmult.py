@@ -184,13 +184,13 @@ order = 2**252 + 27742317777372353535851937790883648493
 
 # Single scalar multiplication (in Edwards space)
 def scalarmult1(scalar, cofactor):
-    co_cleared = cofactor * (5 * order)  # cleared main factor
+    co_cleared = ((cofactor * 5) % 8) * order  # cleared main factor
     combined   = trim(scalar) + co_cleared
     return from_edwards(ed_scalarmult(ed_base, combined))
 
 # Single scalar multiplication (in Montgomery space)
 def scalarmult2(scalar, cofactor):
-    co_cleared = cofactor * (5 * order) # cleared main factor
+    co_cleared = ((cofactor * 5) % 8) * order  # cleared main factor
     combined   = trim(scalar) + co_cleared
     return mt_scalarmult(mt_base, combined)
 
