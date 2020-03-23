@@ -1317,13 +1317,63 @@ static const fe sqrtm1 = {
     -272473, -25146209, -2005654, 326686, 11406482
 };
 
-//def invsqrt(x):
-//    isr = x**((p - 5) // 8)
-//    quartic = x * isr**2
-//    if quartic == fe(-1) or quartic == -sqrtm1:
-//        isr = isr * sqrtm1
-//    is_square = quartic == fe(1) or quartic == fe(-1)
-//    return isr, is_square
+// Inverse square root.
+// Returns true if x is a non zero square, false otherwise.
+// After the call:
+//   isr = sqrt(1/x)        if x is non-zero square.
+//   isr = sqrt(sqrt(-1)/x) if x is not a square.
+//   isr = 0                if x is zero.
+// We do not guarantee the sign of the square root.
+//
+// Notes:
+// Let quartic = x^((p-1)/4)
+//
+// x^((p-1)/2) = chi(x)
+// quartic^2   = chi(x)
+// quartic     = sqrt(chi(x))
+// quartic     = 1 or -1 or sqrt(-1) or -sqrt(-1)
+//
+// Note that x is a square if quartic is 1 or -1
+// There are 4 cases to consider:
+//
+// if   quartic         = 1  (x is a square)
+// then x^((p-1)/4)     = 1
+//      x^((p-5)/4) * x = 1
+//      x^((p-5)/4)     = 1/x
+//      x^((p-5)/8)     = sqrt(1/x) or -sqrt(1/x)
+//
+// if   quartic                = -1  (x is a square)
+// then x^((p-1)/4)            = -1
+//      x^((p-5)/4) * x        = -1
+//      x^((p-5)/4)            = -1/x
+//      x^((p-5)/8)            = sqrt(-1)   / sqrt(x)
+//      x^((p-5)/8) * sqrt(-1) = sqrt(-1)^2 / sqrt(x)
+//      x^((p-5)/8) * sqrt(-1) = -1/sqrt(x)
+//      x^((p-5)/8) * sqrt(-1) = -sqrt(1/x) or sqrt(1/x)
+//
+// if   quartic         = sqrt(-1)  (x is not a square)
+// then x^((p-1)/4)     = sqrt(-1)
+//      x^((p-5)/4) * x = sqrt(-1)
+//      x^((p-5)/4)     = sqrt(-1)/x
+//      x^((p-5)/8)     = sqrt(sqrt(-1)/x) or -sqrt(sqrt(-1)/x)
+//
+// Note that the product of two non-squares is always a square:
+//   For any non-squares a and b, chi(a) = -1 and chi(b) = -1.
+//   Since chi(x) = x^((p-1)/2), chi(a)*chi(b) = chi(a*b) = 1.
+//   Therefore a*b is a square.
+//
+//   Since sqrt(-1) and x are both non-squares, their product is a
+//   square, and we can compute their square root.
+//
+// if   quartic                = -sqrt(-1)  (x is not a square)
+// then x^((p-1)/4)            = -sqrt(-1)
+//      x^((p-5)/4) * x        = -sqrt(-1)
+//      x^((p-5)/4)            = -sqrt(-1)/x
+//      x^((p-5)/8)            = sqrt(-sqrt(-1)/x)
+//      x^((p-5)/8)            = sqrt( sqrt(-1)/x) * sqrt(-1)
+//      x^((p-5)/8) * sqrt(-1) = sqrt( sqrt(-1)/x) * sqrt(-1)^2
+//      x^((p-5)/8) * sqrt(-1) = sqrt( sqrt(-1)/x) * -1
+//      x^((p-5)/8) * sqrt(-1) = -sqrt(sqrt(-1)/x) or sqrt(sqrt(-1)/x)
 static int invsqrt(fe isr, const fe x)
 {
     fe check, quartic;
@@ -2506,7 +2556,6 @@ void crypto_x25519_inverse(u8       blind_salt [32],
     // Before the operation, inverse < L.
     // After the operation, inverse < 8*L.
     // Therefore, inverse fits in 256 bits (32 bytes)
-    //
     u32 mod8  = (inverse[0] * 3) & 7;
     u32 carry = 0;
     FOR (i , 0, 32) {
