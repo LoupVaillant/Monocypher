@@ -1392,15 +1392,17 @@ static int invsqrt(fe isr, const fe x)
 }
 
 // trim a scalar for scalar multiplication
-static void trim_scalar(u8 s[32])
+static void trim_scalar(u8 trimmed[32], const u8 scalar[32])
 {
-    s[ 0] &= 248;
-    s[31] &= 127;
-    s[31] |= 64;
+    COPY(trimmed, scalar, 32);
+    trimmed[ 0] &= 248;
+    trimmed[31] &= 127;
+    trimmed[31] |= 64;
 }
 
 // get bit from scalar at position i
-static int scalar_bit(const u8 s[32], int i) {
+static int scalar_bit(const u8 s[32], int i)
+{
     if (i < 0) { return 0; } // handle -1 for sliding windows
     return (s[i>>3] >> (i&7)) & 1;
 }
@@ -1473,10 +1475,8 @@ void crypto_x25519(u8       raw_shared_secret[32],
 {
     // restrict the possible scalar values
     u8 e[32];
-    COPY(e, your_secret_key, 32);
-    trim_scalar(e);
+    trim_scalar(e, your_secret_key);
     scalarmult(raw_shared_secret, e, their_public_key, 255);
-
     WIPE_BUFFER(e);
 }
 
@@ -2084,7 +2084,7 @@ void crypto_sign_public_key_custom_hash(u8       public_key[32],
 {
     u8 a[64];
     hash->hash(a, secret_key, 32);
-    trim_scalar(a);
+    trim_scalar(a, a);
     ge A;
     ge_scalarmult_base(&A, a);
     ge_tobytes(public_key, &A);
@@ -2107,7 +2107,7 @@ void crypto_sign_init_first_pass_custom_hash(crypto_sign_ctx_abstract *ctx,
     u8 *a      = ctx->buf;
     u8 *prefix = ctx->buf + 32;
     ctx->hash->hash(a, secret_key, 32);
-    trim_scalar(a);
+    trim_scalar(a, a);
 
     if (public_key == 0) {
         crypto_sign_public_key_custom_hash(ctx->pk, secret_key, ctx->hash);
@@ -2393,9 +2393,8 @@ int crypto_private_to_hidden(u8 hidden[32], const u8 secret_key[32], u8 tweak)
     };
 
     u8 scalar[32];
-    COPY(scalar, secret_key, 32);
-    trim_scalar(scalar);
     ge pk;
+    trim_scalar(scalar, secret_key);
     ge_scalarmult_base(&pk, scalar);
 
     // Select low order point
@@ -2539,8 +2538,7 @@ void crypto_x25519_inverse(u8       blind_salt [32],
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
     };
     u8 scalar[32];
-    COPY(scalar, private_key, 32);
-    trim_scalar(scalar);
+    trim_scalar(scalar, private_key);
     u8 inverse[32] = {1};
     for (int i = 252; i >= 0; i--) {
         mul_add(inverse, inverse, inverse, zero);
