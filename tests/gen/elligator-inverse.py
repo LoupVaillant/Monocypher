@@ -61,7 +61,7 @@ from elligator_scalarmult import scalarmult
 
 from random import randrange
 
-def private_to_hash(scalar, tweak):
+def private_to_curve_and_hash(scalar, tweak):
     cofactor      = scalar % 8
     v_is_negative = tweak % 2 == 1;
     msb           = (tweak // 2**6) * 2**254
@@ -72,20 +72,20 @@ def private_to_hash(scalar, tweak):
     r2 = fast_curve_to_hash(u, v_is_negative)
     if r1 != r2: raise ValueError('Incoherent hash_to_curve')
     if r1 is None:
-        return None
+        return u, None
     if r1.val > 2**254: raise ValueError('Representative too big')
     u2, v2 = hash_to_curve(r1)
     if u2 != u: raise ValueError('Round trip failure')
-    return r1.val + msb
+    return (u, r1.val + msb)
 
 # All possible failures
 for cofactor in range(8):
     tweak = randrange(0, 256)
     while True:
         scalar = randrange(0, 2**253) * 8 + cofactor
-        r      = private_to_hash(scalar, tweak)
+        u, r   = private_to_curve_and_hash(scalar, tweak)
         if r is None:
-            print_raw(scalar)
+            u.print()
             print(format(tweak, '02x') + ":")
             print('ff:') # Failure
             print('00:') # dummy value for the hash
@@ -99,9 +99,9 @@ for cofactor in range(8):
             tweak = sign + randrange(0, 32) * 2 + msb * 64
             while True:
                 scalar = randrange(0, 2**253) * 8 + cofactor
-                r      = private_to_hash(scalar, tweak)
+                u, r   = private_to_curve_and_hash(scalar, tweak)
                 if r is not None:
-                    print_raw(scalar)
+                    u.print()
                     print(format(tweak, '02x') + ":")
                     print('00:') # Success
                     print_raw(r)

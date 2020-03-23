@@ -1530,10 +1530,7 @@ static void modL(u8 *r, i64 x[64])
 static void reduce(u8 r[64])
 {
     i64 x[64];
-    FOR (i, 0, 64) {
-        x[i] = (i64)(u64)r[i]; // preserve unsigned
-        r[i] = 0;
-    }
+    COPY(x, r, 64);
     modL(r, x);
     WIPE_BUFFER(x);
 }
@@ -2238,13 +2235,187 @@ int crypto_check(const u8  signature[64],
     return crypto_check_final(actx);
 }
 
+/////////////////////////////////////////////////
+/// Dangerous ephemeral public key generation ///
+/////////////////////////////////////////////////
+
+// Those functions generates a public key, *without* clearing the
+// cofactor.  Sending that key over the network leaks 3 bits of the
+// private key.  Use only to generate ephemeral keys that will be hidden
+// with crypto_curve_to_hidden().
+//
+// The public key is otherwise compatible with crypto_x25519() and
+// crypto_key_exchange() (those properly clear the cofactor).
+//
+// Note that the distribution of the resulting public keys is almost
+// uniform.  Flipping the sign of the v coordinate (not provided by this
+// function), covers the entire key space almost perfectly, where
+// "almost" means a 2^-128 bias (undetectable).  This uniformity is
+// needed to ensure the proper randomness of the resulting
+// representatives (once we apply crypto_curve_to_hidden()).
+//
+// Recall that Curve25519 has order C = 2^255 + e, with e < 2^128 (not
+// to be confused with the prime order of the main subgroup, L, which is
+// 8 times less than that).
+//
+// Generating all points would require us to multiply a point of order C
+// (the base point plus any point of order 8) by all scalars from 0 to
+// C-1.  Clamping limits us to scalars between 2^254 and 2^255 - 1. But
+// by negating the resulting point at random, we also cover scalars from
+// -2^255 + 1 to -2^254 (which modulo C is congruent to e+1 to 2^254 + e).
+//
+// In practice:
+// - Scalars from 0         to e + 1     are never generated
+// - Scalars from 2^255     to 2^255 + e are never generated
+// - Scalars from 2^254 + 1 to 2^254 + e are generated twice
+//
+// Since e < 2^128, detecting this bias requires observing over 2^100
+// representatives from a given source (this will never happen), *and*
+// recovering enough of the private key to determine that they do, or do
+// not, belong to the biased set (this practically requires solving
+// discrete logarithm, which is conjecturally intractable).
+//
+// In practice, this means the bias is impossible to detect.
+
+// s + (x*L) % 8*L
+// Guaranteed to fit in 256 bits iff s fits in 255 bits.
+//  L            < 2^253
+//  x%8          < 2^3
+//  L * (x%8 )   < 2^255
+//  s            < 2^255
+//  s + L*(x%8 ) < 2^256
+static void add_xl(u8 s[32], u8 x)
+{
+    u32 mod8  = x & 7;
+    u32 carry = 0;
+    FOR (i , 0, 32) {
+        carry = carry + s[i] + L[i] * mod8;
+        s[i]  = (u8)carry;
+        carry >>= 8;
+    }
+}
+
+// "Small" dangerous ephemeral key.
+// This version works by decoupling the cofactor from the main factor.
+//
+// - The trimmed scalar determines the main factor
+// - The clamped bits of the scalar determine the cofactor.
+//
+// Cofactor and main factor are combined into a single scalar, which is
+// then multiplied by a point of order 8*L (unlike the base point, which
+// has prime order).  That "dangerous" base point is the addition of the
+// regular base point (9), and a point of order 8.
+void crypto_x25519_dangerous_small(u8 public_key[32], const u8 secret_key[32])
+{
+    // Base point of order 8*L
+    // Raw scalar multiplication with it does not clear the cofactor,
+    // and the resulting public key will reveal 3 bits of the scalar.
+    static const u8 dangerous_base_point[32] = {
+        0x34, 0xfc, 0x6c, 0xb7, 0xc8, 0xde, 0x58, 0x97,
+        0x77, 0x70, 0xd9, 0x52, 0x16, 0xcc, 0xdc, 0x6c,
+        0x85, 0x90, 0xbe, 0xcd, 0x91, 0x9c, 0x07, 0x59,
+        0x94, 0x14, 0x56, 0x3b, 0x4b, 0xa4, 0x47, 0x0f,
+    };
+    // separate the main factor & the cofactor of the scalar
+    u8 scalar[32];
+    trim_scalar(scalar, secret_key);
+
+    // Separate the main factor and the cofactor
+    //
+    // The scalar is trimmed, so its cofactor is cleared.  The three
+    // least significant bits however still have a main factor.  We must
+    // remove it for X25519 compatibility.
+    //
+    // We exploit the fact that 5*L = 1 (modulo 8)
+    //   cofactor = lsb * 5 * L             (modulo 8*L)
+    //   combined = scalar + cofactor       (modulo 8*L)
+    //   combined = scalar + (lsb * 5 * L)  (modulo 8*L)
+    add_xl(scalar, secret_key[0] * 5);
+    scalarmult(public_key, scalar, dangerous_base_point, 256);
+    WIPE_BUFFER(scalar);
+}
+
+// "Fast" dangerous ephemeral key
+//
+// This version works by performing a regular scalar multiplication,
+// then add a low order point.  The scalar multiplication is done in
+// Edwards space for more speed.  The cost is a bigger binary programs
+// that don't also sign messages.
+void crypto_x25519_dangerous_fast(u8 public_key[32], const u8 secret_key[32])
+{
+    static const fe lop_x = {
+        21352778, 5345713, 4660180, -8347857, 24143090,
+        14568123, 30185756, -12247770, -33528939, 8345319,
+    };
+    static const fe lop_y = {
+        -6952922, -1265500, 6862341, -7057498, -4037696,
+        -5447722, 31680899, -15325402, -19365852, 1569102,
+    };
+
+    u8 scalar[32];
+    ge pk;
+    trim_scalar(scalar, secret_key);
+    ge_scalarmult_base(&pk, scalar);
+
+    // Select low order point
+    // We're computing the [cofactor]lop scalar multiplication, where:
+    //   cofactor = tweak & 7.
+    //   lop      = (lop_x, lop_y)
+    //   lop_x    = sqrt((sqrt(d + 1) + 1) / d)
+    //   lop_y    = -lop_x * sqrtm1
+    // Notes:
+    // - A (single) Montgomery ladder would be twice as slow.
+    // - An actual scalar multiplication would hurt performance.
+    // - A full table lookup would take more code.
+    u8 cofactor = secret_key[0] & 7;
+    int a = (cofactor >> 2) & 1;
+    int b = (cofactor >> 1) & 1;
+    int c = (cofactor >> 0) & 1;
+    fe t1, t2, t3;
+    fe_0(t1);
+    fe_ccopy(t1, sqrtm1, b);
+    fe_ccopy(t1, lop_x , c);
+    fe_neg  (t3, t1);
+    fe_ccopy(t1, t3, a);
+    fe_1(t2);
+    fe_0(t3);
+    fe_ccopy(t2, t3   , b);
+    fe_ccopy(t2, lop_y, c);
+    fe_neg  (t3, t2);
+    fe_ccopy(t2, t3, a^b);
+    ge_precomp low_order_point;
+    fe_add(low_order_point.Yp, t2, t1);
+    fe_sub(low_order_point.Ym, t2, t1);
+    fe_mul(low_order_point.T2, t2, t1);
+    fe_mul(low_order_point.T2, low_order_point.T2, D2);
+
+    // Add low order point to the public key
+    ge_madd(&pk, &pk, &low_order_point, t1, t2);
+
+    // Convert to Montgomery u coordinate (we ignore the sign)
+    fe_add(t1, pk.Z, pk.Y);
+    fe_sub(t2, pk.Z, pk.Y);
+    fe_invert(t2, t2);
+    fe_mul(t1, t1, t2);
+
+    fe_tobytes(public_key, t1);
+
+    WIPE_BUFFER(t1);  WIPE_BUFFER(scalar);
+    WIPE_BUFFER(t2);  WIPE_CTX(&pk);
+    WIPE_BUFFER(t3);  WIPE_CTX(&low_order_point);
+}
 
 ///////////////////
 /// Elligator 2 ///
 ///////////////////
-
 static const fe A = {486662};
 
+// Elligator direct map
+//
+// Computes the point corresponding to a representative, encoded in 32
+// bytes (little Endian).  Since positive representatves fits in 254
+// bits, The two most significant bits are ignored.
+//
 // From the paper:
 // w = -A / (fe(1) + non_square * r^2)
 // e = chi(w^3 + A*w^2 + w)
@@ -2339,131 +2510,49 @@ void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
     WIPE_BUFFER(t3);  WIPE_BUFFER(clamped);
 }
 
-// Compute the representative of a point (defined by the secret key and
-// tweak), if possible.  If not it does nothing and returns -1.  Note
-// that the success of the operation depends only on the value of
-// secret_key.  The tweak parameter is used only when we succeed.
+// Elligator inverse map
+//
+// Computes the representative of a point, if possible.  If not, it does
+// nothing and returns -1.  Note that the success of the operation
+// depends only on the point (more precisely its u coordinate).  The
+// tweak parameter is used only upon success
 //
 // The tweak should be a random byte.  Beyond that, its contents are an
-// implementation detail. Currently, the tweak comprises 2 parts:
+// implementation detail. Currently, the tweak comprises:
 // - Bit  1  : sign of the v coordinate (0 if positive, 1 if negative)
 // - Bit  2-5: not used
 // - Bits 6-7: random padding
 //
-// Note that to ensure the representative is fully random, we do *not*
-// clear the cofactor. It is otherwise compatible with X25519 (once
-// converted with crypto_hidden_to_curve()).
+// From the paper:
+// Let sq = -non_square * u * (u+A)
+// if sq is not a square, or u = -A, there is no mapping
+// Assuming there is a mapping:
+//   if v is positive: r = sqrt(-(u+A) / u)
+//   if v is negative: r = sqrt(-u / (u+A))
 //
-// This compatibility was achieved by clamping the scalar, like we do
-// with regular X25519 key exchanges.  The cost is a very small bias in
-// key distribution.
+// We compute isr = invsqrt(-non_square * u * (u+A))
+// if it wasn't a non-zero square, abort.
+// else, isr = sqrt(-1 / (non_square * u * (u+A))
 //
-// Recall that Curve25519 has order C = 2^255 + e, with e < 2^128 (not
-// to be confused with the prime order of the main subgroup, L, which is
-// 8 times less than that).
+// This causes us to abort if u is zero, even though we shouldn't. This
+// never happens in practice, because (i) a random point in the curve has
+// a negligible chance of being zero, and (ii) scalar multiplication with
+// a trimmed scalar *never* yields zero.
 //
-// Generating all points would require us to multiply a point of order C
-// (the base point plus any point of order 8) by all scalars from 0 to
-// C-1.  Clamping limits us to scalars between 2^254 and 2^255 - 1. But
-// since we also negate the resulting point at random, we also cover
-// scalars from -2^255 + 1 to -2^254 (which modulo C is congruent to e+1
-// to 2^254 + e).
-//
-// In practice:
-// - Scalars from 0         to e + 1     are never generated
-// - Scalars from 2^255     to 2^255 + e are never generated
-// - Scalars from 2^254 + 1 to 2^254 + e are generated twice
-//
-// Since e < 2^128, detecting this bias requires observing over 2^100
-// representatives from a given source (this will never happen), *and*
-// recovering enough of the private key to determine that they do, or do
-// not, belong to the bias set (this practically requires solving
-// discrete logarithm, which is conjecturally intractable).
-//
-// In practice, this means the bias is impossible to detect.
-int crypto_private_to_hidden(u8 hidden[32], const u8 secret_key[32], u8 tweak)
+// Since:
+//   isr * (u+A) = sqrt(-1     / (non_square * u * (u+A)) * (u+A)
+//   isr * (u+A) = sqrt(-(u+A) / (non_square * u * (u+A))
+// and:
+//   isr = u = sqrt(-1 / (non_square * u * (u+A)) * u
+//   isr = u = sqrt(-u / (non_square * u * (u+A))
+// Therefore:
+//   if v is positive: r = isr * (u+A)
+//   if v is negative: r = isr * u
+int crypto_curve_to_hidden(u8 hidden[32], const u8 public_key[32], u8 tweak)
 {
-    static const fe lop_x = {
-        21352778, 5345713, 4660180, -8347857, 24143090,
-        14568123, 30185756, -12247770, -33528939, 8345319,
-    };
-    static const fe lop_y = {
-        -6952922, -1265500, 6862341, -7057498, -4037696,
-        -5447722, 31680899, -15325402, -19365852, 1569102,
-    };
-
-    u8 scalar[32];
-    ge pk;
-    trim_scalar(scalar, secret_key);
-    ge_scalarmult_base(&pk, scalar);
-
-    // Select low order point
-    // We're computing the [cofactor]lop scalar multiplication, where:
-    //   cofactor = tweak & 7.
-    //   lop      = (lop_x, lop_y)
-    //   lop_x    = sqrt((sqrt(d + 1) + 1) / d)
-    //   lop_y    = -lop_x * sqrtm1
-    // Notes:
-    // - A (single) Montgomery ladder would be twice as slow.
-    // - An actual scalar multiplication would hurt performance.
-    // - A full table lookup would take more code.
-    u8 cofactor = secret_key[0] & 7;
-    int a = (cofactor >> 2) & 1;
-    int b = (cofactor >> 1) & 1;
-    int c = (cofactor >> 0) & 1;
     fe t1, t2, t3;
-    fe_0(t1);
-    fe_ccopy(t1, sqrtm1, b);
-    fe_ccopy(t1, lop_x , c);
-    fe_neg  (t3, t1);
-    fe_ccopy(t1, t3, a);
-    fe_1(t2);
-    fe_0(t3);
-    fe_ccopy(t2, t3   , b);
-    fe_ccopy(t2, lop_y, c);
-    fe_neg  (t3, t2);
-    fe_ccopy(t2, t3, a^b);
-    ge_precomp low_order_point;
-    fe_add(low_order_point.Yp, t2, t1);
-    fe_sub(low_order_point.Ym, t2, t1);
-    fe_mul(low_order_point.T2, t2, t1);
-    fe_mul(low_order_point.T2, low_order_point.T2, D2);
+    fe_frombytes(t1, public_key);
 
-    // Add low order point to the public key
-    ge_madd(&pk, &pk, &low_order_point, t1, t2);
-
-    // Convert to Montgomery u coordinate (we ignore the sign)
-    fe_add(t1, pk.Z, pk.Y);
-    fe_sub(t2, pk.Z, pk.Y);
-    fe_invert(t2, t2);
-    fe_mul(t1, t1, t2);
-
-    // Convert to representative
-    // From the paper:
-    // Let sq = -non_square * u * (u+A)
-    // if sq is not a square, or u = -A, there is no mapping
-    // Assuming there is a mapping:
-    //   if v is positive: r = sqrt(-(u+A) / u)
-    //   if v is negative: r = sqrt(-u / (u+A))
-    //
-    // We compute isr = invsqrt(-non_square * u * (u+A))
-    // if it wasn't a non-zero square, abort.
-    // else, isr = sqrt(-1 / (non_square * u * (u+A))
-    //
-    // This causes us to abort if u is zero, even though we shouldn't. This
-    // never happens in practice, because (i) a random point in the curve has
-    // a negligible chance of being zero, and (ii) scalar multiplication with
-    // a trimmed scalar *never* yields zero.
-    //
-    // Since:
-    //   isr * (u+A) = sqrt(-1     / (non_square * u * (u+A)) * (u+A)
-    //   isr * (u+A) = sqrt(-(u+A) / (non_square * u * (u+A))
-    // and:
-    //   isr = u = sqrt(-1 / (non_square * u * (u+A)) * u
-    //   isr = u = sqrt(-u / (non_square * u * (u+A))
-    // Therefore:
-    //   if v is positive: r = isr * (u+A)
-    //   if v is negative: r = isr * u
     fe_add(t2, t1, A);
     fe_mul(t3, t1, t2);
     fe_mul_small(t3, t3, -2);
@@ -2472,9 +2561,9 @@ int crypto_private_to_hidden(u8 hidden[32], const u8 secret_key[32], u8 tweak)
         // The only variable time bit.  This ultimately reveals how many
         // tries it took us to find a representable key.
         // This does not affect security as long as we try keys at random.
-        WIPE_BUFFER(t1);  WIPE_BUFFER(scalar);
-        WIPE_BUFFER(t2);  WIPE_CTX(&pk);
-        WIPE_BUFFER(t3);  WIPE_CTX(&low_order_point);
+        WIPE_BUFFER(t1);
+        WIPE_BUFFER(t2);
+        WIPE_BUFFER(t3);
         return -1;
     }
     fe_ccopy(t1, t2, tweak & 1);
@@ -2487,30 +2576,32 @@ int crypto_private_to_hidden(u8 hidden[32], const u8 secret_key[32], u8 tweak)
     // Pad with two random bits
     hidden[31] |= tweak & 0xc0;
 
-    WIPE_BUFFER(t1);  WIPE_BUFFER(scalar);
-    WIPE_BUFFER(t2);  WIPE_CTX(&pk);
-    WIPE_BUFFER(t3);  WIPE_CTX(&low_order_point);
+    WIPE_BUFFER(t1);
+    WIPE_BUFFER(t2);
+    WIPE_BUFFER(t3);
     return 0;
 }
 
 void crypto_hidden_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
 {
-    u8 buf[64];
+    u8 pk [32]; // public key
+    u8 buf[64]; // seed + representative
     COPY(buf + 32, seed, 32);
     do {
         crypto_chacha20(buf, 0, 64, buf+32, zero);
-    } while(crypto_private_to_hidden(buf+32, buf, buf[32]));
-    // Note that buf[32] is not actually reused.  Either we loop one
+        crypto_x25519_dangerous_fast(pk, buf); // or the "small" version
+    } while(crypto_curve_to_hidden(buf+32, pk, buf[32]));
+    // Note that the return value of crypto_private_to_hidden() is
+    // independent from its tweak parameter.
+    // Therefore, buf[32] is not actually reused.  Either we loop one
     // more time and buf[32] is used for the new seed, or we succeeded,
-    // and buf[32] is used as a tweak parameter.
-    //
-    // This is because the return value of crypto_private_to_hidden()
-    // is independent from its tweak parameter.
+    // and buf[32] becomes the tweak parameter.
 
     crypto_wipe(seed, 32);
     COPY(hidden    , buf + 32, 32);
     COPY(secret_key, buf     , 32);
     WIPE_BUFFER(buf);
+    WIPE_BUFFER(pk);
 }
 
 ////////////////////
@@ -2547,23 +2638,15 @@ void crypto_x25519_inverse(u8       blind_salt [32],
         }
     }
     // Clear the cofactor of inverse:
-    //   inverse <- inverse * (3*L + 1)
-    // The order of the curve being 8*L, we can simplify down to
-    //   inverse <- inverse + L * ((inverse*3) % 8)
-    //
-    // Before the operation, inverse < L.
-    // After the operation, inverse < 8*L.
-    // Therefore, inverse fits in 256 bits (32 bytes)
-    u32 mod8  = (inverse[0] * 3) & 7;
-    u32 carry = 0;
-    FOR (i , 0, 32) {
-        carry = carry + inverse[i] + L[i] * mod8;
-        inverse[i]  = (u8)carry;
-        carry >>= 8;
-    }
+    //   cleared = inverse * (3*L + 1)       (modulo 8*L)
+    //   cleared = inverse + inverse * 3 * L (modulo 8*L)
+    // Note that (inverse * 3) is reduced modulo 8, so we only need the
+    // first byte.
+    add_xl(inverse, inverse[0] * 3);
+
     // Recall that 8*L < 2^256. However it is also very close to
     // 2^255. If we spaned the ladder over 255 bits, random tests
-    // wouldn't catch the of-by-one error.
+    // wouldn't catch the off-by-one error.
     scalarmult(blind_salt, inverse, curve_point, 256);
 }
 

@@ -294,10 +294,10 @@ static void elligator_dir(const vector in[], vector *out)
 
 static void elligator_inv(const vector in[], vector *out)
 {
-    const vector *sk = in;
+    const vector *point = in;
     u8  tweak   = in[1].buf[0];
     u8  failure = in[2].buf[0];
-    int check   = crypto_private_to_hidden(out->buf, sk->buf, tweak);
+    int check   = crypto_curve_to_hidden(out->buf, point->buf, tweak);
     if ((u8)check != failure) {
         fprintf(stderr, "Elligator inverse map: failure mismatch\n");
     }
@@ -901,11 +901,11 @@ static int p_elligator_inverse_overlap()
     FOR (i, 0, 62) {
         u8 overlapping[94];
         u8 separate[32];
-        RANDOM_INPUT(sk, 33);
-        u8 tweak = sk[32];
-        memcpy(overlapping + 31, sk, 32);
-        int a = crypto_private_to_hidden(overlapping+i, overlapping+31, tweak);
-        int b = crypto_private_to_hidden(separate, sk, tweak);
+        RANDOM_INPUT(pk, 33);
+        u8 tweak = pk[32];
+        memcpy(overlapping + 31, pk, 32);
+        int a = crypto_curve_to_hidden(overlapping+i, overlapping+31, tweak);
+        int b = crypto_curve_to_hidden(separate, pk, tweak);
         status |= a - b;
         if (a == 0) {
             // The buffers are the same only if written to to begin with
@@ -924,12 +924,23 @@ static int p_elligator_x25519()
     while (i < 64) {
         RANDOM_INPUT(sk1, 32);
         RANDOM_INPUT(sk2, 32);
+        // Maximise tweak diversity.
+        // We want to set the bits 1 (sign) and 6-7 (padding)
+        u8 tweak = (i & 1) + (i << 6);
+        // Both dangerous functions behave the same
+        u8 pks[32];  crypto_x25519_dangerous_small(pks, sk1);
+        u8 pkf[32];  crypto_x25519_dangerous_fast (pkf, sk1);
+        status |= memcmp(pks, pkf, 32);
         u8 r[32];
-        if (crypto_private_to_hidden(r, sk1, i)) {
+        if (crypto_curve_to_hidden(r, pkf, tweak)) {
             continue;
         }
-        u8 pkr[32];  crypto_hidden_to_curve(pkr, r);
+        // Round trip
         u8 pk1[32];  crypto_x25519_public_key(pk1, sk1);
+        u8 pkr[32];  crypto_hidden_to_curve(pkr, r);
+        status |= memcmp(pkr, pkf, 32);
+
+        // Dangerous and safe keys are compatible
         u8 e1 [32];  crypto_x25519(e1, sk2, pk1);
         u8 e2 [32];  crypto_x25519(e2, sk2, pkr);
         status |= memcmp(e1, e2, 32);
