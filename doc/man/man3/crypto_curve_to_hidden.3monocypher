@@ -82,6 +82,8 @@ This is of interest for key exchange protocols that require
 indistinguishability from randomness, such as padded uniform random
 blobs (PURBs) and exponential blinding in oblivious pseudo-random
 functions (OPRFs).
+They are intended for ephemeral (short-lived, possibly just one-time)
+X25519 keys, not for long-term public keys.
 This is an
 .Em advanced feature
 \(en unless you are implementing an protocol that requires
