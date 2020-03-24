@@ -114,19 +114,25 @@ and
 .Fa your_secret_key
 may overlap if your secret is no longer required.
 .El
+.Pp
+Some protocols,
+such as some password-authenticated key exchange (PAKE) protocols
+and oblivious pseudo-random functions (OPRF),
+may require
+.Dq contributory
+behaviour, which ensures that no untrusted party forces the shared
+secret to a known constant.
+If a protocol requires contributory behaviour,
+compare the output of
+.Fn crypto_x25519
+to an all-zero buffer using
+.Xr crypto_verify32 3monocypher ;
+abort the protocol if the output and the all-zero buffer are equal.
 .Sh RETURN VALUES
 .Fn crypto_x25519
 and
 .Fn crypto_x25519_public_key
 return nothing.
-.Pp
-Some poorly designed protocols require to test for
-.Dq contributory
-behaviour, which ensures that no untrusted party forces the shared
-secret to a known constant.
-Protocols should instead be designed in such a way that no such check
-is necessary, namely by authenticating the other party or exchanging
-keys over a trusted channel.
 .Sh EXAMPLES
 The following example assumes the existence of
 .Fn arc4random_buf ,

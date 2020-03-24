@@ -108,11 +108,6 @@ with
 and
 .Fa your_secret_key
 may overlap if the secret is no longer required.
-.Sh RETURN VALUES
-.Fn crypto_key_exchange
-and
-.Fn crypto_key_exchange_public_key
-return nothing.
 .Pp
 Some poorly designed protocols require to test for
 .Dq contributory
@@ -121,6 +116,11 @@ secret to a known constant.
 Protocols should instead be designed in such a way that no such check
 is necessary, namely by authenticating the other party or exchanging
 keys over a trusted channel.
+.Sh RETURN VALUES
+.Fn crypto_key_exchange
+and
+.Fn crypto_key_exchange_public_key
+return nothing.
 .Sh EXAMPLES
 The following examples assume the existence of
 .Fn arc4random_buf ,
