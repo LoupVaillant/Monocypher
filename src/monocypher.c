@@ -2296,6 +2296,9 @@ static void add_xl(u8 s[32], u8 x)
 }
 
 // "Small" dangerous ephemeral key.
+// Use if you need to shrink the size of the binary, and can tolerate a
+// slowdow by a factor of two (compared to the fast version)
+//
 // This version works by decoupling the cofactor from the main factor.
 //
 // - The trimmed scalar determines the main factor
@@ -2336,11 +2339,12 @@ void crypto_x25519_dangerous_small(u8 public_key[32], const u8 secret_key[32])
 }
 
 // "Fast" dangerous ephemeral key
+// We use this one by default.
 //
 // This version works by performing a regular scalar multiplication,
 // then add a low order point.  The scalar multiplication is done in
-// Edwards space for more speed.  The cost is a bigger binary programs
-// that don't also sign messages.
+// Edwards space for more speed (*2 compared to the "small" version).
+// The cost is a bigger binary programs that don't also sign messages.
 void crypto_x25519_dangerous_fast(u8 public_key[32], const u8 secret_key[32])
 {
     static const fe lop_x = {

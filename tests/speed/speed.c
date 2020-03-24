@@ -184,6 +184,24 @@ static u64 x25519_inverse(void)
     TIMING_END;
 }
 
+static u64 x25519_sp_fast(void)
+{
+    RANDOM_INPUT(sk, 32);
+    TIMING_START {
+        crypto_x25519_dangerous_fast(sk, sk);
+    }
+    TIMING_END;
+}
+
+static u64 x25519_sp_small(void)
+{
+    RANDOM_INPUT(sk, 32);
+    TIMING_START {
+        crypto_x25519_dangerous_small(sk, sk);
+    }
+    TIMING_END;
+}
+
 int main()
 {
     print("Chacha20            ",chacha20()     *MUL ,"megabytes  per second");
@@ -196,6 +214,8 @@ int main()
     print("EdDSA(sign)         ",edDSA_sign()        ,"signatures per second");
     print("EdDSA(check)        ",edDSA_check()       ,"checks     per second");
     print("x25519 inverse      ",x25519_inverse()    ,"scalar inv per second");
+    print("x25519 special fast ",x25519_sp_fast()    ,"scalar inv per second");
+    print("x25519 special small",x25519_sp_small()    ,"scalar inv per second");
     printf("\n");
     return 0;
 }
