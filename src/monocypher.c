@@ -2417,7 +2417,7 @@ static const fe A = {486662};
 // Elligator direct map
 //
 // Computes the point corresponding to a representative, encoded in 32
-// bytes (little Endian).  Since positive representatves fits in 254
+// bytes (little Endian).  Since positive representatives fits in 254
 // bits, The two most significant bits are ignored.
 //
 // From the paper:
@@ -2619,9 +2619,9 @@ void crypto_key_exchange(u8       shared_key[32],
     crypto_hchacha20(shared_key, shared_key, zero);
 }
 
-//////////////////////
-/// Scalar divison ///
-//////////////////////
+///////////////////////
+/// Scalar division ///
+///////////////////////
 void crypto_x25519_inverse(u8       blind_salt [32],
                            const u8 private_key[32],
                            const u8 curve_point[32])
