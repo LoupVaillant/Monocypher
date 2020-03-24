@@ -54,7 +54,7 @@
 .Sh NAME
 .Nm crypto_x25519_dangerous_fast ,
 .Nm crypto_x25519_dangerous_small
-.Nd generation of Curve25519 points including low-order points
+.Nd generation of Curve25519 points with a low-order component
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
@@ -97,26 +97,22 @@ accordingly, it uses both more memory (for the temporary variables) and
 more code size (unless the signing code is already compiled in
 elsewhere).
 .Fn crypto_x25519_dangerous_small
-yields the same result, but does so using less time and memory at a
+yields the same result, but does so using less code and memory at a
 large performance penalty compared to
 .Fn crypto_x25519_dangerous_fast .
 .Pp
-The resulting public keys
-.Em may
-be used with
+The resulting public keys are to be used with
 .Xr crypto_x25519 3monocypher
 and
 .Xr crypto_key_exchange 3monocypher ,
 which clear the cofactor,
-but are dangerous for other uses because they contain low-order points,
-and may trip up other implementations of X25519.
 .Sh RETURN VALUES
 These functions have no return value.
 They cannot fail.
 .Sh SEE ALSO
 .Xr crypto_curve_to_hidden 3monocypher ,
-.Xr crypto_key_exchange 3monocypher ,
-.Xr crypto_x25519 3monocypher ,
+.Xr crypto_key_exchange_public_key 3monocypher ,
+.Xr crypto_x25519_public_key 3monocypher ,
 .Xr intro 3monocypher
 .Sh HISTORY
 The
@@ -125,11 +121,11 @@ and
 .Fn crypto_x25519_dangerous_small
 functions first appeared in Monocypher 3.1.0.
 .Sh IMPLEMENTATION DETAILS
-The slow variant is approximately an entire 1.8 times slower than the
+The slow variant is approximately an entire two times slower than the
 fast variant.
 When considering that, on average, two calls to this function will be
 required for obtaining a valid keypair for
 .Xr crypto_curve_to_hidden 3monocypher ,
 this adds up to an
 .Em average
-effective slowdown for key pair generation of a factor of 3.6.
+effective slowdown for key pair generation of a factor of four.

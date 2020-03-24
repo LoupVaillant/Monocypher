@@ -80,16 +80,18 @@ These functions allow obfuscating X25519 public keys by making
 them appear effectively indistinguishable from random noise.
 This is of interest for key exchange protocols that require
 indistinguishability from randomness, such as padded uniform random
-blobs (PURBs) and exponential blinding in oblivious pseudo-random
-functions (OPRFs).
+blobs (PURBs).
 They are intended for ephemeral (short-lived, possibly just one-time)
 X25519 keys, not for long-term public keys.
+After an initial key exchange involving hidden keys,
+subsequent key exchange messages should be encrypted instead;
+see, for example, the Noise protocol.
 This is an
 .Em advanced feature
 \(en unless you are implementing an protocol that requires
 indistinguishability of all communications from random noise,
 consider
-.Xr crypto_key_exchange 3monocypher
+.Xr crypto_key_exchange_public_key 3monocypher
 instead.
 .Pp
 For understanding what these functions do, it is important to note that
@@ -97,7 +99,7 @@ a
 .Dq public key
 in this context refers to a
 .Em point on Curve25519 .
-This also means that these functions yield data unsuitable for use with
+This also means that these functions are not compatible with
 .Xr crypto_sign 3monocypher
 and related functions.
 .Pp
@@ -112,7 +114,7 @@ Note that only
 .Xr crypto_x25519_dangerous_fast 3monocypher
 or
 .Xr crypto_x25519_dangerous_small 3monocypher
-to generate a suitable public key;
+can generate a suitable public key;
 the
 .Xr crypto_x25519 3monocypher
 function is insufficient.
@@ -125,7 +127,10 @@ fail:
 Not all curve points are capable of being hidden.
 In this case,
 .Fn crypto_curve_to_hidden
-must be tried again with a new key pair.
+must be tried again with a new key pair;
+the
+.Fa tweak
+does not need to be changed.
 On average, two attempts are needed.
 Once a suitable public key has been found,
 .Fn crypto_curve_to_hidden
@@ -146,8 +151,7 @@ It decodes a hidden point to a curve point on Curve25519.
 is a convenience function that generates a secret key and its
 corresponding public key, which is effectively indistinguishable from
 random noise from a random seed.
-The
-.Em execution time of this function is unpredictable
+.Em The execution time of this function is unpredictable
 because it may take many failures until a key pair could be generated
 successfully.
 .Fn crypto_hidden_key_pair
@@ -156,7 +160,7 @@ uses
 internally;
 if code size is an important concern,
 its functionality can be replicated with
-.Xr crypto_x25519_dangerous_fast 3monocypher
+.Xr crypto_x25519_dangerous_small 3monocypher
 instead.
 .Pp
 The arguments are:
@@ -189,10 +193,9 @@ which influences the final output of
 .El
 .Pp
 The
-.Fa hidden ,
-.Fa curve ,
+.Fa hidden
 and
-.Fa tweak
+.Fa curve
 arguments may overlap or point at the same buffer.
 .Sh RETURN VALUES
 .Fn crypto_curve_to_hidden
@@ -212,18 +215,14 @@ instead of its fast variant:
 uint8_t sk  [32]; /* Secret key output        */
 uint8_t pk  [32]; /* Hidden public key output */
 uint8_t tweak;    /* Random tweak input       */
-arc4random_buf(tweak, 1);
+arc4random_buf(&tweak, 1);
 for (;;) {
     arc4random_buf(sk, 32);
     crypto_x25519_dangerous_small(pk, sk);
     if (crypto_curve_to_hidden(pk, pk, tweak) == 0)
         break;
 }
-/* Now save either:
- * - the key pair (sk, pk), or
- * - the secret key and tweak (sk, tweak) to reliably
- *   re-generate the same value of pk.
- */
+/* Now save the secret key and send the hidden public key. */
 .Ed
 .Pp
 Performing a key exchange with the other party's public key having been
