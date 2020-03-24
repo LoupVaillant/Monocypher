@@ -49,11 +49,11 @@
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
 .Dd March 24, 2020
-.Dt CRYPTO_X25519_DANGEROUS_FAST 3monocypher
+.Dt CRYPTO_X25519_DIRTY_FAST 3monocypher
 .Os
 .Sh NAME
-.Nm crypto_x25519_dangerous_fast ,
-.Nm crypto_x25519_dangerous_small
+.Nm crypto_x25519_dirty_fast ,
+.Nm crypto_x25519_dirty_small
 .Nd generation of Curve25519 points with a low-order component
 .Sh SYNOPSIS
 .In monocypher.h
@@ -89,17 +89,17 @@ the public keys are on the
 .Em whole
 curve, rather than just the main prime-order subgroup.
 but do the same with different code size and memory characteristics:
-.Fn crypto_x25519_dangerous_fast
+.Fn crypto_x25519_dirty_fast
 uses multiple large temporary variables and uses functions that are
 normally used internally for
 .Xr crypto_sign 3monocypher ;
 accordingly, it uses both more memory (for the temporary variables) and
 more code size (unless the signing code is already compiled in
 elsewhere).
-.Fn crypto_x25519_dangerous_small
+.Fn crypto_x25519_dirty_small
 yields the same result, but does so using less code and memory at a
 large performance penalty compared to
-.Fn crypto_x25519_dangerous_fast .
+.Fn crypto_x25519_dirty_fast .
 .Pp
 The resulting public keys are to be used with
 .Xr crypto_x25519 3monocypher
@@ -116,9 +116,9 @@ They cannot fail.
 .Xr intro 3monocypher
 .Sh HISTORY
 The
-.Fn crypto_x25519_dangerous_fast
+.Fn crypto_x25519_dirty_fast
 and
-.Fn crypto_x25519_dangerous_small
+.Fn crypto_x25519_dirty_small
 functions first appeared in Monocypher 3.1.0.
 .Sh IMPLEMENTATION DETAILS
 The slow variant is approximately an entire two times slower than the
