@@ -252,6 +252,11 @@ void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
                                    const uint8_t public_key[32],
                                    const crypto_sign_vtable *hash);
 
+// EdDSA to X25519
+// ---------------
+void crypto_from_eddsa_private(uint8_t x25519[32], const uint8_t eddsa[32]);
+void crypto_from_eddsa_public (uint8_t x25519[32], const uint8_t eddsa[32]);
+
 // Elligator 2
 // -----------
 

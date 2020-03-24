@@ -135,5 +135,8 @@ void crypto_ed25519_check_init(crypto_check_ctx_abstract *ctx,
 #define crypto_ed25519_check_update crypto_check_update
 #define crypto_ed25519_check_final crypto_check_final
 
+void crypto_from_ed25519_private(uint8_t x25519[32], const uint8_t eddsa[32]);
+#define crypto_from_ed25519_public crypto_from_eddsa_public
+
 
 #endif // ED25519_H

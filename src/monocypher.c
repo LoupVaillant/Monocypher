@@ -2235,6 +2235,32 @@ int crypto_check(const u8  signature[64],
     return crypto_check_final(actx);
 }
 
+///////////////////////
+/// EdDSA to X25519 ///
+///////////////////////
+void crypto_from_eddsa_private(u8 x25519[32], const u8 eddsa[32])
+{
+    u8 a[64];
+    crypto_blake2b(a, eddsa, 32);
+    COPY(x25519, a, 32);
+    WIPE_BUFFER(a);
+}
+
+static const fe fe_one = {1};
+
+void crypto_from_eddsa_public(u8 x25519[32], const u8 eddsa[32])
+{
+    fe t1, t2;
+    fe_frombytes(t2, eddsa);
+    fe_add(t1, fe_one, t2);
+    fe_sub(t2, fe_one, t2);
+    fe_invert(t2, t2);
+    fe_mul(t1, t1, t2);
+    fe_tobytes(x25519, t1);
+    WIPE_BUFFER(t1);
+    WIPE_BUFFER(t2);
+}
+
 /////////////////////////////////////////////
 /// Dirty ephemeral public key generation ///
 /////////////////////////////////////////////
@@ -2479,7 +2505,6 @@ void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
         544946, -16816446, 4011309, -653372, 10741468,
     };
     static const fe A2  = {12721188, 3529, 0, 0, 0, 0, 0, 0, 0, 0};
-    static const fe one = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     // Representatives are encoded in 254 bits.
     // The two most significant ones are random padding that must be ignored.
@@ -2490,7 +2515,7 @@ void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
     fe r, u, t1, t2, t3;
     fe_frombytes(r, clamped);
     fe_sq2(t1, r);
-    fe_add(u, t1, one);
+    fe_add(u, t1, fe_one);
     fe_sq (t2, u);
     fe_mul(t3, A2, t1);
     fe_sub(t3, t3, t2);
@@ -2500,7 +2525,7 @@ void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
     int is_square = invsqrt(t1, t1);
     fe_sq(u, r);
     fe_mul(u, u, ufactor);
-    fe_ccopy(u, one, is_square);
+    fe_ccopy(u, fe_one, is_square);
     fe_sq (t1, t1);
     fe_mul(u, u, A);
     fe_mul(u, u, t3);
