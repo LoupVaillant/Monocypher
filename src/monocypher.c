@@ -2652,6 +2652,9 @@ void crypto_x25519_inverse(u8       blind_salt [32],
     // 2^255. If we spaned the ladder over 255 bits, random tests
     // wouldn't catch the off-by-one error.
     scalarmult(blind_salt, inverse, curve_point, 256);
+
+    WIPE_BUFFER(scalar);
+    WIPE_BUFFER(inverse);
 }
 
 ////////////////////////////////
