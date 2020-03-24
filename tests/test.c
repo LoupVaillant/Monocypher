@@ -927,9 +927,9 @@ static int p_elligator_x25519()
         // Maximise tweak diversity.
         // We want to set the bits 1 (sign) and 6-7 (padding)
         u8 tweak = (i & 1) + (i << 6);
-        // Both dangerous functions behave the same
-        u8 pks[32];  crypto_x25519_dangerous_small(pks, sk1);
-        u8 pkf[32];  crypto_x25519_dangerous_fast (pkf, sk1);
+        // Both dirty functions behave the same
+        u8 pks[32];  crypto_x25519_dirty_small(pks, sk1);
+        u8 pkf[32];  crypto_x25519_dirty_fast (pkf, sk1);
         status |= memcmp(pks, pkf, 32);
         u8 r[32];
         if (crypto_curve_to_hidden(r, pkf, tweak)) {
@@ -940,7 +940,7 @@ static int p_elligator_x25519()
         u8 pkr[32];  crypto_hidden_to_curve(pkr, r);
         status |= memcmp(pkr, pkf, 32);
 
-        // Dangerous and safe keys are compatible
+        // Dirty and safe keys are compatible
         u8 e1 [32];  crypto_x25519(e1, sk2, pk1);
         u8 e2 [32];  crypto_x25519(e2, sk2, pkr);
         status |= memcmp(e1, e2, 32);

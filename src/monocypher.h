@@ -335,10 +335,10 @@ void crypto_x25519(uint8_t       raw_shared_secret[32],
                    const uint8_t your_secret_key  [32],
                    const uint8_t their_public_key [32]);
 
-// "Dangerous" versions of x25519_public_key()
+// "Dirty" versions of x25519_public_key()
 // Only use to generate ephemeral keys you want to hide.
-void crypto_x25519_dangerous_small(uint8_t pk[32], const uint8_t sk[32]);
-void crypto_x25519_dangerous_fast (uint8_t pk[32], const uint8_t sk[32]);
+void crypto_x25519_dirty_small(uint8_t pk[32], const uint8_t sk[32]);
+void crypto_x25519_dirty_fast (uint8_t pk[32], const uint8_t sk[32]);
 
 // scalar division
 // ---------------

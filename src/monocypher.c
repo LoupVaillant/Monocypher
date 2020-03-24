@@ -2235,9 +2235,9 @@ int crypto_check(const u8  signature[64],
     return crypto_check_final(actx);
 }
 
-/////////////////////////////////////////////////
-/// Dangerous ephemeral public key generation ///
-/////////////////////////////////////////////////
+/////////////////////////////////////////////
+/// Dirty ephemeral public key generation ///
+/////////////////////////////////////////////
 
 // Those functions generates a public key, *without* clearing the
 // cofactor.  Sending that key over the network leaks 3 bits of the
@@ -2295,7 +2295,7 @@ static void add_xl(u8 s[32], u8 x)
     }
 }
 
-// "Small" dangerous ephemeral key.
+// "Small" dirty ephemeral key.
 // Use if you need to shrink the size of the binary, and can tolerate a
 // slowdow by a factor of two (compared to the fast version)
 //
@@ -2306,14 +2306,14 @@ static void add_xl(u8 s[32], u8 x)
 //
 // Cofactor and main factor are combined into a single scalar, which is
 // then multiplied by a point of order 8*L (unlike the base point, which
-// has prime order).  That "dangerous" base point is the addition of the
+// has prime order).  That "dirty" base point is the addition of the
 // regular base point (9), and a point of order 8.
-void crypto_x25519_dangerous_small(u8 public_key[32], const u8 secret_key[32])
+void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
 {
     // Base point of order 8*L
     // Raw scalar multiplication with it does not clear the cofactor,
     // and the resulting public key will reveal 3 bits of the scalar.
-    static const u8 dangerous_base_point[32] = {
+    static const u8 dirty_base_point[32] = {
         0x34, 0xfc, 0x6c, 0xb7, 0xc8, 0xde, 0x58, 0x97,
         0x77, 0x70, 0xd9, 0x52, 0x16, 0xcc, 0xdc, 0x6c,
         0x85, 0x90, 0xbe, 0xcd, 0x91, 0x9c, 0x07, 0x59,
@@ -2334,18 +2334,18 @@ void crypto_x25519_dangerous_small(u8 public_key[32], const u8 secret_key[32])
     //   combined = scalar + cofactor       (modulo 8*L)
     //   combined = scalar + (lsb * 5 * L)  (modulo 8*L)
     add_xl(scalar, secret_key[0] * 5);
-    scalarmult(public_key, scalar, dangerous_base_point, 256);
+    scalarmult(public_key, scalar, dirty_base_point, 256);
     WIPE_BUFFER(scalar);
 }
 
-// "Fast" dangerous ephemeral key
+// "Fast" dirty ephemeral key
 // We use this one by default.
 //
 // This version works by performing a regular scalar multiplication,
 // then add a low order point.  The scalar multiplication is done in
 // Edwards space for more speed (*2 compared to the "small" version).
 // The cost is a bigger binary programs that don't also sign messages.
-void crypto_x25519_dangerous_fast(u8 public_key[32], const u8 secret_key[32])
+void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
 {
     static const fe lop_x = {
         21352778, 5345713, 4660180, -8347857, 24143090,
@@ -2593,7 +2593,7 @@ void crypto_hidden_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
     COPY(buf + 32, seed, 32);
     do {
         crypto_chacha20(buf, 0, 64, buf+32, zero);
-        crypto_x25519_dangerous_fast(pk, buf); // or the "small" version
+        crypto_x25519_dirty_fast(pk, buf); // or the "small" version
     } while(crypto_curve_to_hidden(buf+32, pk, buf[32]));
     // Note that the return value of crypto_private_to_hidden() is
     // independent from its tweak parameter.
