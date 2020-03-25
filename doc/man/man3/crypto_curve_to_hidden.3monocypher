@@ -228,10 +228,10 @@ for (;;) {
 Performing a key exchange with the other party's public key having been
 hidden:
 .Bd -literal -offset indent
-uint8_t hidden_pk[32]; /* Their hidden public key   */
-uint8_t their_pk [32]; /* Their unhidden public key */
-uint8_t your_sk  [32]; /* Your secret key           */
-uint8_tshared_key[32]; /* Shared session key        */
+uint8_t hidden_pk [32]; /* Their hidden public key   */
+uint8_t their_pk  [32]; /* Their unhidden public key */
+uint8_t your_sk   [32]; /* Your secret key           */
+uint8_t shared_key[32]; /* Shared session key        */
 crypto_hidden_to_curve(their_pk, hidden_pk);
 crypto_key_exchange(shared_key, your_sk, their_pk);
 /* Wipe secrets if they are no longer needed */
