@@ -157,6 +157,8 @@ and
 .Xr crypto_check_init_custom_hash 3monocypher ,
 .Xr crypto_check_update 3monocypher ,
 .Xr crypto_curve_to_hidden 3monocypher ,
+.Xr crypto_from_eddsa_private 3monocypher ,
+.Xr crypto_from_eddsa_public 3monocypher ,
 .Xr crypto_hchacha20 3monocypher ,
 .Xr crypto_hidden_key_pair 3monocypher ,
 .Xr crypto_hidden_to_curve 3monocypher ,
@@ -191,6 +193,8 @@ and
 .Xr crypto_xchacha20 3monocypher ,
 .Xr crypto_xchacha20_ctr 3monocypher
 .Ss Optional code
+.Xr crypto_from_ed25519_private 3monocypher ,
+.Xr crypto_from_ed25519_public 3monocypher ,
 .Xr crypto_ed25519_check 3monocypher ,
 .Xr crypto_ed25519_check_init 3monocypher ,
 .Xr crypto_ed25519_check_update 3monocypher ,
