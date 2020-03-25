@@ -2235,9 +2235,35 @@ int crypto_check(const u8  signature[64],
     return crypto_check_final(actx);
 }
 
-/////////////////////////////////////////////////
-/// Dangerous ephemeral public key generation ///
-/////////////////////////////////////////////////
+///////////////////////
+/// EdDSA to X25519 ///
+///////////////////////
+void crypto_from_eddsa_private(u8 x25519[32], const u8 eddsa[32])
+{
+    u8 a[64];
+    crypto_blake2b(a, eddsa, 32);
+    COPY(x25519, a, 32);
+    WIPE_BUFFER(a);
+}
+
+static const fe fe_one = {1};
+
+void crypto_from_eddsa_public(u8 x25519[32], const u8 eddsa[32])
+{
+    fe t1, t2;
+    fe_frombytes(t2, eddsa);
+    fe_add(t1, fe_one, t2);
+    fe_sub(t2, fe_one, t2);
+    fe_invert(t2, t2);
+    fe_mul(t1, t1, t2);
+    fe_tobytes(x25519, t1);
+    WIPE_BUFFER(t1);
+    WIPE_BUFFER(t2);
+}
+
+/////////////////////////////////////////////
+/// Dirty ephemeral public key generation ///
+/////////////////////////////////////////////
 
 // Those functions generates a public key, *without* clearing the
 // cofactor.  Sending that key over the network leaks 3 bits of the
@@ -2295,7 +2321,7 @@ static void add_xl(u8 s[32], u8 x)
     }
 }
 
-// "Small" dangerous ephemeral key.
+// "Small" dirty ephemeral key.
 // Use if you need to shrink the size of the binary, and can tolerate a
 // slowdow by a factor of two (compared to the fast version)
 //
@@ -2306,14 +2332,14 @@ static void add_xl(u8 s[32], u8 x)
 //
 // Cofactor and main factor are combined into a single scalar, which is
 // then multiplied by a point of order 8*L (unlike the base point, which
-// has prime order).  That "dangerous" base point is the addition of the
+// has prime order).  That "dirty" base point is the addition of the
 // regular base point (9), and a point of order 8.
-void crypto_x25519_dangerous_small(u8 public_key[32], const u8 secret_key[32])
+void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
 {
     // Base point of order 8*L
     // Raw scalar multiplication with it does not clear the cofactor,
     // and the resulting public key will reveal 3 bits of the scalar.
-    static const u8 dangerous_base_point[32] = {
+    static const u8 dirty_base_point[32] = {
         0x34, 0xfc, 0x6c, 0xb7, 0xc8, 0xde, 0x58, 0x97,
         0x77, 0x70, 0xd9, 0x52, 0x16, 0xcc, 0xdc, 0x6c,
         0x85, 0x90, 0xbe, 0xcd, 0x91, 0x9c, 0x07, 0x59,
@@ -2334,18 +2360,18 @@ void crypto_x25519_dangerous_small(u8 public_key[32], const u8 secret_key[32])
     //   combined = scalar + cofactor       (modulo 8*L)
     //   combined = scalar + (lsb * 5 * L)  (modulo 8*L)
     add_xl(scalar, secret_key[0] * 5);
-    scalarmult(public_key, scalar, dangerous_base_point, 256);
+    scalarmult(public_key, scalar, dirty_base_point, 256);
     WIPE_BUFFER(scalar);
 }
 
-// "Fast" dangerous ephemeral key
+// "Fast" dirty ephemeral key
 // We use this one by default.
 //
 // This version works by performing a regular scalar multiplication,
 // then add a low order point.  The scalar multiplication is done in
 // Edwards space for more speed (*2 compared to the "small" version).
 // The cost is a bigger binary programs that don't also sign messages.
-void crypto_x25519_dangerous_fast(u8 public_key[32], const u8 secret_key[32])
+void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
 {
     static const fe lop_x = {
         21352778, 5345713, 4660180, -8347857, 24143090,
@@ -2417,7 +2443,7 @@ static const fe A = {486662};
 // Elligator direct map
 //
 // Computes the point corresponding to a representative, encoded in 32
-// bytes (little Endian).  Since positive representatves fits in 254
+// bytes (little Endian).  Since positive representatives fits in 254
 // bits, The two most significant bits are ignored.
 //
 // From the paper:
@@ -2479,7 +2505,6 @@ void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
         544946, -16816446, 4011309, -653372, 10741468,
     };
     static const fe A2  = {12721188, 3529, 0, 0, 0, 0, 0, 0, 0, 0};
-    static const fe one = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     // Representatives are encoded in 254 bits.
     // The two most significant ones are random padding that must be ignored.
@@ -2490,7 +2515,7 @@ void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
     fe r, u, t1, t2, t3;
     fe_frombytes(r, clamped);
     fe_sq2(t1, r);
-    fe_add(u, t1, one);
+    fe_add(u, t1, fe_one);
     fe_sq (t2, u);
     fe_mul(t3, A2, t1);
     fe_sub(t3, t3, t2);
@@ -2500,7 +2525,7 @@ void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
     int is_square = invsqrt(t1, t1);
     fe_sq(u, r);
     fe_mul(u, u, ufactor);
-    fe_ccopy(u, one, is_square);
+    fe_ccopy(u, fe_one, is_square);
     fe_sq (t1, t1);
     fe_mul(u, u, A);
     fe_mul(u, u, t3);
@@ -2593,7 +2618,7 @@ void crypto_hidden_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
     COPY(buf + 32, seed, 32);
     do {
         crypto_chacha20(buf, 0, 64, buf+32, zero);
-        crypto_x25519_dangerous_fast(pk, buf); // or the "small" version
+        crypto_x25519_dirty_fast(pk, buf); // or the "small" version
     } while(crypto_curve_to_hidden(buf+32, pk, buf[32]));
     // Note that the return value of crypto_private_to_hidden() is
     // independent from its tweak parameter.
@@ -2619,9 +2644,9 @@ void crypto_key_exchange(u8       shared_key[32],
     crypto_hchacha20(shared_key, shared_key, zero);
 }
 
-//////////////////////
-/// Scalar divison ///
-//////////////////////
+///////////////////////
+/// Scalar division ///
+///////////////////////
 void crypto_x25519_inverse(u8       blind_salt [32],
                            const u8 private_key[32],
                            const u8 curve_point[32])

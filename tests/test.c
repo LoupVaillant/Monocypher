@@ -927,9 +927,9 @@ static int p_elligator_x25519()
         // Maximise tweak diversity.
         // We want to set the bits 1 (sign) and 6-7 (padding)
         u8 tweak = (i & 1) + (i << 6);
-        // Both dangerous functions behave the same
-        u8 pks[32];  crypto_x25519_dangerous_small(pks, sk1);
-        u8 pkf[32];  crypto_x25519_dangerous_fast (pkf, sk1);
+        // Both dirty functions behave the same
+        u8 pks[32];  crypto_x25519_dirty_small(pks, sk1);
+        u8 pkf[32];  crypto_x25519_dirty_fast (pkf, sk1);
         status |= memcmp(pks, pkf, 32);
         u8 r[32];
         if (crypto_curve_to_hidden(r, pkf, tweak)) {
@@ -940,7 +940,7 @@ static int p_elligator_x25519()
         u8 pkr[32];  crypto_hidden_to_curve(pkr, r);
         status |= memcmp(pkr, pkf, 32);
 
-        // Dangerous and safe keys are compatible
+        // Dirty and safe keys are compatible
         u8 e1 [32];  crypto_x25519(e1, sk2, pk1);
         u8 e2 [32];  crypto_x25519(e2, sk2, pkr);
         status |= memcmp(e1, e2, 32);
@@ -1026,6 +1026,36 @@ static int p_x25519_inverse()
     return status;
 }
 
+int p_from_eddsa()
+{
+    int status = 0;
+    FOR (i, 0, 32) {
+        RANDOM_INPUT(ed_private, 32);
+        u8 ed_public[32];  crypto_sign_public_key   (ed_public, ed_private);
+        u8 x_private[32];  crypto_from_eddsa_private(x_private, ed_private);
+        u8 x_public1[32];  crypto_from_eddsa_public (x_public1, ed_public);
+        u8 x_public2[32];  crypto_x25519_public_key (x_public2, x_private);
+        status |= memcmp(x_public1, x_public2, 32);
+    }
+    printf("%s: from_eddsa\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
+int p_from_ed25519()
+{
+    int status = 0;
+    FOR (i, 0, 32) {
+        RANDOM_INPUT(ed_private, 32);
+        u8 ed_public[32];  crypto_ed25519_public_key  (ed_public, ed_private);
+        u8 x_private[32];  crypto_from_ed25519_private(x_private, ed_private);
+        u8 x_public1[32];  crypto_from_ed25519_public (x_public1, ed_public);
+        u8 x_public2[32];  crypto_x25519_public_key   (x_public2, x_private);
+        status |= memcmp(x_public1, x_public2, 32);
+    }
+    printf("%s: from_ed25519\n", status != 0 ? "FAILED" : "OK");
+    return status;
+}
+
 #define TEST(name, nb_inputs) vector_test(name, #name, nb_inputs, \
                                           nb_##name##_vectors,    \
                                           name##_vectors,         \
@@ -1096,6 +1126,8 @@ int main(int argc, char *argv[])
     status |= p_elligator_key_pair();
     status |= p_elligator_key_pair_overlap();
     status |= p_x25519_inverse();
-    printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
+    status |= p_from_eddsa();
+    status |= p_from_ed25519();
+     printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
     return status;
 }
