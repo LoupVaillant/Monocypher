@@ -111,9 +111,9 @@ and a
 hiding the public key it so that it is effectively indistinguishable
 from random noise.
 Note that only
-.Xr crypto_x25519_dangerous_fast 3monocypher
+.Xr crypto_x25519_dirty_fast 3monocypher
 or
-.Xr crypto_x25519_dangerous_small 3monocypher
+.Xr crypto_x25519_dirty_small 3monocypher
 can generate a suitable public key;
 the
 .Xr crypto_x25519 3monocypher
@@ -156,11 +156,11 @@ because it may take many failures until a key pair could be generated
 successfully.
 .Fn crypto_hidden_key_pair
 uses
-.Xr crypto_x25519_dangerous_fast 3monocypher
+.Xr crypto_x25519_dirty_fast 3monocypher
 internally;
 if code size is an important concern,
 its functionality can be replicated with
-.Xr crypto_x25519_dangerous_small 3monocypher
+.Xr crypto_x25519_dirty_small 3monocypher
 instead.
 .Pp
 The arguments are:
@@ -168,9 +168,9 @@ The arguments are:
 .It Fa curve
 A point on the curve, which is a Curve25519 public key generated with
 either
-.Xr crypto_x25519_dangerous_fast 3monocypher
+.Xr crypto_x25519_dirty_fast 3monocypher
 or
-.Xr crypto_x25519_dangerous_small 3monocypher .
+.Xr crypto_x25519_dirty_small 3monocypher .
 .It Fa hidden
 The hidden encoding of a point on the curve which is effectively
 indistinguishable from random.
@@ -209,7 +209,7 @@ and
 return nothing; they cannot fail.
 .Sh EXAMPLES
 Generate a key pair manually using
-.Xr crypto_x25519_dangerous_small 3monocypher
+.Xr crypto_x25519_dirty_small 3monocypher
 instead of its fast variant:
 .Bd -literal -offset indent
 uint8_t sk  [32]; /* Secret key output        */
@@ -218,7 +218,7 @@ uint8_t tweak;    /* Random tweak input       */
 arc4random_buf(&tweak, 1);
 for (;;) {
     arc4random_buf(sk, 32);
-    crypto_x25519_dangerous_small(pk, sk);
+    crypto_x25519_dirty_small(pk, sk);
     if (crypto_curve_to_hidden(pk, pk, tweak) == 0)
         break;
 }
@@ -240,7 +240,7 @@ crypto_wipe(your_sk, 32);
 .Sh SEE ALSO
 .Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_x25519 3monocypher ,
-.Xr crypto_x25519_dangerous_small 3monocypher ,
+.Xr crypto_x25519_dirty_small 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
 These functions implement the Elligator 2 mapping for Curve25519.
