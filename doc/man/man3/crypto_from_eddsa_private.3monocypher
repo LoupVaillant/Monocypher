@@ -129,4 +129,4 @@ purposes.
 While this conversion is technically safe,
 avoid these functions nonetheless unless you are particularly
 resource-constrained or have some other kind of hard requirement.
-It is an unnecessary risk factor.
+It is otherwise an unnecessary risk factor.
