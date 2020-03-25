@@ -85,9 +85,12 @@ The arguments are:
 The output point.
 .It Fa private_key
 The private key (scalar) to use.
-This value's cofactor is cleared first,
-the multiplicative inverse (modulo the curve order) has its cofactor
-cleared and is then used for scalar multiplication.
+First, the value is clamped;
+then the clamped value's multiplicative inverse (modulo the curve order)
+is determined;
+the clamped value's multiplicative inverse then has its cofactor
+cleared,
+and that final value is then used for scalar multiplication.
 .It Fa curve_point
 The curve point on X25519 to multiply with the multiplicative inverse
 (modulo the curve order) of

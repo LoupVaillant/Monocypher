@@ -105,7 +105,7 @@ The resulting public keys are to be used with
 .Xr crypto_x25519 3monocypher
 and
 .Xr crypto_key_exchange 3monocypher ,
-which clear the cofactor,
+which clear the cofactor.
 .Sh RETURN VALUES
 These functions have no return value.
 They cannot fail.

@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 24, 2020
+.Dd March 25, 2020
 .Dt INTRO 3MONOCYPHER
 .Os
 .Sh NAME
@@ -102,10 +102,11 @@ algorithm based on Curve25519.
 X25519 derives a shared secret from two private/public key pairs.
 It is fast, simple, and relatively easy to implement securely.
 .Pp
-For specialized protocols that require indistinguishability from random
+For specialised protocols that require indistinguishability from random
 noise,
 .Xr crypto_curve_to_hidden 3monocypher
-gives the option to disguise X25519 public keys as random noise.
+gives the option to disguise ephemeral (one-time use) X25519 public keys
+as random noise.
 .Ss Public key signatures
 .Xr crypto_sign 3monocypher
 and

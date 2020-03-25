@@ -77,7 +77,7 @@ and
 .Xr crypto_x25519 3monocypher .
 This may be useful in some resource-constrained contexts or when no
 other key is available (for example, when retrieving SSH public keys
-from GitHub and reusing the SSH private keys as X25519 public keys).
+from GitHub and reusing the SSH public keys as X25519 public keys).
 .Pp
 The
 .Fn crypto_from_eddsa_private
@@ -85,7 +85,7 @@ function converts an EdDSA (with BLAKE2b) private key to an X25519
 private key.
 The
 .Fn crypto_from_eddsa_public
-function converts an EdDSA private key to an X25519 public key.
+function converts an EdDSA public key to an X25519 public key.
 .Pp
 X25519 key pairs cannot be converted back to EdDSA key pairs.
 The conversion of private keys is specific to EdDSA with BLAKE2b because
@@ -126,7 +126,7 @@ functions first appeared in Monocypher 3.1.0.
 .Sh SECURITY CONSIDERATIONS
 It is generally considered poor form to reuse the same key for different
 purposes.
-While this conversion is technically safe
-avoid these functions unless you are particularly resource-constrained
-or otherwise have a hard requirement nonetheless.
-It is otherwise an unnecessary risk factor.
+While this conversion is technically safe,
+avoid these functions nonetheless unless you are particularly
+resource-constrained or have some other kind of hard requirement.
+It is an unnecessary risk factor.
