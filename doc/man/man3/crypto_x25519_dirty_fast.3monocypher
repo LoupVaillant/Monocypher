@@ -124,7 +124,7 @@ functions first appeared in Monocypher 3.1.0.
 The slow variant is approximately an entire two times slower than the
 fast variant.
 When considering that, on average, two calls to this function will be
-required for obtaining a valid keypair for
+required for obtaining a valid key pair for
 .Xr crypto_curve_to_hidden 3monocypher ,
 this adds up to an
 .Em average
