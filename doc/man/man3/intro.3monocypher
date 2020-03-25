@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 5, 2020
+.Dd March 25, 2020
 .Dt INTRO 3MONOCYPHER
 .Os
 .Sh NAME
@@ -101,6 +101,12 @@ implements X25519, an elliptic curve Diffie Hellman key exchange
 algorithm based on Curve25519.
 X25519 derives a shared secret from two private/public key pairs.
 It is fast, simple, and relatively easy to implement securely.
+.Pp
+For specialised protocols that require indistinguishability from random
+noise,
+.Xr crypto_curve_to_hidden 3monocypher
+gives the option to disguise ephemeral (one-time use) X25519 public keys
+as random noise.
 .Ss Public key signatures
 .Xr crypto_sign 3monocypher
 and
@@ -151,7 +157,12 @@ and
 .Xr crypto_check_init 3monocypher ,
 .Xr crypto_check_init_custom_hash 3monocypher ,
 .Xr crypto_check_update 3monocypher ,
+.Xr crypto_curve_to_hidden 3monocypher ,
+.Xr crypto_from_eddsa_private 3monocypher ,
+.Xr crypto_from_eddsa_public 3monocypher ,
 .Xr crypto_hchacha20 3monocypher ,
+.Xr crypto_hidden_key_pair 3monocypher ,
+.Xr crypto_hidden_to_curve 3monocypher ,
 .Xr crypto_ietf_chacha20 3monocypher ,
 .Xr crypto_ietf_chacha20_ctr 3monocypher ,
 .Xr crypto_key_exchange 3monocypher ,
@@ -176,10 +187,15 @@ and
 .Xr crypto_verify64 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr crypto_x25519 3monocypher ,
+.Xr crypto_x25519_dangerous_fast 3monocypher ,
+.Xr crypto_x25519_dangerous_small 3monocypher ,
+.Xr crypto_x25519_inverse 3monocypher ,
 .Xr crypto_x25519_public_key 3monocypher ,
 .Xr crypto_xchacha20 3monocypher ,
 .Xr crypto_xchacha20_ctr 3monocypher
 .Ss Optional code
+.Xr crypto_from_ed25519_private 3monocypher ,
+.Xr crypto_from_ed25519_public 3monocypher ,
 .Xr crypto_ed25519_check 3monocypher ,
 .Xr crypto_ed25519_check_init 3monocypher ,
 .Xr crypto_ed25519_check_update 3monocypher ,

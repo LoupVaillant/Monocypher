@@ -1,0 +1,132 @@
+.\" This file is dual-licensed.  Choose whichever you want.
+.\"
+.\" The first licence is a regular 2-clause BSD licence.  The second licence
+.\" is the CC-0 from Creative Commons. It is intended to release Monocypher
+.\" to the public domain.  The BSD licence serves as a fallback option.
+.\"
+.\" SPDX-License-Identifier: BSD-2-Clause OR CC0-1.0
+.\"
+.\" ----------------------------------------------------------------------------
+.\"
+.\" Copyright (c) 2020 Fabio Scotoni
+.\" All rights reserved.
+.\"
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions are
+.\" met:
+.\"
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\"
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the
+.\"    distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+.\" "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+.\" LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+.\" A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+.\" HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+.\" SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+.\" LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+.\" OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" ----------------------------------------------------------------------------
+.\"
+.\" Written in 2020 by Fabio Scotoni
+.\"
+.\" To the extent possible under law, the author(s) have dedicated all copyright
+.\" and related neighboring rights to this software to the public domain
+.\" worldwide.  This software is distributed without any warranty.
+.\"
+.\" You should have received a copy of the CC0 Public Domain Dedication along
+.\" with this software.  If not, see
+.\" <https://creativecommons.org/publicdomain/zero/1.0/>
+.\"
+.Dd March 25, 2020
+.Dt CRYPTO_FROM_EDDSA_PRIVATE 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm crypto_from_eddsa_private ,
+.Nm crypto_from_eddsa_public
+.Nd conversion of key pairs for EdDSA with BLAKE2b to X25519 key pairs
+.Sh SYNOPSIS
+.In monocypher.h
+.Ft void
+.Fo crypto_from_eddsa_private
+.Fa "uint8_t x25519[32]"
+.Fa "const uint8_t eddsa[32]"
+.Fc
+.Ft void
+.Fo crypto_from_eddsa_public
+.Fa "uint8_t x25519[32]"
+.Fa "const uint8_t eddsa[32]"
+.Fc
+.Sh DESCRIPTION
+These functions convert keys for use with
+.Xr crypto_sign 3monocypher
+(EdDSA with the BLAKE2b hash function)
+to keys for use with
+.Xr crypto_key_exchange 3monocypher
+and
+.Xr crypto_x25519 3monocypher .
+This may be useful in some resource-constrained contexts or when no
+other key is available (for example, when retrieving SSH public keys
+from GitHub and reusing the SSH public keys as X25519 public keys).
+.Pp
+The
+.Fn crypto_from_eddsa_private
+function converts an EdDSA (with BLAKE2b) private key to an X25519
+private key.
+The
+.Fn crypto_from_eddsa_public
+function converts an EdDSA public key to an X25519 public key.
+.Pp
+X25519 key pairs cannot be converted back to EdDSA key pairs.
+The conversion of private keys is specific to EdDSA with BLAKE2b because
+of the way EdDSA works.
+In particular, this means that the output of
+.Fn crypto_from_eddsa_private
+differs from
+.Xr crypto_from_ed25519_private 3monocypher
+in the optional code.
+However, the output of
+.Fn crypto_from_eddsa_public
+is identical to
+.Xr crypto_from_ed25519_public 3monocypher .
+.Pp
+The arguments are:
+.Bl -tag -width Ds
+.It Fa eddsa
+The signing public key or private key to convert to a X25519 public key
+or private key, respectively.
+.It Fa x25519
+The converted private key or public key.
+.El
+.Pp
+The arguments may overlap or point at the same buffer.
+.Sh RETURN VALUES
+These functions return nothing.
+They cannot fail.
+.Sh SEE ALSO
+.Xr crypto_key_exchange_public_key 3monocypher ,
+.Xr crypto_sign_public_key 3monocypher ,
+.Xr intro 3monocypher
+.Sh HISTORY
+The
+.Fn crypto_from_eddsa_private
+and
+.Fn crypto_from_eddsa_public
+functions first appeared in Monocypher 3.1.0.
+.Sh SECURITY CONSIDERATIONS
+It is generally considered poor form to reuse the same key for different
+purposes.
+While this conversion is technically safe,
+avoid these functions nonetheless unless you are particularly
+resource-constrained or have some other kind of hard requirement.
+It is otherwise an unnecessary risk factor.
