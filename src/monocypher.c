@@ -1874,9 +1874,9 @@ static void ge_double_scalarmult_vartime(ge *P, const u8 p[32], const u8 b[32])
         ge P2, tmp;
         ge_double(&P2, P, &tmp);
         ge_cache(&cP[0], P);
-        FOR (i, 0, (P_W_SIZE)-1) {
-            ge_add(&tmp, &P2, &cP[i]);
-            ge_cache(&cP[i+1], &tmp);
+        FOR (i, 1, P_W_SIZE) {
+            ge_add(&tmp, &P2, &cP[i-1]);
+            ge_cache(&cP[i], &tmp);
         }
     }
 
