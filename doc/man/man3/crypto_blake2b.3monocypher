@@ -233,7 +233,7 @@ crypto_blake2b(hash, message, 12);
 Computing a message authentication code all at once:
 .Bd -literal -offset indent
 uint8_t hash   [64]; /* Output hash  (between 1 and 64 bytes)  */
-uint8_t key    [32]; /* Key          (between 1 and 64 bytes)  */
+uint8_t key    [32]; /* Key          (between 0 and 64 bytes)  */
 uint8_t message[11] = "Lorem ipsu"; /* Message to authenticate */
 arc4random_buf(key, 32);
 crypto_blake2b_general(hash, 64, key, 32, message, 11);
@@ -257,7 +257,7 @@ crypto_blake2b_final(&ctx, hash);
 Computing a message authentication code incrementally:
 .Bd -literal -offset indent
 uint8_t hash   [ 64]; /* Output hash  (between 1 and 64 bytes) */
-uint8_t key    [ 32]; /* Key          (between 1 and 64 bytes) */
+uint8_t key    [ 32]; /* Key          (between 0 and 64 bytes) */
 uint8_t message[500] = {1}; /* Message to authenticate         */
 crypto_blake2b_ctx ctx;
 arc4random_buf(key, 32);
