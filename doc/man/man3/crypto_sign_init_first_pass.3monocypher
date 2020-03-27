@@ -130,6 +130,14 @@ This recomputation doubles the execution time for short messages.
 .It
 The first pass proper, with
 .Fn crypto_sign_update .
+Forgetting to call
+.Fn crypto_sign_update
+will appear to work in that it produces valid signatures,
+but also
+.Sy loses all security because attackers may now recover the secret key .
+Under
+.Em no
+circumstances must you forget the first pass.
 .It
 Initialisation of the second pass with
 .Fn crypto_sign_init_second_pass .
@@ -203,7 +211,41 @@ if (crypto_check_final((crypto_sign_ctx_abstract*)&ctx)) {
 } else {
     /* Message is genuine */
 }
+.Ed
+.Pp
+This interface can be used to mitigate attacks that leverage power
+analysis and fault injection (glitching) \(en both of which require
+physical access and appropriate equipment \(en by injecting additional
+randomness (at least 32 bytes) and padding (to the hash function's block
+size, which is 128 bytes for all hash functions supported by
+Monocypher), of which 32 bytes are already inserted into the buffer by
+.Fn crypto_sign_init_first_pass .
+Access to a cryptographically secure pseudo-random generator is a
+requirement for effective side channel mitigation.
+Signing a message with increased power-related side channel mitigations:
+.Bd -literal -offset indent
+const uint8_t message  [   500]; /* Message to sign         */
+uint8_t       sk       [    32]; /* Secret key              */
+const uint8_t pk       [    32]; /* Public key (optional)   */
+uint8_t       signature[    64]; /* Output signature        */
+uint8_t       buf      [128-32] = {0}; /* Mitigation buffer */
+crypto_sign_ctx ctx;
+crypto_sign_ctx_abstract *actx = (crypto_sign_ctx_abstract *)&ctx;
 
+arc4random(buf, 32);
+/* The rest of buf MUST be zeroes. */
+
+crypto_sign_init_first_pass(actx, sk, pk);
+crypto_sign_update         (actx, buf, sizeof(buf));
+crypto_sign_update         (actx, message, 500);
+
+crypto_sign_init_second_pass(actx);
+crypto_sign_update          (actx, message, 500);
+crypto_sign_final           (actx, signature);
+
+crypto_wipe(buf, 32);
+/* Wipe the secret key if no longer needed */
+crypto_wipe(sk,  32);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_blake2b 3monocypher ,
@@ -216,6 +258,9 @@ if (crypto_check_final((crypto_sign_ctx_abstract*)&ctx)) {
 These functions implement PureEdDSA with Curve25519 and Blake2b, as
 described in RFC 8032.
 This is the same as Ed25519, with Blake2b instead of SHA-512.
+.Pp
+The example for side channel mitigation follows the methodology outlined
+in I-D.draft-mattsson-cfrg-det-sigs-with-noise-02.
 .Sh HISTORY
 The
 .Fn crypto_sign_init_first_pass ,
@@ -246,6 +291,11 @@ Do not process messages before calling
 When signing messages, the security considerations documented in
 .Xr crypto_sign 3monocypher
 also apply.
+In particular, if power-related side channels are part of your threat
+model,
+note that there may still be other power-related side channels (such as
+if the CPU leaks information when an operation overflows a register)
+that must be considered.
 .Sh IMPLEMENTATION DETAILS
 EdDSA signatures require two passes that cannot be performed in
 parallel.
