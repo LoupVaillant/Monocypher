@@ -2623,7 +2623,7 @@ void crypto_hidden_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
         crypto_chacha20(buf, 0, 64, buf+32, zero);
         crypto_x25519_dirty_fast(pk, buf); // or the "small" version
     } while(crypto_curve_to_hidden(buf+32, pk, buf[32]));
-    // Note that the return value of crypto_private_to_hidden() is
+    // Note that the return value of crypto_curve_to_hidden() is
     // independent from its tweak parameter.
     // Therefore, buf[32] is not actually reused.  Either we loop one
     // more time and buf[32] is used for the new seed, or we succeeded,
@@ -2677,7 +2677,7 @@ void crypto_x25519_inverse(u8       blind_salt [32],
     add_xl(inverse, inverse[0] * 3);
 
     // Recall that 8*L < 2^256. However it is also very close to
-    // 2^255. If we spaned the ladder over 255 bits, random tests
+    // 2^255. If we spanned the ladder over 255 bits, random tests
     // wouldn't catch the off-by-one error.
     scalarmult(blind_salt, inverse, curve_point, 256);
 
