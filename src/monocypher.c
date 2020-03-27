@@ -2325,8 +2325,8 @@ static void add_xl(u8 s[32], u8 x)
 }
 
 // "Small" dirty ephemeral key.
-// Use if you need to shrink the size of the binary, and can tolerate a
-// slowdow by a factor of two (compared to the fast version)
+// Use if you need to shrink the size of the binary, and can afford to
+// slow down by a factor of two (compared to the fast version)
 //
 // This version works by decoupling the cofactor from the main factor.
 //
