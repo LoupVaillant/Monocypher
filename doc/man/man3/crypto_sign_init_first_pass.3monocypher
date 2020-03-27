@@ -232,7 +232,7 @@ uint8_t       buf      [128-32] = {0}; /* Mitigation buffer */
 crypto_sign_ctx ctx;
 crypto_sign_ctx_abstract *actx = (crypto_sign_ctx_abstract *)&ctx;
 
-arc4random(buf, 32);
+arc4random_buf(buf, 32);
 /* The rest of buf MUST be zeroes. */
 
 crypto_sign_init_first_pass(actx, sk, pk);
