@@ -1487,10 +1487,9 @@ void crypto_x25519_public_key(u8       public_key[32],
     crypto_x25519(public_key, secret_key, base_point);
 }
 
-///////////////
-/// Ed25519 ///
-///////////////
-
+///////////////////////////
+/// Arithmetic modulo L ///
+///////////////////////////
 static const  u8 L[32] = {
     0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
     0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
@@ -1561,6 +1560,10 @@ static int is_above_L(const u8 a[32])
     }
     return 1;
 }
+
+///////////////
+/// Ed25519 ///
+///////////////
 
 // Point (group element, ge) in a twisted Edwards curve,
 // in extended projective coordinates.
