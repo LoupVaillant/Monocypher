@@ -551,14 +551,10 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 #endif
 
     // update hash
-    ctx->hash[0] ^= v0 ^ v8;
-    ctx->hash[1] ^= v1 ^ v9;
-    ctx->hash[2] ^= v2 ^ v10;
-    ctx->hash[3] ^= v3 ^ v11;
-    ctx->hash[4] ^= v4 ^ v12;
-    ctx->hash[5] ^= v5 ^ v13;
-    ctx->hash[6] ^= v6 ^ v14;
-    ctx->hash[7] ^= v7 ^ v15;
+    ctx->hash[0] ^= v0 ^ v8;   ctx->hash[1] ^= v1 ^ v9;
+    ctx->hash[2] ^= v2 ^ v10;  ctx->hash[3] ^= v3 ^ v11;
+    ctx->hash[4] ^= v4 ^ v12;  ctx->hash[5] ^= v5 ^ v13;
+    ctx->hash[6] ^= v6 ^ v14;  ctx->hash[7] ^= v7 ^ v15;
 }
 
 static void blake2b_set_input(crypto_blake2b_ctx *ctx, u8 input, size_t index)
@@ -1025,20 +1021,14 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
     ZERO(p, 128 * nb_blocks);
 }
 
-void crypto_argon2i(u8       *hash,      u32 hash_size,
-                    void     *work_area, u32 nb_blocks,
-                    u32 nb_iterations,
+void crypto_argon2i(u8   *hash,      u32 hash_size,
+                    void *work_area, u32 nb_blocks, u32 nb_iterations,
                     const u8 *password,  u32 password_size,
                     const u8 *salt,      u32 salt_size)
 {
-    crypto_argon2i_general(hash, hash_size,
-                           work_area, nb_blocks, nb_iterations,
-                           password, password_size,
-                           salt    , salt_size,
-                           0, 0, 0, 0);
+    crypto_argon2i_general(hash, hash_size, work_area, nb_blocks, nb_iterations,
+                           password, password_size, salt , salt_size, 0,0,0,0);
 }
-
-
 
 ////////////////////////////////////
 /// Arithmetic modulo 2^255 - 19 ///
@@ -1258,17 +1248,11 @@ static void fe_tobytes(u8 s[32], const fe h)
         q += t[2*i+1]; q >>= 25;
     }
     t[0] += 19 * q;
-
-    i32 c0 = t[0] >> 26; t[1] += c0; t[0] -= c0 * (1 << 26);
-    i32 c1 = t[1] >> 25; t[2] += c1; t[1] -= c1 * (1 << 25);
-    i32 c2 = t[2] >> 26; t[3] += c2; t[2] -= c2 * (1 << 26);
-    i32 c3 = t[3] >> 25; t[4] += c3; t[3] -= c3 * (1 << 25);
-    i32 c4 = t[4] >> 26; t[5] += c4; t[4] -= c4 * (1 << 26);
-    i32 c5 = t[5] >> 25; t[6] += c5; t[5] -= c5 * (1 << 25);
-    i32 c6 = t[6] >> 26; t[7] += c6; t[6] -= c6 * (1 << 26);
-    i32 c7 = t[7] >> 25; t[8] += c7; t[7] -= c7 * (1 << 25);
-    i32 c8 = t[8] >> 26; t[9] += c8; t[8] -= c8 * (1 << 26);
-    i32 c9 = t[9] >> 25;             t[9] -= c9 * (1 << 25);
+    q = 0;
+    FOR (i, 0, 5) {
+        t[i*2  ] += q;  q = t[i*2  ] >> 26;  t[i*2  ] -= q * (1 << 26);
+        t[i*2+1] += q;  q = t[i*2+1] >> 25;  t[i*2+1] -= q * (1 << 25);
+    }
 
     store32_le(s +  0, ((u32)t[0] >>  0) | ((u32)t[1] << 26));
     store32_le(s +  4, ((u32)t[1] >>  6) | ((u32)t[2] << 19));
@@ -1312,10 +1296,8 @@ static int fe_isequal(const fe f, const fe g)
     return 1 - isdifferent;
 }
 
-static const fe sqrtm1 = {
-    -32595792, -7943725, 9377950, 3500415, 12389472,
-    -272473, -25146209, -2005654, 326686, 11406482
-};
+static const fe sqrtm1 = { -32595792, -7943725, 9377950, 3500415, 12389472,
+                           -272473, -25146209, -2005654, 326686, 11406482,};
 
 // Inverse square root.
 // Returns true if x is a non zero square, false otherwise.
@@ -1491,11 +1473,9 @@ void crypto_x25519_public_key(u8       public_key[32],
 /// Arithmetic modulo L ///
 ///////////////////////////
 static const  u8 L[32] = {
-    0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-    0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10
-};
+    0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2,
+    0xde, 0xf9, 0xde, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, };
 
 // r = x mod L (little-endian)
 static void modL(u8 *r, i64 x[64])
@@ -1648,10 +1628,9 @@ static int ge_frombytes_vartime(ge *h, const u8 s[32])
     return 0;
 }
 
-static const fe D2 = { // - 2 * 121665 / 121666
-    -21827239, -5839606, -30745221, 13898782, 229458,
-    15978800, -12551817, -6495438, 29715968, 9444199
-};
+// - 2 * 121665 / 121666
+static const fe D2 = {-21827239, -5839606, -30745221, 13898782, 229458,
+                      15978800, -12551817, -6495438, 29715968, 9444199,};
 
 static void ge_cache(ge_cached *c, const ge *p)
 {
@@ -2027,18 +2006,16 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
     // 5-bits signed comb, from Mike Hamburg's
     // Fast and compact elliptic-curve cryptography (2012)
-    static const u8 half_mod_L[32] = { // 1 / 2 modulo L
-        0xf7, 0xe9, 0x7a, 0x2e, 0x8d, 0x31, 0x09, 0x2c,
-        0x6b, 0xce, 0x7b, 0x51, 0xef, 0x7c, 0x6f, 0x0a,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08,
-    };
-    static const u8 half_ones[32] = { // (2^255 - 1) / 2 modulo L
-        0x42, 0x9a, 0xa3, 0xba, 0x23, 0xa5, 0xbf, 0xcb,
-        0x11, 0x5b, 0x9d, 0xc5, 0x74, 0x95, 0xf3, 0xb6,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07,
-    };
+    // 1 / 2 modulo L
+    static const u8 half_mod_L[32] = {
+        0xf7, 0xe9, 0x7a, 0x2e, 0x8d, 0x31, 0x09, 0x2c, 0x6b, 0xce, 0x7b, 0x51,
+        0xef, 0x7c, 0x6f, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, };
+    // (2^255 - 1) / 2 modulo L
+    static const u8 half_ones[32] = {
+        0x42, 0x9a, 0xa3, 0xba, 0x23, 0xa5, 0xbf, 0xcb, 0x11, 0x5b, 0x9d, 0xc5,
+        0x74, 0x95, 0xf3, 0xb6, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07, };
     // All bits set form: 1 means 1, 0 means -1
     u8 s_scalar[32];
     mul_add(s_scalar, scalar, half_mod_L, half_ones);
@@ -2199,8 +2176,7 @@ void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
     ctx->hash->update(ctx, public_key, 32);
 }
 
-void crypto_check_init(crypto_check_ctx_abstract *ctx,
-                       const u8 signature[64],
+void crypto_check_init(crypto_check_ctx_abstract *ctx, const u8 signature[64],
                        const u8 public_key[32])
 {
     crypto_check_init_custom_hash(ctx, signature, public_key,
@@ -2227,8 +2203,7 @@ int crypto_check_final(crypto_check_ctx_abstract *ctx)
     return crypto_verify32(R, R_check); // R == R_check ? OK : fail
 }
 
-int crypto_check(const u8  signature[64],
-                 const u8  public_key[32],
+int crypto_check(const u8  signature[64], const u8 public_key[32],
                  const u8 *message, size_t message_size)
 {
     crypto_check_ctx ctx;
@@ -2343,11 +2318,9 @@ void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
     // Raw scalar multiplication with it does not clear the cofactor,
     // and the resulting public key will reveal 3 bits of the scalar.
     static const u8 dirty_base_point[32] = {
-        0x34, 0xfc, 0x6c, 0xb7, 0xc8, 0xde, 0x58, 0x97,
-        0x77, 0x70, 0xd9, 0x52, 0x16, 0xcc, 0xdc, 0x6c,
-        0x85, 0x90, 0xbe, 0xcd, 0x91, 0x9c, 0x07, 0x59,
-        0x94, 0x14, 0x56, 0x3b, 0x4b, 0xa4, 0x47, 0x0f,
-    };
+        0x34, 0xfc, 0x6c, 0xb7, 0xc8, 0xde, 0x58, 0x97, 0x77, 0x70, 0xd9, 0x52,
+        0x16, 0xcc, 0xdc, 0x6c, 0x85, 0x90, 0xbe, 0xcd, 0x91, 0x9c, 0x07, 0x59,
+        0x94, 0x14, 0x56, 0x3b, 0x4b, 0xa4, 0x47, 0x0f, };
     // separate the main factor & the cofactor of the scalar
     u8 scalar[32];
     trim_scalar(scalar, secret_key);
@@ -2376,15 +2349,10 @@ void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
 // The cost is a bigger binary programs that don't also sign messages.
 void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
 {
-    static const fe lop_x = {
-        21352778, 5345713, 4660180, -8347857, 24143090,
-        14568123, 30185756, -12247770, -33528939, 8345319,
-    };
-    static const fe lop_y = {
-        -6952922, -1265500, 6862341, -7057498, -4037696,
-        -5447722, 31680899, -15325402, -19365852, 1569102,
-    };
-
+    static const fe lop_x ={21352778, 5345713, 4660180, -8347857, 24143090,
+                            14568123, 30185756, -12247770, -33528939, 8345319,};
+    static const fe lop_y ={-6952922, -1265500, 6862341, -7057498, -4037696,
+                            -5447722, 31680899, -15325402, -19365852, 1569102,};
     u8 scalar[32];
     ge pk;
     trim_scalar(scalar, secret_key);
@@ -2503,11 +2471,10 @@ static const fe A = {486662};
 //       u2 = u
 void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
 {
-    static const fe ufactor = { // -sqrt(-1) * 2
-        -1917299, 15887451, -18755900, -7000830, -24778944,
-        544946, -16816446, 4011309, -653372, 10741468,
-    };
-    static const fe A2  = {12721188, 3529, 0, 0, 0, 0, 0, 0, 0, 0};
+     // -sqrt(-1) * 2
+    static const fe ufactor={-1917299, 15887451, -18755900, -7000830, -24778944,
+                             544946, -16816446, 4011309, -653372, 10741468,};
+    static const fe A2 = {12721188, 3529,};
 
     // Representatives are encoded in 254 bits.
     // The two most significant ones are random padding that must be ignored.
@@ -2724,16 +2691,13 @@ static void redc(u32 u[8], u32 x[16])
     WIPE_BUFFER(t);
 }
 
-void crypto_x25519_inverse(u8       blind_salt [32],
-                           const u8 private_key[32],
+void crypto_x25519_inverse(u8 blind_salt [32], const u8 private_key[32],
                            const u8 curve_point[32])
 {
     static const  u8 Lm2[32] = { // L - 2
-        0xeb, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-        0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
-    };
+        0xeb, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2,
+        0xde, 0xf9, 0xde, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, };
     // 1 in Montgomery form
     u32 m_inv [8] = {0x8d98951d, 0xd6ec3174, 0x737dcf70, 0xc6ef5bf4,
                      0xfffffffe, 0xffffffff, 0xffffffff, 0x0fffffff,};
@@ -2803,10 +2767,8 @@ static void lock_auth(u8 mac[16], const u8  auth_key[32],
     crypto_poly1305_final (&poly_ctx, mac); // ...here
 }
 
-void crypto_lock_aead(u8        mac[16],
-                      u8       *cipher_text,
-                      const u8  key[32],
-                      const u8  nonce[24],
+void crypto_lock_aead(u8 mac[16], u8 *cipher_text,
+                      const u8  key[32], const u8  nonce[24],
                       const u8 *ad        , size_t ad_size,
                       const u8 *plain_text, size_t text_size)
 {
@@ -2821,9 +2783,7 @@ void crypto_lock_aead(u8        mac[16],
     WIPE_BUFFER(auth_key);
 }
 
-int crypto_unlock_aead(u8       *plain_text,
-                       const u8  key[32],
-                       const u8  nonce[24],
+int crypto_unlock_aead(u8 *plain_text, const u8 key[32], const u8 nonce[24],
                        const u8  mac[16],
                        const u8 *ad         , size_t ad_size,
                        const u8 *cipher_text, size_t text_size)
@@ -2847,19 +2807,15 @@ int crypto_unlock_aead(u8       *plain_text,
     return 0;
 }
 
-void crypto_lock(u8        mac[16],
-                 u8       *cipher_text,
-                 const u8  key[32],
-                 const u8  nonce[24],
+void crypto_lock(u8 mac[16], u8 *cipher_text,
+                 const u8 key[32], const u8 nonce[24],
                  const u8 *plain_text, size_t text_size)
 {
     crypto_lock_aead(mac, cipher_text, key, nonce, 0, 0, plain_text, text_size);
 }
 
-int crypto_unlock(u8       *plain_text,
-                  const u8  key[32],
-                  const u8  nonce[24],
-                  const u8  mac[16],
+int crypto_unlock(u8 *plain_text,
+                  const u8 key[32], const u8 nonce[24], const u8 mac[16],
                   const u8 *cipher_text, size_t text_size)
 {
     return crypto_unlock_aead(plain_text, key, nonce, mac, 0, 0,
