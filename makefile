@@ -67,7 +67,7 @@ endif
 
 .PHONY: all library static-library dynamic-library                     \
         install install-doc pkg-config-libhydrogen                     \
-        check test                                                     \
+        check test ctgrind                                             \
         speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519 \
         clean uninstall                                                \
         dist
@@ -144,6 +144,9 @@ speed-c25519   : speed-c25519.out
 test test-legacy speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519:
 	./$<
 
+ctgrind: ctgrind.out
+	valgrind ./ctgrind.out
+
 # Monocypher libraries
 lib/libmonocypher.a: lib/monocypher.o $(LINK_ED25519)
 	ar cr $@ $^
@@ -169,11 +172,17 @@ SPEED       = tests/speed
 lib/utils.o          :tests/utils.c
 lib/test.o           :tests/test.c               $(TEST_COMMON) tests/vectors.h
 lib/test-legacy.o    :tests/test-legacy.c        $(TEST_LEGACY) tests/vectors.h
+lib/ctgrind.o        :tests/ctgrind.c            $(TEST_COMMON)
 lib/speed.o          :$(SPEED)/speed.c           $(TEST_COMMON) $(SPEED)/speed.h
 lib/speed-tweetnacl.o:$(SPEED)/speed-tweetnacl.c $(TEST_COMMON) $(SPEED)/speed.h
 lib/utils.o lib/test.o lib/test-legacy.o lib/speed.o:
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS)                     \
+            -I src -I src/optional -I tests \
+            -fPIC -c -o $@ $<
+lib/ctgrind.o: # suppress optimisations to maximise findings
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -O0                 \
             -I src -I src/optional -I tests \
             -fPIC -c -o $@ $<
 
@@ -223,9 +232,12 @@ lib/speed-c25519.o:$(SPEED)/speed-c25519.c \
 TEST_OBJ=  lib/utils.o lib/monocypher.o
 test.out       : lib/test.o        $(TEST_OBJ) lib/monocypher-ed25519.o
 test-legacy.out: lib/test-legacy.o $(TEST_OBJ) lib/chacha20.o lib/aead-incr.o
+ctgrind.out    : lib/ctgrind.o     $(TEST_OBJ) lib/monocypher-ed25519.o
 speed.out      : lib/speed.o       $(TEST_OBJ) lib/monocypher-ed25519.o
 test.out test-legacy.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
+ctgrind.out:
+	$(CC) $(CFLAGS) -O0 -I src -I src/optional -o $@ $^
 speed-sodium.out: lib/speed-sodium.o lib/utils.o
 	$(CC) $(CFLAGS) -o $@ $^            \
             `pkg-config --cflags libsodium` \
