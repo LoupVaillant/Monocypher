@@ -11,9 +11,9 @@ to what file during which years.  See below for special notes.
 Licence 1 (2-clause BSD)
 ------------------------
 
-Copyright (c) 2017-2019, Loup Vaillant
-Copyright (c) 2017-2018, Michael Savage
-Copyright (c) 2017-2019, Fabio Scotoni
+Copyright (c) 2017-2020, Loup Vaillant
+Copyright (c) 2017-2019, Michael Savage
+Copyright (c) 2017-2020, Fabio Scotoni
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
