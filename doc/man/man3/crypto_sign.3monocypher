@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 2, 2020
+.Dd March 31, 2020
 .Dt CRYPTO_SIGN 3MONOCYPHER
 .Os
 .Sh NAME
@@ -220,7 +220,7 @@ signatures.
 Some of them require knowledge of the private key.
 Others only require knowledge of an existing signature.
 Observing a valid signature only proves that someone with knowledge of
-the private key signed the document at some point.
+the private key signed the message at some point.
 Do not rely on any other security property.
 .Ss Fault injection and power analysis
 Fault injection (also known as glitching) and power analysis may be used

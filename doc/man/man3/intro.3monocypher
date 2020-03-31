@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 25, 2020
+.Dd March 31, 2020
 .Dt INTRO 3MONOCYPHER
 .Os
 .Sh NAME
@@ -64,13 +64,13 @@ hashing and key derivation, key exchange, and public key signatures.
 .Xr crypto_lock 3monocypher
 and
 .Xr crypto_unlock 3monocypher
-use the Chacha20 cipher and the Poly1305 one time authenticator.
+use the Chacha20 cipher and the Poly1305 one-time authenticator.
 .Pp
 Chacha20 is a stream cipher based on a cryptographic hash function.
 It runs efficiently on a wide variety of hardware, and unlike AES
 naturally runs in constant time on all hardware.
 .Pp
-Poly1305 is a one time authenticator, derived from Carter & Wegman
+Poly1305 is a one-time authenticator, derived from Carter & Wegman
 universal hashing.
 It is very fast and very simple.
 .Pp

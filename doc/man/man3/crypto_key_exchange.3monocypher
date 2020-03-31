@@ -52,7 +52,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 2, 2020
+.Dd March 31, 2020
 .Dt CRYPTO_KEY_EXCHANGE 3MONOCYPHER
 .Os
 .Sh NAME
@@ -93,8 +93,6 @@ See
 .Xr intro 3monocypher
 for advice about generating random bytes (use the operating system's
 random number generator).
-Do not use the same private key for both key exchanges and signatures.
-The public keys are different, and revealing both may leak information.
 .It Fa their_public_key
 The public key of the other party.
 .It Fa your_public_key
@@ -116,6 +114,15 @@ secret to a known constant.
 Protocols should instead be designed in such a way that no such check
 is necessary, namely by authenticating the other party or exchanging
 keys over a trusted channel.
+.Pp
+Do not use the same secret key for both key exchanges and signatures.
+The public keys are different, and revealing both may leak information.
+If there really is no room to store or derive two different secret keys,
+consider generating a key pair for signatures and then converting it
+with
+.Xr crypto_from_eddsa_private 3monocypher
+and
+.Xr crypto_from_eddsa_public 3monocypher .
 .Sh RETURN VALUES
 .Fn crypto_key_exchange
 and

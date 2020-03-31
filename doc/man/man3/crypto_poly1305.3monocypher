@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 2, 2020
+.Dd March 31, 2020
 .Dt CRYPTO_POLY1305 3MONOCYPHER
 .Os
 .Sh NAME
@@ -218,7 +218,7 @@ If you are certain you do not want encryption, refer to
 on how to use Blake2b to generate message authentication codes.
 .Ss Authentication key requirements
 Poly1305 is a
-.Em one time
+.Em one-time
 authenticator.
 This puts rather stringent constraints on the authentication key:
 .Bl -bullet

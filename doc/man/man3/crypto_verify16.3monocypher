@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2017, 2019 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2019 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd December 12, 2019
+.Dd March 31, 2020
 .Dt CRYPTO_VERIFY16 3MONOCYPHER
 .Os
 .Sh NAME
@@ -88,9 +88,9 @@ network along with a message, but the correct MAC is secret.
 If the attacker attempts a forgery, one does not want to reveal
 .Dq your MAC is wrong, Em and it took 384 microseconds to tell .
 If the next attempt takes 462 microseconds instead, it tells the
-attacker they just guessed a few bytes correctly.
-That way, an attacker can derive the correct MAC, and successfully
-forge a message.
+attacker they just guessed a byte correctly.
+That way, an attacker can derive the correct MAC byte by byte,
+and successfully forge a message.
 This has lead to practical attacks in the past.
 .Pp
 To avoid such catastrophic failure,
@@ -106,7 +106,7 @@ They compare the first
 and
 .Fa b .
 .Pp
-When in doubt, prefer these over
+When in doubt, prefer these functions over
 .Fn memcmp .
 .Sh RETURN VALUES
 These functions return 0 if the two memory chunks are the same, -1
