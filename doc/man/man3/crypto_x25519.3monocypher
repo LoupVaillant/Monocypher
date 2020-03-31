@@ -52,7 +52,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 2, 2020
+.Dd March 31, 2020
 .Dt CRYPTO_X25519 3MONOCYPHER
 .Os
 .Sh NAME
@@ -128,6 +128,15 @@ compare the output of
 to an all-zero buffer using
 .Xr crypto_verify32 3monocypher ;
 abort the protocol if the output and the all-zero buffer are equal.
+.Pp
+Do not use the same secret key for both key exchanges and signatures.
+The public keys are different, and revealing both may leak information.
+If there really is no room to store or derive two different secret keys,
+consider generating a key pair for signatures and then converting it
+with
+.Xr crypto_from_eddsa_private 3monocypher
+and
+.Xr crypto_from_eddsa_public 3monocypher .
 .Sh RETURN VALUES
 .Fn crypto_x25519
 and
