@@ -218,7 +218,7 @@ If you are certain you do not want encryption, refer to
 on how to use Blake2b to generate message authentication codes.
 .Ss Authentication key requirements
 Poly1305 is a
-.Em one time
+.Em one-time
 authenticator.
 This puts rather stringent constraints on the authentication key:
 .Bl -bullet
