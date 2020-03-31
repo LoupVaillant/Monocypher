@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 2, 2020
+.Dd March 31, 2020
 .Dt CRYPTO_CHACHA20 3MONOCYPHER
 .Os
 .Sh NAME
@@ -157,7 +157,7 @@ It uses an 8-byte nonce, which is too small to be selected at random.
 Use a message counter as a nonce instead.
 .Pp
 .Fn crypto_xchacha20
-performs an Chacha20 operation.
+performs an XChacha20 operation.
 It uses a 24-byte nonce, which is large enough to be selected at random.
 .Pp
 .Fn crypto_xchacha20
