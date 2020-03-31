@@ -48,7 +48,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 24, 2020
+.Dd March 31, 2020
 .Dt CRYPTO_CURVE_TO_HIDDEN 3MONOCYPHER
 .Os
 .Sh NAME
@@ -134,7 +134,7 @@ does not need to be changed.
 On average, two attempts are needed.
 Once a suitable public key has been found,
 .Fn crypto_curve_to_hidden
-always succeeds it.
+always succeeds for it.
 Given the same values for
 .Fa tweak
 and
