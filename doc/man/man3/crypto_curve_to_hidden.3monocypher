@@ -150,7 +150,7 @@ It decodes a hidden point to a curve point on Curve25519.
 .Fn crypto_hidden_key_pair
 is a convenience function that generates a secret key and its
 corresponding public key, which is effectively indistinguishable from
-random noise from a random seed.
+random noise, from a random seed.
 .Em The execution time of this function is unpredictable
 because it may take many failures until a key pair could be generated
 successfully.
@@ -273,10 +273,10 @@ rather than deterministically.
 Otherwise, the timing information given by the required number of
 retries also leaks information on the secret keys.
 .Pp
-This function
-.Em helps
+These functions
+.Em help
 build highly difficult-to-analyze protocols,
-but it is insufficient by itself:
+but are insufficient by themselves:
 Other metadata, such as the amount of bytes sent in a packet or the size
 of the 32-byte random-looking string that represents the curve point
 itself, can be very strong indicators of the use of cryptography.

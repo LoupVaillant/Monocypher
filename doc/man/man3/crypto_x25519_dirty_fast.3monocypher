@@ -88,7 +88,7 @@ from the given secret key
 the public keys are on the
 .Em whole
 curve, rather than just the main prime-order subgroup.
-but do the same with different code size and memory characteristics:
+Both do the same with different code size and memory characteristics:
 .Fn crypto_x25519_dirty_fast
 uses multiple large temporary variables and uses functions that are
 normally used internally for
@@ -103,7 +103,7 @@ large performance penalty compared to
 .Pp
 The resulting public keys are to be used with
 .Xr crypto_x25519 3monocypher
-and
+or
 .Xr crypto_key_exchange 3monocypher ,
 which clear the cofactor.
 .Sh RETURN VALUES
