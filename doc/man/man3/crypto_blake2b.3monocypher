@@ -123,7 +123,6 @@ Length of
 .Fa hash ,
 in bytes.
 Must be between 1 and 64.
-64 is recommended.
 Anything below 32 is discouraged when using Blake2b as a general-purpose
 hash function;
 anything below 16 is discouraged when using Blake2b as a message

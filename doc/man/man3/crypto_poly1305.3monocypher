@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 2, 2020
+.Dd March 31, 2020
 .Dt CRYPTO_POLY1305 3MONOCYPHER
 .Os
 .Sh NAME
