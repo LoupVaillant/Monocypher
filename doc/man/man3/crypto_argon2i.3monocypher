@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 2, 2020
+.Dd March 31, 2020
 .Dt CRYPTO_ARGON2I 3MONOCYPHER
 .Os
 .Sh NAME
@@ -93,7 +93,8 @@ It runs in constant time with respect to the contents of the password.
 .Pp
 Typical applications are password checking (for online services), and
 key derivation (for encryption).
-Derived keys can be used to encrypt private keys or password databases.
+Derived keys can be used to encrypt, for example, private keys or
+password databases.
 .Pp
 The version provided by Monocypher has no threading support, so the
 degree of parallelism is limited to 1.
