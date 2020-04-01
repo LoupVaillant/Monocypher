@@ -926,24 +926,31 @@ static int p_elligator_x25519()
     while (i < 64) {
         RANDOM_INPUT(sk1, 32);
         RANDOM_INPUT(sk2, 32);
-        // Maximise tweak diversity.
-        // We want to set the bits 1 (sign) and 6-7 (padding)
-        u8 tweak = (i & 1) + (i << 6);
-        u8 pks[32];  crypto_x25519_dirty_small(pks, sk1);
-        u8 pkf[32];  crypto_x25519_dirty_fast (pkf, sk1);
-        u8 pk1[32];  crypto_x25519_public_key(pk1, sk1);
+        u8 skc [32];  memcpy(skc, sk1, 32);  skc[0] &= 248;
+        u8 pks [32];  crypto_x25519_dirty_small(pks , sk1);
+        u8 pksc[32];  crypto_x25519_dirty_small(pksc, skc);
+        u8 pkf [32];  crypto_x25519_dirty_fast (pkf , sk1);
+        u8 pkfc[32];  crypto_x25519_dirty_fast (pkfc, skc);
+        u8 pk1 [32];  crypto_x25519_public_key (pk1 , sk1);
 
         // Both dirty functions behave the same
         status |= memcmp(pks, pkf, 32);
 
+        // Dirty functions behave cleanly if we clear the 3 msb first
+        status |= memcmp(pksc, pk1, 32);
+        status |= memcmp(pkfc, pk1, 32);
+
         // Dirty functions behave the same as the clean one if the lsb
         // are 0, differently if it is not
-        if ((sk1[0] & 7) == 0) { status |=  memcmp(pk1, pkf, 32); }
-        else                   { status |= !memcmp(pk1, pkf, 32); }
+        if ((sk1[0] & 7) == 0) { status |= memcmp(pk1, pkf, 32);      }
+        else                   { status |= memcmp(pk1, pkf, 32) == 0; }
 
+        // Maximise tweak diversity.
+        // We want to set the bits 1 (sign) and 6-7 (padding)
+        u8 tweak = (i & 1) + (i << 6);
         u8 r[32];
         if (crypto_curve_to_hidden(r, pkf, tweak)) {
-            continue;
+            continue; // retry untill success (doesn't increment the tweak)
         }
         // Verify that the tweak's msb are copied to the representative
         status |= (tweak >> 6) ^ (r[31] >> 6);
