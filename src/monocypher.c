@@ -2283,11 +2283,11 @@ void crypto_from_eddsa_public(u8 x25519[32], const u8 eddsa[32])
 
 // s + (x*L) % 8*L
 // Guaranteed to fit in 256 bits iff s fits in 255 bits.
-//  L            < 2^253
-//  x%8          < 2^3
-//  L * (x%8 )   < 2^255
-//  s            < 2^255
-//  s + L*(x%8 ) < 2^256
+//   L             < 2^253
+//   x%8           < 2^3
+//   L * (x%8)     < 2^255
+//   s             < 2^255
+//   s + L * (x%8) < 2^256
 static void add_xl(u8 s[32], u8 x)
 {
     u32 mod8  = x & 7;
@@ -2346,7 +2346,7 @@ void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
 // This version works by performing a regular scalar multiplication,
 // then add a low order point.  The scalar multiplication is done in
 // Edwards space for more speed (*2 compared to the "small" version).
-// The cost is a bigger binary programs that don't also sign messages.
+// The cost is a bigger binary for programs that don't also sign messages.
 void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
 {
     static const fe lop_x ={21352778, 5345713, 4660180, -8347857, 24143090,
@@ -2708,12 +2708,14 @@ void crypto_x25519_inverse(u8 blind_salt [32], const u8 private_key[32],
     // Convert the scalar in Montgomery form
     // m_scl = scalar * 2^256 (modulo L)
     u32 m_scl[8];
-    i64 tmp[64];
-    ZERO(tmp, 32);
-    COPY(tmp+32, scalar, 32);
-    modL(scalar, tmp);
-    load32_le_buf(m_scl, scalar, 8);
-    WIPE_BUFFER(tmp); // Wipe ASAP to save stack space
+    {
+        i64 tmp[64];
+        ZERO(tmp, 32);
+        COPY(tmp+32, scalar, 32);
+        modL(scalar, tmp);
+        load32_le_buf(m_scl, scalar, 8);
+        WIPE_BUFFER(tmp); // Wipe ASAP to save stack space
+    }
 
     u32 product[16];
     for (int i = 252; i >= 0; i--) {
