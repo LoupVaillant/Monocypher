@@ -1,0 +1,12 @@
+prefix=/PREFIX
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libhydrogen
+Version: git-HEAD
+Description: Small, easy-to-use,
+hard-to-misuse cryptographic library.
+
+Libs: -L${libdir} -lhydrogen
+Cflags: -I${includedir}

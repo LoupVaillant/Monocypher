@@ -54,15 +54,16 @@ CFLAGS= -pedantic -Wall -Wextra -O3 -march=native
 DESTDIR=
 PREFIX=usr/local
 LIBDIR=$(PREFIX)/lib
-PKGCONFIG=$(DESTDIR)/$(LIBDIR)/pkgconfig
-MAN_DIR=$(DESTDIR)/$(PREFIX)/share/man/man3
+INCLUDEDIR=$(PREFIX)/include
+PKGCONFIGDIR=$(LIBDIR)/pkgconfig
+MANDIR=$(PREFIX)/share/man/man3
 SONAME=libmonocypher.so.3
 
 VERSION=__git__
 
 ifdef USE_ED25519
 LINK_ED25519=lib/monocypher-ed25519.o
-INSTALL_ED25519=cp src/optional/monocypher-ed25519.h $(DESTDIR)/$(PREFIX)/include
+INSTALL_ED25519=cp src/optional/monocypher-ed25519.h $(DESTDIR)/$(INCLUDEDIR)
 endif
 
 .PHONY: all library static-library dynamic-library                     \
@@ -73,50 +74,27 @@ endif
         dist
 
 all    : library
-install: library src/monocypher.h install-doc
-	mkdir -p $(DESTDIR)/$(PREFIX)/include
+install: library src/monocypher.h monocypher.pc install-doc
+	mkdir -p $(DESTDIR)/$(INCLUDEDIR)
 	mkdir -p $(DESTDIR)/$(LIBDIR)
-	mkdir -p $(PKGCONFIG)
+	mkdir -p $(DESTDIR)/$(PKGCONFIGDIR)
 	cp -P lib/libmonocypher.a lib/libmonocypher.so* $(DESTDIR)/$(LIBDIR)
-	cp src/monocypher.h $(DESTDIR)/$(PREFIX)/include
+	cp src/monocypher.h $(DESTDIR)/$(INCLUDEDIR)
 	$(INSTALL_ED25519)
-	@echo "Creating $(PKGCONFIG)/monocypher.pc"
-	@echo "prefix=/$(PREFIX)"                > $(PKGCONFIG)/monocypher.pc
-	@echo 'exec_prefix=$${prefix}'          >> $(PKGCONFIG)/monocypher.pc
-	@echo 'libdir=$(LIBDIR)'                >> $(PKGCONFIG)/monocypher.pc
-	@echo 'includedir=$${prefix}/include'   >> $(PKGCONFIG)/monocypher.pc
-	@echo ''                                >> $(PKGCONFIG)/monocypher.pc
-	@echo 'Name: monocypher'                >> $(PKGCONFIG)/monocypher.pc
-	@echo 'Version: ' $(VERSION)            >> $(PKGCONFIG)/monocypher.pc
-	@echo 'Description: Easy to use, easy to deploy crypto library' \
-                                                >> $(PKGCONFIG)/monocypher.pc
-	@echo ''                                >> $(PKGCONFIG)/monocypher.pc
-	@echo 'Libs: -L$${libdir} -lmonocypher' >> $(PKGCONFIG)/monocypher.pc
-	@echo 'Cflags: -I$${includedir}'        >> $(PKGCONFIG)/monocypher.pc
+	sed "s|PREFIX|$(PREFIX)|"  monocypher.pc \
+            > $(DESTDIR)/$(PKGCONFIGDIR)/monocypher.pc
 
 install-doc:
-	mkdir -p $(MAN_DIR)
-	cp -PR doc/man/man3/*.3monocypher $(MAN_DIR)
+	mkdir -p $(DESTDIR)/$(MANDIR)
+	cp -PR doc/man/man3/*.3monocypher $(DESTDIR)/$(MANDIR)
 ifdef USE_ED25519
-	cp -PR doc/man/man3/optional/*.3monocypher $(MAN_DIR)
+	cp -PR doc/man/man3/optional/*.3monocypher $(DESTDIR)/$(MANDIR)
 endif
 
 pkg-config-libhydrogen:
-	mkdir -p $(PKGCONFIG)
-	@echo "Creating $(PKGCONFIG)/libhydrogen.pc"
-	@echo "prefix=/$(PREFIX)"               > $(PKGCONFIG)/libhydrogen.pc
-	@echo 'exec_prefix=$${prefix}'         >> $(PKGCONFIG)/libhydrogen.pc
-	@echo 'libdir=$${exec_prefix}/lib'     >> $(PKGCONFIG)/libhydrogen.pc
-	@echo 'includedir=$${prefix}/include'  >> $(PKGCONFIG)/libhydrogen.pc
-	@echo ''                               >> $(PKGCONFIG)/libhydrogen.pc
-	@echo 'Name: libhydrogen'              >> $(PKGCONFIG)/libhydrogen.pc
-	@echo 'Version: git-HEAD'              >> $(PKGCONFIG)/libhydrogen.pc
-	@echo 'Description: Small, easy-to-use,'      \
-              'hard-to-misuse cryptographic library.' \
-                                               >> $(PKGCONFIG)/libhydrogen.pc
-	@echo ''                               >> $(PKGCONFIG)/libhydrogen.pc
-	@echo 'Libs: -L$${libdir} -lhydrogen'  >> $(PKGCONFIG)/libhydrogen.pc
-	@echo 'Cflags: -I$${includedir}'       >> $(PKGCONFIG)/libhydrogen.pc
+	mkdir -p $(DESTDIR)/$(PKGCONFIGDIR)
+	sed "s|PREFIX|$(PREFIX)|" tests/speed/libhydrogen.pc \
+            > $(DESTDIR)/$(PKGCONFIGDIR)/libhydrogen.pc
 
 library: static-library dynamic-library
 static-library : lib/libmonocypher.a
@@ -129,9 +107,10 @@ clean:
 uninstall:
 	rm -f $(DESTDIR)/$(LIBDIR)/libmonocypher.a
 	rm -f $(DESTDIR)/$(LIBDIR)/libmonocypher.so*
-	rm -f $(DESTDIR)/$(PREFIX)/include/monocypher.h
-	rm -f $(PKGCONFIG)/monocypher.pc
-	rm -f $(MAN_DIR)/*.3monocypher
+	rm -f $(DESTDIR)/$(INCLUDEDIR)/monocypher.h
+	rm -f $(DESTDIR)/$(INCLUDEDIR)/monocypher-ed25519.h
+	rm -f $(DESTDIR)/$(PKGCONFIGDIR)/monocypher.pc
+	rm -f $(DESTDIR)/$(MANDIR)/*.3monocypher
 
 check: test
 test           : test.out

@@ -1,0 +1,11 @@
+prefix=/PREFIX
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: monocypher
+Version: __git__
+Description: Easy to use, easy to deploy crypto library
+
+Libs: -L${libdir} -lmonocypher
+Cflags: -I${includedir}
