@@ -1,6 +1,6 @@
 3.1.0
 -----
-2020/03/31
+2020/04/03
 
 - Added Elligator 2 mappings (hash to curve, curve to hash).
 - Added OPRF support (with scalar inversion).
