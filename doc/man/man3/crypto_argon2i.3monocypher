@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 31, 2020
+.Dd April 8, 2020
 .Dt CRYPTO_ARGON2I 3MONOCYPHER
 .Os
 .Sh NAME
@@ -134,7 +134,10 @@ If it is still too fast with all available memory, increase
 .It Fa nb_iterations
 The number of iterations.
 It must be at least 1.
-A value of 3 is recommended.
+A value of 3 is
+.Em strongly
+recommended;
+any value lower than 3 enables significantly more efficient attacks.
 .It Fa password
 The password to hash.
 It should be wiped with
