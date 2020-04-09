@@ -2734,7 +2734,7 @@ void crypto_x25519_inverse(u8 blind_salt [32], const u8 private_key[32],
     store32_le_buf(scalar, m_inv, 8); // the *inverse* of the scalar
 
     // Clear the cofactor of scalar:
-    //   cleared = scalar * (3*L + 1)       (modulo 8*L)
+    //   cleared = scalar * (3*L + 1)      (modulo 8*L)
     //   cleared = scalar + scalar * 3 * L (modulo 8*L)
     // Note that (scalar * 3) is reduced modulo 8, so we only need the
     // first byte.
