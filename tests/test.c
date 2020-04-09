@@ -1166,6 +1166,6 @@ int main(int argc, char *argv[])
     status |= p_x25519_inverse_overlap();
     status |= p_from_eddsa();
     status |= p_from_ed25519();
-     printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
+    printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
     return status;
 }
