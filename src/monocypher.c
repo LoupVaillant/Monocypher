@@ -1039,6 +1039,28 @@ void crypto_argon2i(u8   *hash,      u32 hash_size,
 // field element
 typedef i32 fe[10];
 
+// field constants
+//
+// sqrtm1      : sqrt(-1)
+// d           :     -121665 / 121666
+// D2          : 2 * -121665 / 121666
+// lop_x, lop_y: low order point in Edwards coordinates
+// ufactor     : -sqrt(-1) * 2
+// A2          : 486662^2  (A squared)
+static const fe sqrtm1  = {-32595792, -7943725, 9377950, 3500415, 12389472,
+                           -272473, -25146209, -2005654, 326686, 11406482,};
+static const fe d       = {-10913610, 13857413, -15372611, 6949391, 114729,
+                           -8787816, -6275908, -3247719, -18696448, -12055116,};
+static const fe D2      = {-21827239, -5839606, -30745221, 13898782, 229458,
+                           15978800, -12551817, -6495438, 29715968, 9444199,};
+static const fe lop_x   = {21352778, 5345713, 4660180, -8347857, 24143090,
+                           14568123, 30185756, -12247770, -33528939, 8345319,};
+static const fe lop_y   = {-6952922, -1265500, 6862341, -7057498, -4037696,
+                           -5447722, 31680899, -15325402, -19365852, 1569102,};
+static const fe ufactor = {-1917299, 15887451, -18755900, -7000830, -24778944,
+                           544946, -16816446, 4011309, -653372, 10741468,};
+static const fe A2      = {12721188, 3529, 0, 0, 0, 0, 0, 0, 0, 0,};
+
 static void fe_0(fe h) {           ZERO(h  , 10); }
 static void fe_1(fe h) { h[0] = 1; ZERO(h+1,  9); }
 
@@ -1096,6 +1118,34 @@ static void fe_frombytes(fe h, const u8 s[32])
     i64 t8 =  load24_le(s + 26) << 4;
     i64 t9 = (load24_le(s + 29) & 0x7fffff) << 2;
     FE_CARRY;
+}
+
+static void fe_tobytes(u8 s[32], const fe h)
+{
+    i32 t[10];
+    COPY(t, h, 10);
+    i32 q = (19 * t[9] + (((i32) 1) << 24)) >> 25;
+    FOR (i, 0, 5) {
+        q += t[2*i  ]; q >>= 26;
+        q += t[2*i+1]; q >>= 25;
+    }
+    t[0] += 19 * q;
+    q = 0;
+    FOR (i, 0, 5) {
+        t[i*2  ] += q;  q = t[i*2  ] >> 26;  t[i*2  ] -= q * ((i32)1 << 26);
+        t[i*2+1] += q;  q = t[i*2+1] >> 25;  t[i*2+1] -= q * ((i32)1 << 25);
+    }
+
+    store32_le(s +  0, ((u32)t[0] >>  0) | ((u32)t[1] << 26));
+    store32_le(s +  4, ((u32)t[1] >>  6) | ((u32)t[2] << 19));
+    store32_le(s +  8, ((u32)t[2] >> 13) | ((u32)t[3] << 13));
+    store32_le(s + 12, ((u32)t[3] >> 19) | ((u32)t[4] <<  6));
+    store32_le(s + 16, ((u32)t[5] >>  0) | ((u32)t[6] << 25));
+    store32_le(s + 20, ((u32)t[6] >>  7) | ((u32)t[7] << 19));
+    store32_le(s + 24, ((u32)t[7] >> 13) | ((u32)t[8] << 12));
+    store32_le(s + 28, ((u32)t[8] >> 20) | ((u32)t[9] <<  6));
+
+    WIPE_BUFFER(t);
 }
 
 // multiply a field element by a signed 32-bit integer
@@ -1222,34 +1272,6 @@ static void fe_invert(fe out, const fe z)
     WIPE_BUFFER(tmp);
 }
 
-static void fe_tobytes(u8 s[32], const fe h)
-{
-    i32 t[10];
-    COPY(t, h, 10);
-    i32 q = (19 * t[9] + (((i32) 1) << 24)) >> 25;
-    FOR (i, 0, 5) {
-        q += t[2*i  ]; q >>= 26;
-        q += t[2*i+1]; q >>= 25;
-    }
-    t[0] += 19 * q;
-    q = 0;
-    FOR (i, 0, 5) {
-        t[i*2  ] += q;  q = t[i*2  ] >> 26;  t[i*2  ] -= q * ((i32)1 << 26);
-        t[i*2+1] += q;  q = t[i*2+1] >> 25;  t[i*2+1] -= q * ((i32)1 << 25);
-    }
-
-    store32_le(s +  0, ((u32)t[0] >>  0) | ((u32)t[1] << 26));
-    store32_le(s +  4, ((u32)t[1] >>  6) | ((u32)t[2] << 19));
-    store32_le(s +  8, ((u32)t[2] >> 13) | ((u32)t[3] << 13));
-    store32_le(s + 12, ((u32)t[3] >> 19) | ((u32)t[4] <<  6));
-    store32_le(s + 16, ((u32)t[5] >>  0) | ((u32)t[6] << 25));
-    store32_le(s + 20, ((u32)t[6] >>  7) | ((u32)t[7] << 19));
-    store32_le(s + 24, ((u32)t[7] >> 13) | ((u32)t[8] << 12));
-    store32_le(s + 28, ((u32)t[8] >> 20) | ((u32)t[9] <<  6));
-
-    WIPE_BUFFER(t);
-}
-
 //  Parity check.  Returns 0 if even, 1 if odd
 static int fe_isodd(const fe f)
 {
@@ -1279,9 +1301,6 @@ static int fe_isequal(const fe f, const fe g)
     WIPE_BUFFER(diff);
     return 1 - isdifferent;
 }
-
-static const fe sqrtm1 = { -32595792, -7943725, 9377950, 3500415, 12389472,
-                           -272473, -25146209, -2005654, 326686, 11406482,};
 
 // Inverse square root.
 // Returns true if x is a non zero square, false otherwise.
@@ -1589,10 +1608,6 @@ static void ge_tobytes(u8 s[32], const ge *h)
 // Finally, negate x if its sign is not as specified.
 static int ge_frombytes_vartime(ge *h, const u8 s[32])
 {
-    static const fe d = { // −121665 / 121666
-        -10913610, 13857413, -15372611, 6949391, 114729,
-        -8787816, -6275908, -3247719, -18696448, -12055116
-    };
     fe_frombytes(h->Y, s);
     fe_1(h->Z);
     fe_sq (h->T, h->Y);        // t =   y^2
@@ -1611,10 +1626,6 @@ static int ge_frombytes_vartime(ge *h, const u8 s[32])
     fe_mul(h->T, h->X, h->Y);
     return 0;
 }
-
-// - 2 * 121665 / 121666
-static const fe D2 = {-21827239, -5839606, -30745221, 13898782, 229458,
-                      15978800, -12551817, -6495438, 29715968, 9444199,};
 
 static void ge_cache(ge_cached *c, const ge *p)
 {
@@ -2333,10 +2344,6 @@ void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
 // The cost is a bigger binary for programs that don't also sign messages.
 void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
 {
-    static const fe lop_x ={21352778, 5345713, 4660180, -8347857, 24143090,
-                            14568123, 30185756, -12247770, -33528939, 8345319,};
-    static const fe lop_y ={-6952922, -1265500, 6862341, -7057498, -4037696,
-                            -5447722, 31680899, -15325402, -19365852, 1569102,};
     u8 scalar[32];
     ge pk;
     trim_scalar(scalar, secret_key);
@@ -2455,11 +2462,6 @@ static const fe A = {486662};
 //       u2 = u
 void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
 {
-     // -sqrt(-1) * 2
-    static const fe ufactor={-1917299, 15887451, -18755900, -7000830, -24778944,
-                             544946, -16816446, 4011309, -653372, 10741468,};
-    static const fe A2 = {12721188, 3529,};
-
     // Representatives are encoded in 254 bits.
     // The two most significant ones are random padding that must be ignored.
     u8 clamped[32];
