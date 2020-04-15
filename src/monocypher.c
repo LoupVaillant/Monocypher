@@ -1108,7 +1108,6 @@ static void fe_mul_small(fe h, const fe f, i32 g)
     i64 t8 = f[8] * (i64) g;  i64 t9 = f[9] * (i64) g;
     FE_CARRY;
 }
-static void fe_mul121666(fe h, const fe f) { fe_mul_small(h, f, 121666); }
 
 static void fe_mul(fe h, const fe f, const fe g)
 {
@@ -1415,7 +1414,7 @@ static void scalarmult(u8 q[32], const u8 scalar[32], const u8 p[32],
         fe_mul(x2, t1, t0);
         fe_sub(t1, t1, t0);
         fe_sq (z2, z2    );
-        fe_mul121666(z3, t1);
+        fe_mul_small(z3, t1, 121666);
         fe_sq (x3, x3    );
         fe_add(t0, t0, z3);
         fe_mul(z3, x1, z2);
