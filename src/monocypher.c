@@ -2667,7 +2667,7 @@ static void redc(u32 u[8], u32 x[16])
         carry  += (u64)t[i+8] + ~l[i];
         carry >>= 32;
     }
-    u32 mask = (u32)-carry; // carry == 0 or 1
+    u32 mask = ~(u32)carry + 1; // carry == 0 or 1
     FOR (i, 0, 8) {
         carry  += (u64)t[i+8] + (~l[i] & mask);
         u[i]    = (u32)carry;
