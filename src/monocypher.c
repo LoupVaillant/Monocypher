@@ -1377,12 +1377,11 @@ static int invsqrt(fe isr, const fe x)
 }
 
 // trim a scalar for scalar multiplication
-static void trim_scalar(u8 trimmed[32], const u8 scalar[32])
+static void trim_scalar(u8 scalar[32])
 {
-    COPY(trimmed, scalar, 32);
-    trimmed[ 0] &= 248;
-    trimmed[31] &= 127;
-    trimmed[31] |= 64;
+    scalar[ 0] &= 248;
+    scalar[31] &= 127;
+    scalar[31] |= 64;
 }
 
 // get bit from scalar at position i
@@ -1460,7 +1459,8 @@ void crypto_x25519(u8       raw_shared_secret[32],
 {
     // restrict the possible scalar values
     u8 e[32];
-    trim_scalar(e, your_secret_key);
+    COPY(e, your_secret_key, 32);
+    trim_scalar(e);
     scalarmult(raw_shared_secret, e, their_public_key, 255);
     WIPE_BUFFER(e);
 }
@@ -2056,7 +2056,7 @@ void crypto_sign_public_key_custom_hash(u8       public_key[32],
 {
     u8 a[64];
     hash->hash(a, secret_key, 32);
-    trim_scalar(a, a);
+    trim_scalar(a);
     ge A;
     ge_scalarmult_base(&A, a);
     ge_tobytes(public_key, &A);
@@ -2079,7 +2079,7 @@ void crypto_sign_init_first_pass_custom_hash(crypto_sign_ctx_abstract *ctx,
     u8 *a      = ctx->buf;
     u8 *prefix = ctx->buf + 32;
     ctx->hash->hash(a, secret_key, 32);
-    trim_scalar(a, a);
+    trim_scalar(a);
 
     if (public_key == 0) {
         crypto_sign_public_key_custom_hash(ctx->pk, secret_key, ctx->hash);
@@ -2318,7 +2318,8 @@ void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
         0x94, 0x14, 0x56, 0x3b, 0x4b, 0xa4, 0x47, 0x0f, };
     // separate the main factor & the cofactor of the scalar
     u8 scalar[32];
-    trim_scalar(scalar, secret_key);
+    COPY(scalar, secret_key, 32);
+    trim_scalar(scalar);
 
     // Separate the main factor and the cofactor
     //
@@ -2346,7 +2347,8 @@ void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
 {
     u8 scalar[32];
     ge pk;
-    trim_scalar(scalar, secret_key);
+    COPY(scalar, secret_key, 32);
+    trim_scalar(scalar);
     ge_scalarmult_base(&pk, scalar);
 
     // Select low order point
@@ -2689,7 +2691,8 @@ void crypto_x25519_inverse(u8 blind_salt [32], const u8 private_key[32],
                      0xfffffffe, 0xffffffff, 0xffffffff, 0x0fffffff,};
 
     u8 scalar[32];
-    trim_scalar(scalar, private_key);
+    COPY(scalar, private_key, 32);
+    trim_scalar(scalar);
 
     // Convert the scalar in Montgomery form
     // m_scl = scalar * 2^256 (modulo L)
