@@ -409,6 +409,9 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const u8 *message, size_t message_size)
 {
+    if (message_size == 0) {
+        return;
+    }
     // Align ourselves with block boundaries
     size_t align = MIN(ALIGN(ctx->c_idx, 16), message_size);
     poly_update(ctx, message, align);
@@ -614,6 +617,9 @@ void crypto_blake2b_init(crypto_blake2b_ctx *ctx)
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const u8 *message, size_t message_size)
 {
+    if (message_size == 0) {
+        return;
+    }
     // Align ourselves with block boundaries
     size_t align = MIN(ALIGN(ctx->input_idx, 128), message_size);
     blake2b_update(ctx, message, align);

@@ -215,6 +215,9 @@ void crypto_sha512_init(crypto_sha512_ctx *ctx)
 void crypto_sha512_update(crypto_sha512_ctx *ctx,
                           const u8 *message, size_t message_size)
 {
+    if (message_size == 0) {
+        return;
+    }
     // Align ourselves with block boundaries
     size_t align = MIN(ALIGN(ctx->input_idx, 128), message_size);
     sha512_update(ctx, message, align);
