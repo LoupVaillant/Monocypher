@@ -528,20 +528,20 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 
     // mangle work vector
     u64 *input = ctx->input;
-#define BLAKE2_G(v, a, b, c, d, x, y)                  \
-    v##a += v##b + x;  v##d = rotr64(v##d ^ v##a, 32); \
-    v##c += v##d;      v##b = rotr64(v##b ^ v##c, 24); \
-    v##a += v##b + y;  v##d = rotr64(v##d ^ v##a, 16); \
-    v##c += v##d;      v##b = rotr64(v##b ^ v##c, 63)
+#define BLAKE2_G(a, b, c, d, x, y)      \
+    a += b + x;  d = rotr64(d ^ a, 32); \
+    c += d;      b = rotr64(b ^ c, 24); \
+    a += b + y;  d = rotr64(d ^ a, 16); \
+    c += d;      b = rotr64(b ^ c, 63)
 #define BLAKE2_ROUND(i)                                                 \
-    BLAKE2_G(v, 0, 4,  8, 12, input[sigma[i][ 0]], input[sigma[i][ 1]]);\
-    BLAKE2_G(v, 1, 5,  9, 13, input[sigma[i][ 2]], input[sigma[i][ 3]]);\
-    BLAKE2_G(v, 2, 6, 10, 14, input[sigma[i][ 4]], input[sigma[i][ 5]]);\
-    BLAKE2_G(v, 3, 7, 11, 15, input[sigma[i][ 6]], input[sigma[i][ 7]]);\
-    BLAKE2_G(v, 0, 5, 10, 15, input[sigma[i][ 8]], input[sigma[i][ 9]]);\
-    BLAKE2_G(v, 1, 6, 11, 12, input[sigma[i][10]], input[sigma[i][11]]);\
-    BLAKE2_G(v, 2, 7,  8, 13, input[sigma[i][12]], input[sigma[i][13]]);\
-    BLAKE2_G(v, 3, 4,  9, 14, input[sigma[i][14]], input[sigma[i][15]])
+    BLAKE2_G(v0, v4, v8 , v12, input[sigma[i][ 0]], input[sigma[i][ 1]]); \
+    BLAKE2_G(v1, v5, v9 , v13, input[sigma[i][ 2]], input[sigma[i][ 3]]); \
+    BLAKE2_G(v2, v6, v10, v14, input[sigma[i][ 4]], input[sigma[i][ 5]]); \
+    BLAKE2_G(v3, v7, v11, v15, input[sigma[i][ 6]], input[sigma[i][ 7]]); \
+    BLAKE2_G(v0, v5, v10, v15, input[sigma[i][ 8]], input[sigma[i][ 9]]); \
+    BLAKE2_G(v1, v6, v11, v12, input[sigma[i][10]], input[sigma[i][11]]); \
+    BLAKE2_G(v2, v7, v8 , v13, input[sigma[i][12]], input[sigma[i][13]]); \
+    BLAKE2_G(v3, v4, v9 , v14, input[sigma[i][14]], input[sigma[i][15]])
 
 #ifdef BLAKE2_NO_UNROLLING
     FOR (i, 0, 12) {
