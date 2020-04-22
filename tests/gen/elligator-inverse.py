@@ -12,6 +12,7 @@
 # ------------------------------------------------------------------------
 #
 # Copyright (c) 2020, Loup Vaillant
+# Copyright (c) 2020, Fabio Scotoni
 # All rights reserved.
 #
 #
@@ -41,7 +42,7 @@
 #
 # ------------------------------------------------------------------------
 #
-# Written in 2020 by Loup Vaillant
+# Written in 2020 by Loup Vaillant and Fabio Scotoni
 #
 # To the extent possible under law, the author(s) have dedicated all copyright
 # and related neighboring rights to this software to the public domain
@@ -60,6 +61,7 @@ from elligator import print_raw
 from elligator_scalarmult import scalarmult
 
 from random import randrange
+from random import seed
 
 def private_to_curve_and_hash(scalar, tweak):
     cofactor      = scalar % 8
@@ -77,6 +79,10 @@ def private_to_curve_and_hash(scalar, tweak):
     u2, v2 = hash_to_curve(r1)
     if u2 != u: raise ValueError('Round trip failure')
     return (u, r1.val + msb)
+
+# Make test vector generation deterministic, the actual randomness does
+# not matter here since these are just tests.
+seed(12345)
 
 # All possible failures
 for cofactor in range(8):

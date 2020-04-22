@@ -12,6 +12,7 @@
 # ------------------------------------------------------------------------
 #
 # Copyright (c) 2020, Loup Vaillant
+# Copyright (c) 2020, Fabio Scotoni
 # All rights reserved.
 #
 #
@@ -41,7 +42,7 @@
 #
 # ------------------------------------------------------------------------
 #
-# Written in 2020 by Loup Vaillant
+# Written in 2020 by Loup Vaillant and Fabio Scotoni
 #
 # To the extent possible under law, the author(s) have dedicated all copyright
 # and related neighboring rights to this software to the public domain
@@ -58,6 +59,7 @@ from elligator import fast_hash_to_curve
 from elligator import p
 from elligator import print_raw
 from random    import randrange
+from random    import seed
 
 def direct(r1, padding):
     q1 = hash_to_curve(r1)
@@ -73,5 +75,10 @@ direct(fe(0), 0) # representative 0 maps to point (0, 0)
 direct(fe(0), 1) # representative 0 maps to point (0, 0)
 direct(fe(0), 2) # representative 0 maps to point (0, 0)
 direct(fe(0), 3) # representative 0 maps to point (0, 0)
+
+# Make test vector generation deterministic, the actual randomness does
+# not matter here since these are just tests.
+seed(12345)
+
 for i in range(50):
     direct(fe(randrange(0, (p-1)/2)), i % 4)
