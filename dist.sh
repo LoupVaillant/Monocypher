@@ -12,7 +12,7 @@
 # ------------------------------------------------------------------------
 #
 # Copyright (c) 2019, Loup Vaillant
-# Copyright (c) 2019, Fabio Scotoni
+# Copyright (c) 2019-2020, Fabio Scotoni
 # All rights reserved.
 #
 #
@@ -42,7 +42,7 @@
 #
 # ------------------------------------------------------------------------
 #
-# Written in 2019 by Loup Vaillant and Fabio Scotoni
+# Written in 2019-2020 by Loup Vaillant and Fabio Scotoni
 #
 # To the extent possible under law, the author(s) have dedicated all copyright
 # and related neighboring rights to this software to the public domain
@@ -56,7 +56,7 @@ set -e
 
 VERSION=`git describe --tags`
 FOLDER=monocypher-$VERSION
-TARBALL=$FOLDER.tar.gz
+TARBALL=$FOLDER.tar
 
 # Generate documentation for users who don't have mandoc
 doc/man2html.sh
@@ -85,8 +85,20 @@ Monocypher\
 ----------' \
     -i $FOLDER/README.md
 
-# Make the actual tarball
-tar -cvzf $TARBALL $FOLDER
+# Make the actual tarball.  The options here were taken from:
+# https://reproducible-builds.org/docs/archives/#full-example
+# This requires GNU tar.
+# The --mtime value was chosen arbitrarily, but the date is chosen such
+# that it is after the release 3.1.0, the last one without reproducible
+# tarballs.
+tar --sort=name \
+    --mtime=@1587513600 \
+    --owner=0 --group=0 --numeric-owner \
+    --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime \
+    -cvf $TARBALL $FOLDER
+# Compress separately so that we can set the -n option to avoid any kind
+# of timestamp metadata
+gzip -n $TARBALL
 
 # Remove the temporary folder
 rm -rf $FOLDER
@@ -94,7 +106,7 @@ rm -rf $FOLDER
 # Run tests in the tarball, to make sure we didn't screw up anything
 # important.  We're missing the TIS interpreter run, but that's a good
 # quick check.
-tar -xzf $TARBALL
+tar -xzf $TARBALL.gz
 cd $FOLDER   # Extracting from the tarball, just to make sure
 tests/test.sh
 make clean
