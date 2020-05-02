@@ -62,9 +62,18 @@
 #define WIPE_CTX(ctx)        crypto_wipe(ctx   , sizeof(*(ctx)))
 #define WIPE_BUFFER(buffer)  crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)            ((a) <= (b) ? (a) : (b))
-#define ALIGN(x, block_size) ((~(x) + 1) & ((block_size) - 1))
 typedef uint8_t u8;
 typedef uint64_t u64;
+
+// returns the smallest positive integer y such that
+// (x + y) % pow_2  == 0
+// Basically, it's how many bytes we need to add to "align" x.
+// Only works when pow_2 is a power of 2.
+// Note: we use ~x+1 instead of -x to avoid compiler warnings
+static size_t align(size_t x, size_t pow_2)
+{
+    return (~x + 1) & (pow_2 - 1);
+}
 
 static u64 load64_be(const u8 s[8])
 {
@@ -219,10 +228,10 @@ void crypto_sha512_update(crypto_sha512_ctx *ctx,
         return;
     }
     // Align ourselves with block boundaries
-    size_t align = MIN(ALIGN(ctx->input_idx, 128), message_size);
-    sha512_update(ctx, message, align);
-    message      += align;
-    message_size -= align;
+    size_t aligned = MIN(align(ctx->input_idx, 128), message_size);
+    sha512_update(ctx, message, aligned);
+    message      += aligned;
+    message_size -= aligned;
 
     // Process the message block by block
     FOR (i, 0, message_size / 128) { // number of blocks

@@ -64,7 +64,7 @@
 #define WIPE_BUFFER(buffer)        crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)                  ((a) <= (b) ? (a) : (b))
 #define MAX(a, b)                  ((a) >= (b) ? (a) : (b))
-#define ALIGN(x, block_size)       ((~(x) + 1) & ((block_size) - 1))
+
 typedef int8_t   i8;
 typedef uint8_t  u8;
 typedef int16_t  i16;
@@ -74,6 +74,16 @@ typedef int64_t  i64;
 typedef uint64_t u64;
 
 static const u8 zero[128] = {0};
+
+// returns the smallest positive integer y such that
+// (x + y) % pow_2  == 0
+// Basically, it's how many bytes we need to add to "align" x.
+// Only works when pow_2 is a power of 2.
+// Note: we use ~x+1 instead of -x to avoid compiler warnings
+static size_t align(size_t x, size_t pow_2)
+{
+    return (~x + 1) & (pow_2 - 1);
+}
 
 static u32 load24_le(const u8 s[3])
 {
@@ -413,10 +423,10 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
         return;
     }
     // Align ourselves with block boundaries
-    size_t align = MIN(ALIGN(ctx->c_idx, 16), message_size);
-    poly_update(ctx, message, align);
-    message      += align;
-    message_size -= align;
+    size_t aligned = MIN(align(ctx->c_idx, 16), message_size);
+    poly_update(ctx, message, aligned);
+    message      += aligned;
+    message_size -= aligned;
 
     // Process the message block by block
     size_t nb_blocks = message_size >> 4;
@@ -621,10 +631,10 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
         return;
     }
     // Align ourselves with block boundaries
-    size_t align = MIN(ALIGN(ctx->input_idx, 128), message_size);
-    blake2b_update(ctx, message, align);
-    message      += align;
-    message_size -= align;
+    size_t aligned = MIN(align(ctx->input_idx, 128), message_size);
+    blake2b_update(ctx, message, aligned);
+    message      += aligned;
+    message_size -= aligned;
 
     // Process the message block by block
     FOR (i, 0, message_size >> 7) { // number of blocks
@@ -2757,9 +2767,9 @@ static void lock_auth(u8 mac[16], const u8  auth_key[32],
     crypto_poly1305_ctx poly_ctx;           // auto wiped...
     crypto_poly1305_init  (&poly_ctx, auth_key);
     crypto_poly1305_update(&poly_ctx, ad         , ad_size);
-    crypto_poly1305_update(&poly_ctx, zero       , ALIGN(ad_size, 16));
+    crypto_poly1305_update(&poly_ctx, zero       , align(ad_size, 16));
     crypto_poly1305_update(&poly_ctx, cipher_text, text_size);
-    crypto_poly1305_update(&poly_ctx, zero       , ALIGN(text_size, 16));
+    crypto_poly1305_update(&poly_ctx, zero       , align(text_size, 16));
     crypto_poly1305_update(&poly_ctx, sizes      , 16);
     crypto_poly1305_final (&poly_ctx, mac); // ...here
 }
