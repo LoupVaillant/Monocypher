@@ -680,21 +680,15 @@ void crypto_blake2b(u8 hash[64], const u8 *message, size_t message_size)
     crypto_blake2b_general(hash, 64, 0, 0, message, message_size);
 }
 
-static void blake2b_vtable_init(void *ctx)
-{
+static void blake2b_vtable_init(void *ctx) {
     crypto_blake2b_init(&((crypto_sign_ctx*)ctx)->hash);
 }
-
-static void blake2b_vtable_update(void *ctx, const u8 *m, size_t s)
-{
+static void blake2b_vtable_update(void *ctx, const u8 *m, size_t s) {
     crypto_blake2b_update(&((crypto_sign_ctx*)ctx)->hash, m, s);
 }
-
-static void blake2b_vtable_final(void *ctx, u8 *h)
-{
+static void blake2b_vtable_final(void *ctx, u8 *h) {
     crypto_blake2b_final(&((crypto_sign_ctx*)ctx)->hash, h);
 }
-
 const crypto_sign_vtable crypto_blake2b_vtable = {
     crypto_blake2b,
     blake2b_vtable_init,
