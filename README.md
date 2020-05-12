@@ -132,10 +132,11 @@ Speed benchmark
 
     $ make speed
 
-This will give you an idea how fast Monocypher is on your machine.
-Make sure you run it on the target platform if performance is a
-concern.  If Monocypher is too slow, try Libsodium or NaCl.  If you're
-not sure, you can always switch later.
+This will give you an idea how fast Monocypher is on your machine.  Make
+sure you run it on the target platform if performance is a concern.  If
+Monocypher is too slow, try Libsodium.  If you're not sure, you can
+always switch later.
+
 
 Note: the speed benchmark currently requires the POSIX
 `clock_gettime()` function.
