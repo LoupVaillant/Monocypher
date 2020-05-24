@@ -48,7 +48,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 25, 2020
+.Dd May 24, 2020
 .Dt CRYPTO_FROM_ED25519_PRIVATE 3MONOCYPHER
 .Os
 .Sh NAME
@@ -56,7 +56,7 @@
 .Nm crypto_from_ed25519_public
 .Nd conversion of key pairs for EdDSA with BLAKE2b to X25519 key pairs
 .Sh SYNOPSIS
-.In monocypher.h
+.In monocypher-ed25519.h
 .Ft void
 .Fo crypto_from_ed25519_private
 .Fa "uint8_t x25519[32]"
