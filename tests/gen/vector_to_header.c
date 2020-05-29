@@ -86,7 +86,7 @@ int main(int argc, char** argv)
             printf("#define %s_%d 0\n", prefix, nb_vec);
         }
         else {
-            printf("uint8_t %s_%d[] = { ", prefix, nb_vec);
+            printf("static uint8_t %s_%d[] = { ", prefix, nb_vec);
             while (c != ':') {
                 char msb = (char)c;  c = getchar();
                 char lsb = (char)c;  c = getchar();
@@ -105,15 +105,15 @@ int main(int argc, char** argv)
         nb_vec++;
     }
 
-    printf("size_t nb_%s_vectors = %d;\n", prefix, nb_vec);
+    printf("static size_t nb_%s_vectors = %d;\n", prefix, nb_vec);
 
-    printf("uint8_t *%s_vectors[] = { ", prefix);
+    printf("static uint8_t *%s_vectors[] = { ", prefix);
     for (int i = 0; i < nb_vec; i++) {
         printf("%s_%d, ", prefix, i);
     }
     printf("};\n");
 
-    printf("size_t %s_sizes[] = { ", prefix);
+    printf("static size_t %s_sizes[] = { ", prefix);
     for (int i = 0; i < nb_vec; i++) {
         printf("%s_%d_size, ", prefix, i);
     }

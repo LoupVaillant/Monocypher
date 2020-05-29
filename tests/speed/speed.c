@@ -118,9 +118,9 @@ static u64 sha512(void)
 
 static u64 argon2i(void)
 {
-    u64    work_area[SIZE / 8];
-    u8     hash     [32];
-    size_t nb_blocks = SIZE / 1024;
+    u64 work_area[SIZE / 8];
+    u8  hash     [32];
+    u32 nb_blocks = (u32)(SIZE / 1024);
     RANDOM_INPUT(password,  16);
     RANDOM_INPUT(salt    ,  16);
 

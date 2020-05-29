@@ -932,7 +932,7 @@ static u32 gidx_next(gidx_ctx *ctx)
     u64 y   = (area_size * x) >> 32;
     u64 z   = (area_size - 1) - y;
     u64 ref = start_pos + z;                // ref < 2 * nb_blocks
-    return ref < ctx->nb_blocks ? ref : ref - ctx->nb_blocks;
+    return (u32)(ref < ctx->nb_blocks ? ref : ref - ctx->nb_blocks);
 }
 
 // Main algorithm
@@ -1405,7 +1405,7 @@ static int scalar_bit(const u8 s[32], int i)
 /// X-25519 /// Taken from SUPERCOP's ref10 implementation.
 ///////////////
 static void scalarmult(u8 q[32], const u8 scalar[32], const u8 p[32],
-                       size_t nb_bits)
+                       int nb_bits)
 {
     // computes the scalar product
     fe x1;

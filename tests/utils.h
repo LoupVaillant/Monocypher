@@ -82,7 +82,7 @@ typedef struct {
 void store64_le(u8 out[8], u64 in);
 u64  load64_le(const u8 s[8]);
 u32  load32_le(const u8 s[8]);
-u64 rand64(); // Pseudo-random 64 bit number, based on xorshift*
+u64  rand64(void); // Pseudo-random 64 bit number, based on xorshift*
 void p_random(u8 *stream, size_t size);
 void print_vector(const u8 *buf, size_t size);
 void print_number(u64 n);

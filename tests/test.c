@@ -58,7 +58,6 @@
 #include "vectors.h"
 
 #define CHACHA_BLOCK_SIZE    64
-#define CHACHA_NB_BLOCKS     10
 #define POLY1305_BLOCK_SIZE  16
 #define BLAKE2B_BLOCK_SIZE  128
 #define SHA_512_BLOCK_SIZE  128
@@ -88,7 +87,7 @@ static void ietf_chacha20(const vector in[], vector *out)
     u32 ctr       = load32_le(in[3].buf);
     u32 new_ctr   = crypto_ietf_chacha20_ctr(out->buf, plain->buf, plain->size,
                                              key->buf, nonce->buf, ctr);
-    u32 nb_blocks = plain->size / 64 + (plain->size % 64 != 0);
+    u32 nb_blocks = (u32)(plain->size / 64 + (plain->size % 64 != 0));
     if (new_ctr - ctr != nb_blocks) {
         printf("FAILURE: IETF Chacha20 returned counter not correct: ");
     }
@@ -243,8 +242,8 @@ static void ed_25519_check(const vector in[], vector *out)
     const vector *public_k = in;
     const vector *msg      = in + 1;
     const vector *sig      = in + 2;
-    out->buf[0] = crypto_ed25519_check(sig->buf, public_k->buf,
-                                       msg->buf, msg->size);
+    out->buf[0] = (u8)crypto_ed25519_check(sig->buf, public_k->buf,
+                                           msg->buf, msg->size);
 }
 
 static void iterate_x25519(u8 k[32], u8 u[32])
@@ -331,7 +330,7 @@ static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
                 }
                 a[k] = (u8)i; a[k + size/2 - 1] = (u8)i;
                 b[k] = (u8)j; b[k + size/2 - 1] = (u8)j;
-                int cmp = compare(a, b);
+                cmp = compare(a, b);
                 status |= (i == j ? cmp : ~cmp);
             }
         }
@@ -659,10 +658,10 @@ static int p_argon2i_overlap()
         u32 ad_offset   = rand64() % 64;
         u8 hash1[32];
         u8 hash2[32];
-        u8 pass [16];  FOR (i, 0, 16) { pass[i] = work_area[i + pass_offset]; }
-        u8 salt [16];  FOR (i, 0, 16) { salt[i] = work_area[i + salt_offset]; }
-        u8 key  [32];  FOR (i, 0, 32) { key [i] = work_area[i +  key_offset]; }
-        u8 ad   [32];  FOR (i, 0, 32) { ad  [i] = work_area[i +   ad_offset]; }
+        u8 pass [16];  FOR (j, 0, 16) { pass[j] = work_area[j + pass_offset]; }
+        u8 salt [16];  FOR (j, 0, 16) { salt[j] = work_area[j + salt_offset]; }
+        u8 key  [32];  FOR (j, 0, 32) { key [j] = work_area[j +  key_offset]; }
+        u8 ad   [32];  FOR (j, 0, 32) { ad  [j] = work_area[j +   ad_offset]; }
 
         crypto_argon2i_general(hash1, 32, clean_work_area, 8, 1,
                                pass, 16, salt, 16, key, 32, ad, 32);
@@ -947,7 +946,7 @@ static int p_elligator_x25519()
 
         // Maximise tweak diversity.
         // We want to set the bits 1 (sign) and 6-7 (padding)
-        u8 tweak = (i & 1) + (i << 6);
+        u8 tweak = (u8)((i & 1) + (i << 6));
         u8 r[32];
         if (crypto_curve_to_hidden(r, pkf, tweak)) {
             continue; // retry untill success (doesn't increment the tweak)
@@ -1063,7 +1062,7 @@ static int p_x25519_inverse_overlap()
     return status;
 }
 
-int p_from_eddsa()
+static int p_from_eddsa()
 {
     int status = 0;
     FOR (i, 0, 32) {
@@ -1078,7 +1077,7 @@ int p_from_eddsa()
     return status;
 }
 
-int p_from_ed25519()
+static int p_from_ed25519()
 {
     int status = 0;
     FOR (i, 0, 32) {

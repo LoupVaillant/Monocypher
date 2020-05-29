@@ -69,10 +69,10 @@ void store64_le(u8 out[8], u64 in)
 
 u32 load32_le(const u8 s[4])
 {
-    return (u64)s[0]
-        | ((u64)s[1] <<  8)
-        | ((u64)s[2] << 16)
-        | ((u64)s[3] << 24);
+    return (u32)s[0]
+        | ((u32)s[1] <<  8)
+        | ((u32)s[2] << 16)
+        | ((u32)s[3] << 24);
 }
 
 u64 load64_le(const u8 s[8])
@@ -85,7 +85,7 @@ u64 load64_le(const u8 s[8])
 u64 random_state = 12345;
 
 // Pseudo-random 64 bit number, based on xorshift*
-u64 rand64()
+u64 rand64(void)
 {
     random_state ^= random_state >> 12;
     random_state ^= random_state << 25;
