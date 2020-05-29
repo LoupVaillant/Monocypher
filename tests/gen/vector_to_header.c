@@ -9,7 +9,7 @@
 //
 // ------------------------------------------------------------------------
 //
-// Copyright (c) 2017-2019, Loup Vaillant
+// Copyright (c) 2017-2020, Loup Vaillant
 // All rights reserved.
 //
 //
@@ -39,7 +39,7 @@
 //
 // ------------------------------------------------------------------------
 //
-// Written in 2017-2019 by Loup Vaillant
+// Written in 2017-2020 by Loup Vaillant
 //
 // To the extent possible under law, the author(s) have dedicated all copyright
 // and related neighboring rights to this software to the public domain
@@ -52,14 +52,50 @@
 // Transforms a test vector file (from stdin) into a C header.
 
 #include <stdio.h>
-#include <inttypes.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <stddef.h>
+#include <assert.h>
+
+#define FOR(i, start, end) for (size_t i = (start); i < (end); i++)
+
+typedef struct {
+    size_t  size;
+    size_t  room;
+    size_t *buf;
+} Vector;
+
+static void vector_init(Vector *v)
+{
+    v->size = 0;
+    v->room = 256;
+    v->buf  = (size_t*)malloc(256*sizeof(size_t));
+    assert(v->buf != 0);
+}
+
+static void vector_append(Vector *v, size_t e)
+{
+    if (v->size == v->room) {
+        v->room *= 2;
+        v->buf   = (size_t*)realloc(v->buf, v->room * sizeof(size_t));
+        assert(v->buf != 0);
+    }
+    v->buf[v->size] = e;
+    v->size++;
+}
 
 static int is_digit(int c)
 {
     return (c >= '0' && c <= '9')
         || (c >= 'a' && c <= 'f')
         || (c >= 'A' && c <= 'F');
+}
+
+static int to_num(int c)
+{
+    return c >= '0' && c <= '9' ? c - '0'
+        :  c >= 'a' && c <= 'f' ? c - 'a' + 10
+        :                         c - 'A' + 10;
 }
 
 int main(int argc, char** argv)
@@ -69,9 +105,11 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    char *prefix = argv[1];
-    int   c      = getchar();
-    int   nb_vec = 0;
+    char  *prefix = argv[1];
+    int    c      = getchar();
+    size_t nb_vec = 0;
+    Vector sizes;
+    vector_init(&sizes);
 
     // seek first line
     while (!is_digit(c) && c != ':' && c != EOF) {
@@ -80,23 +118,18 @@ int main(int argc, char** argv)
 
     while (c != EOF) {
         int size = 0;
-        if (c == ':') {
-            // Empty lines can't be C arrays.
-            // We make them null pointers instead
-            printf("#define %s_%d 0\n", prefix, nb_vec);
-        }
-        else {
-            printf("static uint8_t %s_%d[] = { ", prefix, nb_vec);
-            while (c != ':') {
+        if (c != ':') { // ignore empty lines
+            printf("static uint8_t %s_%zu[]={", prefix, nb_vec);
+            while (c != ':' && c != EOF) {
                 char msb = (char)c;  c = getchar();
                 char lsb = (char)c;  c = getchar();
-                printf("0x%c%c, ", msb, lsb);
-                size ++;
+                printf("%d,", to_num(lsb) + to_num(msb)*16);
+                size++;
             }
             printf("};\n");
         }
         c = getchar();
-        printf("#define %s_%d_size %d\n", prefix, nb_vec, size);
+        vector_append(&sizes, size);
 
         // seek next line
         while (!is_digit(c) && c != ':' && c != EOF) {
@@ -105,18 +138,20 @@ int main(int argc, char** argv)
         nb_vec++;
     }
 
-    printf("static size_t nb_%s_vectors = %d;\n", prefix, nb_vec);
+    printf("static size_t nb_%s_vectors=%zu;\n", prefix, nb_vec);
 
-    printf("static uint8_t *%s_vectors[] = { ", prefix);
-    for (int i = 0; i < nb_vec; i++) {
-        printf("%s_%d, ", prefix, i);
+    printf("static uint8_t *%s_vectors[]={", prefix);
+    FOR (i, 0, nb_vec) {
+        if (sizes.buf[i] == 0) { printf("0,");                 }
+        else                   { printf("%s_%zu,", prefix, i); }
     }
     printf("};\n");
 
-    printf("static size_t %s_sizes[] = { ", prefix);
-    for (int i = 0; i < nb_vec; i++) {
-        printf("%s_%d_size, ", prefix, i);
+    printf("static size_t %s_sizes[]={", prefix);
+    FOR (i, 0, nb_vec) {
+        printf("%zu,", sizes.buf[i]);
     }
     printf("};\n");
+    free(sizes.buf);
     return 0;
 }
