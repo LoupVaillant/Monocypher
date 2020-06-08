@@ -614,8 +614,11 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
 
     // if there is a key, the first block is that key (padded with zeroes)
     if (key_size > 0) {
-        crypto_blake2b_update(ctx, key ,       key_size);
-        crypto_blake2b_update(ctx, zero, 128 - key_size);
+        u8 key_block[128] = {0};
+        COPY(key_block, key, key_size);
+        // same as calling crypto_blake2b_update(ctx, key_block , 128)
+        load64_le_buf(ctx->input, key_block, 16);
+        ctx->input_idx = 128;
     }
 }
 
