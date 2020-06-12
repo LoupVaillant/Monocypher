@@ -1,3 +1,12 @@
+3.1.1
+-----
+2020/06/12
+
+- Various documentation fixes.
+- Fixed various compiler warnings.
+- Fixed some integer overflows (16-bit platforms only).
+
+
 3.1.0
 -----
 2020/04/03
