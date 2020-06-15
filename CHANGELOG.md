@@ -1,6 +1,6 @@
 3.1.1
 -----
-2020/06/12
+2020/06/15
 
 - Various documentation fixes.
 - Fixed various compiler warnings.
