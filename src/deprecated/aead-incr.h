@@ -92,6 +92,10 @@
 #include <inttypes.h>
 #include "monocypher.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     crypto_poly1305_ctx poly;
     uint64_t            ad_size;
@@ -130,5 +134,9 @@ void crypto_unlock_update(crypto_unlock_ctx *ctx,
                           const uint8_t     *cipher_text,
                           size_t             text_size);
 int crypto_unlock_final(crypto_unlock_ctx *ctx, const uint8_t mac[16]);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // AEAD_INCR_H

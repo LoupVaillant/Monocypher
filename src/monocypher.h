@@ -358,5 +358,5 @@ void crypto_x25519_inverse(uint8_t       blind_salt [32],
 #ifdef __cplusplus
 }
 #endif
-    
+
 #endif // MONOCYPHER_H

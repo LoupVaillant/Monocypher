@@ -82,6 +82,10 @@
 #include <stddef.h>
 #include <inttypes.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Chacha20
 typedef struct {
     uint8_t  key[32];
@@ -117,5 +121,8 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
 void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
                             uint8_t *stream, size_t size);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // CHACHA20_H
