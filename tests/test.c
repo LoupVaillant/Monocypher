@@ -1009,13 +1009,15 @@ static int p_elligator_key_pair_overlap()
 static int p_x25519_inverse()
 {
     int status = 0;
-    const u8 base [32] = {9};
+    RANDOM_INPUT(b, 32);
+    u8 base[32];  // random point (cofactor is cleared).
+    crypto_x25519_public_key(base, b);
     // check round trip
     FOR (i, 0, 50) {
         RANDOM_INPUT(sk, 32);
         u8 pk   [32];
         u8 blind[32];
-        crypto_x25519_public_key(pk, sk);
+        crypto_x25519(pk, sk, base);
         crypto_x25519_inverse(blind, sk, pk);
         status |= memcmp(blind, base, 32);
     }
