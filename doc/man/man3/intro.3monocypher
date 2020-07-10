@@ -241,7 +241,7 @@ in
 .In linux/random.h .
 Do not set any flag.
 .It
-BSD provides
+BSD, Darwin/macOS, illumos as well as Solaris provide
 .Fn arc4random_buf
 in
 .In stdlib.h
