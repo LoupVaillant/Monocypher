@@ -1023,15 +1023,16 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
         }
     }
     wipe_block(&tmp);
-    // hash the very last block with H' into the output hash
     u8 final_block[1024];
     store_block(final_block, blocks + (nb_blocks - 1));
-    extended_hash(hash, hash_size, final_block, 1024);
-    WIPE_BUFFER(final_block);
 
     // wipe work area
     volatile u64 *p = (u64*)work_area;
     ZERO(p, 128 * nb_blocks);
+
+    // hash the very last block with H' into the output hash
+    extended_hash(hash, hash_size, final_block, 1024);
+    WIPE_BUFFER(final_block);
 }
 
 void crypto_argon2i(u8   *hash,      u32 hash_size,

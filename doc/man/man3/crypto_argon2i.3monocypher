@@ -163,9 +163,7 @@ Must be at least 8.
 16 is recommended.
 .El
 .Pp
-The output hash must not overlap with the work area, or it will be
-wiped along with it.
-Any other overlap is permitted.
+The arguments may overlap or point at the same buffer.
 .Pp
 Use
 .Xr crypto_verify16 3monocypher ,

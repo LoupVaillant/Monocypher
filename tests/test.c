@@ -652,16 +652,17 @@ static int p_argon2i_overlap()
     u8 *clean_work_area = (u8*)alloc(8 * 1024);
     FOR (i, 0, 10) {
         p_random(work_area, 8 * 1024);
+        u32 hash_offset = rand64() % 64;
         u32 pass_offset = rand64() % 64;
         u32 salt_offset = rand64() % 64;
         u32 key_offset  = rand64() % 64;
         u32 ad_offset   = rand64() % 64;
-        u8 hash1[32];
-        u8 hash2[32];
-        u8 pass [16];  FOR (j, 0, 16) { pass[j] = work_area[j + pass_offset]; }
-        u8 salt [16];  FOR (j, 0, 16) { salt[j] = work_area[j + salt_offset]; }
-        u8 key  [32];  FOR (j, 0, 32) { key [j] = work_area[j +  key_offset]; }
-        u8 ad   [32];  FOR (j, 0, 32) { ad  [j] = work_area[j +   ad_offset]; }
+        u8  hash1[32];
+        u8 *hash2 = work_area + hash_offset;
+        u8  pass [16];  FOR (j, 0, 16) { pass[j] = work_area[j + pass_offset]; }
+        u8  salt [16];  FOR (j, 0, 16) { salt[j] = work_area[j + salt_offset]; }
+        u8  key  [32];  FOR (j, 0, 32) { key [j] = work_area[j +  key_offset]; }
+        u8  ad   [32];  FOR (j, 0, 32) { ad  [j] = work_area[j +   ad_offset]; }
 
         crypto_argon2i_general(hash1, 32, clean_work_area, 8, 1,
                                pass, 16, salt, 16, key, 32, ad, 32);
