@@ -1,3 +1,6 @@
+[![TrustInSoft CI](https://ci.trust-in-soft.com/projects/LoupVaillant/Monocypher.svg?branch=master)](https://ci.trust-in-soft.com/projects/LoupVaillant/Monocypher)
+
+
 Monocypher (Developer Edition)
 ------------------------------
 
