@@ -139,7 +139,7 @@ do
         echo '{ "name"           :' "\"$entry_point - $platform\"" >> $TIS_CONFIG
         echo ', "files"          :'                                >> $TIS_CONFIG
         echo '  [ "src/monocypher.c"'                              >> $TIS_CONFIG
-        echo '  , "src/optional/monocypher-ed25519.c",'            >> $TIS_CONFIG
+        echo '  , "src/optional/monocypher-ed25519.c"'             >> $TIS_CONFIG
         echo '  , "tests/utils.c"'                                 >> $TIS_CONFIG
         echo '  , "tests/test.c"'                                  >> $TIS_CONFIG
         echo '  ]'                                                 >> $TIS_CONFIG
