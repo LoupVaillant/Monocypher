@@ -23,5 +23,5 @@ tests/formal-analysis
 **/__pycache__/**
 *.tar.gz
 monocypher-*/
-doc/html/*.html
+doc/html/
 tests/vectors.h
