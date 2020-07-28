@@ -137,11 +137,13 @@ do
         "apple_ppc_32"
     do
         echo '{ "name"           :' "\"$entry_point - $platform\"" >> $TIS_CONFIG
-        echo ', "files"          :'                 \
-             '["src/monocypher.c",'                 \
-             '"src/optional/monocypher-ed25519.c",' \
-             '"tests/test.c" ]'                                    >> $TIS_CONFIG
-        echo ', "compilation_cmd": "-Isrc -Isrc/optional"'         >> $TIS_CONFIG
+        echo ', "files"          :'                                >> $TIS_CONFIG
+        echo '  [ "src/monocypher.c"'                              >> $TIS_CONFIG
+        echo '  , "src/optional/monocypher-ed25519.c",'            >> $TIS_CONFIG
+        echo '  , "tests/utils.c"'                                 >> $TIS_CONFIG
+        echo '  , "tests/test.c"'                                  >> $TIS_CONFIG
+        echo '  ]'                                                 >> $TIS_CONFIG
+        echo ', "compilation_cmd": "-Isrc -Isrc/optional -Itests"' >> $TIS_CONFIG
         echo ', "machdep"        :' "\"$platform\""                >> $TIS_CONFIG
 #       echo ', "raw_options     : " { "-no-results" : "true" }'   >> $TIS_CONFIG
         echo ', "main"           :' "\"$entry_point\""             >> $TIS_CONFIG
