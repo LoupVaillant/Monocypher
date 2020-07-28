@@ -1095,10 +1095,34 @@ static int p_from_ed25519()
     return status;
 }
 
-#define TEST(name, nb_inputs) vector_test(name, #name, nb_inputs, \
-                                          nb_##name##_vectors,    \
-                                          name##_vectors,         \
-                                          name##_sizes)
+#define TEST(name, nb_inputs)                      \
+    int v_##name() {                               \
+        return vector_test(name, #name, nb_inputs, \
+                           nb_##name##_vectors,    \
+                           name##_vectors,         \
+                           name##_sizes);          \
+    }
+
+TEST(chacha20      , 4)
+TEST(ietf_chacha20 , 4)
+TEST(hchacha20     , 2)
+TEST(xchacha20     , 4)
+TEST(poly1305      , 2)
+TEST(aead_ietf     , 4)
+TEST(blake2b       , 2)
+TEST(sha512        , 1)
+TEST(hmac_sha512   , 2)
+TEST(argon2i       , 6)
+TEST(x25519        , 2)
+TEST(x25519_pk     , 1)
+TEST(key_exchange  , 2)
+TEST(edDSA         , 3)
+TEST(edDSA_pk      , 1)
+TEST(ed_25519      , 3)
+TEST(ed_25519_pk   , 1)
+TEST(ed_25519_check, 3)
+TEST(elligator_dir , 1)
+TEST(elligator_inv , 3)
 
 int main(int argc, char *argv[])
 {
@@ -1110,27 +1134,27 @@ int main(int argc, char *argv[])
     int status = 0;
     printf("\nTest against vectors");
     printf("\n--------------------\n");
-    status |= TEST(chacha20      , 4);
-    status |= TEST(ietf_chacha20 , 4);
-    status |= TEST(hchacha20     , 2);
-    status |= TEST(xchacha20     , 4);
-    status |= TEST(poly1305      , 2);
-    status |= TEST(aead_ietf     , 4);
-    status |= TEST(blake2b       , 2);
-    status |= TEST(sha512        , 1);
-    status |= TEST(hmac_sha512   , 2);
-    status |= TEST(argon2i       , 6);
-    status |= TEST(x25519        , 2);
-    status |= TEST(x25519_pk     , 1);
-    status |= TEST(key_exchange  , 2);
-    status |= TEST(edDSA         , 3);
-    status |= TEST(edDSA_pk      , 1);
-    status |= TEST(ed_25519      , 3);
-    status |= TEST(ed_25519_pk   , 1);
-    status |= TEST(ed_25519_check, 3);
+    status |= v_chacha20      ();
+    status |= v_ietf_chacha20 ();
+    status |= v_hchacha20     ();
+    status |= v_xchacha20     ();
+    status |= v_poly1305      ();
+    status |= v_aead_ietf     ();
+    status |= v_blake2b       ();
+    status |= v_sha512        ();
+    status |= v_hmac_sha512   ();
+    status |= v_argon2i       ();
+    status |= v_x25519        ();
+    status |= v_x25519_pk     ();
+    status |= v_key_exchange  ();
+    status |= v_edDSA         ();
+    status |= v_edDSA_pk      ();
+    status |= v_ed_25519      ();
+    status |= v_ed_25519_pk   ();
+    status |= v_ed_25519_check();
+    status |= v_elligator_dir ();
+    status |= v_elligator_inv ();
     status |= test_x25519();
-    status |= TEST(elligator_dir , 1);
-    status |= TEST(elligator_inv , 3);
 
     printf("\nProperty based tests");
     printf("\n--------------------\n");
