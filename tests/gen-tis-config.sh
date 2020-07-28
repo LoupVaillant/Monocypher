@@ -136,16 +136,16 @@ do
         "mipsel_n32"  \
         "apple_ppc_32"
     do
-        echo '{ "name"           : "p1305 - sparc_64"'           >> $TIS_CONFIG
+        echo '{ "name"           :' "\"$entry_point - $platform\"" >> $TIS_CONFIG
         echo ', "files"          :'                 \
              '["src/monocypher.c",'                 \
              '"src/optional/monocypher-ed25519.c",' \
-             '"tests/test.c" ]'                                  >> $TIS_CONFIG
-        echo ', "compilation_cmd": "-Isrc -Isrc/optional"'       >> $TIS_CONFIG
-        echo ', "machdep"        :' "$platform"                  >> $TIS_CONFIG
-#       echo ', "raw_options     : " { "-no-results" : "true" }' >> $TIS_CONFIG
-        echo ', "main"           :' "$entry_point"               >> $TIS_CONFIG
-        echo '},'                                                >> $TIS_CONFIG
+             '"tests/test.c" ]'                                    >> $TIS_CONFIG
+        echo ', "compilation_cmd": "-Isrc -Isrc/optional"'         >> $TIS_CONFIG
+        echo ', "machdep"        :' "\"$platform\""                >> $TIS_CONFIG
+#       echo ', "raw_options     : " { "-no-results" : "true" }'   >> $TIS_CONFIG
+        echo ', "main"           :' "\"$entry_point\""             >> $TIS_CONFIG
+        echo '},'                                                  >> $TIS_CONFIG
     done
 done
 sed -i '$ d' $TIS_CONFIG
