@@ -1843,7 +1843,7 @@ static int slide_step(slide_ctx *ctx, int width, int i, const u8 scalar[32])
                        | (((lsb & 0xF0) != 0) << 2));
             ctx->next_index  = (i16)(i-(w-1)+s);
             ctx->next_digit  = (i8) (v >> s   );
-            ctx->next_check -= w;
+            ctx->next_check -= (u8) w;
         }
     }
     return i == ctx->next_index ? ctx->next_digit: 0;
