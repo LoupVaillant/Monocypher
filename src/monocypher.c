@@ -1143,8 +1143,7 @@ static void fe_tobytes(u8 s[32], const fe h)
         q += t[2*i  ]; q >>= 26;
         q += t[2*i+1]; q >>= 25;
     }
-    t[0] += 19 * q;
-    q = 0;
+    q *= 19;  // Shift carry back to the begining
     FOR (i, 0, 5) {
         t[i*2  ] += q;  q = t[i*2  ] >> 26;  t[i*2  ] -= q * ((i32)1 << 26);
         t[i*2+1] += q;  q = t[i*2+1] >> 25;  t[i*2+1] -= q * ((i32)1 << 25);
