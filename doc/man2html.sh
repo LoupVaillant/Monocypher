@@ -68,7 +68,7 @@ convert() {
         -Thtml "$MANS/$name.3monocypher" \
         > "$DIR/html/$HTML/$name.html"
     done
-    cp style.css "$DIR/html/$HTML/"
+    cp "$DIR/style.css" "$DIR/html/$HTML/"
 }
 
 mkdir -p "$DIR/html"
