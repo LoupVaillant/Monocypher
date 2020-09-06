@@ -1,3 +1,11 @@
+2.0.7
+-----
+2020/09/06
+
+- Fixed integer overflow that caused elliptic curves to fail on 16-bit
+  machines.
+
+
 2.0.6
 -----
 2019/10/21
