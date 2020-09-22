@@ -172,6 +172,11 @@ the `USE_ED25519` variable to link it to monocypher.a and monocypher.so:
 
     $ make USE_ED25519=true
 
+If you install Monocypher with the makefile, you also need that option
+to copy `monocypher-ed25519.h` automatically:
+
+    $ make install USE_ED25519=true
+
 Monocypher also has the `BLAKE2_NO_UNROLLING` preprocessor flag, which
 is activated by compiling monocypher.c with the `-DBLAKE2_NO_UNROLLING`
 option.
