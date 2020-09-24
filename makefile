@@ -50,7 +50,7 @@
 # with this software.  If not, see
 # <https://creativecommons.org/publicdomain/zero/1.0/>
 CC=gcc -std=gnu99 # speed tests don't work with -std=cxx, they need the POSIX extensions
-CFLAGS= -pedantic -Wall -Wextra -Os -march=native
+CFLAGS= -pedantic -Wall -Wextra -Os -march=native -DBLAKE2_NO_UNROLLING
 DESTDIR=
 PREFIX=usr/local
 LIBDIR=$(PREFIX)/lib
