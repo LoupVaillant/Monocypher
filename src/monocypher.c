@@ -72,6 +72,7 @@ typedef uint32_t u32;
 typedef int32_t  i32;
 typedef int64_t  i64;
 typedef uint64_t u64;
+typedef uint_fast8_t uf8;
 
 static const u8 zero[128] = {0};
 
@@ -85,56 +86,95 @@ static size_t align(size_t x, size_t pow_2)
     return (~x + 1) & (pow_2 - 1);
 }
 
-static u32 load24_le(const u8 s[3])
+#ifdef MSVC
+#define swap32 _byteswap_ulong
+#define swap64 _byteswap_ulonglong
+#else
+#define swap32 __builtin_bswap32
+#define swap64 __builtin_bswap64
+#endif
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+    static inline u32 swap32_if_nle(u32 x){
+        return x;
+    }
+    static inline u64 swap64_if_nle(u64 x){
+        return x;
+    }
+    static inline u32 load24_le(const u8 s[3])
+    {
+        return 0x00FFFFFFUL & *(const u32*)s;
+    }
+
+#elif __BYTE_ORDER == __BIG_ENDIAN
+    static inline u32 swap32_if_nle(u32 x){
+        return swap32(x);
+    }
+    static inline u64 swap64_if_nle(u64 x){
+        return swap64(x);
+    }
+    static inline u32 load24_le(const u8 s[3])
+    {
+        return 0xFFFFFFUL & swap32(*(const u32*)(s-1));
+    }
+#else
+#error "Unsupported endianness on target machine"
+#endif
+
+
+
+static inline u32 load32_le(const u8 s[4])
 {
-    return (u32)s[0]
-        | ((u32)s[1] <<  8)
-        | ((u32)s[2] << 16);
+    return swap32_if_nle(*(const u32*)s);
 }
 
-static u32 load32_le(const u8 s[4])
+static inline u64 load64_le(const u8 s[8])
 {
-    return (u32)s[0]
-        | ((u32)s[1] <<  8)
-        | ((u32)s[2] << 16)
-        | ((u32)s[3] << 24);
+    return swap64_if_nle(*(const u64*)s);
 }
 
-static u64 load64_le(const u8 s[8])
+static inline void store32_le(u8 out[4], u32 in)
 {
-    return load32_le(s) | ((u64)load32_le(s+4) << 32);
+    *(u32*)out = swap64_if_nle(in);
 }
 
-static void store32_le(u8 out[4], u32 in)
+static inline void store64_le(u8 out[8], u64 in)
 {
-    out[0] =  in        & 0xff;
-    out[1] = (in >>  8) & 0xff;
-    out[2] = (in >> 16) & 0xff;
-    out[3] = (in >> 24) & 0xff;
+    *(u64*)out = swap64_if_nle(in);
 }
 
-static void store64_le(u8 out[8], u64 in)
+static void cpy32_le(u32* dst,const u32* src,size_t sz)
 {
-    store32_le(out    , (u32)in );
-    store32_le(out + 4, in >> 32);
+    FOR(i, 0, sz) { dst[i]=swap32_if_nle(src[i]); }
+}
+static void cpy64_le(u64* dst,const u64* src,size_t sz)
+{
+    FOR(i, 0, sz) { dst[i]=swap64_if_nle(src[i]); }
 }
 
-static void load32_le_buf (u32 *dst, const u8 *src, size_t size) {
-    FOR(i, 0, size) { dst[i] = load32_le(src + i*4); }
+static inline void load32_le_buf (u32 *dst, const u8 *src, size_t size) {
+    cpy32_le(dst,(const u32*)src,size);
 }
-static void load64_le_buf (u64 *dst, const u8 *src, size_t size) {
-    FOR(i, 0, size) { dst[i] = load64_le(src + i*8); }
+static inline void load64_le_buf (u64 *dst, const u8 *src, size_t size) {
+    cpy64_le(dst,(const u64*)src,size);
 }
-static void store32_le_buf(u8 *dst, const u32 *src, size_t size) {
-    FOR(i, 0, size) { store32_le(dst + i*4, src[i]); }
+static inline void store32_le_buf(u8 *dst, const u32 *src, size_t size) {
+    cpy32_le((u32*)dst,src,size);
 }
-static void store64_le_buf(u8 *dst, const u64 *src, size_t size) {
-    FOR(i, 0, size) { store64_le(dst + i*8, src[i]); }
+static inline void store64_le_buf(u8 *dst, const u64 *src, size_t size) {
+    cpy64_le((u64*)dst,src,size);
 }
 
-static u64 rotr64(u64 x, u64 n) { return (x >> n) ^ (x << (64 - n)); }
-static u32 rotl32(u32 x, u32 n) { return (x << n) ^ (x >> (32 - n)); }
+#ifdef MSVC
+static inline u64 rotr64(u64 x, uf8 n) { return (u64)_rotr64((u64)x,n); }
+static inline u32 rotl32(u32 x, uf8 n) { return (u32)_rotl((u32)x,n); }
+#else
+static inline u64 rotr64(u64 x, uf8 n) { return (x >> n) | (x << (64 - n)); }
+static inline u32 rotl32(u32 x, uf8 n) { return (x << n) | (x >> (32 - n)); }
+#endif
 
+//Unminimized.
+//TODO: this is only constant time IF the word size is 32.   On 8 bit platforms this might not be constant time.
 static int neq0(u64 diff)
 {   // constant time comparison to zero
     // return diff != 0 ? -1 : 0
