@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd April 8, 2020
+.Dd September 26, 2020
 .Dt CRYPTO_ARGON2I 3MONOCYPHER
 .Os
 .Sh NAME
@@ -106,6 +106,16 @@ are:
 .Bl -tag -width Ds
 .It Fa hash
 The output hash.
+If all parameters to
+.Fn crypto_argon2i
+or
+.Fn crypto_argon2i_general
+are identical between two calls,
+then the output
+.Fa hash
+is also identical.
+In other words, all input parameters passed to the function influence
+the output value.
 .It Fa hash_size
 Length of
 .Fa hash ,
