@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 31, 2020
+.Dd September 26, 2020
 .Dt CRYPTO_SIGN 3MONOCYPHER
 .Os
 .Sh NAME
@@ -207,6 +207,12 @@ The
 and
 .Fn crypto_sign_public_key
 functions appeared in Monocypher 0.2.
+.Pp
+Starting with Monocypher 2.0.5, modified signatures abusing the inherent
+signature malleability property of EdDSA now cause a non-zero return
+value of
+.Fn crypto_check ;
+in prior versions, such signatures would be accepted.
 .Pp
 .Sy A critical security vulnerability
 that caused all-zero signatures to be accepted was introduced in
