@@ -58,61 +58,29 @@ echo "// auto generated with tests/gen-tis-config.sh" > $TIS_CONFIG
 echo "[" >> $TIS_CONFIG
 
 for entry_point in \
-    "v_chacha20"                   \
-    "v_ietf_chacha20"              \
-    "v_hchacha20"                  \
-    "v_xchacha20"                  \
-    "v_poly1305"                   \
-    "v_aead_ietf"                  \
-    "v_blake2b"                    \
-    "v_sha512"                     \
-    "v_hmac_sha512"                \
-    "v_argon2i"                    \
-    "v_x25519"                     \
-    "v_x25519_pk"                  \
-    "v_key_exchange"               \
-    "v_edDSA"                      \
-    "v_edDSA_pk"                   \
-    "v_ed_25519"                   \
-    "v_ed_25519_pk"                \
-    "v_ed_25519_check"             \
-    "v_elligator_dir"              \
-    "v_elligator_inv"              \
-    "test_x25519"                  \
-    "p_verify16"                   \
-    "p_verify32"                   \
-    "p_verify64"                   \
-    "p_chacha20_ctr"               \
-    "p_chacha20_stream"            \
-    "p_chacha20_same_ptr"          \
-    "p_hchacha20"                  \
-    "p_poly1305"                   \
-    "p_poly1305_overlap"           \
-    "p_blake2b"                    \
-    "p_blake2b_overlap"            \
-    "p_sha512"                     \
-    "p_sha512_overlap"             \
-    "p_hmac_sha512"                \
-    "p_hmac_sha512_overlap"        \
-    "p_argon2i_easy"               \
-    "p_argon2i_overlap"            \
-    "p_x25519_overlap"             \
-    "p_key_exchange_overlap"       \
-    "p_eddsa_roundtrip"            \
-    "p_eddsa_random"               \
-    "p_eddsa_overlap"              \
-    "p_eddsa_incremental"          \
-    "p_aead"                       \
-    "p_elligator_direct_msb"       \
-    "p_elligator_direct_overlap"   \
-    "p_elligator_inverse_overlap"  \
-    "p_elligator_x25519"           \
-    "p_elligator_key_pair"         \
-    "p_elligator_key_pair_overlap" \
-    "p_x25519_inverse"             \
-    "p_x25519_inverse_overlap"     \
-    "p_from_eddsa"                 \
-    "p_from_ed25519"
+    "p1305"              \
+    "blake2b"            \
+    "verify"             \
+    "wipe"               \
+    "lock_unlock"        \
+    "argon"              \
+    "key_exchange"       \
+    "sign_check"         \
+    "from_eddsa"         \
+    "hidden"             \
+    "hchacha"            \
+    "chacha"             \
+    "xchacha"            \
+    "ietf_chacha"        \
+    "chacha_ctr"         \
+    "xchacha_ctr"        \
+    "ietf_chacha_ctr"    \
+    "x25519"             \
+    "dirty"              \
+    "inverse"            \
+    "sha512"             \
+    "hmac"               \
+    "sign_check_ed25519"
 do
     for platform in   \
         "sparc_64"    \
@@ -140,12 +108,11 @@ do
         echo ', "files"          :'                                >> $TIS_CONFIG
         echo '  [ "src/monocypher.c"'                              >> $TIS_CONFIG
         echo '  , "src/optional/monocypher-ed25519.c"'             >> $TIS_CONFIG
-        echo '  , "tests/utils.c"'                                 >> $TIS_CONFIG
-        echo '  , "tests/test.c"'                                  >> $TIS_CONFIG
+        echo '  , "tests/tis-ci.c"'                                >> $TIS_CONFIG
         echo '  ]'                                                 >> $TIS_CONFIG
         echo ', "compilation_cmd": "-Isrc -Isrc/optional -Itests"' >> $TIS_CONFIG
         echo ', "machdep"        :' "\"$platform\""                >> $TIS_CONFIG
-#       echo ', "raw_options     : " { "-no-results" : "true" }'   >> $TIS_CONFIG
+        echo ', "raw_options"    : { "-no-results" : "true" }'     >> $TIS_CONFIG
         echo ', "main"           :' "\"$entry_point\""             >> $TIS_CONFIG
         echo '},'                                                  >> $TIS_CONFIG
     done
