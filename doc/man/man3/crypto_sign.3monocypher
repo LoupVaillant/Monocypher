@@ -220,14 +220,23 @@ Monocypher 0.3;
 it was fixed in Monocypher 1.1.1 and 2.0.4.
 .Sh SECURITY CONSIDERATIONS
 .Ss Signature malleability
-EdDSA signatures are not unique like cryptographic hashes.
-For any given public key and message, there are many possible valid
-signatures.
-Some of them require knowledge of the private key.
-Others only require knowledge of an existing signature.
-Observing a valid signature only proves that someone with knowledge of
-the private key signed the message at some point.
-Do not rely on any other security property.
+Signature malleability is the ability of an attacker to produce a valid
+signature with knowledge of only an existing signature and the public
+key.
+That is, given a message, a signature and a public key,
+an attacker could generate a new signature for the same message that
+is valid under the same public key.
+Monocypher prevents signature malleability by only accepting
+signatures in canonical form.
+.Pp
+On the other hand, EdDSA signatures are not unique like cryptographic
+hashes.
+The signing procedure is deterministic by specification and
+.Fn crypto_sign
+follows this specification.
+However, someone with the private key can generate arbitrarily many
+valid, canonical, different signatures of the same message.
+Because of this, never assume that signatures are unique.
 .Ss Fault injection and power analysis
 Fault injection (also known as glitching) and power analysis may be used
 to manipulate the resulting signature and recover the secret key in
