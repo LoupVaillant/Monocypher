@@ -67,36 +67,39 @@
 ////////////////////////////
 /// Tests aginst vectors ///
 ////////////////////////////
-static void chacha20(const vector in[], vector *out)
+static void chacha20(vector_reader *reader)
 {
-    const vector *key   = in;
-    const vector *nonce = in + 1;
-    const vector *plain = in + 2;
-    u64 ctr = load64_le(in[3].buf);
+    vector key   = next_input(reader);
+    vector nonce = next_input(reader);
+    vector plain = next_input(reader);
+    u64    ctr   = load64_le(next_input(reader).buf);
+    vector out   = next_output(reader);
 
     crypto_chacha_ctx ctx;
-    crypto_chacha20_init   (&ctx, key->buf, nonce->buf);
+    crypto_chacha20_init   (&ctx, key.buf, nonce.buf);
     crypto_chacha20_set_ctr(&ctx, ctr);
-    crypto_chacha20_encrypt(&ctx, out->buf, plain->buf, plain->size);
+    crypto_chacha20_encrypt(&ctx, out.buf, plain.buf, plain.size);
 }
 
-static void hchacha20(const vector in[], vector *out)
+static void hchacha20(vector_reader *reader)
 {
-    const vector *key   = in;
-    const vector *nonce = in + 1;
-    crypto_chacha20_H(out->buf, key->buf, nonce->buf);
+    vector key   = next_input(reader);
+    vector nonce = next_input(reader);
+    vector out   = next_output(reader);
+    crypto_chacha20_H(out.buf, key.buf, nonce.buf);
 }
 
-static void xchacha20(const vector in[], vector *out)
+static void xchacha20(vector_reader *reader)
 {
-    const vector *key   = in;
-    const vector *nonce = in + 1;
-    const vector *plain = in + 2;
-    u64 ctr = load64_le(in[3].buf);
+    vector key   = next_input(reader);
+    vector nonce = next_input(reader);
+    vector plain = next_input(reader);
+    u64    ctr   = load64_le(next_input(reader).buf);
+    vector out   = next_output(reader);
     crypto_chacha_ctx ctx;
-    crypto_chacha20_x_init (&ctx, key->buf, nonce->buf);
+    crypto_chacha20_x_init (&ctx, key.buf, nonce.buf);
     crypto_chacha20_set_ctr(&ctx, ctr);
-    crypto_chacha20_encrypt(&ctx, out->buf, plain->buf, plain->size);
+    crypto_chacha20_encrypt(&ctx, out.buf, plain.buf, plain.size);
 }
 
 //////////////////////////////
@@ -315,10 +318,7 @@ static int p_auth()
     return status;
 }
 
-#define TEST(name, nb_inputs) vector_test(name, #name, nb_inputs, \
-                                          nb_##name##_vectors,    \
-                                          name##_vectors,         \
-                                          name##_sizes)
+#define TEST(name) vector_test(name, #name, nb_##name##_vectors, name##_vectors)
 
 int main(int argc, char *argv[])
 {
@@ -330,9 +330,9 @@ int main(int argc, char *argv[])
     int status = 0;
     printf("\nTest against vectors");
     printf("\n--------------------\n");
-    status |= TEST(chacha20      , 4);
-    status |= TEST(hchacha20     , 2);
-    status |= TEST(xchacha20     , 4);
+    status |= TEST(chacha20);
+    status |= TEST(hchacha20);
+    status |= TEST(xchacha20);
 
     printf("\nProperty based tests");
     printf("\n--------------------\n");

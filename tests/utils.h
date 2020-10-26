@@ -79,6 +79,15 @@ typedef struct {
     size_t  size;
 } vector;
 
+typedef struct {
+    const char **next;
+    size_t       size;
+    vector       inputs[10];
+    size_t       nb_inputs;
+    vector       expected;
+    vector       out;
+} vector_reader;
+
 void store64_le(u8 out[8], u64 in);
 u64  load64_le(const u8 s[8]);
 u32  load32_le(const u8 s[8]);
@@ -88,8 +97,9 @@ void print_vector(const u8 *buf, size_t size);
 void print_number(u64 n);
 void* alloc(size_t size);
 
-int vector_test(void (*f)(const vector[], vector*),
-                const char *name, size_t nb_inputs,
-                size_t nb_vectors, u8 **vectors, size_t *sizes);
+vector next_input (vector_reader *vectors);
+vector next_output(vector_reader *vectors);
+int vector_test(void (*f)(vector_reader*),
+                const char *name, size_t nb_vectors, const char *vectors[]);
 
 #endif // UTILS_H
