@@ -1120,31 +1120,7 @@ static int p_from_ed25519()
 int vector_test(void (*f)(vector_reader*),
                 const char *name, size_t nb_vectors, const char *vectors[]);
 
-#define TEST(name)                                                      \
-    int v_##name() {                                                    \
-        return vector_test(name, #name, nb_##name##_vectors, name##_vectors); \
-    }
-
-TEST(chacha20)
-TEST(ietf_chacha20)
-TEST(hchacha20)
-TEST(xchacha20)
-TEST(poly1305)
-TEST(aead_ietf)
-TEST(blake2b)
-TEST(sha512)
-TEST(hmac_sha512)
-TEST(argon2i)
-TEST(x25519)
-TEST(x25519_pk)
-TEST(key_exchange)
-TEST(edDSA)
-TEST(edDSA_pk)
-TEST(ed_25519)
-TEST(ed_25519_pk)
-TEST(ed_25519_check)
-TEST(elligator_dir)
-TEST(elligator_inv)
+#define TEST(name) vector_test(name, #name, nb_##name##_vectors, name##_vectors)
 
 int main(int argc, char *argv[])
 {
@@ -1156,28 +1132,27 @@ int main(int argc, char *argv[])
     int status = 0;
     printf("\nTest against vectors");
     printf("\n--------------------\n");
-    status |= v_chacha20      ();
-    status |= v_ietf_chacha20 ();
-    status |= v_hchacha20     ();
-    status |= v_xchacha20     ();
-    status |= v_poly1305      ();
-    status |= v_aead_ietf     ();
-    status |= v_blake2b       ();
-    status |= v_sha512        ();
-    status |= v_hmac_sha512   ();
-    status |= v_argon2i       ();
-    status |= v_x25519        ();
-    status |= v_x25519_pk     ();
-    status |= v_key_exchange  ();
-    status |= v_edDSA         ();
-    status |= v_edDSA_pk      ();
-    status |= v_ed_25519      ();
-    status |= v_ed_25519_pk   ();
-    status |= v_ed_25519_check();
-    status |= v_elligator_dir ();
-    status |= v_elligator_inv ();
+    status |= TEST(chacha20);
+    status |= TEST(ietf_chacha20);
+    status |= TEST(hchacha20);
+    status |= TEST(xchacha20);
+    status |= TEST(poly1305);
+    status |= TEST(aead_ietf);
+    status |= TEST(blake2b);
+    status |= TEST(sha512);
+    status |= TEST(hmac_sha512);
+    status |= TEST(argon2i);
+    status |= TEST(x25519);
+    status |= TEST(x25519_pk);
+    status |= TEST(key_exchange);
+    status |= TEST(edDSA);
+    status |= TEST(edDSA_pk);
+    status |= TEST(ed_25519);
+    status |= TEST(ed_25519_pk);
+    status |= TEST(ed_25519_check);
+    status |= TEST(elligator_dir);
+    status |= TEST(elligator_inv);
     status |= test_x25519();
-
     printf("\nProperty based tests");
     printf("\n--------------------\n");
     status |= p_verify16();
