@@ -72,7 +72,6 @@ typedef uint32_t u32;
 typedef int32_t  i32;
 typedef int64_t  i64;
 typedef uint64_t u64;
-typedef uint_fast8_t uf8;
 
 static const u8 zero[128] = {0};
 
@@ -86,98 +85,56 @@ static size_t align(size_t x, size_t pow_2)
     return (~x + 1) & (pow_2 - 1);
 }
 
-#ifdef MSVC
-#define swap32 _byteswap_ulong
-#define swap64 _byteswap_ulonglong
-#else
-#define swap32 __builtin_bswap32
-#define swap64 __builtin_bswap64
-#endif
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-    static inline u32 swap32_if_nle(u32 x){
-        return x;
-    }
-    static inline u64 swap64_if_nle(u64 x){
-        return x;
-    }
-    static inline u32 load24_le(const u8 s[3])
-    {
-        return 0x00FFFFFFUL & *(const u32*)s;
-    }
-
-#elif __BYTE_ORDER == __BIG_ENDIAN
-    static inline u32 swap32_if_nle(u32 x){
-        return swap32(x);
-    }
-    static inline u64 swap64_if_nle(u64 x){
-        return swap64(x);
-    }
-    static inline u32 load24_le(const u8 s[3])
-    {
-        return 0xFFFFFFUL & swap32(*(const u32*)(s-1));
-    }
-#else
-#error "Unsupported endianness on target machine"
-#endif
-
-
-
-static inline u32 load32_le(const u8 s[4])
+static u32 load24_le(const u8 s[3])
 {
-    return swap32_if_nle(*(const u32*)s);
+    return (u32)s[0]
+        | ((u32)s[1] <<  8)
+        | ((u32)s[2] << 16);
 }
 
-static inline u64 load64_le(const u8 s[8])
+static u32 load32_le(const u8 s[4])
 {
-    return swap64_if_nle(*(const u64*)s);
+    return (u32)s[0]
+        | ((u32)s[1] <<  8)
+        | ((u32)s[2] << 16)
+        | ((u32)s[3] << 24);
 }
 
-static inline void store32_le(u8 out[4], u32 in)
+static u64 load64_le(const u8 s[8])
 {
-    *(u32*)out = swap64_if_nle(in);
+    return load32_le(s) | ((u64)load32_le(s+4) << 32);
 }
 
-static inline void store64_le(u8 out[8], u64 in)
+static void store32_le(u8 out[4], u32 in)
 {
-    *(u64*)out = swap64_if_nle(in);
+    out[0] =  in        & 0xff;
+    out[1] = (in >>  8) & 0xff;
+    out[2] = (in >> 16) & 0xff;
+    out[3] = (in >> 24) & 0xff;
 }
 
-static void cpy32_le(u32* dst,const u32* src,size_t sz)
+static void store64_le(u8 out[8], u64 in)
 {
-    FOR(i, 0, sz) { dst[i]=swap32_if_nle(src[i]); }
-}
-static void cpy64_le(u64* dst,const u64* src,size_t sz)
-{
-    FOR(i, 0, sz) { dst[i]=swap64_if_nle(src[i]); }
-}
-static void cpy32(u32* dst,const u32* src,size_t sz)
-{
-    FOR(i, 0, sz) { dst[i]=src[i]; }
-}
-static inline void load32_le_buf (u32 *dst, const u8 *src, size_t size) {
-    cpy32_le(dst,(const u32*)src,size);
-}
-static inline void load64_le_buf (u64 *dst, const u8 *src, size_t size) {
-    cpy64_le(dst,(const u64*)src,size);
-}
-static inline void store32_le_buf(u8 *dst, const u32 *src, size_t size) {
-    cpy32_le((u32*)dst,src,size);
-}
-static inline void store64_le_buf(u8 *dst, const u64 *src, size_t size) {
-    cpy64_le((u64*)dst,src,size);
+    store32_le(out    , (u32)in );
+    store32_le(out + 4, in >> 32);
 }
 
-#ifdef MSVC
-static inline u64 rotr64(u64 x, uf8 n) { return (u64)_rotr64((u64)x,n); }
-static inline u32 rotl32(u32 x, uf8 n) { return (u32)_rotl((u32)x,n); }
-#else
-static inline u64 rotr64(u64 x, uf8 n) { return (x >> n) | (x << (64 - n)); }
-static inline u32 rotl32(u32 x, uf8 n) { return (x << n) | (x >> (32 - n)); }
-#endif
+static void load32_le_buf (u32 *dst, const u8 *src, size_t size) {
+    FOR(i, 0, size) { dst[i] = load32_le(src + i*4); }
+}
+static void load64_le_buf (u64 *dst, const u8 *src, size_t size) {
+    FOR(i, 0, size) { dst[i] = load64_le(src + i*8); }
+}
+static void store32_le_buf(u8 *dst, const u32 *src, size_t size) {
+    FOR(i, 0, size) { store32_le(dst + i*4, src[i]); }
+}
+static void store64_le_buf(u8 *dst, const u64 *src, size_t size) {
+    FOR(i, 0, size) { store64_le(dst + i*8, src[i]); }
+}
 
-//Unminimized.
-//TODO: this is only constant time IF the word size is 32.   On 8 bit platforms this might not be constant time.
+static u64 rotr64(u64 x, u64 n) { return (x >> n) ^ (x << (64 - n)); }
+static u32 rotl32(u32 x, u32 n) { return (x << n) ^ (x >> (32 - n)); }
+
 static int neq0(u64 diff)
 {   // constant time comparison to zero
     // return diff != 0 ? -1 : 0
@@ -210,26 +167,34 @@ void crypto_wipe(void *secret, size_t size)
 /////////////////
 /// Chacha 20 ///
 /////////////////
-static inline void quarterround(u32 out[16],uf8 step)
-{
-    u32 a=out[0],b=out[step],c=out[step*2],d=out[step*3];
-    a += b;  d^= a; d = rotl32(d, 16);  
-    c += d;  b^= c; b = rotl32(b, 12);  
-    a += b;  d^= a; d = rotl32(d,  8);
-    c += d;  b^= c; b = rotl32(b,  7);
-    out[0]=a;
-    out[step]=b;
-    out[step*2]=c;
-    out[step*3]=d; //possible stack problem here?
-}
+#define QUARTERROUND(a, b, c, d)     \
+    a += b;  d = rotl32(d ^ a, 16);  \
+    c += d;  b = rotl32(b ^ c, 12);  \
+    a += b;  d = rotl32(d ^ a,  8);  \
+    c += d;  b = rotl32(b ^ c,  7)
 
-static void chacha20_rounds(u32 out[16])
+static void chacha20_rounds(u32 out[16], const u32 in[16])
 {
+    // The temporary variables make Chacha20 10% faster.
+    u32 t0  = in[ 0];  u32 t1  = in[ 1];  u32 t2  = in[ 2];  u32 t3  = in[ 3];
+    u32 t4  = in[ 4];  u32 t5  = in[ 5];  u32 t6  = in[ 6];  u32 t7  = in[ 7];
+    u32 t8  = in[ 8];  u32 t9  = in[ 9];  u32 t10 = in[10];  u32 t11 = in[11];
+    u32 t12 = in[12];  u32 t13 = in[13];  u32 t14 = in[14];  u32 t15 = in[15];
+
     FOR (i, 0, 10) { // 20 rounds, 2 rounds per loop.
-        FOR_T(uf8,j,0,8) {
-            quarterround(out+(j & 0x3), 4 + (j >> 2)); // column 0
-        }
+        QUARTERROUND(t0, t4, t8 , t12); // column 0
+        QUARTERROUND(t1, t5, t9 , t13); // column 1
+        QUARTERROUND(t2, t6, t10, t14); // column 2
+        QUARTERROUND(t3, t7, t11, t15); // column 3
+        QUARTERROUND(t0, t5, t10, t15); // diagonal 0
+        QUARTERROUND(t1, t6, t11, t12); // diagonal 1
+        QUARTERROUND(t2, t7, t8 , t13); // diagonal 2
+        QUARTERROUND(t3, t4, t9 , t14); // diagonal 3
     }
+    out[ 0] = t0;   out[ 1] = t1;   out[ 2] = t2;   out[ 3] = t3;
+    out[ 4] = t4;   out[ 5] = t5;   out[ 6] = t6;   out[ 7] = t7;
+    out[ 8] = t8;   out[ 9] = t9;   out[10] = t10;  out[11] = t11;
+    out[12] = t12;  out[13] = t13;  out[14] = t14;  out[15] = t15;
 }
 
 static void chacha20_init_key(u32 block[16], const u8 key[32])
@@ -245,8 +210,7 @@ static u64 chacha20_core(u32 input[16], u8 *cipher_text, const u8 *plain_text,
     u32    pool[16];
     size_t nb_blocks = text_size >> 6;
     FOR (i, 0, nb_blocks) {
-        cpy32(pool,input,16);
-        chacha20_rounds(pool);
+        chacha20_rounds(pool, input);
         if (plain_text != 0) {
             FOR (j, 0, 16) {
                 u32 p = pool[j] + input[j];
@@ -273,8 +237,7 @@ static u64 chacha20_core(u32 input[16], u8 *cipher_text, const u8 *plain_text,
         if (plain_text == 0) {
             plain_text = zero;
         }
-        cpy32(pool,input,16);
-        chacha20_rounds(pool);
+        chacha20_rounds(pool, input);
         u8 tmp[64];
         FOR (i, 0, 16) {
             store32_le(tmp + i*4, pool[i] + input[i]);
@@ -294,7 +257,7 @@ void crypto_hchacha20(u8 out[32], const u8 key[32], const u8 in [16])
     chacha20_init_key(block, key);
     // input
     load32_le_buf(block + 12, in, 4);
-    chacha20_rounds(block);
+    chacha20_rounds(block, block);
     // prevent reversal of the rounds by revealing only half of the buffer.
     store32_le_buf(out   , block   , 4); // constant
     store32_le_buf(out+16, block+12, 4); // counter and nonce

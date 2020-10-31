@@ -50,7 +50,7 @@
 # with this software.  If not, see
 # <https://creativecommons.org/publicdomain/zero/1.0/>
 CC=gcc -std=gnu99 # speed tests don't work with -std=cxx, they need the POSIX extensions
-CFLAGS= -pedantic -Wall -Wextra -Os -march=native -DBLAKE2_NO_UNROLLING
+CFLAGS= -pedantic -Wall -Wextra -O3 -march=native
 DESTDIR=
 PREFIX=usr/local
 LIBDIR=$(PREFIX)/lib
@@ -71,9 +71,9 @@ endif
         check test ctgrind                                             \
         speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519 \
         clean uninstall                                                \
-        dist sizecheck
+        dist
 
-all    : library sizecheck
+all    : library
 install: library src/monocypher.h monocypher.pc install-doc
 	mkdir -p $(DESTDIR)/$(INCLUDEDIR)
 	mkdir -p $(DESTDIR)/$(LIBDIR)
@@ -83,10 +83,6 @@ install: library src/monocypher.h monocypher.pc install-doc
 	$(INSTALL_ED25519)
 	sed "s|PREFIX|$(PREFIX)|"  monocypher.pc \
             > $(DESTDIR)/$(PKGCONFIGDIR)/monocypher.pc
-
-sizecheck: static-library
-	objdump -D -S lib/libmonocypher.a > lib/libmonocypher.s
-	du -sb lib/libmonocypher.a
 
 install-doc:
 	mkdir -p $(DESTDIR)/$(MANDIR)
