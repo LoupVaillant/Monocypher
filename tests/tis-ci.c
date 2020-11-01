@@ -9,7 +9,7 @@
 //
 // ------------------------------------------------------------------------
 //
-// Copyright (c) 2020, Mike Pechkin
+// Copyright (c) 2020, Mike Pechkin and Loup Vaillant
 // All rights reserved.
 //
 //
@@ -39,7 +39,7 @@
 //
 // ------------------------------------------------------------------------
 //
-// Written in 2017-2020 by Mike Pechkin
+// Written in 2017-2020 by Mike Pechkin and Loup Vaillant
 //
 // To the extent possible under law, the author(s) have dedicated all copyright
 // and related neighboring rights to this software to the public domain
@@ -51,12 +51,67 @@
 
 #include "monocypher.h"
 #include "monocypher-ed25519.h"
+#include "utils.h"
+#include "tis-ci-vectors.h"
 
 typedef uint8_t u8;
 
 #define ARRAY(name, size)                               \
     u8 name[size];                                      \
     for(size_t i = 0; i < size; i++) name[i] = i;
+
+static void chacha20(vector_reader *reader)
+{
+    vector key       = next_input(reader);
+    vector nonce     = next_input(reader);
+    vector plain     = next_input(reader);
+    u64    ctr       = load64_le(next_input(reader).buf);
+    vector out       = next_output(reader);
+    u64    nb_blocks = plain.size / 64 + (plain.size % 64 != 0);
+    u64    new_ctr   = crypto_chacha20_ctr(out.buf, plain.buf, plain.size,
+                                            key.buf, nonce.buf, ctr);
+    if (new_ctr - ctr != nb_blocks) {
+        printf("FAILURE: Chacha20 returned counter not correct: ");
+    }
+}
+
+static void ietf_chacha20(vector_reader *reader)
+{
+    vector key       = next_input(reader);
+    vector nonce     = next_input(reader);
+    vector plain     = next_input(reader);
+    u64    ctr       = load64_le(next_input(reader).buf);
+    vector out       = next_output(reader);
+    u32    nb_blocks = (u32)(plain.size / 64 + (plain.size % 64 != 0));
+    u32    new_ctr   = crypto_ietf_chacha20_ctr(out.buf, plain.buf, plain.size,
+                                                 key.buf, nonce.buf, ctr);
+    if (new_ctr - ctr != nb_blocks) {
+        printf("FAILURE: IETF Chacha20 returned counter not correct: ");
+    }
+}
+
+static void hchacha20(vector_reader *reader)
+{
+    vector key   = next_input(reader);
+    vector nonce = next_input(reader);
+    vector out   = next_output(reader);
+    crypto_hchacha20(out.buf, key.buf, nonce.buf);
+}
+
+static void xchacha20(vector_reader *reader)
+{
+    vector key       = next_input(reader);
+    vector nonce     = next_input(reader);
+    vector plain     = next_input(reader);
+    u64    ctr       = load64_le(next_input(reader).buf);
+    vector out       = next_output(reader);
+    u64    nb_blocks = plain.size / 64 + (plain.size % 64 != 0);
+    u64    new_ctr   = crypto_xchacha20_ctr(out.buf, plain.buf, plain.size,
+                                             key.buf, nonce.buf, ctr);
+    if (new_ctr - ctr != nb_blocks) {
+        printf("FAILURE: XChacha20 returned counter not correct: ");
+    }
+}
 
 void p1305(void) {
     ARRAY(mac, 16);
@@ -259,7 +314,22 @@ void sign_check_ed25519(void) {
     crypto_ed25519_check(hash, pub, in, 32);
 }
 
+#define TEST(name)                                                      \
+    int v_##name() {                                                    \
+        return vector_test(name, #name, nb_##name##_vectors, name##_vectors); \
+    }
+
+TEST(chacha20)
+TEST(ietf_chacha20)
+TEST(hchacha20)
+TEST(xchacha20)
+
 int main(void) {
+    int status = 0;
+    status |= v_chacha20      ();
+    status |= v_ietf_chacha20 ();
+    status |= v_hchacha20     ();
+    status |= v_xchacha20     ();
     p1305();
     blake2b();
     verify();
@@ -283,5 +353,5 @@ int main(void) {
     sha512();
     hmac();
     sign_check_ed25519();
-    return 0;
+    return status;
 }
