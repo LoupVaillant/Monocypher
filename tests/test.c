@@ -325,7 +325,7 @@ static void elligator_inv(vector_reader *reader)
     vector out     = next_output(reader);
     int    check   = crypto_curve_to_hidden(out.buf, point.buf, tweak);
     if ((u8)check != failure) {
-        fprintf(stderr, "Elligator inverse map: failure mismatch\n");
+        printf("Elligator inverse map: failure mismatch\n");
         exit(1);
     }
     if (check) {
