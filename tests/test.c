@@ -77,6 +77,7 @@ static void chacha20(vector_reader *reader)
                                             key.buf, nonce.buf, ctr);
     if (new_ctr - ctr != nb_blocks) {
         printf("FAILURE: Chacha20 returned counter not correct: ");
+        exit(1);
     }
 }
 
@@ -92,6 +93,7 @@ static void ietf_chacha20(vector_reader *reader)
                                                  key.buf, nonce.buf, ctr);
     if (new_ctr - ctr != nb_blocks) {
         printf("FAILURE: IETF Chacha20 returned counter not correct: ");
+        exit(1);
     }
 }
 
@@ -115,6 +117,7 @@ static void xchacha20(vector_reader *reader)
                                              key.buf, nonce.buf, ctr);
     if (new_ctr - ctr != nb_blocks) {
         printf("FAILURE: XChacha20 returned counter not correct: ");
+        exit(1);
     }
 }
 
@@ -220,6 +223,7 @@ static void edDSA(vector_reader *reader)
     if (memcmp(out.buf, out2, out.size)) {
         printf("FAILURE: reconstructing public key"
                " yields different signature\n");
+        exit(1);
     }
 }
 
@@ -245,6 +249,7 @@ static void ed_25519(vector_reader *reader)
     if (memcmp(out.buf, out2, out.size)) {
         printf("FAILURE: reconstructing public key"
                " yields different signature\n");
+        exit(1);
     }
 }
 
@@ -321,6 +326,7 @@ static void elligator_inv(vector_reader *reader)
     int    check   = crypto_curve_to_hidden(out.buf, point.buf, tweak);
     if ((u8)check != failure) {
         fprintf(stderr, "Elligator inverse map: failure mismatch\n");
+        exit(1);
     }
     if (check) {
         out.buf[0] = 0;
