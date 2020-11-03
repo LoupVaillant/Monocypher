@@ -673,6 +673,7 @@ void crypto_blake2b_general(u8       *hash   , size_t hash_size,
     crypto_blake2b_final(&ctx, hash);
 }
 
+#ifndef REMOVE_BLAKE2
 void crypto_blake2b(u8 hash[64], const u8 *message, size_t message_size)
 {
     crypto_blake2b_general(hash, 64, 0, 0, message, message_size);
@@ -694,6 +695,7 @@ const crypto_sign_vtable crypto_blake2b_vtable = {
     blake2b_vtable_final,
     sizeof(crypto_sign_ctx),
 };
+#endif
 
 ////////////////
 /// Argon2 i ///
