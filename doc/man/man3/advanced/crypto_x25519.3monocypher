@@ -96,7 +96,7 @@ The shared secret, known only to those who know a relevant secret key
 It is not cryptographically random.
 Do not use it directly as a key.
 Hash it with
-.Xr crypto_chacha20_H 3monocypher
+.Xr crypto_hchacha20 3monocypher
 or
 .Xr crypto_blake2b 3monocypher
 first.
