@@ -60,7 +60,7 @@
 .Fo crypto_x25519_inverse
 .Fa "uint8_t blind_salt[32]"
 .Fa "const uint8_t private_key[32]"
-.Fa "const uint8_t curve_point"
+.Fa "const uint8_t curve_point[32]"
 .Fc
 .Sh DESCRIPTION
 The
