@@ -975,7 +975,7 @@ static int p_elligator_x25519()
 
         // Maximise tweak diversity.
         // We want to set the bits 1 (sign) and 6-7 (padding)
-        u8 tweak = (u8)((i & 1) + (i << 6));
+        u8 tweak = (u8)((i & 1) + (i << 5));
         u8 r[32];
         if (crypto_curve_to_hidden(r, pkf, tweak)) {
             continue; // retry untill success (doesn't increment the tweak)
