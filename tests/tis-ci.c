@@ -53,8 +53,7 @@
 #include "monocypher-ed25519.h"
 #include "utils.h"
 #include "tis-ci-vectors.h"
-
-typedef uint8_t u8;
+#include <stdio.h>
 
 #define ARRAY(name, size)                               \
     u8 name[size];                                      \
