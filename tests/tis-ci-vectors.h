@@ -1424,9 +1424,9 @@ static const char *ed_25519_pk_vectors[]={
   "0000000000000000000000000000000000000000000000000000000000000000",
   "3b6a27bcceb6a42d62a3a8d02a6f0d73653215771de243a63ac048a18b59da29",
 };
-static size_t nb_ed_25519_pk_vectors=514;
-static const char *ed_25519_check_vectors[]={
-};
+//static size_t nb_ed_25519_pk_vectors=514;
+//static const char *ed_25519_check_vectors[]={
+//};
 static size_t nb_ed_25519_check_vectors=0;
 static const char *x25519_vectors[]={
   "e4e4c4054fe35a75d9c0f679ad8770d8227e68e4c1e68ce67ee88e6be251a207",
@@ -1455,9 +1455,9 @@ static const char *x25519_pk_vectors[]={
   "0000000000000000000000000000000000000000000000000000000000000000",
   "2fe57da347cd62431528daac5fbb290730fff684afc4cfc2ed90995f58cb3b74",
 };
-static size_t nb_x25519_pk_vectors=4;
-static const char *key_exchange_vectors[]={
-};
+//static size_t nb_x25519_pk_vectors=4;
+//static const char *key_exchange_vectors[]={
+//};
 static size_t nb_key_exchange_vectors=0;
 static const char *elligator_inv_vectors[]={
   "2920d46f2f37b04d00ff73df4115fda3876810c2144e94a7e6d0c09290ff7359",
