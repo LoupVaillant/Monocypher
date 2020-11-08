@@ -153,11 +153,6 @@ int crypto_verify16(const u8 a[16], const u8 b[16]){ return neq0(x16(a, b)); }
 int crypto_verify32(const u8 a[32], const u8 b[32]){ return neq0(x32(a, b)); }
 int crypto_verify64(const u8 a[64], const u8 b[64]){ return neq0(x64(a, b)); }
 
-static int zerocmp32(const u8 p[32])
-{
-    return crypto_verify32(p, zero);
-}
-
 void crypto_wipe(void *secret, size_t size)
 {
     volatile u8 *v_secret = (u8*)secret;
@@ -1290,24 +1285,17 @@ static int fe_isodd(const fe f)
     return isodd;
 }
 
-// Returns 0 if zero, 1 if non zero
-static int fe_isnonzero(const fe f)
-{
-    u8 s[32];
-    fe_tobytes(s, f);
-    int isnonzero = zerocmp32(s);
-    WIPE_BUFFER(s);
-    return -isnonzero;
-}
-
 // Returns 1 if equal, 0 if not equal
 static int fe_isequal(const fe f, const fe g)
 {
-    fe diff;
-    fe_sub(diff, f, g);
-    int isdifferent = fe_isnonzero(diff);
-    WIPE_BUFFER(diff);
-    return 1 - isdifferent;
+    u8 fs[32];
+    u8 gs[32];
+    fe_tobytes(fs, f);
+    fe_tobytes(gs, g);
+    int isdifferent = crypto_verify32(fs, gs);
+    WIPE_BUFFER(fs);
+    WIPE_BUFFER(gs);
+    return 1 + isdifferent;
 }
 
 // Inverse square root.
@@ -2561,11 +2549,11 @@ int crypto_curve_to_hidden(u8 hidden[32], const u8 public_key[32], u8 tweak)
         WIPE_BUFFER(t3);
         return -1;
     }
-    fe_ccopy(t1, t2, tweak & 1);
-    fe_mul  (t3, t1, t3);
-    fe_add  (t1, t3, t3);
-    fe_neg  (t2, t3);
-    fe_ccopy(t3, t2, fe_isodd(t1));
+    fe_ccopy    (t1, t2, tweak & 1);
+    fe_mul      (t3, t1, t3);
+    fe_mul_small(t1, t3, 2);
+    fe_neg      (t2, t3);
+    fe_ccopy    (t3, t2, fe_isodd(t1));
     fe_tobytes(hidden, t3);
 
     // Pad with two random bits
