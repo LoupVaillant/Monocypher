@@ -259,14 +259,12 @@ static void elligator_inv(vector_reader *reader)
 static int p_from_eddsa()
 {
     int status = 0;
-    FOR (i, 0, 3) {
-        RANDOM_INPUT(ed_private, 32);
-        u8 ed_public[32];  crypto_sign_public_key   (ed_public, ed_private);
-        u8 x_private[32];  crypto_from_eddsa_private(x_private, ed_private);
-        u8 x_public1[32];  crypto_from_eddsa_public (x_public1, ed_public);
-        u8 x_public2[32];  crypto_x25519_public_key (x_public2, x_private);
-        status |= memcmp(x_public1, x_public2, 32);
-    }
+    RANDOM_INPUT(ed_private, 32);
+    u8 ed_public[32];  crypto_sign_public_key   (ed_public, ed_private);
+    u8 x_private[32];  crypto_from_eddsa_private(x_private, ed_private);
+    u8 x_public1[32];  crypto_from_eddsa_public (x_public1, ed_public);
+    u8 x_public2[32];  crypto_x25519_public_key (x_public2, x_private);
+    status |= memcmp(x_public1, x_public2, 32);
     printf("%s: from_eddsa\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
@@ -274,14 +272,12 @@ static int p_from_eddsa()
 static int p_from_ed25519()
 {
     int status = 0;
-    FOR (i, 0, 3) {
-        RANDOM_INPUT(ed_private, 32);
-        u8 ed_public[32];  crypto_ed25519_public_key  (ed_public, ed_private);
-        u8 x_private[32];  crypto_from_ed25519_private(x_private, ed_private);
-        u8 x_public1[32];  crypto_from_ed25519_public (x_public1, ed_public);
-        u8 x_public2[32];  crypto_x25519_public_key   (x_public2, x_private);
-        status |= memcmp(x_public1, x_public2, 32);
-    }
+    RANDOM_INPUT(ed_private, 32);
+    u8 ed_public[32];  crypto_ed25519_public_key  (ed_public, ed_private);
+    u8 x_private[32];  crypto_from_ed25519_private(x_private, ed_private);
+    u8 x_public1[32];  crypto_from_ed25519_public (x_public1, ed_public);
+    u8 x_public2[32];  crypto_x25519_public_key   (x_public2, x_private);
+    status |= memcmp(x_public1, x_public2, 32);
     printf("%s: from_ed25519\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
@@ -343,35 +339,24 @@ static int p_x25519_inverse()
     u8 base[32];  // random point (cofactor is cleared).
     crypto_x25519_public_key(base, b);
     // check round trip
-    FOR (i, 0, 2) {
-        RANDOM_INPUT(sk, 32);
-        u8 pk   [32];
-        u8 blind[32];
-        crypto_x25519(pk, sk, base);
-        crypto_x25519_inverse(blind, sk, pk);
-        status |= memcmp(blind, base, 32);
-    }
+    RANDOM_INPUT(sk, 32);
+    u8 pk   [32];
+    u8 blind[32];
+    crypto_x25519(pk, sk, base);
+    crypto_x25519_inverse(blind, sk, pk);
+    status |= memcmp(blind, base, 32);
 
     // check cofactor clearing
     // (Multiplying by a low order point yields zero
-    u8 low_order[4][32] = {
-        {0}, {1},
-        {0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24,
-         0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b,
-         0x04, 0x44, 0x5c, 0xc4, 0x58, 0x1c, 0x8e, 0x86,
-         0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57,},
-        {0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae,
-         0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a,
-         0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd,
-         0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00,},
+    u8 low_order[32] = {
+        0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24,
+        0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b,
+        0x04, 0x44, 0x5c, 0xc4, 0x58, 0x1c, 0x8e, 0x86,
+        0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57,
     };
     u8 zero[32] = {0};
-    FOR (i, 0, 3) {
-        u8 blind[32];
-        RANDOM_INPUT(sk, 32);
-        crypto_x25519_inverse(blind, sk, low_order[i%4]);
-        status |= memcmp(blind, zero, 32);
-    }
+    crypto_x25519_inverse(blind, sk, low_order);
+    status |= memcmp(blind, zero, 32);
     printf("%s: x25519_inverse\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
