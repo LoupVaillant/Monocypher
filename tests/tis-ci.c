@@ -256,6 +256,7 @@ static void elligator_inv(vector_reader *reader)
     }
 }
 
+//@ ensures \result == 0;
 static int p_from_eddsa()
 {
     int status = 0;
@@ -269,6 +270,7 @@ static int p_from_eddsa()
     return status;
 }
 
+//@ ensures \result == 0;
 static int p_from_ed25519()
 {
     int status = 0;
@@ -282,6 +284,7 @@ static int p_from_ed25519()
     return status;
 }
 
+//@ ensures \result == 0;
 static int p_elligator_x25519()
 {
     int status = 0;
@@ -332,6 +335,7 @@ static int p_elligator_x25519()
     return status;
 }
 
+//@ ensures \result == 0;
 static int p_x25519_inverse()
 {
     int status = 0;
@@ -361,6 +365,7 @@ static int p_x25519_inverse()
     return status;
 }
 
+//@ ensures \result == 0;
 static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
 {
     int status = 0;
@@ -391,8 +396,11 @@ static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
     printf("%s: crypto_verify%zu\n", status != 0 ? "FAILED" : "OK", size);
     return status;
 }
+//@ ensures \result == 0;
 static int p_verify16(){ return p_verify(16, crypto_verify16); }
+//@ ensures \result == 0;
 static int p_verify32(){ return p_verify(32, crypto_verify32); }
+//@ ensures \result == 0;
 static int p_verify64(){ return p_verify(64, crypto_verify64); }
 
 #define TEST(name)                                                      \
@@ -400,23 +408,40 @@ static int p_verify64(){ return p_verify(64, crypto_verify64); }
         return vector_test(name, #name, nb_##name##_vectors, name##_vectors); \
     }
 
+//@ ensures \result == 0;
 TEST(chacha20)
+//@ ensures \result == 0;
 TEST(ietf_chacha20)
+//@ ensures \result == 0;
 TEST(hchacha20)
+//@ ensures \result == 0;
 TEST(xchacha20)
+//@ ensures \result == 0;
 TEST(poly1305)
+//@ ensures \result == 0;
 TEST(aead_ietf)
+//@ ensures \result == 0;
 TEST(blake2b)
+//@ ensures \result == 0;
 TEST(sha512)
+//@ ensures \result == 0;
 TEST(hmac_sha512)
+//@ ensures \result == 0;
 TEST(argon2i)
+//@ ensures \result == 0;
 TEST(key_exchange)
+//@ ensures \result == 0;
 TEST(edDSA)
+//@ ensures \result == 0;
 TEST(ed_25519)
+//@ ensures \result == 0;
 TEST(ed_25519_check)
+//@ ensures \result == 0;
 TEST(elligator_dir)
+//@ ensures \result == 0;
 TEST(elligator_inv)
 
+//@ ensures \result == 0;
 int main(void) {
     int status = 0;
     status |= v_chacha20      ();
