@@ -1245,7 +1245,7 @@ static void fe_frombytes(fe h, const u8 s[32])
 // - If h is positive, all we need to do is reduce its individual
 //   limbs down to their tight positive range.
 // - If h is negative, we also need to add 2^255-19 to it.
-//   Or just remove 19 and chop off any exess bit.
+//   Or just remove 19 and chop off any excess bit.
 static void fe_tobytes(u8 s[32], const fe h)
 {
     i32 t[10];
@@ -1264,7 +1264,7 @@ static void fe_tobytes(u8 s[32], const fe h)
     // q =  0 iff h >= 0
     // q = -1 iff h <  0
     // Adding q * 19 to h reduces h to its proper range.
-    q *= 19;  // Shift carry back to the begining
+    q *= 19;  // Shift carry back to the beginning
     FOR (i, 0, 5) {
         t[i*2  ] += q;  q = t[i*2  ] >> 26;  t[i*2  ] -= q * ((i32)1 << 26);
         t[i*2+1] += q;  q = t[i*2+1] >> 25;  t[i*2+1] -= q * ((i32)1 << 25);
@@ -2638,7 +2638,7 @@ static const fe A = {486662};
 //
 // Let isr   = invsqrt((A^2*r1 - r2^2) *  A * r2^3)
 //     isr   = sqrt(1        / ((A^2*r1 - r2^2) *  A * r2^3)) if e =  1
-//     isr   = strt(sqrt(-1) / ((A^2*r1 - r2^2) *  A * r2^3)) if e = -1
+//     isr   = sqrt(sqrt(-1) / ((A^2*r1 - r2^2) *  A * r2^3)) if e = -1
 //
 // if e = 1
 //   let u1 = -A * (A^2*r1 - r2^2) * A * r2^2 * isr^2
