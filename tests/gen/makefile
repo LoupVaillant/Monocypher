@@ -124,7 +124,7 @@ ed_25519_pk.all.vec   : ed_25519_pk.vec
 ed_25519_check.all.vec:                   vectors/ed_25519_check
 key_exchange.all.vec  :                   vectors/key_exchange
 elligator_dir.all.vec : elligator_dir.vec vectors/elligator_dir
-elligator_inv.all.vec : elligator_inv.vec
+elligator_inv.all.vec : elligator_inv.vec vectors/elligator_inv
 $(VEC2):
 	mkdir -p $(@D)
 	cat $^ > $@
