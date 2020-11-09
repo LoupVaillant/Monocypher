@@ -1045,12 +1045,14 @@ typedef i32 fe[10];
 
 // field constants
 //
+// fe_one      : 1
 // sqrtm1      : sqrt(-1)
 // d           :     -121665 / 121666
 // D2          : 2 * -121665 / 121666
 // lop_x, lop_y: low order point in Edwards coordinates
 // ufactor     : -sqrt(-1) * 2
 // A2          : 486662^2  (A squared)
+static const fe fe_one  = {1};
 static const fe sqrtm1  = {-32595792, -7943725, 9377950, 3500415, 12389472,
                            -272473, -25146209, -2005654, 326686, 11406482,};
 static const fe d       = {-10913610, 13857413, -15372611, 6949391, 114729,
@@ -2408,8 +2410,6 @@ void crypto_from_eddsa_private(u8 x25519[32], const u8 eddsa[32])
     COPY(x25519, a, 32);
     WIPE_BUFFER(a);
 }
-
-static const fe fe_one = {1};
 
 void crypto_from_eddsa_public(u8 x25519[32], const u8 eddsa[32])
 {
