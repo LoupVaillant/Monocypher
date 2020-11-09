@@ -256,7 +256,7 @@ def invsqrt(x):
 # u = e*w - (fe(1)-e)*(A//2)
 # v = -e * sqrt(u^3 + A*u^2 + u)
 #
-# Note that e is eiter 0, 1 or -1
+# Note that e is either 0, 1 or -1
 # if e = 0
 #   (u, v) = (0, 0)
 # if e = 1
