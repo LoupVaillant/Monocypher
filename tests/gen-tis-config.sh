@@ -76,7 +76,7 @@ for entry_point in      \
     "v_elligator_inv"   \
     "p_from_eddsa"      \
     "p_from_ed25519"    \
-    "p_elligator_x25519"\
+    "p_dirty"           \
     "p_x25519_inverse"  \
     "p_verify16"        \
     "p_verify32"        \

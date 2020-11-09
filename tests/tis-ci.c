@@ -285,53 +285,26 @@ static int p_from_ed25519()
 }
 
 //@ ensures \result == 0;
-static int p_elligator_x25519()
+static int p_dirty()
 {
     int status = 0;
-    int i = 0;
-    while (i < 2) {
-        RANDOM_INPUT(sk1, 32);
-        RANDOM_INPUT(sk2, 32);
-        u8 skc [32];  memcpy(skc, sk1, 32);  skc[0] &= 248;
-        u8 pks [32];  crypto_x25519_dirty_small(pks , sk1);
-        u8 pksc[32];  crypto_x25519_dirty_small(pksc, skc);
-        u8 pkf [32];  crypto_x25519_dirty_fast (pkf , sk1);
-        u8 pkfc[32];  crypto_x25519_dirty_fast (pkfc, skc);
-        u8 pk1 [32];  crypto_x25519_public_key (pk1 , sk1);
 
-        // Both dirty functions behave the same
-        status |= memcmp(pks, pkf, 32);
+    RANDOM_INPUT(sk1, 32);               sk1[0] |= 1;   // make sure it's dirty
+    u8 skc [32];  memcpy(skc, sk1, 32);  skc[0] &= 248; // make sure it's clean
+    u8 pks [32];  crypto_x25519_dirty_small(pks , sk1);
+    u8 pksc[32];  crypto_x25519_dirty_small(pksc, skc);
+    u8 pkf [32];  crypto_x25519_dirty_fast (pkf , sk1);
+    u8 pkfc[32];  crypto_x25519_dirty_fast (pkfc, skc);
+    u8 pk1 [32];  crypto_x25519_public_key (pk1 , sk1);
 
-        // Dirty functions behave cleanly if we clear the 3 msb first
-        status |= memcmp(pksc, pk1, 32);
-        status |= memcmp(pkfc, pk1, 32);
+    // Both dirty functions behave the same
+    status |= memcmp(pks, pkf, 32);
 
-        // Dirty functions behave the same as the clean one if the lsb
-        // are 0, differently if it is not
-        if ((sk1[0] & 7) == 0) { status |= memcmp(pk1, pkf, 32);      }
-        else                   { status |= memcmp(pk1, pkf, 32) == 0; }
+    // Dirty functions behave cleanly if we clear the 3 msb first
+    status |= memcmp(pksc, pk1, 32);
+    status |= memcmp(pkfc, pk1, 32);
 
-        // Maximise tweak diversity.
-        // We want to set the bits 1 (sign) and 6-7 (padding)
-        u8 tweak = (u8)((i & 1) + (i << 5));
-        u8 r[32];
-        if (crypto_curve_to_hidden(r, pkf, tweak)) {
-            continue; // retry untill success (doesn't increment the tweak)
-        }
-        // Verify that the tweak's msb are copied to the representative
-        status |= (tweak >> 6) ^ (r[31] >> 6);
-
-        // Round trip
-        u8 pkr[32];  crypto_hidden_to_curve(pkr, r);
-        status |= memcmp(pkr, pkf, 32);
-
-        // Dirty and safe keys are compatible
-        u8 e1 [32];  crypto_x25519(e1, sk2, pk1);
-        u8 e2 [32];  crypto_x25519(e2, sk2, pkr);
-        status |= memcmp(e1, e2, 32);
-        i += 3;
-    }
-    printf("%s: elligator x25519\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: x25519 dirty\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -460,12 +433,13 @@ int main(void) {
     status |= v_ed_25519_check();
     status |= v_elligator_dir ();
     status |= v_elligator_inv ();
-    status |= p_from_eddsa      ();
-    status |= p_from_ed25519    ();
-    status |= p_elligator_x25519();
-    status |= p_x25519_inverse  ();
-    status |= p_verify16        ();
-    status |= p_verify32        ();
-    status |= p_verify64        ();
+
+    status |= p_from_eddsa    ();
+    status |= p_from_ed25519  ();
+    status |= p_dirty         ();
+    status |= p_x25519_inverse();
+    status |= p_verify16      ();
+    status |= p_verify32      ();
+    status |= p_verify64      ();
     return status;
 }
