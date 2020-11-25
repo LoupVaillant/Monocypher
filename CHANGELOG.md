@@ -12,6 +12,7 @@
   - Enforced slightly safer invariants.
 - Made the vectors.h header more compact and easier to modify.
 - TIS-CI integration.
+- Added speed benchmark for ed25519-donna.
 
 
 3.1.1

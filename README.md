@@ -144,13 +144,14 @@ always switch later.
 Note: the speed benchmark currently requires the POSIX
 `clock_gettime()` function.
 
-There are similar benchmarks for Libsodium, TweetNaCl, LibHydrogen, and
-c25519:
+There are similar benchmarks for Libsodium, TweetNaCl, LibHydrogen,
+c25519, and ed25519-donna (the portable, 32-bit version):
 
     $ make speed-sodium
     $ make speed-tweetnacl
     $ make speed-hydrogen
     $ make speed-c25519
+    $ make speed-donna
 
 (The `speed-hydrogen` target assumes it has pkg-config installed. Try
 `make pkg-config-libhydrogen` as root if it is not.)
