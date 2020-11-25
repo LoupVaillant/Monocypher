@@ -168,7 +168,7 @@ static u64 edDSA_check(void)
 
     TIMING_START {
         if (crypto_sign_verify_detached(signature, message, 64, pk)) {
-            printf("Monocypher verification failed\n");
+            printf("Libsodium verification failed\n");
         }
     }
     TIMING_END;
