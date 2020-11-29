@@ -19,8 +19,7 @@ Implementors
 - **Argon2i:**  Loup Vaillant, implemented from spec.
 - **X25519:**   Daniel J. Bernstein, taken and packaged from SUPERCOP
                 ref10.
-- **EdDSA:**    Loup Vaillant, with bits and pieces from SUPERCOP ref10
-                and TweetNaCl.
+- **EdDSA:**    Loup Vaillant, with bits and pieces from SUPERCOP ref10.
 
 Test suite
 ----------

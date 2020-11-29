@@ -1667,73 +1667,118 @@ void crypto_x25519_public_key(u8       public_key[32],
 ///////////////////////////
 /// Arithmetic modulo L ///
 ///////////////////////////
-static const  u8 L[32] = {
-    0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2,
-    0xde, 0xf9, 0xde, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, };
+static const u32 L[8] = {0x5cf5d3ed, 0x5812631a, 0xa2f79cd6, 0x14def9de,
+                         0x00000000, 0x00000000, 0x00000000, 0x10000000,};
 
-// r = x mod L (little-endian)
-static void modL(u8 *r, i64 x[64])
+//  p = a*b + p
+static void multiply(u32 p[16], const u32 a[8], const u32 b[8])
 {
-    for (unsigned i = 63; i >= 32; i--) {
-        i64 carry = 0;
-        FOR (j, i-32, i-12) {
-            x[j] += carry - 16 * x[i] * L[j - (i - 32)];
-            carry = (x[j] + 128) >> 8;
-            x[j] -= carry * (1 << 8);
+    FOR (i, 0, 8) {
+        u64 carry = 0;
+        FOR (j, 0, 8) {
+            carry  += p[i+j] + (u64)a[i] * b[j];
+            p[i+j]  = (u32)carry;
+            carry >>= 32;
         }
-        x[i-12] += carry;
-        x[i] = 0;
-    }
-    i64 carry = 0;
-    FOR (i, 0, 32) {
-        x[i] += carry - (x[31] >> 4) * L[i];
-        carry = x[i] >> 8;
-        x[i] &= 255;
-    }
-    FOR (i, 0, 32) {
-        x[i] -= carry * L[i];
-    }
-    FOR (i, 0, 32) {
-        x[i+1] += x[i] >> 8;
-        r[i  ]  = x[i] & 255;
+        p[i+8] = (u32)carry;
     }
 }
 
-// Reduces a 64-byte hash modulo L (little endian)
+static int is_above_l(const u32 x[8])
+{
+    // We work with L directly, in a 2's complement encoding
+    // (-L == ~L + 1)
+    u64 carry = 1;
+    FOR (i, 0, 8) {
+        carry += (u64)x[i] + ~L[i];
+        carry >>= 32;
+    }
+    return carry;
+}
+
+// Final reduction modulo L, by conditionally removing L.
+// if x < l     , then r = x
+// if l <= x 2*l, then r = x-l
+// otherwise the result will be wrong
+static void remove_l(u32 r[8], const u32 x[8])
+{
+    u64 carry = is_above_l(x);
+    u32 mask  = ~(u32)carry + 1; // carry == 0 or 1
+    FOR (i, 0, 8) {
+        carry += (u64)x[i] + (~L[i] & mask);
+        r[i]   = (u32)carry;
+        carry >>= 32;
+    }
+}
+
+// Full reduction modulo L (Barrett reduction)
+// Uses
+static void mod_l(u8 reduced[32], const u32 x[16])
+{
+    static const u32 r[9] = {0x0a2c131b,0xed9ce5a3,0x086329a7,0x2106215d,
+                             0xffffffeb,0xffffffff,0xffffffff,0xffffffff,0xf,};
+    // xr = x * r
+    u32 xr[25] = {0};
+    FOR (i, 0, 9) {
+        u64 carry = 0;
+        FOR (j, 0, 16) {
+            carry  += xr[i+j] + (u64)r[i] * x[j];
+            xr[i+j] = (u32)carry;
+            carry >>= 32;
+        }
+        xr[i+16] = (u32)carry;
+    }
+    // xr = floor(xr / 2^512) * L
+    // Since the result is guaranteed to be below 2*L,
+    // it is enough to only compute the first 256 bits.
+    // The division is performed by saying xr[i+16]. (16 * 32 = 512)
+    ZERO(xr, 8);
+    FOR (i, 0, 8) {
+        u64 carry = 0;
+        FOR (j, 0, 8-i) {
+            carry   += xr[i+j] + (u64)xr[i+16] * L[j];
+            xr[i+j] = (u32)carry;
+            carry >>= 32;
+        }
+    }
+    // xr = x - xr
+    u64 carry = 1;
+    carry = 1;
+    FOR (i, 0, 8) {
+        carry  += (u64)x[i] + ~xr[i];
+        xr[i]   = (u32)carry;
+        carry >>= 32;
+    }
+    // Final reduction modulo L (conditional subtraction)
+    remove_l(xr, xr);
+    store32_le_buf(reduced, xr, 8);
+
+    WIPE_BUFFER(xr);
+}
+
 static void reduce(u8 r[64])
 {
-    i64 x[64];
-    COPY(x, r, 64);
-    modL(r, x);
+    u32 x[16];
+    load32_le_buf(x, r, 16);
+    mod_l(r, x);
     WIPE_BUFFER(x);
 }
 
 // r = (a * b) + c
 static void mul_add(u8 r[32], const u8 a[32], const u8 b[32], const u8 c[32])
 {
-    i64 s[64];
-    FOR (i, 0, 32) {
-        s[i] = (i64)(u64)c[i];  // preserve unsigned
-    }
-    ZERO(s + 32, 32);
-    FOR (i,  0, 32) {
-        FOR (j, 0, 32) {
-            s[i+j] += a[i] * (u64)b[j];
-        }
-    }
-    modL(r, s);
-    WIPE_BUFFER(s);
-}
+    u32 A[8];  load32_le_buf(A, a, 8);
+    u32 B[8];  load32_le_buf(B, b, 8);
+    u32 p[16];
+    load32_le_buf(p, c, 8);
+    ZERO(p + 8, 8);
 
-// Variable time! a must not be secret!
-static int is_above_L(const u8 a[32])
-{
-    for (int i = 31; i >= 0; i--) {
-        if (a[i] > L[i]) { return 1; }
-        if (a[i] < L[i]) { return 0; }
-    }
-    return 1;
+    multiply(p, A, B);
+
+    mod_l(r, p);
+    WIPE_BUFFER(p);
+    WIPE_BUFFER(A);
+    WIPE_BUFFER(B);
 }
 
 ///////////////
@@ -2075,9 +2120,11 @@ static void ge_double_scalarmult_vartime(ge *P, const u8 p[32], const u8 b[32])
 // => Use only to *check* signatures.
 static int ge_r_check(u8 R_check[32], u8 s[32], u8 h_ram[32], u8 pk[32])
 {
-    ge A; // not secret, not wiped
+    ge  A;      // not secret, not wiped
+    u32 s32[8]; // not secret, not wiped
+    load32_le_buf(s32, s, 8);
     if (ge_frombytes_vartime(&A, pk) ||         // A = pk
-        is_above_L(s)) {                        // prevent s malleability
+        is_above_l(s32)) {                      // prevent s malleability
         return -1;
     }
     fe_neg(A.X, A.X);
@@ -2475,12 +2522,12 @@ void crypto_from_eddsa_public(u8 x25519[32], const u8 eddsa[32])
 //   s + L * (x%8) < 2^256
 static void add_xl(u8 s[32], u8 x)
 {
-    u32 mod8  = x & 7;
-    u32 carry = 0;
-    FOR (i , 0, 32) {
-        carry = carry + s[i] + L[i] * mod8;
-        s[i]  = (u8)carry;
-        carry >>= 8;
+    u64 mod8  = x & 7;
+    u64 carry = 0;
+    FOR (i , 0, 8) {
+        carry = carry + load32_le(s + 4*i) + L[i] * mod8;
+        store32_le(s + 4*i, (u32)carry);
+        carry >>= 32;
     }
 }
 
@@ -2795,19 +2842,6 @@ void crypto_key_exchange(u8       shared_key[32],
 ///////////////////////
 /// Scalar division ///
 ///////////////////////
-static void multiply(u32 p[16], const u32 a[8], const u32 b[8])
-{
-    ZERO(p, 16);
-    FOR (i, 0, 8) {
-        u64 carry = 0;
-        FOR (j, 0, 8) {
-            carry  += p[i+j] + (u64)a[i] * b[j];
-            p[i+j]  = (u32)carry;
-            carry >>= 32;
-        }
-        p[i+8] = (u32)carry;
-    }
-}
 
 // Montgomery reduction.
 // Divides x by (2^256), and reduces the result modulo L
@@ -2838,7 +2872,7 @@ static void redc(u32 u[8], u32 x[16])
             carry >>= 32;
         }
     }
-    u32 t[16];
+    u32 t[16] = {0};
     multiply(t, s, l);
 
     // t = t + x
@@ -2854,17 +2888,8 @@ static void redc(u32 u[8], u32 x[16])
     // So a constant time conditional subtraction is enough
     // We work with L directly, in a 2's complement encoding
     // (-L == ~L + 1)
-    carry = 1;
-    FOR (i, 0, 8) {
-        carry  += (u64)t[i+8] + ~l[i];
-        carry >>= 32;
-    }
-    u32 mask = ~(u32)carry + 1; // carry == 0 or 1
-    FOR (i, 0, 8) {
-        carry  += (u64)t[i+8] + (~l[i] & mask);
-        u[i]    = (u32)carry;
-        carry >>= 32;
-    }
+    remove_l(u, t+8);
+
     WIPE_BUFFER(s);
     WIPE_BUFFER(t);
 }
@@ -2888,19 +2913,21 @@ void crypto_x25519_inverse(u8 blind_salt [32], const u8 private_key[32],
     // m_scl = scalar * 2^256 (modulo L)
     u32 m_scl[8];
     {
-        i64 tmp[64];
-        ZERO(tmp, 32);
-        COPY(tmp+32, scalar, 32);
-        modL(scalar, tmp);
+        u32 tmp[16];
+        ZERO(tmp, 8);
+        load32_le_buf(tmp+8, scalar, 8);
+        mod_l(scalar, tmp);
         load32_le_buf(m_scl, scalar, 8);
         WIPE_BUFFER(tmp); // Wipe ASAP to save stack space
     }
 
     u32 product[16];
     for (int i = 252; i >= 0; i--) {
+        ZERO(product, 16);
         multiply(product, m_inv, m_inv);
         redc(m_inv, product);
         if (scalar_bit(Lm2, i)) {
+            ZERO(product, 16);
             multiply(product, m_inv, m_scl);
             redc(m_inv, product);
         }

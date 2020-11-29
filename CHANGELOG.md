@@ -10,6 +10,7 @@
 - Quality assurance for 2^255-19 arithmetic (elliptic curves):
   - Documented carry propagation.
   - Enforced slightly safer invariants.
+- Improved the speed of EdDSA signature generation.
 - Made the vectors.h header more compact and easier to modify.
 - TIS-CI integration.
 - Added speed benchmark for ed25519-donna.
