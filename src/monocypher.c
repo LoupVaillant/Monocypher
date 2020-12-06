@@ -1712,7 +1712,6 @@ static void remove_l(u32 r[8], const u32 x[8])
 }
 
 // Full reduction modulo L (Barrett reduction)
-// Uses
 static void mod_l(u8 reduced[32], const u32 x[16])
 {
     static const u32 r[9] = {0x0a2c131b,0xed9ce5a3,0x086329a7,0x2106215d,
@@ -1772,9 +1771,7 @@ static void mul_add(u8 r[32], const u8 a[32], const u8 b[32], const u8 c[32])
     u32 p[16];
     load32_le_buf(p, c, 8);
     ZERO(p + 8, 8);
-
     multiply(p, A, B);
-
     mod_l(r, p);
     WIPE_BUFFER(p);
     WIPE_BUFFER(A);
