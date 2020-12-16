@@ -1742,7 +1742,6 @@ static void mod_l(u8 reduced[32], const u32 x[16])
     }
     // xr = x - xr
     u64 carry = 1;
-    carry = 1;
     FOR (i, 0, 8) {
         carry  += (u64)x[i] + ~xr[i];
         xr[i]   = (u32)carry;
