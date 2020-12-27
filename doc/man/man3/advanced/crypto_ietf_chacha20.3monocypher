@@ -65,7 +65,7 @@
 .Fa "const uint8_t key[32]"
 .Fa "const uint8_t nonce[12]"
 .Fc
-.Ft void
+.Ft uint32_t
 .Fo crypto_ietf_chacha20_ctr
 .Fa "uint8_t *cipher_text"
 .Fa "const uint8_t *plain_text"
@@ -111,7 +111,7 @@ nonces.
 .Fn crypto_ietf_chacha20
 returns nothing.
 .Fn crypto_ietf_chacha20_ctr
-functions return the next
+returns the next
 .Fa ctr
 to use with the same key and nonce values;
 this is always
@@ -130,3 +130,22 @@ These functions implement Chacha20 as described in RFC 8439.
 and
 .Fn crypto_ietf_chacha20_ctr
 were added in Monocypher 3.0.0.
+.Sh SECURITY CONSIDERATIONS
+These functions exhibit a nonce reuse issue if the internal counter
+overflows, losing all confidentiality for the parts of the data for
+which the nonces overlap.
+When using crypto_ietf_chacha20(),
+this occurs when encrypting more than 256 GiB of data and then
+incrementing the nonce.
+More specifically, this can be triggered by encrypting more than
+512 bytes with crypto_ietf_chacha20_ctr() at ctr = 0xffffffff,
+then encrypting a message at nonce[0]+1 and ctr = 0;
+it can be observed that the keystreams are identical.
+.Pp
+RFC 8439 only specifies that the upper limit of data per message is
+256 GiB of data for a nonce pair with a counter starting at 0.
+It does not specify what actions can or should be taken when this limit
+is exceeded.
+Encrypting more than 256 GiB of data is therefore
+.Sy undefined behaviour ;
+Monocypher may change the way it handles counter overflows at any time.
