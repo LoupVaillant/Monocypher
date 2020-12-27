@@ -177,7 +177,7 @@ vector next_output(vector_reader *reader)
     reader->size--;
     reader->expected = vector_of_string(next);
     reader->out.size = reader->expected.size;
-    reader->out.buf  = alloc(reader->out.size);
+    reader->out.buf  = (u8*)alloc(reader->out.size);
     return reader->out;
 }
 
