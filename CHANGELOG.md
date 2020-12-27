@@ -1,6 +1,6 @@
 3.1.2
 -----
-2020/11/09
+2020/12/27
 
 - Addressed issues from Cure53's audit:
   - MON-01-001: Clarified which CSPRNG to use on Darwin.
@@ -14,6 +14,7 @@
 - Made the vectors.h header more compact and easier to modify.
 - TIS-CI integration.
 - Added speed benchmark for ed25519-donna.
+- Documented lengths limits of `crypto_ietf_chacha20()`
 
 
 3.1.1
