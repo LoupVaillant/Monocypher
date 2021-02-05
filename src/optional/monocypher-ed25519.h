@@ -86,10 +86,14 @@ typedef crypto_sign_ed25519_ctx crypto_check_ed25519_ctx;
 
 // SHA 512
 // -------
+MONOCYPHER_EXPORT_API
 void crypto_sha512_init  (crypto_sha512_ctx *ctx);
+MONOCYPHER_EXPORT_API
 void crypto_sha512_update(crypto_sha512_ctx *ctx,
                           const uint8_t *message, size_t  message_size);
+MONOCYPHER_EXPORT_API
 void crypto_sha512_final (crypto_sha512_ctx *ctx, uint8_t hash[64]);
+MONOCYPHER_EXPORT_API
 void crypto_sha512(uint8_t hash[64], const uint8_t *message, size_t message_size);
 
 // vtable for signatures
@@ -98,11 +102,15 @@ extern const crypto_sign_vtable crypto_sha512_vtable;
 
 // HMAC SHA 512
 // ------------
+MONOCYPHER_EXPORT_API
 void crypto_hmac_sha512_init(crypto_hmac_sha512_ctx *ctx,
                              const uint8_t *key, size_t key_size);
+MONOCYPHER_EXPORT_API
 void crypto_hmac_sha512_update(crypto_hmac_sha512_ctx *ctx,
                                const uint8_t *message, size_t  message_size);
+MONOCYPHER_EXPORT_API
 void crypto_hmac_sha512_final(crypto_hmac_sha512_ctx *ctx, uint8_t hmac[64]);
+MONOCYPHER_EXPORT_API
 void crypto_hmac_sha512(uint8_t hmac[64],
                         const uint8_t *key    , size_t key_size,
                         const uint8_t *message, size_t message_size);
@@ -112,19 +120,23 @@ void crypto_hmac_sha512(uint8_t hmac[64],
 // -------
 
 // Generate public key
+MONOCYPHER_EXPORT_API
 void crypto_ed25519_public_key(uint8_t       public_key[32],
                                const uint8_t secret_key[32]);
 
 // Direct interface
+MONOCYPHER_EXPORT_API
 void crypto_ed25519_sign(uint8_t        signature [64],
                          const uint8_t  secret_key[32],
                          const uint8_t  public_key[32], // optional, may be 0
                          const uint8_t *message, size_t message_size);
+MONOCYPHER_EXPORT_API
 int crypto_ed25519_check(const uint8_t  signature [64],
                          const uint8_t  public_key[32],
                          const uint8_t *message, size_t message_size);
 
 // Incremental interface
+MONOCYPHER_EXPORT_API
 void crypto_ed25519_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
                                          const uint8_t secret_key[32],
                                          const uint8_t public_key[32]);
@@ -133,12 +145,14 @@ void crypto_ed25519_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
 // use crypto_ed25519_sign_update() again.
 #define crypto_ed25519_sign_final crypto_sign_final
 
+MONOCYPHER_EXPORT_API
 void crypto_ed25519_check_init(crypto_check_ctx_abstract *ctx,
                                const uint8_t signature[64],
                                const uint8_t public_key[32]);
 #define crypto_ed25519_check_update crypto_check_update
 #define crypto_ed25519_check_final crypto_check_final
 
+MONOCYPHER_EXPORT_API
 void crypto_from_ed25519_private(uint8_t x25519[32], const uint8_t eddsa[32]);
 #define crypto_from_ed25519_public crypto_from_eddsa_public
 

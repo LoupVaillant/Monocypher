@@ -57,6 +57,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef WIN32
+#define MONOCYPHER_EXPORT_API __declspec(dllexport)
+#else
+#define MONOCYPHER_EXPORT_API __attribute__((visibility("default")))
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -119,24 +125,30 @@ typedef crypto_sign_ctx crypto_check_ctx;
 // -------------------------
 
 // Return 0 if a and b are equal, -1 otherwise
+MONOCYPHER_EXPORT_API
 int crypto_verify16(const uint8_t a[16], const uint8_t b[16]);
+MONOCYPHER_EXPORT_API
 int crypto_verify32(const uint8_t a[32], const uint8_t b[32]);
+MONOCYPHER_EXPORT_API
 int crypto_verify64(const uint8_t a[64], const uint8_t b[64]);
 
 // Erase sensitive data
 // --------------------
 
 // Please erase all copies
+MONOCYPHER_EXPORT_API
 void crypto_wipe(void *secret, size_t size);
 
 
 // Authenticated encryption
 // ------------------------
+MONOCYPHER_EXPORT_API 
 void crypto_lock(uint8_t        mac[16],
                  uint8_t       *cipher_text,
                  const uint8_t  key[32],
                  const uint8_t  nonce[24],
                  const uint8_t *plain_text, size_t text_size);
+MONOCYPHER_EXPORT_API
 int crypto_unlock(uint8_t       *plain_text,
                   const uint8_t  key[32],
                   const uint8_t  nonce[24],
@@ -144,12 +156,14 @@ int crypto_unlock(uint8_t       *plain_text,
                   const uint8_t *cipher_text, size_t text_size);
 
 // With additional data
+MONOCYPHER_EXPORT_API
 void crypto_lock_aead(uint8_t        mac[16],
                       uint8_t       *cipher_text,
                       const uint8_t  key[32],
                       const uint8_t  nonce[24],
                       const uint8_t *ad        , size_t ad_size,
                       const uint8_t *plain_text, size_t text_size);
+MONOCYPHER_EXPORT_API
 int crypto_unlock_aead(uint8_t       *plain_text,
                        const uint8_t  key[32],
                        const uint8_t  nonce[24],
@@ -162,19 +176,25 @@ int crypto_unlock_aead(uint8_t       *plain_text,
 // ------------------------------
 
 // Direct interface
+MONOCYPHER_EXPORT_API
 void crypto_blake2b(uint8_t hash[64],
                     const uint8_t *message, size_t message_size);
 
+MONOCYPHER_EXPORT_API
 void crypto_blake2b_general(uint8_t       *hash   , size_t hash_size,
                             const uint8_t *key    , size_t key_size, // optional
                             const uint8_t *message, size_t message_size);
 
 // Incremental interface
+MONOCYPHER_EXPORT_API
 void crypto_blake2b_init  (crypto_blake2b_ctx *ctx);
+MONOCYPHER_EXPORT_API
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const uint8_t *message, size_t message_size);
+MONOCYPHER_EXPORT_API
 void crypto_blake2b_final (crypto_blake2b_ctx *ctx, uint8_t *hash);
 
+MONOCYPHER_EXPORT_API
 void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
                                  const uint8_t      *key, size_t key_size);
 
@@ -184,12 +204,14 @@ extern const crypto_sign_vtable crypto_blake2b_vtable;
 
 // Password key derivation (Argon2 i)
 // ----------------------------------
+MONOCYPHER_EXPORT_API
 void crypto_argon2i(uint8_t       *hash,      uint32_t hash_size,     // >= 4
                     void          *work_area, uint32_t nb_blocks,     // >= 8
                     uint32_t       nb_iterations,                     // >= 3
                     const uint8_t *password,  uint32_t password_size,
                     const uint8_t *salt,      uint32_t salt_size);    // >= 8
 
+MONOCYPHER_EXPORT_API
 void crypto_argon2i_general(uint8_t       *hash,      uint32_t hash_size,// >= 4
                             void          *work_area, uint32_t nb_blocks,// >= 8
                             uint32_t       nb_iterations,                // >= 3
@@ -202,6 +224,7 @@ void crypto_argon2i_general(uint8_t       *hash,      uint32_t hash_size,// >= 4
 // Key exchange (x25519 + HChacha20)
 // ---------------------------------
 #define crypto_key_exchange_public_key crypto_x25519_public_key
+MONOCYPHER_EXPORT_API
 void crypto_key_exchange(uint8_t       shared_key      [32],
                          const uint8_t your_secret_key [32],
                          const uint8_t their_public_key[32]);
@@ -211,14 +234,17 @@ void crypto_key_exchange(uint8_t       shared_key      [32],
 // --------------------------------------------
 
 // Generate public key
+MONOCYPHER_EXPORT_API
 void crypto_sign_public_key(uint8_t        public_key[32],
                             const uint8_t  secret_key[32]);
 
 // Direct interface
+MONOCYPHER_EXPORT_API
 void crypto_sign(uint8_t        signature [64],
                  const uint8_t  secret_key[32],
                  const uint8_t  public_key[32], // optional, may be 0
                  const uint8_t *message, size_t message_size);
+MONOCYPHER_EXPORT_API
 int crypto_check(const uint8_t  signature [64],
                  const uint8_t  public_key[32],
                  const uint8_t *message, size_t message_size);
@@ -234,39 +260,46 @@ int crypto_check(const uint8_t  signature [64],
 
 // Specialised hash.
 // Used to hash X25519 shared secrets.
+MONOCYPHER_EXPORT_API
 void crypto_hchacha20(uint8_t       out[32],
                       const uint8_t key[32],
                       const uint8_t in [16]);
 
 // Unauthenticated stream cipher.
 // Don't forget to add authentication.
+MONOCYPHER_EXPORT_API
 void crypto_chacha20(uint8_t       *cipher_text,
                      const uint8_t *plain_text,
                      size_t         text_size,
                      const uint8_t  key[32],
                      const uint8_t  nonce[8]);
+MONOCYPHER_EXPORT_API
 void crypto_xchacha20(uint8_t       *cipher_text,
                       const uint8_t *plain_text,
                       size_t         text_size,
                       const uint8_t  key[32],
                       const uint8_t  nonce[24]);
+MONOCYPHER_EXPORT_API
 void crypto_ietf_chacha20(uint8_t       *cipher_text,
                           const uint8_t *plain_text,
                           size_t         text_size,
                           const uint8_t  key[32],
                           const uint8_t  nonce[12]);
+MONOCYPHER_EXPORT_API
 uint64_t crypto_chacha20_ctr(uint8_t       *cipher_text,
                              const uint8_t *plain_text,
                              size_t         text_size,
                              const uint8_t  key[32],
                              const uint8_t  nonce[8],
                              uint64_t       ctr);
+MONOCYPHER_EXPORT_API
 uint64_t crypto_xchacha20_ctr(uint8_t       *cipher_text,
                               const uint8_t *plain_text,
                               size_t         text_size,
                               const uint8_t  key[32],
                               const uint8_t  nonce[24],
                               uint64_t       ctr);
+MONOCYPHER_EXPORT_API
 uint32_t crypto_ietf_chacha20_ctr(uint8_t       *cipher_text,
                                   const uint8_t *plain_text,
                                   size_t         text_size,
@@ -282,14 +315,18 @@ uint32_t crypto_ietf_chacha20_ctr(uint8_t       *cipher_text,
 // See crypto_lock() on how to use it properly.
 
 // Direct interface
+MONOCYPHER_EXPORT_API
 void crypto_poly1305(uint8_t        mac[16],
                      const uint8_t *message, size_t message_size,
                      const uint8_t  key[32]);
 
 // Incremental interface
+MONOCYPHER_EXPORT_API
 void crypto_poly1305_init  (crypto_poly1305_ctx *ctx, const uint8_t key[32]);
+MONOCYPHER_EXPORT_API
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const uint8_t *message, size_t message_size);
+MONOCYPHER_EXPORT_API
 void crypto_poly1305_final (crypto_poly1305_ctx *ctx, uint8_t mac[16]);
 
 
@@ -298,8 +335,10 @@ void crypto_poly1305_final (crypto_poly1305_ctx *ctx, uint8_t mac[16]);
 
 // Shared secrets are not quite random.
 // Hash them to derive an actual shared key.
+MONOCYPHER_EXPORT_API
 void crypto_x25519_public_key(uint8_t       public_key[32],
                               const uint8_t secret_key[32]);
+MONOCYPHER_EXPORT_API
 void crypto_x25519(uint8_t       raw_shared_secret[32],
                    const uint8_t your_secret_key  [32],
                    const uint8_t their_public_key [32]);
@@ -307,12 +346,15 @@ void crypto_x25519(uint8_t       raw_shared_secret[32],
 // "Dirty" versions of x25519_public_key()
 // Only use to generate ephemeral keys you want to hide.
 // Note that those functions leaks 3 bits of the private key.
+MONOCYPHER_EXPORT_API
 void crypto_x25519_dirty_small(uint8_t pk[32], const uint8_t sk[32]);
+MONOCYPHER_EXPORT_API
 void crypto_x25519_dirty_fast (uint8_t pk[32], const uint8_t sk[32]);
 
 // scalar "division"
 // Used for OPRF.  Be aware that exponential blinding is less secure
 // than Diffie-Hellman key exchange.
+MONOCYPHER_EXPORT_API
 void crypto_x25519_inverse(uint8_t       blind_salt [32],
                            const uint8_t private_key[32],
                            const uint8_t curve_point[32]);
@@ -320,7 +362,9 @@ void crypto_x25519_inverse(uint8_t       blind_salt [32],
 
 // EdDSA to X25519
 // ---------------
+MONOCYPHER_EXPORT_API
 void crypto_from_eddsa_private(uint8_t x25519[32], const uint8_t eddsa[32]);
+MONOCYPHER_EXPORT_API
 void crypto_from_eddsa_public (uint8_t x25519[32], const uint8_t eddsa[32]);
 
 
@@ -330,33 +374,43 @@ void crypto_from_eddsa_public (uint8_t x25519[32], const uint8_t eddsa[32]);
 // Signing (2 passes)
 // Make sure the two passes hash the same message,
 // else you might reveal the private key.
+MONOCYPHER_EXPORT_API
 void crypto_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
                                  const uint8_t  secret_key[32],
                                  const uint8_t  public_key[32]);
+MONOCYPHER_EXPORT_API
 void crypto_sign_update(crypto_sign_ctx_abstract *ctx,
                         const uint8_t *message, size_t message_size);
+MONOCYPHER_EXPORT_API
 void crypto_sign_init_second_pass(crypto_sign_ctx_abstract *ctx);
 // use crypto_sign_update() again.
+MONOCYPHER_EXPORT_API
 void crypto_sign_final(crypto_sign_ctx_abstract *ctx, uint8_t signature[64]);
 
 // Verification (1 pass)
 // Make sure you don't use (parts of) the message
 // before you're done checking it.
+MONOCYPHER_EXPORT_API
 void crypto_check_init  (crypto_check_ctx_abstract *ctx,
                          const uint8_t signature[64],
                          const uint8_t public_key[32]);
+MONOCYPHER_EXPORT_API
 void crypto_check_update(crypto_check_ctx_abstract *ctx,
                          const uint8_t *message, size_t message_size);
+MONOCYPHER_EXPORT_API
 int crypto_check_final  (crypto_check_ctx_abstract *ctx);
 
 // Custom hash interface
+MONOCYPHER_EXPORT_API
 void crypto_sign_public_key_custom_hash(uint8_t       public_key[32],
                                         const uint8_t secret_key[32],
                                         const crypto_sign_vtable *hash);
+MONOCYPHER_EXPORT_API
 void crypto_sign_init_first_pass_custom_hash(crypto_sign_ctx_abstract *ctx,
                                              const uint8_t secret_key[32],
                                              const uint8_t public_key[32],
                                              const crypto_sign_vtable *hash);
+MONOCYPHER_EXPORT_API
 void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
                                    const uint8_t signature[64],
                                    const uint8_t public_key[32],
@@ -366,11 +420,14 @@ void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
 // -----------
 
 // Elligator mappings proper
+MONOCYPHER_EXPORT_API
 void crypto_hidden_to_curve(uint8_t curve [32], const uint8_t hidden[32]);
+MONOCYPHER_EXPORT_API
 int  crypto_curve_to_hidden(uint8_t hidden[32], const uint8_t curve [32],
                             uint8_t tweak);
 
 // Easy to use key pair generation
+MONOCYPHER_EXPORT_API
 void crypto_hidden_key_pair(uint8_t hidden[32], uint8_t secret_key[32],
                             uint8_t seed[32]);
 
