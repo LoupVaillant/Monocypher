@@ -954,22 +954,18 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
         crypto_blake2b_final(&ctx, initial_hash);
 
         // fill first 2 blocks
-        block tmp_block;
-        u8    hash_area[1024];
+        u8 hash_area[1024];
         store32_le(initial_hash + 64, 0); // first  additional word
         store32_le(initial_hash + 68, 0); // second additional word
         extended_hash(hash_area, 1024, initial_hash, 72);
-        load_block(&tmp_block, hash_area);
-        copy_block(blocks, &tmp_block);
+        load_block(blocks, hash_area);
 
         store32_le(initial_hash + 64, 1); // slight modification
         extended_hash(hash_area, 1024, initial_hash, 72);
-        load_block(&tmp_block, hash_area);
-        copy_block(blocks + 1, &tmp_block);
+        load_block(blocks + 1, hash_area);
 
         WIPE_BUFFER(initial_hash);
         WIPE_BUFFER(hash_area);
-        wipe_block(&tmp_block);
     }
 
     // Actual number of blocks
