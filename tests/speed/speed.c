@@ -85,7 +85,7 @@ static u64 authenticated(void)
     u8 mac[  16];
     RANDOM_INPUT(in   , SIZE);
     RANDOM_INPUT(key  ,   32);
-    RANDOM_INPUT(nonce,    8);
+    RANDOM_INPUT(nonce,   24);
 
     TIMING_START {
         crypto_lock(mac, out, key, nonce, in, SIZE);
