@@ -70,6 +70,7 @@ int main(void)
 {
     SODIUM_INIT;
     FOR(size     , 0, 256) { test(size, 0       , 64       ); }
+    FOR(key_size , 0,  64) { test(  0 , key_size, 64       ); }
     FOR(key_size , 0,  64) { test(128 , key_size, 64       ); }
     FOR(hash_size, 1,  64) { test(128 , 0       , hash_size); }
     return 0;
