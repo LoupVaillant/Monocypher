@@ -69,7 +69,9 @@ static void test(size_t size, size_t key_size, size_t hash_size)
 int main(void)
 {
     SODIUM_INIT;
-    FOR(size     , 0, 256) { test(size, 0       , 64       ); }
+    // Official test vectors test for all message sizes, so no need to
+    // repeat ourselves here. However they only test keys and hashes of size 64.
+    // Here we're testing all possible key and hash sizes.
     FOR(key_size , 0,  64) { test(  0 , key_size, 64       ); }
     FOR(key_size , 0,  64) { test(128 , key_size, 64       ); }
     FOR(hash_size, 1,  64) { test(128 , 0       , hash_size); }

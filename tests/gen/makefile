@@ -113,7 +113,7 @@ hchacha20.all.vec     : hchacha20.vec
 xchacha20.all.vec     : xchacha20.vec
 ietf_chacha20.all.vec : ietf_chacha20.vec
 aead_ietf.all.vec     : aead_ietf.vec
-blake2b.all.vec       : blake2b.vec
+blake2b.all.vec       : blake2b.vec       vectors/blake2b
 sha512.all.vec        : sha512.vec
 hmac_sha512.all.vec   : hmac_sha512.vec   vectors/hmac_sha512
 argon2i.all.vec       : argon2i.vec       vectors/argon2i
