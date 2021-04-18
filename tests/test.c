@@ -964,7 +964,7 @@ static int p_elligator_x25519()
         // Both dirty functions behave the same
         status |= memcmp(pks, pkf, 32);
 
-        // Dirty functions behave cleanly if we clear the 3 msb first
+        // Dirty functions behave cleanly if we clear the 3 lsb first
         status |= memcmp(pksc, pk1, 32);
         status |= memcmp(pkfc, pk1, 32);
 
