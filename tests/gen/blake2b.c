@@ -72,9 +72,9 @@ int main(void)
     // Official test vectors test for all message sizes, so no need to
     // repeat ourselves here. However they only test keys and hashes of size 64.
     // Here we're testing many possible key and hash sizes.
-    for (size_t key_size = 0; key_size < 64; key_size += 16) {
-        for (size_t hash_size = 0; hash_size < 64; hash_size += 16) {
-            for (size_t input_size = 0; input_size < 256; input_size += 16) {
+    for (size_t key_size = 0; key_size <= 64; key_size += 16) {
+        for (size_t hash_size = 0; hash_size <= 64; hash_size += 16) {
+            for (size_t input_size = 0; input_size <= 256; input_size += 16) {
                 test(input_size, key_size, hash_size);
             }
         }
