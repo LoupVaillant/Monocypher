@@ -2549,10 +2549,14 @@ void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
     // Base point of order 8*L
     // Raw scalar multiplication with it does not clear the cofactor,
     // and the resulting public key will reveal 3 bits of the scalar.
+    //
+    // The low order component of this base point  has been chosen
+    // to yield the same results as crypto_x25519_dirty_fast().
     static const u8 dirty_base_point[32] = {
-        0x34, 0xfc, 0x6c, 0xb7, 0xc8, 0xde, 0x58, 0x97, 0x77, 0x70, 0xd9, 0x52,
-        0x16, 0xcc, 0xdc, 0x6c, 0x85, 0x90, 0xbe, 0xcd, 0x91, 0x9c, 0x07, 0x59,
-        0x94, 0x14, 0x56, 0x3b, 0x4b, 0xa4, 0x47, 0x0f, };
+        0xd8, 0x86, 0x1a, 0xa2, 0x78, 0x7a, 0xd9, 0x26, 0x8b, 0x74, 0x74, 0xb6,
+        0x82, 0xe3, 0xbe, 0xc3, 0xce, 0x36, 0x9a, 0x1e, 0x5e, 0x31, 0x47, 0xa2,
+        0x6d, 0x37, 0x7c, 0xfd, 0x20, 0xb5, 0xdf, 0x75,
+    };
     // separate the main factor & the cofactor of the scalar
     u8 scalar[32];
     COPY(scalar, secret_key, 32);
@@ -2564,11 +2568,9 @@ void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
     // least significant bits however still have a main factor.  We must
     // remove it for X25519 compatibility.
     //
-    // We exploit the fact that 5*L = 1 (modulo 8)
-    //   cofactor = lsb * 5 * L             (modulo 8*L)
-    //   combined = scalar + cofactor       (modulo 8*L)
-    //   combined = scalar + (lsb * 5 * L)  (modulo 8*L)
-    add_xl(scalar, secret_key[0] * 5);
+    //   cofactor = lsb * L            (modulo 8*L)
+    //   combined = scalar + cofactor  (modulo 8*L)
+    add_xl(scalar, secret_key[0]);
     scalarmult(public_key, scalar, dirty_base_point, 256);
     WIPE_BUFFER(scalar);
 }

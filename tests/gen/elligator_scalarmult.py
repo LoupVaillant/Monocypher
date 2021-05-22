@@ -153,12 +153,16 @@ montgomery_base = 9
 # Point of order 8, used to add the cofactor component
 low_order_point_x = sqrt((sqrt(d + fe(1)) + fe(1)) / d)
 low_order_point_y = -low_order_point_x * sqrtm1
-low_order_point   = (low_order_point_x, low_order_point_y)
+low_order_point_1 = (low_order_point_x, low_order_point_y)
+low_order_point_2 = point_add2(low_order_point_1, low_order_point_1)
+low_order_point_4 = point_add2(low_order_point_2, low_order_point_2)
+low_order_point_8 = point_add2(low_order_point_4, low_order_point_4)
+low_order_point_5 = point_add2(low_order_point_1, low_order_point_4)
 
 def check_low_order_point():
-    lop2 = point_add2(low_order_point, low_order_point)
-    lop4 = point_add2(lop2, lop2)
-    lop8 = point_add2(lop4, lop4)
+    lop2 = low_order_point_2
+    lop4 = low_order_point_4
+    lop8 = low_order_point_8
     zero = (fe(0), fe(1))
     if lop8 != zero: raise ValueError('low_order_point does not have low order')
     if lop2 == zero: raise ValueError('low_order_point only has order 2')
@@ -166,8 +170,10 @@ def check_low_order_point():
 check_low_order_point()
 
 # base point + low order point
-ed_base = point_add2(low_order_point, edwards_base)   # in Edwards space
-mt_base = (fe(1) + ed_base[1]) / (fe(1) - ed_base[1]) # in Montgomery space
+ed_base_1 = point_add2(low_order_point_1, edwards_base) # in Edwards space
+ed_base_5 = point_add2(low_order_point_5, edwards_base) # in Edwards space
+mt_base_1 = (fe(1)+ed_base_1[1]) / (fe(1)-ed_base_1[1]) # in Montgomery space
+mt_base_5 = (fe(1)+ed_base_5[1]) / (fe(1)-ed_base_5[1]) # in Montgomery space
 
 # Clamp the scalar.
 # % 8 stops subgroup attacks
@@ -186,25 +192,39 @@ order = 2**252 + 27742317777372353535851937790883648493
 def scalarmult1(scalar, cofactor):
     co_cleared = ((cofactor * 5) % 8) * order  # cleared main factor
     combined   = trim(scalar) + co_cleared
-    return from_edwards(ed_scalarmult(ed_base, combined))
+    return from_edwards(ed_scalarmult(ed_base_1, combined))
+
+# Single scalar multiplication (in Edwards space, simplified)
+def scalarmult2(scalar, cofactor):
+    co_cleared = (cofactor % 8) * order  # cleared main factor
+    combined   = trim(scalar) + co_cleared
+    return from_edwards(ed_scalarmult(ed_base_5, combined))
 
 # Single scalar multiplication (in Montgomery space)
-def scalarmult2(scalar, cofactor):
+def scalarmult3(scalar, cofactor):
     co_cleared = ((cofactor * 5) % 8) * order  # cleared main factor
     combined   = trim(scalar) + co_cleared
-    return mt_scalarmult(mt_base, combined)
+    return mt_scalarmult(mt_base_1, combined)
+
+# Single scalar multiplication (in Montgomery space, simplified)
+def scalarmult4(scalar, cofactor):
+    co_cleared = (cofactor % 8) * order  # cleared main factor
+    combined   = trim(scalar) + co_cleared
+    return mt_scalarmult(mt_base_5, combined)
 
 # Double scalar multiplication (reuses EdDSA code)
-def scalarmult3(scalar, cofactor):
-    main_point = ed_scalarmult(edwards_base   , trim(scalar))
-    low_order  = ed_scalarmult(low_order_point, cofactor    )
+def scalarmult5(scalar, cofactor):
+    main_point = ed_scalarmult(edwards_base     , trim(scalar))
+    low_order  = ed_scalarmult(low_order_point_1, cofactor    )
     return from_edwards(point_add(main_point, low_order))
 
-# Combine and compare all ways ofd doing the scalar multiplication
+# Combine and compare all ways of doing the scalar multiplication
 def scalarmult(scalar, cofactor):
     p1 = scalarmult1(scalar, cofactor)
     p2 = scalarmult2(scalar, cofactor)
     p3 = scalarmult3(scalar, cofactor)
-    if p1 != p2 or p1 != p3:
+    p4 = scalarmult4(scalar, cofactor)
+    p5 = scalarmult5(scalar, cofactor)
+    if p1 != p2 or p1 != p3 or p1 != p4 or p1 != p5:
         raise ValueError('Incoherent scalarmult')
     return p1
