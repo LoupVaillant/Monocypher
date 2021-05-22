@@ -1424,41 +1424,6 @@ static void fe_sq2(fe h, const fe f)
     fe_mul_small(h, h, 2);
 }
 
-// This could be simplified, but it would be slower
-static void fe_pow22523(fe out, const fe z)
-{
-    fe t0, t1, t2;
-    fe_sq(t0, z);
-    fe_sq(t1,t0);                   fe_sq(t1, t1);  fe_mul(t1, z, t1);
-    fe_mul(t0, t0, t1);
-    fe_sq(t0, t0);                                  fe_mul(t0, t1, t0);
-    fe_sq(t1, t0);  FOR (i, 1,   5) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
-    fe_sq(t1, t0);  FOR (i, 1,  10) fe_sq(t1, t1);  fe_mul(t1, t1, t0);
-    fe_sq(t2, t1);  FOR (i, 1,  20) fe_sq(t2, t2);  fe_mul(t1, t2, t1);
-    fe_sq(t1, t1);  FOR (i, 1,  10) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
-    fe_sq(t1, t0);  FOR (i, 1,  50) fe_sq(t1, t1);  fe_mul(t1, t1, t0);
-    fe_sq(t2, t1);  FOR (i, 1, 100) fe_sq(t2, t2);  fe_mul(t1, t2, t1);
-    fe_sq(t1, t1);  FOR (i, 1,  50) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
-    fe_sq(t0, t0);  FOR (i, 1,   2) fe_sq(t0, t0);  fe_mul(out, t0, z);
-    WIPE_BUFFER(t0);
-    WIPE_BUFFER(t1);
-    WIPE_BUFFER(t2);
-}
-
-// Inverting means multiplying by 2^255 - 21
-// 2^255 - 21 = (2^252 - 3) * 8 + 3
-// So we reuse the multiplication chain of fe_pow22523
-static void fe_invert(fe out, const fe z)
-{
-    fe tmp;
-    fe_pow22523(tmp, z);
-    // tmp2^8 * z^3
-    fe_sq(tmp, tmp);                        // 0
-    fe_sq(tmp, tmp);  fe_mul(tmp, tmp, z);  // 1
-    fe_sq(tmp, tmp);  fe_mul(out, tmp, z);  // 1
-    WIPE_BUFFER(tmp);
-}
-
 //  Parity check.  Returns 0 if even, 1 if odd
 static int fe_isodd(const fe f)
 {
@@ -1485,7 +1450,7 @@ static int fe_isequal(const fe f, const fe g)
 // Inverse square root.
 // Returns true if x is a non zero square, false otherwise.
 // After the call:
-//   isr = sqrt(1/x)        if x is non-zero square.
+//   isr = sqrt(1/x)        if x is a non-zero square.
 //   isr = sqrt(sqrt(-1)/x) if x is not a square.
 //   isr = 0                if x is zero.
 // We do not guarantee the sign of the square root.
@@ -1541,19 +1506,62 @@ static int fe_isequal(const fe f, const fe g)
 //      x^((p-5)/8) * sqrt(-1) = -sqrt(sqrt(-1)/x) or sqrt(sqrt(-1)/x)
 static int invsqrt(fe isr, const fe x)
 {
-    fe check, quartic;
-    fe_copy(check, x);
-    fe_pow22523(isr, check);
-    fe_sq (quartic, isr);
-    fe_mul(quartic, quartic, check);
+    fe t0, t1, t2;
+
+    // t0 = x^((p-5)/8)
+    // Can be achieved with a simple double & add ladder,
+    // but it would be slower.
+    fe_sq(t0, x);
+    fe_sq(t1,t0);                   fe_sq(t1, t1);  fe_mul(t1, x, t1);
+    fe_mul(t0, t0, t1);
+    fe_sq(t0, t0);                                  fe_mul(t0, t1, t0);
+    fe_sq(t1, t0);  FOR (i, 1,   5) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
+    fe_sq(t1, t0);  FOR (i, 1,  10) fe_sq(t1, t1);  fe_mul(t1, t1, t0);
+    fe_sq(t2, t1);  FOR (i, 1,  20) fe_sq(t2, t2);  fe_mul(t1, t2, t1);
+    fe_sq(t1, t1);  FOR (i, 1,  10) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
+    fe_sq(t1, t0);  FOR (i, 1,  50) fe_sq(t1, t1);  fe_mul(t1, t1, t0);
+    fe_sq(t2, t1);  FOR (i, 1, 100) fe_sq(t2, t2);  fe_mul(t1, t2, t1);
+    fe_sq(t1, t1);  FOR (i, 1,  50) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
+    fe_sq(t0, t0);  FOR (i, 1,   2) fe_sq(t0, t0);  fe_mul(t0, t0, x);
+
+    // quartic = x^((p-1)/4)
+    i32 *quartic = t1;
+    fe_sq (quartic, t0);
+    fe_mul(quartic, quartic, x);
+
+    i32 *check = t2;
     fe_1  (check);          int p1 = fe_isequal(quartic, check);
     fe_neg(check, check );  int m1 = fe_isequal(quartic, check);
     fe_neg(check, sqrtm1);  int ms = fe_isequal(quartic, check);
-    fe_mul(check, isr, sqrtm1);
-    fe_ccopy(isr, check, m1 | ms);
-    WIPE_BUFFER(quartic);
-    WIPE_BUFFER(check);
+
+    // if quartic == -1 or sqrt(-1)
+    // then  isr = x^((p-1)/4) * sqrt(-1)
+    // else  isr = x^((p-1)/4)
+    fe_mul(isr, t0, sqrtm1);
+    fe_ccopy(isr, t0, 1 - (m1 | ms));
+
+    WIPE_BUFFER(t0);
+    WIPE_BUFFER(t1);
+    WIPE_BUFFER(t2);
     return p1 | m1;
+}
+
+// Inverse in terms of inverse square root.
+// Requires two additional squarings to get rid of the sign.
+//
+//   1/x = x * (+invsqrt(x^2))^2
+//       = x * (-invsqrt(x^2))^2
+//
+// A fully optimised exponentiation by p-1 would save 6 field
+// multiplications, but it would require more code.
+static void fe_invert(fe out, const fe x)
+{
+    fe tmp;
+    fe_sq(tmp, x);
+    invsqrt(tmp, tmp);
+    fe_sq(tmp, tmp);
+    fe_mul(out, tmp, x);
+    WIPE_BUFFER(tmp);
 }
 
 // trim a scalar for scalar multiplication
