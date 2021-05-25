@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2021 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2021 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd September 26, 2020
+.Dd May 25, 2021
 .Dt CRYPTO_SIGN_INIT_FIRST_PASS 3MONOCYPHER
 .Os
 .Sh NAME
@@ -181,6 +181,8 @@ const uint8_t pk       [ 32]; /* Public key (optional) */
 const uint8_t message  [500]; /* Message to sign       */
 uint8_t       signature[ 64]; /* Output signature      */
 crypto_sign_ctx ctx;
+arc4random_buf(sk, 32);
+crypto_sign_public_key(pk, sk);
 crypto_sign_init_first_pass((crypto_sign_ctx_abstract*)&ctx, sk, pk);
 /* Wipe the secret key if no longer needed */
 crypto_wipe(sk, 32);
@@ -229,6 +231,9 @@ uint8_t       signature[    64]; /* Output signature        */
 uint8_t       buf      [128-32] = {0}; /* Mitigation buffer */
 crypto_sign_ctx ctx;
 crypto_sign_ctx_abstract *actx = (crypto_sign_ctx_abstract *)&ctx;
+
+arc4random_buf(sk, 32);
+crypto_sign_public_key(pk, sk);
 
 arc4random_buf(buf, 32);
 /* The rest of buf MUST be zeroes. */
