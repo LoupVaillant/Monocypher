@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2017-2019 Loup Vaillant
+.\" Copyright (c) 2017-2021 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
 .\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
 .\" All rights reserved.
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2021 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -213,11 +213,17 @@ if (crypto_check_final((crypto_sign_ctx_abstract*)&ctx)) {
 .Pp
 This interface can be used to mitigate attacks that leverage power
 analysis and fault injection (glitching) \(en both of which require
-physical access and appropriate equipment \(en by injecting additional
-randomness (at least 32 bytes) and padding (to the hash function's block
-size, which is 128 bytes for all hash functions supported by
-Monocypher), of which 32 bytes are already inserted into the buffer by
-.Fn crypto_sign_init_first_pass .
+physical access and appropriate equipment.
+We inject additional randomness (at least 32 bytes) and
+enough all-zero padding to fill the hash function's block size
+(128 bytes for both Blake2b and SHA-512).
+Note that
+.Fn crypto_sign_init_first_pass
+already fills 32 bytes,
+so randomness and padding must fill 32 bytes
+.Em less
+than the block
+size (96 bytes for Blake2b and SHA-512).
 Access to a cryptographically secure pseudo-random generator is a
 requirement for effective side channel mitigation.
 Signing a message with increased power-related side channel mitigations:
