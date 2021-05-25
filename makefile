@@ -87,7 +87,8 @@ install: library src/monocypher.h monocypher.pc install-doc
 
 install-doc:
 	mkdir -p $(DESTDIR)/$(MANDIR)
-	cp -PR doc/man/man3/*.3monocypher $(DESTDIR)/$(MANDIR)
+	cp -PR doc/man/man3/*.3monocypher          $(DESTDIR)/$(MANDIR)
+	cp -PR doc/man/man3/advanced/*.3monocypher $(DESTDIR)/$(MANDIR)
 ifdef USE_ED25519
 	cp -PR doc/man/man3/optional/*.3monocypher $(DESTDIR)/$(MANDIR)
 endif
