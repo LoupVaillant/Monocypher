@@ -58,8 +58,8 @@
 /////////////////
 #define FOR_T(type, i, start, end) for (type i = (start); i < (end); i++)
 #define FOR(i, start, end)         FOR_T(size_t, i, start, end)
-#define COPY(dst, src, size)       FOR(i, 0, size) (dst)[i] = (src)[i]
-#define ZERO(buf, size)            FOR(i, 0, size) (buf)[i] = 0
+#define COPY(dst, src, size)       FOR(i__, 0, size) (dst)[i__] = (src)[i__]
+#define ZERO(buf, size)            FOR(i__, 0, size) (buf)[i__] = 0
 #define WIPE_CTX(ctx)              crypto_wipe(ctx   , sizeof(*(ctx)))
 #define WIPE_BUFFER(buffer)        crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)                  ((a) <= (b) ? (a) : (b))
