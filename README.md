@@ -25,6 +25,29 @@ speed of [Libsodium][].
 [Libsodium]: https://libsodium.org
 [TweetNaCl]: https://tweetnacl.cr.yp.to/
 
+
+Features
+--------
+
+- [Authenticated Encryption][AEAD] with XChacha20 and Poly1305
+  (RFC&nbsp;8439).
+- [Hashing][HASH] with Blake2b.
+- [Password Hashing][PWH] with Argon2i.
+- [Public Key Cryptography][PKC] with X25519 (key exchange).
+- [Public Key Signatures][PKS] with EdDSA (RFC 8032) and Ed25519.
+- [Steganography support][STEG] with Elligator&nbsp;2.
+- [OPRF and PAKE support][PAKE] with Elligator&nbsp;2 and scalar
+  inversion.
+
+[AEAD]: https://monocypher.org/manual/aead
+[HASH]: https://monocypher.org/manual/hash
+[PWH]:  https://monocypher.org/manual/argon2i
+[PKC]:  https://monocypher.org/manual/key_exchange
+[PKS]:  https://monocypher.org/manual/sign
+[STEG]: https://monocypher.org/manual/advanced/elligator
+[PAKE]: https://monocypher.org/manual/advanced/x25519_inverse
+
+
 Manual
 ------
 
