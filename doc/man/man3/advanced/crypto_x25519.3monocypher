@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2017-2019 Loup Vaillant
+.\" Copyright (c) 2017-2021 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
 .\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
 .\" Copyright (c) 2020 Richard Walmsley
@@ -41,7 +41,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2020 by Loup Vaillant, Michael Savage, Fabio Scotoni and
+.\" Written in 2017-2021 by Loup Vaillant, Michael Savage, Fabio Scotoni and
 .\" Richard Walmsley
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
@@ -52,13 +52,13 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 31, 2020
+.Dd June 6, 2021
 .Dt CRYPTO_X25519 3MONOCYPHER
 .Os
 .Sh NAME
 .Nm crypto_x25519 ,
 .Nm crypto_x25519_public_key
-.Nd X25519 key exchange
+.Nd X25519 key exchange (Public Key Cryptography)
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
