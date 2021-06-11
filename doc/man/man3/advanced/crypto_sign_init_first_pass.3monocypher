@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd May 25, 2021
+.Dd June 11, 2021
 .Dt CRYPTO_SIGN_INIT_FIRST_PASS 3MONOCYPHER
 .Os
 .Sh NAME
@@ -218,14 +218,14 @@ analysis and fault injection (glitching) \(en both of which require
 physical access and appropriate equipment.
 We inject additional randomness (at least 32 bytes) and
 enough all-zero padding to fill the hash function's block size
-(128 bytes for both Blake2b and SHA-512).
+(128 bytes for both BLAKE2b and SHA-512).
 Note that
 .Fn crypto_sign_init_first_pass
 already fills 32 bytes,
 so randomness and padding must fill 32 bytes
 .Em less
 than the block
-size (96 bytes for Blake2b and SHA-512).
+size (96 bytes for BLAKE2b and SHA-512).
 Access to a cryptographically secure pseudo-random generator is a
 requirement for effective side channel mitigation.
 Signing a message with increased power-related side channel mitigations:
@@ -264,9 +264,9 @@ crypto_wipe(sk,  32);
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement PureEdDSA with Curve25519 and Blake2b, as
+These functions implement PureEdDSA with Curve25519 and BLAKE2b, as
 described in RFC 8032.
-This is the same as Ed25519, with Blake2b instead of SHA-512.
+This is the same as Ed25519, with BLAKE2b instead of SHA-512.
 .Pp
 The example for side channel mitigation follows the methodology outlined
 in I-D.draft-mattsson-cfrg-det-sigs-with-noise-02.

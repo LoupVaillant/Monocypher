@@ -357,7 +357,7 @@ that were deprecated in Monocypher 3.0.0.
 ChaCha20 only protects against eavesdropping, not forgeries.
 Most applications need protection against forgeries to be properly
 secure.
-To ensure the integrity of a message, use Blake2b in keyed mode, or
+To ensure the integrity of a message, use BLAKE2b in keyed mode, or
 authenticated encryption; see
 .Xr crypto_blake2b 3monocypher
 and

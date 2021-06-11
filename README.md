@@ -31,7 +31,7 @@ Features
 
 - [Authenticated Encryption][AEAD] with XChaCha20 and Poly1305
   (RFC&nbsp;8439).
-- [Hashing][HASH] with Blake2b.
+- [Hashing][HASH] with BLAKE2b.
 - [Password Hashing][PWH] with Argon2i.
 - [Public Key Cryptography][PKC] with X25519 (key exchange).
 - [Public Key Signatures][PKS] with EdDSA (RFC 8032) and Ed25519.
@@ -206,7 +206,7 @@ is activated by compiling monocypher.c with the `-DBLAKE2_NO_UNROLLING`
 option.
 
 The `-DBLAKE2_NO_UNROLLING` option is a performance tweak.  By default,
-Monocypher unrolls the Blake2b inner loop, because doing so is over 25%
+Monocypher unrolls the BLAKE2b inner loop, because doing so is over 25%
 faster on modern processors.  Some embedded processors however, run the
 unrolled loop _slower_ (possibly because of the cost of fetching 5KB of
 additional code).  If you're using an embedded platform, try this

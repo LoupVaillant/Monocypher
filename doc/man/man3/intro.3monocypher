@@ -84,8 +84,8 @@ Whenever possible,
 should be preferred, however.
 .Ss Hashing
 .Xr crypto_blake2b 3monocypher
-implements the Blake2b hash.
-Blake2b combines the security of SHA-3 and the speed of MD5.
+implements the BLAKE2b hash.
+BLAKE2b combines the security of SHA-3 and the speed of MD5.
 It is immune to length extension attacks and provides a keyed mode
 that makes it a safe, easy to use authenticator.
 .Ss Password hashing and key derivation
@@ -111,9 +111,9 @@ as random noise.
 .Xr crypto_sign 3monocypher
 and
 .Xr crypto_check 3monocypher
-implement EdDSA, with Curve25519 and Blake2b.
+implement EdDSA, with Curve25519 and BLAKE2b.
 This is the same as the more famous Ed25519, with SHA-512 replaced by
-the faster and more secure Blake2b.
+the faster and more secure BLAKE2b.
 .Pp
 For highly specialised needs,
 it is possible to use a custom hash function with EdDSA;
