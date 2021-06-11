@@ -29,7 +29,7 @@ speed of [Libsodium][].
 Features
 --------
 
-- [Authenticated Encryption][AEAD] with XChacha20 and Poly1305
+- [Authenticated Encryption][AEAD] with XChaCha20 and Poly1305
   (RFC&nbsp;8439).
 - [Hashing][HASH] with Blake2b.
 - [Password Hashing][PWH] with Argon2i.

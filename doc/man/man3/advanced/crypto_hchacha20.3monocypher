@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2019-2020 Fabio Scotoni
+.\" Copyright (c) 2019-2021 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2021 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,12 +50,12 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 2, 2020
+.Dd June 11, 2021
 .Dt CRYPTO_HCHACHA20 3MONOCYPHER
 .Os
 .Sh NAME
 .Nm crypto_hchacha20
-.Nd HChacha20 special-purpose hashing
+.Nd HChaCha20 special-purpose hashing
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
@@ -68,7 +68,7 @@
 .Fn crypto_hchacha20
 provides a not-so-cryptographic hash.
 It may be used for some specific purposes, such as X25519 key
-derivation, or XChacha20 initialisation.
+derivation, or XChaCha20 initialisation.
 If in doubt, do not use directly.
 Use
 .Xr crypto_blake2b 3monocypher
@@ -80,7 +80,7 @@ The arguments are:
 A sufficiently random key, such as the output of
 .Xr crypto_x25519 3monocypher .
 .It Fa in
-The space reserved for the Chacha20 nonce and counter.
+The space reserved for the ChaCha20 nonce and counter.
 It does not have to be random.
 .It Fa out
 A cryptographically secure random number
@@ -117,8 +117,8 @@ crypto_wipe(in , 16);
 .Xr crypto_key_exchange 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-This function implements HChacha20.
-HChacha20 derives from Chacha20 the same way HSalsa20 derives from
+This function implements HChaCha20.
+HChaCha20 derives from ChaCha20 the same way HSalsa20 derives from
 Salsa20.
 .Sh HISTORY
 The

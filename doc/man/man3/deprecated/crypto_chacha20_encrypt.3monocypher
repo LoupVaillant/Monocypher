@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2019 Fabio Scotoni
+.\" Copyright (c) 2019, 2021 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -38,7 +38,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2019 by Fabio Scotoni
+.\" Written in 2019 and 2021 by Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -48,7 +48,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd December 2, 2019
+.Dd June 11, 2021
 .Dt CRYPTO_CHACHA20_ENCRYPT 3MONOCYPHER
 .Os
 .Sh NAME
@@ -57,7 +57,7 @@
 .Nm crypto_chacha20_x_init ,
 .Nm crypto_chacha20_stream ,
 .Nm crypto_chacha20_set_ctr
-.Nd deprecated Chacha20 and XChacha20 encryption functions
+.Nd deprecated ChaCha20 and XChaCha20 encryption functions
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
@@ -91,7 +91,7 @@
 .Fa "uint64_t ctr"
 .Fc
 .Sh DESCRIPTION
-These functions provided an incremental interface for the Chacha20
+These functions provided an incremental interface for the ChaCha20
 cipher.
 They are deprecated in favor of
 .Xr crypto_chacha20 3monocypher ,
@@ -111,14 +111,14 @@ The new functions
 This means that input ciphertexts or plaintexts
 whose lengths are not exactly multiples of 64 bytes
 advance the counter, even though there is theoretically some space left
-in a Chacha20 block.
+in a ChaCha20 block.
 New applications should design their code so that either
 the protocl is not reliant on the counter covering the entire text
 (e.g. by cutting input into independent chunks) or
 inputs are always such that their lengths are multiples of 64 bytes
 (e.g. by buffering input until 64 bytes have been obtained).
 .Pp
-To obtain the raw Chacha20 stream previously provided by
+To obtain the raw ChaCha20 stream previously provided by
 .Fn crypto_chacha20_stream ,
 pass
 .Dv NULL
