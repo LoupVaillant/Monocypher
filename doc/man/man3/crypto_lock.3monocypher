@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2021 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2021 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 29, 2020
+.Dd June 11, 2021
 .Dt CRYPTO_LOCK 3MONOCYPHER
 .Os
 .Sh NAME
@@ -315,10 +315,10 @@ if (crypto_unlock(text, key, nonce, mac, text, 12)) {
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement RFC 8439, with XChacha20 instead of Chacha20.
-XChacha20 derives from Chacha20 the same way XSalsa20 derives from
+These functions implement RFC 8439, with XChaCha20 instead of ChaCha20.
+XChaCha20 derives from ChaCha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
-as long as Chacha20 itself is secure).
+as long as ChaCha20 itself is secure).
 .Sh HISTORY
 The
 .Fn crypto_lock
@@ -330,9 +330,9 @@ and
 .Fn crypto_unlock_aead
 were introduced in Monocypher 1.1.0.
 In Monocypher 2.0.0, the underlying algorithms for these functions were
-changed from a custom XChacha20/Poly1305 construction to an
-implementation of RFC 7539 (now RFC 8439) with XChacha20 instead of
-Chacha20.
+changed from a custom XChaCha20/Poly1305 construction to an
+implementation of RFC 7539 (now RFC 8439) with XChaCha20 instead of
+ChaCha20.
 The
 .Fn crypto_lock_encrypt
 and

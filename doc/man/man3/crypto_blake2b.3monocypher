@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2018 Michael Savage
-.\" Copyright (c) 2017, 2020 Fabio Scotoni
+.\" Copyright (c) 2017, 2020-2021 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2021 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 31, 2020
+.Dd June 11, 2021
 .Dt CRYPTO_BLAKE2B 3MONOCYPHER
 .Os
 .Sh NAME
@@ -102,7 +102,7 @@
 .Fc
 .Sh DESCRIPTION
 BLAKE2b is a fast cryptographically secure hash, based on the ideas of
-Chacha20.
+ChaCha20.
 It is faster than MD5, yet just as secure as SHA-3.
 .Pp
 Note that BLAKE2b itself is not suitable for hashing passwords and
@@ -123,9 +123,9 @@ Length of
 .Fa hash ,
 in bytes.
 Must be between 1 and 64.
-Anything below 32 is discouraged when using Blake2b as a general-purpose
+Anything below 32 is discouraged when using BLAKE2b as a general-purpose
 hash function;
-anything below 16 is discouraged when using Blake2b as a message
+anything below 16 is discouraged when using BLAKE2b as a message
 authentication code.
 .It Fa key
 Some secret key.

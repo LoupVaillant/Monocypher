@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2018 Michael Savage
-.\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2021 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2020 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2021 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 31, 2020
+.Dd June 11, 2021
 .Dt CRYPTO_CHACHA20 3MONOCYPHER
 .Os
 .Sh NAME
@@ -58,7 +58,7 @@
 .Nm crypto_chacha20_ctr ,
 .Nm crypto_xchacha20 ,
 .Nm crypto_xchacha20_ctr
-.Nd Chacha20 and XChacha20 encryption functions
+.Nd ChaCha20 and XChaCha20 encryption functions
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
@@ -96,10 +96,10 @@
 .Fa "uint64_t ctr"
 .Fc
 .Sh DESCRIPTION
-These functions provide an interface for the Chacha20 encryption
+These functions provide an interface for the ChaCha20 encryption
 primitive.
 .Pp
-Chacha20 is a low-level primitive.
+ChaCha20 is a low-level primitive.
 Consider using authenticated encryption, implemented by
 .Xr crypto_lock 3monocypher .
 .Pp
@@ -127,7 +127,7 @@ It is allowed to be
 .Dv NULL ,
 in which case it will be interpreted as an all zero input.
 .Fa cipher_text
-will then contain the raw Chacha20 stream.
+will then contain the raw ChaCha20 stream.
 .It Fa cipher_text
 The encrypted message.
 .It Fa text_size
@@ -152,12 +152,12 @@ must either be the same buffer (for in-place encryption), or
 non-overlapping.
 .Pp
 .Fn crypto_chacha20
-performs a Chacha20 operation.
+performs a ChaCha20 operation.
 It uses an 8-byte nonce, which is too small to be selected at random.
 Use a message counter as a nonce instead.
 .Pp
 .Fn crypto_xchacha20
-performs an XChacha20 operation.
+performs an XChaCha20 operation.
 It uses a 24-byte nonce, which is large enough to be selected at random.
 .Pp
 .Fn crypto_xchacha20
@@ -211,7 +211,7 @@ The
 .Fn crypto_chacha20_ctr
 and
 .Fn crypto_xchacha20_ctr
-perform a Chacha20 or XChacha20 encryption, respectively,
+perform a ChaCha20 or XChaCha20 encryption, respectively,
 starting the stream at the block
 .Fa ctr
 (which is the byte
@@ -325,8 +325,8 @@ crypto_wipe(plain_text, 500);
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement Chacha20 and XChacha20.
-Chacha20 is described in:
+These functions implement ChaCha20 and XChaCha20.
+ChaCha20 is described in:
 .Rs
 .%A Daniel J. Bernstein
 .%J SASC 2008 \(en The State of the Art of Stream Ciphers
@@ -334,9 +334,9 @@ Chacha20 is described in:
 .%T ChaCha, a variant of Salsa20
 .Re
 The nonce and counter sizes were modified in RFC 8439.
-XChacha20 derives from Chacha20 the same way XSalsa20 derives from
+XChaCha20 derives from ChaCha20 the same way XSalsa20 derives from
 Salsa20, and benefits from the same security reduction (proven secure
-as long as Chacha20 itself is secure).
+as long as ChaCha20 itself is secure).
 .Sh HISTORY
 .Fn crypto_chacha20 ,
 .Fn crypto_chacha20_ctr ,
@@ -354,10 +354,10 @@ and
 that were deprecated in Monocypher 3.0.0.
 .Sh SECURITY CONSIDERATIONS
 .Ss Encrypted does not mean secure
-Chacha20 only protects against eavesdropping, not forgeries.
+ChaCha20 only protects against eavesdropping, not forgeries.
 Most applications need protection against forgeries to be properly
 secure.
-To ensure the integrity of a message, use Blake2b in keyed mode, or
+To ensure the integrity of a message, use BLAKE2b in keyed mode, or
 authenticated encryption; see
 .Xr crypto_blake2b 3monocypher
 and
@@ -387,5 +387,5 @@ Secrets should not dwell in memory longer than needed.
 Use
 .Xr crypto_wipe 3monocypher
 to erase secrets you no longer need.
-For Chacha20, this means the key and in some cases the
+For ChaCha20, this means the key and in some cases the
 plain text itself.

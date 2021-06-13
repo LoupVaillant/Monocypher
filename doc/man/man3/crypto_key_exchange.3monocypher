@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2021 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2021 Fabio Scotoni
 .\" Copyright (c) 2020 Richard Walmsley
 .\" All rights reserved.
 .\"
@@ -52,7 +52,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd June 6, 2021
+.Dd June 11, 2021
 .Dt CRYPTO_KEY_EXCHANGE 3MONOCYPHER
 .Os
 .Sh NAME
@@ -166,7 +166,7 @@ crypto_wipe(your_sk, 32);
 .Sh STANDARDS
 These functions implement X25519, described in RFC 7748.
 .Fn crypto_key_exchange
-uses HChacha20 as well.
+uses HChaCha20 as well.
 .Sh HISTORY
 The
 .Fn crypto_key_exchange
