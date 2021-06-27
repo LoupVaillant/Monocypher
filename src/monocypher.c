@@ -1208,8 +1208,13 @@ static void fe_ccopy(fe f, const fe g, int b)
     h[0]=(i32)t0;  h[1]=(i32)t1;  h[2]=(i32)t2;  h[3]=(i32)t3;  h[4]=(i32)t4; \
     h[5]=(i32)t5;  h[6]=(i32)t6;  h[7]=(i32)t7;  h[8]=(i32)t8;  h[9]=(i32)t9
 
-static void fe_frombytes(fe h, const u8 s[32])
+// Decodes a field element from a byte buffer.
+// nb_clamps specifies how many bits we ignore.
+// Traditionally we ignore 1. It's useful for EdDSA,
+// which uses that bit to denote the sign of x.
+static void fe_frombytes(fe h, const u8 s[32], unsigned nb_clamp)
 {
+    i32 clamp = 0xffffff >> nb_clamp;
     i64 t0 =  load32_le(s);                        // t0 < 2^32
     i64 t1 =  load24_le(s +  4) << 6;              // t1 < 2^30
     i64 t2 =  load24_le(s +  7) << 5;              // t2 < 2^29
@@ -1219,8 +1224,8 @@ static void fe_frombytes(fe h, const u8 s[32])
     i64 t6 =  load24_le(s + 20) << 7;              // t6 < 2^31
     i64 t7 =  load24_le(s + 23) << 5;              // t7 < 2^29
     i64 t8 =  load24_le(s + 26) << 4;              // t8 < 2^28
-    i64 t9 = (load24_le(s + 29) & 0x7fffff) << 2;  // t9 < 2^25
-    FE_CARRY;                                      // Carry recondition OK
+    i64 t9 = (load24_le(s + 29) & clamp) << 2;     // t9 < 2^25
+    FE_CARRY;                                      // Carry precondition OK
 }
 
 // Precondition
@@ -1587,7 +1592,7 @@ static void scalarmult(u8 q[32], const u8 scalar[32], const u8 p[32],
 {
     // computes the scalar product
     fe x1;
-    fe_frombytes(x1, p);
+    fe_frombytes(x1, p, 1);
 
     // computes the actual scalar product (the result is in x2 and z2)
     fe x2, z2, x3, z3, t0, t1;
@@ -1837,7 +1842,7 @@ static void ge_tobytes(u8 s[32], const ge *h)
 // Finally, negate x if its sign is not as specified.
 static int ge_frombytes_vartime(ge *h, const u8 s[32])
 {
-    fe_frombytes(h->Y, s);
+    fe_frombytes(h->Y, s, 1);
     fe_1(h->Z);
     fe_sq (h->T, h->Y);        // t =   y^2
     fe_mul(h->X, h->T, d   );  // x = d*y^2
@@ -2469,7 +2474,7 @@ void crypto_from_eddsa_private(u8 x25519[32], const u8 eddsa[32])
 void crypto_from_eddsa_public(u8 x25519[32], const u8 eddsa[32])
 {
     fe t1, t2;
-    fe_frombytes(t2, eddsa);
+    fe_frombytes(t2, eddsa, 1);
     fe_add(t1, fe_one, t2);
     fe_sub(t2, fe_one, t2);
     fe_invert(t2, t2);
@@ -2711,14 +2716,8 @@ static const fe A = {486662};
 //       u2 = u
 void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
 {
-    // Representatives are encoded in 254 bits.
-    // The two most significant ones are random padding that must be ignored.
-    u8 clamped[32];
-    COPY(clamped, hidden, 32);
-    clamped[31] &= 0x3f;
-
     fe r, u, t1, t2, t3;
-    fe_frombytes(r, clamped);
+    fe_frombytes(r, hidden, 2); // Representatives are encoded in 254 bits.
     fe_sq(r, r);
     fe_add(t1, r, r);
     fe_add(u, t1, fe_one);
@@ -2741,7 +2740,7 @@ void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
 
     WIPE_BUFFER(t1);  WIPE_BUFFER(r);
     WIPE_BUFFER(t2);  WIPE_BUFFER(u);
-    WIPE_BUFFER(t3);  WIPE_BUFFER(clamped);
+    WIPE_BUFFER(t3);
 }
 
 // Elligator inverse map
@@ -2785,7 +2784,7 @@ void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
 int crypto_curve_to_hidden(u8 hidden[32], const u8 public_key[32], u8 tweak)
 {
     fe t1, t2, t3;
-    fe_frombytes(t1, public_key);
+    fe_frombytes(t1, public_key, 1);
 
     fe_add(t2, t1, A);
     fe_mul(t3, t1, t2);
