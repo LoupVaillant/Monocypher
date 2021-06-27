@@ -2719,7 +2719,8 @@ void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
 
     fe r, u, t1, t2, t3;
     fe_frombytes(r, clamped);
-    fe_sq2(t1, r);
+    fe_sq(r, r);
+    fe_add(t1, r, r);
     fe_add(u, t1, fe_one);
     fe_sq (t2, u);
     fe_mul(t3, A2, t1);
@@ -2728,8 +2729,7 @@ void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
     fe_mul(t1, t2, u);
     fe_mul(t1, t3, t1);
     int is_square = invsqrt(t1, t1);
-    fe_sq(u, r);
-    fe_mul(u, u, ufactor);
+    fe_mul(u, r, ufactor);
     fe_ccopy(u, fe_one, is_square);
     fe_sq (t1, t1);
     fe_mul(u, u, A);
