@@ -2790,29 +2790,26 @@ int crypto_curve_to_hidden(u8 hidden[32], const u8 public_key[32], u8 tweak)
     fe_mul(t3, t1, t2);
     fe_mul_small(t3, t3, -2);
     int is_square = invsqrt(t3, t3);
-    if (!is_square) {
+    if (is_square) {
         // The only variable time bit.  This ultimately reveals how many
         // tries it took us to find a representable key.
         // This does not affect security as long as we try keys at random.
-        WIPE_BUFFER(t1);
-        WIPE_BUFFER(t2);
-        WIPE_BUFFER(t3);
-        return -1;
-    }
-    fe_ccopy    (t1, t2, tweak & 1);
-    fe_mul      (t3, t1, t3);
-    fe_mul_small(t1, t3, 2);
-    fe_neg      (t2, t3);
-    fe_ccopy    (t3, t2, fe_isodd(t1));
-    fe_tobytes(hidden, t3);
 
-    // Pad with two random bits
-    hidden[31] |= tweak & 0xc0;
+        fe_ccopy    (t1, t2, tweak & 1);
+        fe_mul      (t3, t1, t3);
+        fe_mul_small(t1, t3, 2);
+        fe_neg      (t2, t3);
+        fe_ccopy    (t3, t2, fe_isodd(t1));
+        fe_tobytes(hidden, t3);
+
+        // Pad with two random bits
+        hidden[31] |= tweak & 0xc0;
+    }
 
     WIPE_BUFFER(t1);
     WIPE_BUFFER(t2);
     WIPE_BUFFER(t3);
-    return 0;
+    return is_square - 1;
 }
 
 void crypto_hidden_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
@@ -3012,16 +3009,14 @@ int crypto_unlock_aead(u8 *plain_text, const u8 key[32], const u8 nonce[24],
     u8 real_mac[16];
     lock_auth(real_mac, auth_key, ad, ad_size, cipher_text, text_size);
     WIPE_BUFFER(auth_key);
-    if (crypto_verify16(mac, real_mac)) {
-        WIPE_BUFFER(sub_key);
-        WIPE_BUFFER(real_mac);
-        return -1;
+    int mismatch = crypto_verify16(mac, real_mac);
+    if (!mismatch) {
+        crypto_chacha20_ctr(plain_text, cipher_text, text_size,
+                            sub_key, nonce + 16, 1);
     }
-    crypto_chacha20_ctr(plain_text, cipher_text, text_size,
-                        sub_key, nonce + 16, 1);
     WIPE_BUFFER(sub_key);
     WIPE_BUFFER(real_mac);
-    return 0;
+    return mismatch;
 }
 
 void crypto_lock(u8 mac[16], u8 *cipher_text,
