@@ -2588,6 +2588,49 @@ void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
     WIPE_BUFFER(scalar);
 }
 
+// Select low order point
+// We're computing the [cofactor]lop scalar multiplication, where:
+//
+//   cofactor = tweak & 7.
+//   lop      = (lop_x, lop_y)
+//   lop_x    = sqrt((sqrt(d + 1) + 1) / d)
+//   lop_y    = -lop_x * sqrtm1
+//
+// The low order point has order 8. There are 4 such points.  We've
+// chosen the one whose both coordinates are positive (below p/2).
+// The 8 low order points are as follows:
+//
+// [0]lop = ( 0       ,  1    )
+// [1]lop = ( lop_x   ,  lop_y)
+// [2]lop = ( sqrt(-1), -0    )
+// [3]lop = ( lop_x   , -lop_y)
+// [4]lop = (-0       , -1    )
+// [5]lop = (-lop_x   , -lop_y)
+// [6]lop = (-sqrt(-1),  0    )
+// [7]lop = (-lop_x   ,  lop_y)
+//
+// The x coordinate is either 0, sqrt(-1), lop_x, or their opposite.
+// The y coordinate is either 0,      -1 , lop_y, or their opposite.
+// The pattern for both is the same, except for a rotation of 2 (modulo 8)
+//
+// This helper function captures the pattern, and we can use it thus:
+//
+//    select_lop(x, lop_x, sqrtm1, cofactor);
+//    select_lop(y, lop_y, fe_one, cofactor + 2);
+//
+// This is faster than an actual scalar multiplication,
+// and requires less code than naive constant time look up.
+static void select_lop(fe out, const fe x, const fe k, u8 cofactor)
+{
+    fe tmp;
+    fe_0(out);
+    fe_ccopy(out, k  , (cofactor >> 1) & 1); // bit 1
+    fe_ccopy(out, x  , (cofactor >> 0) & 1); // bit 0
+    fe_neg  (tmp, out);
+    fe_ccopy(out, tmp, (cofactor >> 2) & 1); // bit 2
+    WIPE_BUFFER(tmp);
+}
+
 // "Fast" dirty ephemeral key
 // We use this one by default.
 //
@@ -2597,38 +2640,17 @@ void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
 // The cost is a bigger binary for programs that don't also sign messages.
 void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
 {
+    // Compute clean scalar multiplication
     u8 scalar[32];
     ge pk;
     COPY(scalar, secret_key, 32);
     trim_scalar(scalar);
     ge_scalarmult_base(&pk, scalar);
 
-    // Select low order point
-    // We're computing the [cofactor]lop scalar multiplication, where:
-    //   cofactor = tweak & 7.
-    //   lop      = (lop_x, lop_y)
-    //   lop_x    = sqrt((sqrt(d + 1) + 1) / d)
-    //   lop_y    = -lop_x * sqrtm1
-    // Notes:
-    // - A (single) Montgomery ladder would be twice as slow.
-    // - An actual scalar multiplication would hurt performance.
-    // - A full table lookup would take more code.
-    u8 cofactor = secret_key[0] & 7;
-    int a = (cofactor >> 2) & 1;
-    int b = (cofactor >> 1) & 1;
-    int c = (cofactor >> 0) & 1;
-    fe t1, t2, t3;
-    fe_0(t1);
-    fe_ccopy(t1, sqrtm1, b);
-    fe_ccopy(t1, lop_x , c);
-    fe_neg  (t3, t1);
-    fe_ccopy(t1, t3, a);
-    fe_1(t2);
-    fe_0(t3);
-    fe_ccopy(t2, t3   , b);
-    fe_ccopy(t2, lop_y, c);
-    fe_neg  (t3, t2);
-    fe_ccopy(t2, t3, a^b);
+    // Compute low order point
+    fe t1, t2;
+    select_lop(t1, lop_x, sqrtm1, secret_key[0]);
+    select_lop(t2, lop_y, fe_one, secret_key[0] + 2);
     ge_precomp low_order_point;
     fe_add(low_order_point.Yp, t2, t1);
     fe_sub(low_order_point.Ym, t2, t1);
@@ -2646,9 +2668,9 @@ void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
 
     fe_tobytes(public_key, t1);
 
-    WIPE_BUFFER(t1);  WIPE_BUFFER(scalar);
-    WIPE_BUFFER(t2);  WIPE_CTX(&pk);
-    WIPE_BUFFER(t3);  WIPE_CTX(&low_order_point);
+    WIPE_BUFFER(t1);    WIPE_CTX(&pk);
+    WIPE_BUFFER(t2);    WIPE_CTX(&low_order_point);
+    WIPE_BUFFER(scalar);
 }
 
 ///////////////////
