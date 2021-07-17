@@ -361,13 +361,6 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     ctx->h[4] = (u32)u4; // u4 <=          4
 }
 
-// (re-)initialises the input counter and input buffer
-static void poly_clear_c(crypto_poly1305_ctx *ctx)
-{
-    ZERO(ctx->c, 4);
-    ctx->c_idx = 0;
-}
-
 static void poly_take_input(crypto_poly1305_ctx *ctx, u8 input)
 {
     size_t word = ctx->c_idx >> 2;
@@ -376,25 +369,13 @@ static void poly_take_input(crypto_poly1305_ctx *ctx, u8 input)
     ctx->c_idx++;
 }
 
-static void poly_update(crypto_poly1305_ctx *ctx,
-                        const u8 *message, size_t message_size)
-{
-    FOR (i, 0, message_size) {
-        poly_take_input(ctx, message[i]);
-        if (ctx->c_idx == 16) {
-            poly_block(ctx);
-            poly_clear_c(ctx);
-        }
-    }
-}
-
 void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 {
-    // Initial hash is zero
-    ZERO(ctx->h, 5);
-    // add 2^130 to every input block
-    ctx->c[4] = 1;
-    poly_clear_c(ctx);
+
+    ZERO(ctx->h, 5);  // Initial hash is zero
+    ZERO(ctx->c, 4);  // Input block starts empty
+    ctx->c[4]  = 1;   // add 2^130 to every input block
+    ctx->c_idx = 0;
     // load r and pad (r has some of its bits cleared)
     load32_le_buf(ctx->r  , key   , 4);
     load32_le_buf(ctx->pad, key+16, 4);
@@ -405,14 +386,20 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const u8 *message, size_t message_size)
 {
-    if (message_size == 0) {
-        return;
-    }
     // Align ourselves with block boundaries
     size_t aligned = MIN(align(ctx->c_idx, 16), message_size);
-    poly_update(ctx, message, aligned);
+    FOR (i, 0, aligned) {
+        poly_take_input(ctx, message[i]);
+    }
     message      += aligned;
     message_size -= aligned;
+
+    // If block is complete, process it and clear input
+    if (ctx->c_idx == 16) {
+        poly_block(ctx);
+        ZERO(ctx->c, 4);
+        ctx->c_idx = 0;
+    }
 
     // Process the message block by block
     size_t nb_blocks = message_size >> 4;
@@ -421,13 +408,17 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
         poly_block(ctx);
         message += 16;
     }
-    if (nb_blocks > 0) {
-        poly_clear_c(ctx);
-    }
     message_size &= 15;
 
-    // remaining bytes
-    poly_update(ctx, message, message_size);
+    // If we processed whole blocks, clear the input
+    if (nb_blocks > 0) {
+        ZERO(ctx->c, 4);
+    }
+
+    // remaining bytes (we never complete a block here)
+    FOR (i, 0, message_size) {
+        poly_take_input(ctx, message[i]);
+    }
 }
 
 void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
