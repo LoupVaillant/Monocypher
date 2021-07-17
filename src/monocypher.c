@@ -2216,7 +2216,7 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
         lookup_add(p, &tmp_c, tmp_a, tmp_b, b_comb_high, s_scalar, i+128);
     }
     // Note: we could save one addition at the end if we assumed the
-    // scalar fit in 252 bit.  Which it does in practice if it is
+    // scalar fit in 252 bits.  Which it does in practice if it is
     // selected at random.  However, non-random, non-hashed scalars
     // *can* overflow 252 bits in practice.  Better account for that
     // than leaving that kind of subtle corner case.
@@ -2873,6 +2873,7 @@ void crypto_x25519_inverse(u8 blind_salt [32], const u8 private_key[32],
         WIPE_BUFFER(tmp); // Wipe ASAP to save stack space
     }
 
+    // Compute the inverse
     u32 product[16];
     for (int i = 252; i >= 0; i--) {
         ZERO(product, 16);
