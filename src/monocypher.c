@@ -1361,30 +1361,6 @@ static void fe_sq(fe h, const fe f)
     FE_CARRY;
 }
 
-// h = 2 * (f^2)
-//
-// Precondition
-// -------------
-//   |f0|, |f2|, |f4|, |f6|, |f8|  <  1.65 * 2^26
-//   |f1|, |f3|, |f5|, |f7|, |f9|  <  1.65 * 2^25
-//
-// Note: we could implement fe_sq2() by copying fe_sq(), multiplying
-// each limb by 2, *then* perform the carry.  This saves one carry.
-// However, doing so with the stated preconditions does not work (t2
-// would overflow).  There are 3 ways to solve this:
-//
-// 1. Show that t2 actually never overflows (it really does not).
-// 2. Accept an additional carry, at a small lost of performance.
-// 3. Make sure the input of fe_sq2() is freshly carried.
-//
-// SUPERCOP ref10 relies on (1).
-// Monocypher chose (2) and (3), mostly to save code.
-static void fe_sq2(fe h, const fe f)
-{
-    fe_sq(h, f);
-    fe_mul_small(h, h, 2);
-}
-
 //  Parity check.  Returns 0 if even, 1 if odd
 static int fe_isodd(const fe f)
 {
@@ -1905,7 +1881,8 @@ static void ge_double(ge *s, const ge *p, ge *q)
 {
     fe_sq (q->X, p->X);
     fe_sq (q->Y, p->Y);
-    fe_sq2(q->Z, p->Z);
+    fe_sq (q->Z, p->Z);          // qZ = pZ^2
+    fe_mul_small(q->Z, q->Z, 2); // qZ = pZ^2 * 2
     fe_add(q->T, p->X, p->Y);
     fe_sq (s->T, q->T);
     fe_add(q->T, q->Y, q->X);
