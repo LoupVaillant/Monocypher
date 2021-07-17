@@ -470,17 +470,6 @@ static const u64 iv[8] = {
     0x1f83d9abfb41bd6b, 0x5be0cd19137e2179,
 };
 
-// increment the input offset
-static void blake2b_incr(crypto_blake2b_ctx *ctx)
-{
-    u64   *x = ctx->input_offset;
-    size_t y = ctx->input_idx;
-    x[0] += y;
-    if (x[0] < y) {
-        x[1]++;
-    }
-}
-
 static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 {
     static const u8 sigma[12][16] = {
@@ -497,6 +486,14 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
         {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 },
         { 14, 10,  4,  8,  9, 15, 13,  6,  1, 12,  0,  2, 11,  7,  5,  3 },
     };
+
+    // increment input offset
+    u64   *x = ctx->input_offset;
+    size_t y = ctx->input_idx;
+    x[0] += y;
+    if (x[0] < y) {
+        x[1]++;
+    }
 
     // init work vector
     u64 v0 = ctx->hash[0];  u64 v8  = iv[0];
@@ -550,26 +547,6 @@ static void blake2b_set_input(crypto_blake2b_ctx *ctx, u8 input, size_t index)
     size_t word = index >> 3;
     size_t byte = index & 7;
     ctx->input[word] |= (u64)input << (byte << 3);
-
-}
-
-static void blake2b_end_block(crypto_blake2b_ctx *ctx)
-{
-    if (ctx->input_idx == 128) {  // If buffer is full,
-        blake2b_incr(ctx);        // update the input offset
-        blake2b_compress(ctx, 0); // and compress the (not last) block
-        ctx->input_idx = 0;
-    }
-}
-
-static void blake2b_update(crypto_blake2b_ctx *ctx,
-                           const u8 *message, size_t message_size)
-{
-    FOR (i, 0, message_size) {
-        blake2b_end_block(ctx);
-        blake2b_set_input(ctx, message[i], ctx->input_idx);
-        ctx->input_idx++;
-    }
 }
 
 void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
@@ -602,26 +579,39 @@ void crypto_blake2b_init(crypto_blake2b_ctx *ctx)
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const u8 *message, size_t message_size)
 {
-    if (message_size == 0) {
-        return;
-    }
     // Align ourselves with block boundaries
+    // The block that may result is not compressed yet
     size_t aligned = MIN(align(ctx->input_idx, 128), message_size);
-    blake2b_update(ctx, message, aligned);
+    FOR (i, 0, aligned) {
+        blake2b_set_input(ctx, message[i], ctx->input_idx);
+        ctx->input_idx++;
+    }
     message      += aligned;
     message_size -= aligned;
 
     // Process the message block by block
-    FOR (i, 0, message_size >> 7) { // number of blocks
-        blake2b_end_block(ctx);
+    // The last block is not compressed yet.
+    size_t nb_blocks = message_size >> 7;
+    FOR (i, 0, nb_blocks) {
+        if (ctx->input_idx == 128) {
+            blake2b_compress(ctx, 0);
+        }
         load64_le_buf(ctx->input, message, 16);
         message += 128;
         ctx->input_idx = 128;
     }
     message_size &= 127;
 
-    // remaining bytes
-    blake2b_update(ctx, message, message_size);
+    // Fill remaining bytes (not the whole buffer)
+    // The last block is never fully filled
+    FOR (i, 0, message_size) {
+        if (ctx->input_idx == 128) {
+            blake2b_compress(ctx, 0);
+            ctx->input_idx = 0;
+        }
+        blake2b_set_input(ctx, message[i], ctx->input_idx);
+        ctx->input_idx++;
+    }
 }
 
 void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
@@ -630,7 +620,6 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
     FOR (i, ctx->input_idx, 128) {
         blake2b_set_input(ctx, 0, i);
     }
-    blake2b_incr(ctx);        // update the input offset
     blake2b_compress(ctx, 1); // compress the last block
     size_t nb_words = ctx->hash_size >> 3;
     store64_le_buf(hash, ctx->hash, nb_words);
