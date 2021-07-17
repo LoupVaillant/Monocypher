@@ -771,37 +771,6 @@ static void g_rounds(block *work_block)
     }
 }
 
-// The compression function G (copy version for the first pass)
-static void g_copy(block *result, const block *x, const block *y, block* tmp)
-{
-    copy_block(tmp   , x  ); // tmp    = X
-    xor_block (tmp   , y  ); // tmp    = X ^ Y = R
-    copy_block(result, tmp); // result = R         (only difference with g_xor)
-    g_rounds  (tmp);         // tmp    = Z
-    xor_block (result, tmp); // result = R ^ Z
-}
-
-// The compression function G (xor version for subsequent passes)
-static void g_xor(block *result, const block *x, const block *y, block *tmp)
-{
-    copy_block(tmp   , x  ); // tmp    = X
-    xor_block (tmp   , y  ); // tmp    = X ^ Y = R
-    xor_block (result, tmp); // result = R ^ old   (only difference with g_copy)
-    g_rounds  (tmp);         // tmp    = Z
-    xor_block (result, tmp); // result = R ^ old ^ Z
-}
-
-// Unary version of the compression function.
-// The missing argument is implied zero.
-// Does the transformation in place.
-static void unary_g(block *work_block, block *tmp)
-{
-    // work_block == R
-    copy_block(tmp, work_block); // tmp        = R
-    g_rounds  (work_block);      // work_block = Z
-    xor_block (work_block, tmp); // work_block = Z ^ R
-}
-
 // Argon2i uses a kind of stream cipher to determine which reference
 // block it will take to synthesise the next block.  This context hold
 // that stream's state.  (It's very similar to Chacha20.  The block b
@@ -835,8 +804,12 @@ static void gidx_refresh(gidx_ctx *ctx)
     // Shuffle the block thus: ctx->b = G((G(ctx->b, zero)), zero)
     // (G "square" function), to get cheap pseudo-random numbers.
     block tmp;
-    unary_g(&ctx->b, &tmp);
-    unary_g(&ctx->b, &tmp);
+    copy_block(&tmp, &ctx->b);
+    g_rounds  (&ctx->b);
+    xor_block (&ctx->b, &tmp);
+    copy_block(&tmp, &ctx->b);
+    g_rounds  (&ctx->b);
+    xor_block (&ctx->b, &tmp);
     wipe_block(&tmp);
 }
 
@@ -967,15 +940,19 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
             u32 segment_start = segment * segment_size + start_offset;
             u32 segment_end   = (segment + 1) * segment_size;
             FOR_T (u32, current_block, segment_start, segment_end) {
-                u32 reference_block = gidx_next(&ctx);
-                u32 previous_block  = current_block == 0
-                                    ? nb_blocks - 1
-                                    : current_block - 1;
-                block *c = blocks + current_block;
-                block *p = blocks + previous_block;
-                block *r = blocks + reference_block;
-                if (first_pass) { g_copy(c, p, r, &tmp); }
-                else            { g_xor (c, p, r, &tmp); }
+                block *reference = blocks + gidx_next(&ctx);
+                block *current   = blocks + current_block;
+                block *previous  = current_block == 0
+                                 ? blocks + nb_blocks - 1
+                                 : blocks + current_block - 1;
+                // Apply compression function G,
+                // And copy it (or XOR it) to the current block.
+                copy_block(&tmp, previous);
+                xor_block (&tmp, reference);
+                if (first_pass) { copy_block(current, &tmp); }
+                else            { xor_block (current, &tmp); }
+                g_rounds  (&tmp);
+                xor_block (current, &tmp);
             }
         }
     }
