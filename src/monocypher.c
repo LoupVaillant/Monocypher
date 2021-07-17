@@ -1857,24 +1857,15 @@ static void ge_madd(ge *s, const ge *p, const ge_precomp *q, fe a, fe b)
     fe_mul(s->Z, a   , b   );
 }
 
+// Internal buffers are not wiped! Inputs must not be secret!
+// => Use only to *check* signatures.
 static void ge_msub(ge *s, const ge *p, const ge_precomp *q, fe a, fe b)
 {
-    fe_add(a   , p->Y, p->X );
-    fe_sub(b   , p->Y, p->X );
-    fe_mul(a   , a   , q->Ym);
-    fe_mul(b   , b   , q->Yp);
-    fe_add(s->Y, a   , b    );
-    fe_sub(s->X, a   , b    );
-
-    fe_add(s->Z, p->Z, p->Z );
-    fe_mul(s->T, p->T, q->T2);
-    fe_sub(a   , s->Z, s->T );
-    fe_add(b   , s->Z, s->T );
-
-    fe_mul(s->T, s->X, s->Y);
-    fe_mul(s->X, s->X, b   );
-    fe_mul(s->Y, s->Y, a   );
-    fe_mul(s->Z, a   , b   );
+    ge_precomp neg;
+    fe_copy(neg.Ym, q->Yp);
+    fe_copy(neg.Yp, q->Ym);
+    fe_neg (neg.T2, q->T2);
+    ge_madd(s, p, &neg, a, b);
 }
 
 static void ge_double(ge *s, const ge *p, ge *q)
