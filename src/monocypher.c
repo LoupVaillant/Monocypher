@@ -192,19 +192,17 @@ static void chacha20_rounds(u32 out[16], const u32 in[16])
     out[12] = t12;  out[13] = t13;  out[14] = t14;  out[15] = t15;
 }
 
-static void chacha20_init_key(u32 block[16], const u8 key[32])
-{
-    load32_le_buf(block  , (const u8*)"expand 32-byte k", 4); // constant
-    load32_le_buf(block+4, key                          , 8); // key
-}
+const u8 *chacha20_constant = (const u8*)"expand 32-byte k"; // 16 bytes
 
 void crypto_hchacha20(u8 out[32], const u8 key[32], const u8 in [16])
 {
     u32 block[16];
-    chacha20_init_key(block, key);
-    // input
-    load32_le_buf(block + 12, in, 4);
+    load32_le_buf(block     , chacha20_constant, 4);
+    load32_le_buf(block +  4, key              , 8);
+    load32_le_buf(block + 12, in               , 4);
+
     chacha20_rounds(block, block);
+
     // prevent reversal of the rounds by revealing only half of the buffer.
     store32_le_buf(out   , block   , 4); // constant
     store32_le_buf(out+16, block+12, 4); // counter and nonce
@@ -216,10 +214,11 @@ u64 crypto_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
                         u64 ctr)
 {
     u32 input[16];
-    chacha20_init_key(input, key);
+    load32_le_buf(input     , chacha20_constant, 4);
+    load32_le_buf(input +  4, key              , 8);
+    load32_le_buf(input + 14, nonce            , 2);
     input[12] = (u32) ctr;
     input[13] = (u32)(ctr >> 32);
-    load32_le_buf(input+14, nonce, 2);
 
     // Whole blocks
     u32    pool[16];
