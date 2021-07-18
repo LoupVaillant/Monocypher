@@ -315,18 +315,21 @@ void crypto_xchacha20(u8 *cipher_text, const u8 *plain_text, size_t text_size,
 // h = (h + c) * r
 // preconditions:
 //   ctx->h <= 4_ffffffff_ffffffff_ffffffff_ffffffff
-//   ctx->c <= 1_ffffffff_ffffffff_ffffffff_ffffffff
 //   ctx->r <=   0ffffffc_0ffffffc_0ffffffc_0fffffff
+//   end    <= 1
 // Postcondition:
 //   ctx->h <= 4_ffffffff_ffffffff_ffffffff_ffffffff
-static void poly_block(crypto_poly1305_ctx *ctx)
+static void poly_block(crypto_poly1305_ctx *ctx, const u8 in[16], unsigned end)
 {
+    u32 s[4];
+    load32_le_buf(s, in, 4);
+
     // s = h + c, without carry propagation
-    const u64 s0 = ctx->h[0] + (u64)ctx->c[0]; // s0 <= 1_fffffffe
-    const u64 s1 = ctx->h[1] + (u64)ctx->c[1]; // s1 <= 1_fffffffe
-    const u64 s2 = ctx->h[2] + (u64)ctx->c[2]; // s2 <= 1_fffffffe
-    const u64 s3 = ctx->h[3] + (u64)ctx->c[3]; // s3 <= 1_fffffffe
-    const u32 s4 = ctx->h[4] +      ctx->c[4]; // s4 <=          5
+    const u64 s0 = ctx->h[0] + (u64)s[0]; // s0 <= 1_fffffffe
+    const u64 s1 = ctx->h[1] + (u64)s[1]; // s1 <= 1_fffffffe
+    const u64 s2 = ctx->h[2] + (u64)s[2]; // s2 <= 1_fffffffe
+    const u64 s3 = ctx->h[3] + (u64)s[3]; // s3 <= 1_fffffffe
+    const u32 s4 = ctx->h[4] + end;       // s4 <=          5
 
     // Local all the things!
     const u32 r0 = ctx->r[0];       // r0  <= 0fffffff
@@ -361,20 +364,9 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     ctx->h[4] = (u32)u4; // u4 <=          4
 }
 
-static void poly_take_input(crypto_poly1305_ctx *ctx, u8 input)
-{
-    size_t word = ctx->c_idx >> 2;
-    size_t byte = ctx->c_idx & 3;
-    ctx->c[word] |= (u32)input << (byte * 8);
-    ctx->c_idx++;
-}
-
 void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 {
-
-    ZERO(ctx->h, 5);  // Initial hash is zero
-    ZERO(ctx->c, 4);  // Input block starts empty
-    ctx->c[4]  = 1;   // add 2^130 to every input block
+    ZERO(ctx->h, 5); // Initial hash is zero
     ctx->c_idx = 0;
     // load r and pad (r has some of its bits cleared)
     load32_le_buf(ctx->r  , key   , 4);
@@ -389,48 +381,42 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
     // Align ourselves with block boundaries
     size_t aligned = MIN(align(ctx->c_idx, 16), message_size);
     FOR (i, 0, aligned) {
-        poly_take_input(ctx, *message);
+        ctx->c[ctx->c_idx] = *message;
+        ctx->c_idx++;
         message++;
         message_size--;
     }
 
-    // If block is complete, process it and clear input
+    // If block is complete, process it
     if (ctx->c_idx == 16) {
-        poly_block(ctx);
-        ZERO(ctx->c, 4);
+        poly_block(ctx, ctx->c, 1);
         ctx->c_idx = 0;
     }
 
     // Process the message block by block
     size_t nb_blocks = message_size >> 4;
     FOR (i, 0, nb_blocks) {
-        load32_le_buf(ctx->c, message, 4);
-        poly_block(ctx);
+        poly_block(ctx, message, 1);
         message += 16;
     }
     message_size &= 15;
 
-    // If we processed whole blocks, clear the input
-    if (nb_blocks > 0) {
-        ZERO(ctx->c, 4);
-    }
-
     // remaining bytes (we never complete a block here)
     FOR (i, 0, message_size) {
-        poly_take_input(ctx, message[i]);
+        ctx->c[ctx->c_idx] = message[i];
+        ctx->c_idx++;
     }
 }
 
 void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
 {
     // Process the last block (if any)
+    // We move the final 1 according to remaining input length
+    // (this will add less than 2^130 to the last input block)
     if (ctx->c_idx != 0) {
-        // move the final 1 according to remaining input length
-        // (We may add less than 2^130 to the last input block)
-        ctx->c[4] = 0;
-        poly_take_input(ctx, 1);
-        // one last hash update
-        poly_block(ctx);
+        ZERO(ctx->c + ctx->c_idx, 16 - ctx->c_idx);
+        ctx->c[ctx->c_idx] = 1;
+        poly_block(ctx, ctx->c, 0);
     }
 
     // check if we should subtract 2^130-5 by performing the

@@ -83,7 +83,7 @@ typedef struct {
 typedef struct {
     uint32_t r[4];   // constant multiplier (from the secret key)
     uint32_t h[5];   // accumulated hash
-    uint32_t c[5];   // chunk of the message
+    uint8_t  c[16];  // chunk of the message
     uint32_t pad[4]; // random number added at the end (from the secret key)
     size_t   c_idx;  // How many bytes are there in the chunk.
 } crypto_poly1305_ctx;
