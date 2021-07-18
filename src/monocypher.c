@@ -389,10 +389,10 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
     // Align ourselves with block boundaries
     size_t aligned = MIN(align(ctx->c_idx, 16), message_size);
     FOR (i, 0, aligned) {
-        poly_take_input(ctx, message[i]);
+        poly_take_input(ctx, *message);
+        message++;
+        message_size--;
     }
-    message      += aligned;
-    message_size -= aligned;
 
     // If block is complete, process it and clear input
     if (ctx->c_idx == 16) {
@@ -583,11 +583,11 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
     // The block that may result is not compressed yet
     size_t aligned = MIN(align(ctx->input_idx, 128), message_size);
     FOR (i, 0, aligned) {
-        blake2b_set_input(ctx, message[i], ctx->input_idx);
+        blake2b_set_input(ctx, *message, ctx->input_idx);
         ctx->input_idx++;
+        message++;
+        message_size--;
     }
-    message      += aligned;
-    message_size -= aligned;
 
     // Process the message block by block
     // The last block is not compressed yet.
