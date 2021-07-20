@@ -1609,10 +1609,10 @@ static int is_above_l(const u32 x[8])
     // (-L == ~L + 1)
     u64 carry = 1;
     FOR (i, 0, 8) {
-        carry += (u64)x[i] + ~L[i];
+        carry  += (u64)x[i] + (~L[i] & 0xffffffff);
         carry >>= 32;
     }
-    return carry;
+    return (int)carry; // carry is either 0 or 1
 }
 
 // Final reduction modulo L, by conditionally removing L.
@@ -1662,7 +1662,7 @@ static void mod_l(u8 reduced[32], const u32 x[16])
     // xr = x - xr
     u64 carry = 1;
     FOR (i, 0, 8) {
-        carry  += (u64)x[i] + ~xr[i];
+        carry  += (u64)x[i] + (~xr[i] & 0xffffffff);
         xr[i]   = (u32)carry;
         carry >>= 32;
     }
