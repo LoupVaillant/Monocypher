@@ -113,6 +113,13 @@ typedef struct {
 } crypto_sign_ctx;
 typedef crypto_sign_ctx crypto_check_ctx;
 
+// Authenticated stream
+typedef struct {
+    uint64_t counter;
+    uint8_t  key[32];
+    uint8_t  nonce[8];
+} crypto_stream_ctx;
+
 ////////////////////////////
 /// High level interface ///
 ////////////////////////////
@@ -158,6 +165,37 @@ int crypto_unlock_aead(uint8_t       *plain_text,
                        const uint8_t  mac[16],
                        const uint8_t *ad         , size_t ad_size,
                        const uint8_t *cipher_text, size_t text_size);
+
+// Authenticated stream
+// --------------------
+void crypto_stream_init(crypto_stream_ctx *ctx,
+                        const uint8_t key[32], const uint8_t nonce[24]);
+void crypto_stream_init_djb(crypto_stream_ctx *ctx,
+                            const uint8_t key[32], const uint8_t nonce[8]);
+void crypto_stream_init_ietf(crypto_stream_ctx *ctx,
+                             const uint8_t key[32], const uint8_t nonce[12]);
+
+void crypto_stream_write(crypto_stream_ctx *ctx,
+                         uint8_t            mac[16],
+                         uint8_t           *cipher_text,
+                         const uint8_t     *plain_text, size_t text_size);
+int crypto_stream_read(crypto_stream_ctx *ctx,
+                       uint8_t           *plain_text,
+                       const uint8_t      mac[16],
+                       const uint8_t     *cipher_text, size_t text_size);
+
+
+// with additional data
+void crypto_stream_write_aead(crypto_stream_ctx *ctx,
+                              uint8_t            mac[16],
+                              uint8_t           *cipher_text,
+                              const uint8_t     *ad        , size_t ad_size,
+                              const uint8_t     *plain_text, size_t text_size);
+int crypto_stream_read_aead(crypto_stream_ctx *ctx,
+                            uint8_t           *plain_text,
+                            const uint8_t      mac[16],
+                            const uint8_t     *ad        , size_t ad_size,
+                            const uint8_t     *cipher_text, size_t text_size);
 
 
 // General purpose hash (BLAKE2b)

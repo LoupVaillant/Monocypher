@@ -140,6 +140,18 @@ static void aead_ietf(vector_reader *reader)
                      ad.buf, ad.size, text.buf, text.size);
 }
 
+static void aead_8439(vector_reader *reader)
+{
+    vector key   = next_input(reader);
+    vector nonce = next_input(reader);
+    vector ad    = next_input(reader);
+    vector text  = next_input(reader);
+    vector out   = next_output(reader);
+    crypto_stream_ctx ctx;
+    crypto_stream_init_ietf(&ctx, key.buf, nonce.buf);
+    crypto_stream_write_aead(&ctx, out.buf, out.buf + 16, ad.buf, ad.size,
+                             text.buf, text.size);
+}
 
 static void blake2b(vector_reader *reader)
 {
@@ -884,6 +896,64 @@ static int p_aead()
     return status;
 }
 
+static int p_aead_incr()
+{
+    int s = 0;
+    FOR (i, 0, 50) {
+        RANDOM_INPUT(key      , 32);
+        RANDOM_INPUT(nonce    , 24);
+        crypto_stream_ctx ctx_a;
+        crypto_stream_ctx ctx_b;
+        crypto_stream_ctx ctx_djb_a;
+        crypto_stream_ctx ctx_djb_b;
+        crypto_stream_ctx ctx_ietf_a;
+        crypto_stream_ctx ctx_ietf_b;
+        crypto_stream_init     (&ctx_a     , key, nonce);
+        crypto_stream_init     (&ctx_b     , key, nonce);
+        crypto_stream_init_djb (&ctx_djb_a , key, nonce);
+        crypto_stream_init_djb (&ctx_djb_b , key, nonce);
+        crypto_stream_init_ietf(&ctx_ietf_a, key, nonce);
+        crypto_stream_init_ietf(&ctx_ietf_b, key, nonce);
+
+        FOR (j, 0, 10) {
+            RANDOM_INPUT(ad,  4); // additional data
+            RANDOM_INPUT(pt,  8); // plaintext
+            u8 box[24];
+            u8 out[8];
+            // AEAD roundtrip (happy path)
+            crypto_stream_write_aead(&ctx_a, box, box+16, ad, 4, pt, 8);
+            s |= crypto_stream_read_aead(&ctx_b, out, box, ad, 4, box+16, 8);
+            s |= memcmp(pt, out, 8);
+            s |= memcmp(&ctx_a, &ctx_b, sizeof(crypto_stream_ctx));
+
+            crypto_stream_write_aead(&ctx_djb_a, box, box+16, ad, 4, pt, 8);
+            s |= crypto_stream_read_aead(&ctx_djb_b, out, box, ad,4,box+16,8);
+            s |= memcmp(pt, out, 8);
+
+            crypto_stream_write_aead(&ctx_ietf_a, box, box+16, ad, 4, pt, 8);
+            s |= crypto_stream_read_aead(&ctx_ietf_b, out, box, ad,4,box+16,8);
+            s |= memcmp(pt, out, 8);
+
+            // Authenticated roundtrip (no ad, happy path)
+            crypto_stream_write(&ctx_a, box, box+16, pt, 8);
+            s |= crypto_stream_read(&ctx_b, out, box, box+16, 8);
+            s |= memcmp(pt, out, 8);
+
+            crypto_stream_write(&ctx_djb_a, box, box+16, pt, 8);
+            s |= crypto_stream_read(&ctx_djb_b, out, box, box+16, 8);
+            s |= memcmp(pt, out, 8);
+
+            crypto_stream_write(&ctx_ietf_a, box, box+16, pt, 8);
+            s |= crypto_stream_read(&ctx_ietf_b, out, box, box+16, 8);
+            s |= memcmp(pt, out, 8);
+        }
+    }
+    printf("\n");
+
+    printf("%s: aead incr (roundtrip)\n", s != 0 ? "FAILED" : "OK");
+    return s;
+}
+
 // Elligator direct mapping must ignore the most significant bits
 static int p_elligator_direct_msb()
 {
@@ -1144,6 +1214,7 @@ int main(int argc, char *argv[])
     status |= TEST(xchacha20);
     status |= TEST(poly1305);
     status |= TEST(aead_ietf);
+    status |= TEST(aead_8439);
     status |= TEST(blake2b);
     status |= TEST(sha512);
     status |= TEST(hmac_sha512);
@@ -1185,6 +1256,7 @@ int main(int argc, char *argv[])
     status |= p_eddsa_overlap();
     status |= p_eddsa_incremental();
     status |= p_aead();
+    status |= p_aead_incr();
     status |= p_elligator_direct_msb();
     status |= p_elligator_direct_overlap();
     status |= p_elligator_inverse_overlap();

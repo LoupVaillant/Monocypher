@@ -2904,54 +2904,107 @@ static void lock_auth(u8 mac[16], const u8  auth_key[32],
     crypto_poly1305_final (&poly_ctx, mac); // ...here
 }
 
-void crypto_lock_aead(u8 mac[16], u8 *cipher_text,
-                      const u8  key[32], const u8  nonce[24],
-                      const u8 *ad        , size_t ad_size,
-                      const u8 *plain_text, size_t text_size)
+void crypto_stream_init(crypto_stream_ctx *ctx,
+                        u8 const key[32], const u8 nonce[24])
 {
-    u8 sub_key[32];
-    u8 auth_key[64]; // "Wasting" the whole Chacha block is faster
-    crypto_hchacha20(sub_key, key, nonce);
-    crypto_chacha20(auth_key, 0, 64, sub_key, nonce + 16);
+    crypto_hchacha20(ctx->key, key, nonce);
+    COPY(ctx->nonce, nonce + 16, 8);
+    ctx->counter = 0;
+}
+
+void crypto_stream_init_djb(crypto_stream_ctx *ctx,
+                            const u8 key[32], const u8 nonce[8])
+{
+    COPY(ctx->key  , key  , 32);
+    COPY(ctx->nonce, nonce,  8);
+    ctx->counter = 0;
+}
+
+void crypto_stream_init_ietf(crypto_stream_ctx *ctx,
+                             const u8 key[32], const u8 nonce[12])
+{
+    COPY(ctx->key  , key      , 32);
+    COPY(ctx->nonce, nonce + 4,  8);
+    ctx->counter = (u64)load32_le(nonce) << 32;
+}
+
+void crypto_stream_write_aead(crypto_stream_ctx *ctx, u8 mac[16],
+                              u8 *cipher_text, const u8 *ad, size_t ad_size,
+                              const u8 *plain_text, size_t text_size)
+{
+    u8 auth_key[64]; // the last 32 bytes are used for rekeying.
+    crypto_chacha20_ctr(auth_key, 0, 64, ctx->key, ctx->nonce, ctx->counter);
     crypto_chacha20_ctr(cipher_text, plain_text, text_size,
-                        sub_key, nonce + 16, 1);
+                        ctx->key, ctx->nonce, ctx->counter + 1);
     lock_auth(mac, auth_key, ad, ad_size, cipher_text, text_size);
-    WIPE_BUFFER(sub_key);
+    COPY(ctx->key, auth_key + 32, 32);
     WIPE_BUFFER(auth_key);
 }
 
-int crypto_unlock_aead(u8 *plain_text, const u8 key[32], const u8 nonce[24],
-                       const u8  mac[16],
-                       const u8 *ad         , size_t ad_size,
-                       const u8 *cipher_text, size_t text_size)
+int crypto_stream_read_aead(crypto_stream_ctx *ctx, u8 *plain_text,
+                            const u8  mac[16], const u8 *ad, size_t ad_size,
+                            const u8 *cipher_text, size_t text_size)
 {
-    u8 sub_key[32];
-    u8 auth_key[64]; // "Wasting" the whole Chacha block is faster
-    crypto_hchacha20(sub_key, key, nonce);
-    crypto_chacha20(auth_key, 0, 64, sub_key, nonce + 16);
+    u8 auth_key[64]; // the last 32 bytes are used for rekeying.
     u8 real_mac[16];
+    crypto_chacha20_ctr(auth_key, 0, 64, ctx->key, ctx->nonce, ctx->counter);
     lock_auth(real_mac, auth_key, ad, ad_size, cipher_text, text_size);
-    WIPE_BUFFER(auth_key);
     int mismatch = crypto_verify16(mac, real_mac);
     if (!mismatch) {
         crypto_chacha20_ctr(plain_text, cipher_text, text_size,
-                            sub_key, nonce + 16, 1);
+                            ctx->key, ctx->nonce, ctx->counter + 1);
+        COPY(ctx->key, auth_key + 32, 32);
     }
-    WIPE_BUFFER(sub_key);
+    WIPE_BUFFER(auth_key);
     WIPE_BUFFER(real_mac);
     return mismatch;
 }
 
-void crypto_lock(u8 mac[16], u8 *cipher_text,
-                 const u8 key[32], const u8 nonce[24],
-                 const u8 *plain_text, size_t text_size)
+void crypto_stream_write(crypto_stream_ctx *ctx, u8 mac[16], u8 *cipher_text,
+                         const u8 *plain_text, size_t text_size)
+{
+    crypto_stream_write_aead(ctx, mac, cipher_text, 0, 0,
+                             plain_text, text_size);
+}
+
+int crypto_stream_read(crypto_stream_ctx *ctx, u8 *plain_text, const u8 mac[16],
+                       const u8 *cipher_text, size_t text_size)
+{
+    return crypto_stream_read_aead(ctx, plain_text, mac, 0, 0,
+                                   cipher_text, text_size);
+}
+
+void crypto_lock_aead(u8 mac[16], u8 *cipher_text, const u8 key[32],
+                      const u8  nonce[24], const u8 *ad, size_t ad_size,
+                      const u8 *plain_text, size_t text_size)
+{
+    crypto_stream_ctx ctx;
+    crypto_stream_init(&ctx, key, nonce);
+    crypto_stream_write_aead(&ctx, mac, cipher_text, ad, ad_size,
+                             plain_text, text_size);
+    crypto_wipe(&ctx, sizeof(ctx));
+}
+
+int crypto_unlock_aead(u8 *plain_text, const u8 key[32], const u8 nonce[24],
+                       const u8  mac[16], const u8 *ad, size_t ad_size,
+                       const u8 *cipher_text, size_t text_size)
+{
+    crypto_stream_ctx ctx;
+    crypto_stream_init(&ctx, key, nonce);
+    int mismatch = crypto_stream_read_aead(&ctx, plain_text, mac, ad, ad_size,
+                                           cipher_text, text_size);
+    crypto_wipe(&ctx, sizeof(ctx));
+    return mismatch;
+}
+
+void crypto_lock(u8 mac[16], u8 *cipher_text, const u8 key[32],
+                 const u8 nonce[24], const u8 *plain_text, size_t text_size)
 {
     crypto_lock_aead(mac, cipher_text, key, nonce, 0, 0, plain_text, text_size);
 }
 
-int crypto_unlock(u8 *plain_text,
-                  const u8 key[32], const u8 nonce[24], const u8 mac[16],
-                  const u8 *cipher_text, size_t text_size)
+int crypto_unlock(u8 *plain_text, const u8 key[32], const u8 nonce[24],
+                  const u8 mac[16], const u8 *cipher_text, size_t text_size)
 {
     return crypto_unlock_aead(plain_text, key, nonce, mac, 0, 0,
                               cipher_text, text_size);
