@@ -315,9 +315,23 @@ static void aead_ietf(vector_reader *reader)
 	                 ad.buf, ad.size, text.buf, text.size);
 }
 
+static void aead_8439(vector_reader *reader)
+{
+    vector key   = next_input(reader);
+    vector nonce = next_input(reader);
+    vector ad    = next_input(reader);
+    vector text  = next_input(reader);
+    vector out   = next_output(reader);
+    crypto_aead_ctx ctx;
+    crypto_aead_init_ietf(&ctx, key.buf, nonce.buf);
+    crypto_aead_write(&ctx, out.buf + 16, out.buf, ad.buf, ad.size,
+                      text.buf, text.size);
+}
+
 static void test_aead()
 {
 	VECTORS(aead_ietf);
+	VECTORS(aead_8439);
 
 	printf("\taead (roundtrip)\n");
 	FOR (i, 0, 1000) {
@@ -349,6 +363,46 @@ static void test_aead()
 		crypto_lock_aead(box2, box2 + 16, key, nonce, 0, 0, plaintext, 8);
 		ASSERT_EQUAL(box, box2, 24);
 	}
+
+	printf("\taead incr (roundtrip)\n");
+	FOR (i, 0, 50) {
+		RANDOM_INPUT(key      , 32);
+		RANDOM_INPUT(nonce    , 24);
+		crypto_aead_ctx ctx_xa;
+		crypto_aead_ctx ctx_xb;
+		crypto_aead_ctx ctx_da;
+		crypto_aead_ctx ctx_db;
+		crypto_aead_ctx ctx_ia;
+		crypto_aead_ctx ctx_ib;
+		crypto_aead_init_x   (&ctx_xa, key, nonce);
+		crypto_aead_init_x   (&ctx_xb, key, nonce);
+		crypto_aead_init_djb (&ctx_da, key, nonce);
+		crypto_aead_init_djb (&ctx_db, key, nonce);
+		crypto_aead_init_ietf(&ctx_ia, key, nonce);
+		crypto_aead_init_ietf(&ctx_ib, key, nonce);
+
+		FOR (j, 0, 10) {
+			RANDOM_INPUT(ad,  4); // additional data
+			RANDOM_INPUT(pt,  8); // plaintext
+			u8 mac[16];
+			u8 ct [ 8];
+			u8 pt2[ 8];
+			// AEAD roundtrip (happy path)
+			crypto_aead_write         (&ctx_xa, ct , mac, ad, 4, pt, 8);
+			ASSERT_OK(crypto_aead_read(&ctx_xb, pt2, mac, ad, 4, ct, 8));
+			ASSERT_EQUAL(pt, pt2, 8);
+			ASSERT_EQUAL(&ctx_xa, &ctx_xb, sizeof(crypto_aead_ctx));
+
+			crypto_aead_write         (&ctx_da, ct , mac, ad, 4, pt, 8);
+			ASSERT_OK(crypto_aead_read(&ctx_db, pt2, mac, ad, 4, ct, 8));
+			ASSERT_EQUAL(pt, pt2, 8);
+
+			crypto_aead_write         (&ctx_ia, ct , mac, ad, 4, pt, 8);
+			ASSERT_OK(crypto_aead_read(&ctx_ib, pt2, mac, ad, 4, ct, 8));
+			ASSERT_EQUAL(pt, pt2, 8);
+		}
+	}
+	printf("\n");
 }
 
 ///////////////
