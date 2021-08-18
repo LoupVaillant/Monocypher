@@ -2027,24 +2027,6 @@ static void ge_double_scalarmult_vartime(ge *P, const u8 p[32], const u8 b[32])
     }
 }
 
-// R_check = s[B] - h_ram[pk], where B is the base point
-//
-// Variable time! Internal buffers are not wiped! Inputs must not be secret!
-// => Use only to *check* signatures.
-static int ge_r_check(u8 R_check[32], u8 s[32], u8 h_ram[32], u8 pk[32])
-{
-    ge  A;      // not secret, not wiped
-    u32 s32[8]; // not secret, not wiped
-    load32_le_buf(s32, s, 8);
-    if (ge_frombytes_neg_vartime(&A, pk) ||     // A = -pk
-        is_above_l(s32)) {                      // prevent s malleability
-        return -1;
-    }
-    ge_double_scalarmult_vartime(&A, h_ram, s); // A = [s]B - [h_ram]pk
-    ge_tobytes(R_check, &A);                    // R_check = A
-    return 0;
-}
-
 // 5-bit signed comb in cached format (Niels coordinates, Z=1)
 static const ge_precomp b_comb_low[8] = {
     {{-6816601,-2324159,-22559413,124364,18015490,
@@ -2352,16 +2334,21 @@ void crypto_check_update(crypto_check_ctx_abstract *ctx,
 
 int crypto_check_final(crypto_check_ctx_abstract *ctx)
 {
-    u8 h_ram[64];
+    u8 *s = ctx->buf + 32; // s
+    u8  h_ram[64];
+    u32 s32[8];            // s (different encoding)
+    ge  A;
+
     ctx->hash->final(ctx, h_ram);
     reduce(h_ram);
-    u8 *R       = ctx->buf;      // R
-    u8 *s       = ctx->buf + 32; // s
-    u8 *R_check = ctx->pk;       // overwrite ctx->pk to save stack space
-    if (ge_r_check(R_check, s, h_ram, ctx->pk)) {
+    load32_le_buf(s32, s, 8);
+    if (ge_frombytes_neg_vartime(&A, ctx->pk) ||  // A = -pk
+        is_above_l(s32)) {                        // prevent s malleability
         return -1;
     }
-    return crypto_verify32(R, R_check); // R == R_check ? OK : fail
+    ge_double_scalarmult_vartime(&A, h_ram, s);   // A = [s]B - [h_ram]pk
+    ge_tobytes(ctx->pk, &A);                      // R_check = A
+    return crypto_verify32(ctx->buf, ctx->pk);    // R == R_check ? OK : fail
 }
 
 int crypto_check(const u8  signature[64], const u8 public_key[32],
