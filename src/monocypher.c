@@ -1731,7 +1731,7 @@ static void ge_tobytes(u8 s[32], const ge *h)
     WIPE_BUFFER(y);
 }
 
-// h = s, where s is a point encoded in 32 bytes
+// h = -s, where s is a point encoded in 32 bytes
 //
 // Variable time!  Inputs must not be secret!
 // => Use only to *check* signatures.
@@ -1764,7 +1764,7 @@ static void ge_tobytes(u8 s[32], const ge *h)
 // reject it.  However, we are only using it to read EdDSA public keys,
 // And the legitimate ones never have low order. Indeed, some libraries
 // reject *all* low order points, on purpose.
-static int ge_frombytes_vartime(ge *h, const u8 s[32])
+static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
 {
     fe_frombytes(h->Y, s, 1);
     fe_1(h->Z);
@@ -1778,7 +1778,7 @@ static int ge_frombytes_vartime(ge *h, const u8 s[32])
         return -1;             // Not on the curve, abort
     }
     fe_mul(h->X, h->T, h->X);  // x = sqrt((y^2 - 1) / (d*y^2 + 1))
-    if (fe_isodd(h->X) != (s[31] >> 7)) {
+    if (fe_isodd(h->X) == (s[31] >> 7)) {
         fe_neg(h->X, h->X);
     }
     fe_mul(h->T, h->X, h->Y);
@@ -2036,12 +2036,10 @@ static int ge_r_check(u8 R_check[32], u8 s[32], u8 h_ram[32], u8 pk[32])
     ge  A;      // not secret, not wiped
     u32 s32[8]; // not secret, not wiped
     load32_le_buf(s32, s, 8);
-    if (ge_frombytes_vartime(&A, pk) ||         // A = pk
+    if (ge_frombytes_neg_vartime(&A, pk) ||     // A = -pk
         is_above_l(s32)) {                      // prevent s malleability
         return -1;
     }
-    fe_neg(A.X, A.X);
-    fe_neg(A.T, A.T);                           // A = -pk
     ge_double_scalarmult_vartime(&A, h_ram, s); // A = [s]B - [h_ram]pk
     ge_tobytes(R_check, &A);                    // R_check = A
     return 0;
