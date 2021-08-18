@@ -1758,6 +1758,12 @@ static void ge_tobytes(u8 s[32], const ge *h)
 //   isr = invsqrt(num * den)  // abort if not square
 //   x   = num * isr
 // Finally, negate x if its sign is not as specified.
+//
+// Note that using invsqrt causes this function to fail when y = 1.
+// The point (0, 1) *is* on the curve, so in principle we should not
+// reject it.  However, we are only using it to read EdDSA public keys,
+// And the legitimate ones never have low order. Indeed, some libraries
+// reject *all* low order points, on purpose.
 static int ge_frombytes_vartime(ge *h, const u8 s[32])
 {
     fe_frombytes(h->Y, s, 1);
