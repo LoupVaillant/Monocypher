@@ -4,10 +4,10 @@
 ### Prologue. Do not modify this block. #######################################
 -include path.mk
 FRAMAC ?= frama-c
-include $(shell $(FRAMAC)-config -scripts)/prologue.mk
+include $(shell $(FRAMAC)-config -print-share-path)/analysis-scripts/prologue.mk
 ###############################################################################
 
-# Edit below as needed. MACHDEP is mandatory. Suggested flags are optional.
+# Edit below as needed. Suggested flags are optional.
 
 MACHDEP = x86_64
 
@@ -25,11 +25,13 @@ FCFLAGS     += \
 
 ## Eva-specific flags
 EVAFLAGS    += \
+  -eva-slevel 8 \
+  -eva-split-return auto \
+  -eva-warn-key signed-overflow=inactive \
   -eva-warn-key builtins:missing-spec=abort \
 
 ## GUI-only flags
 FCGUIFLAGS += \
-  -add-symbolic-path=.:.. \
 
 ## Analysis targets (suffixed with .eva)
 TARGETS = monocypher.eva
@@ -42,6 +44,6 @@ monocypher.parse: \
   ../tests/utils.c \
 
 ### Epilogue. Do not modify this block. #######################################
-include $(shell $(FRAMAC)-config -scripts)/epilogue.mk
+include $(shell $(FRAMAC)-config -print-share-path)/analysis-scripts/epilogue.mk
 ###############################################################################
 
