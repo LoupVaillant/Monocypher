@@ -2,9 +2,11 @@ name: Frama-C-Eva-SARIF
 
 on:
   push:
-    branches: [ master ]
+    branches:
+    - '*'
   pull_request:
-    branches: [ master ]
+    branches:
+    - '*'
 
 jobs:
   run_eva:
@@ -13,7 +15,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Run Frama-C/Eva
       id: eva
-      uses: frama-c/github-action-eva-sarif@v1
+      uses: frama-c/github-action-eva-sarif@v2
       with:
         eva-target: 'monocypher.eva'
     - name: Alarm count
