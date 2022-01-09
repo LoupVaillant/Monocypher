@@ -178,21 +178,21 @@ for advice about how to generate cryptographically secure random bytes.
 .Pp
 Computing a message authentication code all at once:
 .Bd -literal -offset indent
-uint8_t hash   [64]; /* Output hash  (between 1 and 64 bytes)  */
-uint8_t key    [32]; /* Key          (at least 1 byte)         */
+uint8_t hash   [64];                /* Output hash             */
+uint8_t key    [32];                /* Key                     */
 uint8_t message[10] = "Lorem ipsu"; /* Message to authenticate */
 arc4random_buf(key, 32);
-crypto_hmac_sha512(hash, key, 32, message, 500);
+crypto_hmac_sha512(hash, key, 32, message, 10);
 /* Wipe secrets if they are no longer needed */
-crypto_wipe(message, 500);
+crypto_wipe(message, 10);
 crypto_wipe(key, 32);
 .Ed
 .Pp
 Computing a message authentication code incrementally:
 .Bd -literal -offset indent
-uint8_t hash   [64]; /* Output hash  (between 1 and 64 bytes)  */
-uint8_t key    [32]; /* Key          (at least 1 byte)         */
-uint8_t message[500] = {1}; /* Message to authenticate         */
+uint8_t hash   [64];        /* Output hash             */
+uint8_t key    [32];        /* Key                     */
+uint8_t message[500] = {1}; /* Message to authenticate */
 crypto_hmac_sha512_ctx ctx;
 arc4random_buf(key, 32);
 crypto_hmac_sha512_init(&ctx, key, 32);
