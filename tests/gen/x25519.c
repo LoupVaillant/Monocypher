@@ -61,7 +61,7 @@ static void test()
     crypto_scalarmult_base(pk1, sk1);
     crypto_scalarmult_base(pk2, sk2);
     if (crypto_scalarmult(shared, sk1, pk2)) {
-        fprintf(stderr, "Libsodium rejected the public key\n");
+        fprintf(stderr, "libsodium rejected the public key\n");
         printf(":deadbeef:\n"); // prints a canary to fail subsequent tests
     }
 

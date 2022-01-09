@@ -135,7 +135,7 @@ $(VEC2):
 prelude.h.vec:
 	@echo "creating prelude.h.vec"
 	@echo "// Generated with hard coded official vectors, and"     >  $@
-	@echo "// random vectors with Libsodium and ed25519-donna."    >> $@
+	@echo "// random vectors with libsodium and ed25519-donna."    >> $@
 	@echo "// Download Monocypher's git repository to regenerate." >> $@
 	@echo "#include <inttypes.h>"                                  >> $@
 	@echo "#include <stddef.h>"                                    >> $@

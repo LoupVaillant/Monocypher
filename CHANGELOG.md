@@ -118,7 +118,7 @@
 - Changed the authenticated encryption format.  It now conforms to
   RFC 7539, with one exception: it uses XChacha20 initialisation instead
   of the IETF version of Chacha20.  This new format conforms to
-  Libsodium's `crypto_aead_xchacha20poly1305_ietf_encrypt`.
+  libsodium's `crypto_aead_xchacha20poly1305_ietf_encrypt`.
 - Removed `crypto_lock_encrypt()` and `crypto_lock_auth()`.
 - Renamed `crypto_lock_aead_auth()` to `crypto_lock_auth_ad()`.
 - Renamed `crypto_unlock_aead_auth()` to `crypto_unlock_auth_ad()`.

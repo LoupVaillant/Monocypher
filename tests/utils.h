@@ -66,7 +66,7 @@ typedef uint64_t u64;
 #define SODIUM_INIT                                     \
     do {                                                \
         if (sodium_init() == -1) {                      \
-            printf("Libsodium init failed.  Abort.\n"); \
+            printf("libsodium init failed.  Abort.\n"); \
             return 1;                                   \
         }                                               \
     } while (0)

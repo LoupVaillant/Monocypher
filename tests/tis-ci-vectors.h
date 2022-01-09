@@ -1,5 +1,5 @@
 // Generated with hard coded official vectors, and
-// random vectors with Libsodium and ed25519-donna.
+// random vectors with libsodium and ed25519-donna.
 // Download Monocypher's git repository to regenerate.
 #include <inttypes.h>
 #include <stddef.h>

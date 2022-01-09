@@ -137,7 +137,7 @@ static u64 x25519(void)
 
     TIMING_START {
         if (crypto_scalarmult(out, out, in)) {
-            fprintf(stderr, "Libsodium rejected the public key\n");
+            fprintf(stderr, "libsodium rejected the public key\n");
         }
     }
     TIMING_END;
@@ -168,7 +168,7 @@ static u64 edDSA_check(void)
 
     TIMING_START {
         if (crypto_sign_verify_detached(signature, message, 64, pk)) {
-            printf("Libsodium verification failed\n");
+            printf("libsodium verification failed\n");
         }
     }
     TIMING_END;
