@@ -81,4 +81,4 @@ direct(fe(0), 3) # representative 0 maps to point (0, 0)
 seed(12345)
 
 for i in range(50):
-    direct(fe(randrange(0, (p-1)/2)), i % 4)
+    direct(fe(randrange(0, (p-1)//2)), i % 4)
