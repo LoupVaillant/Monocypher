@@ -212,6 +212,13 @@ unrolled loop _slower_ (possibly because of the cost of fetching 5KB of
 additional code).  If you're using an embedded platform, try this
 option.  The binary will be about 5KB smaller, and in some cases faster.
 
+The `change-prefix.sh` script can rename all functions by replacing
+"crypto_" by a chosen prefix, so you can avoid name clashes. For
+instance, the following command changes all instances of "crypto_" by
+"foobar_" (note the absence of the underscore):
+
+    ./change-prefix.sh foobar
+
 
 Contributor notes
 -----------------
