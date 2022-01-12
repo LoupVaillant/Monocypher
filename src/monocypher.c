@@ -53,6 +53,10 @@
 
 #include "monocypher.h"
 
+#ifdef MONOCYPHER_CPP_NAMESPACE
+namespace MONOCYPHER_CPP_NAMESPACE {
+#endif
+
 /////////////////
 /// Utilities ///
 /////////////////
@@ -2957,3 +2961,7 @@ int crypto_unlock(u8 *plain_text,
     return crypto_unlock_aead(plain_text, key, nonce, mac, 0, 0,
                               cipher_text, text_size);
 }
+
+#ifdef MONOCYPHER_CPP_NAMESPACE
+}
+#endif

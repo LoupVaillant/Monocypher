@@ -57,7 +57,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifdef __cplusplus
+#ifdef MONOCYPHER_CPP_NAMESPACE
+namespace MONOCYPHER_CPP_NAMESPACE {
+#elif defined(__cplusplus)
 extern "C" {
 #endif
 

@@ -79,6 +79,10 @@
 #include "chacha20.h"
 #include "monocypher.h"
 
+#ifdef MONOCYPHER_CPP_NAMESPACE
+namespace MONOCYPHER_CPP_NAMESPACE {
+#endif
+
 #define FOR_T(type, i, start, end) for (type i = (start); i < (end); i++)
 #define FOR(i, start, end)         FOR_T(size_t, i, start, end)
 #define WIPE_CTX(ctx)              crypto_wipe(ctx   , sizeof(*(ctx)))
@@ -146,3 +150,7 @@ void crypto_chacha20_stream(crypto_chacha_ctx *ctx, u8 *stream, size_t size)
 {
     crypto_chacha20_encrypt(ctx, stream, 0, size);
 }
+
+#ifdef MONOCYPHER_CPP_NAMESPACE
+}
+#endif

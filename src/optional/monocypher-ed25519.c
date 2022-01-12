@@ -53,6 +53,10 @@
 
 #include "monocypher-ed25519.h"
 
+#ifdef MONOCYPHER_CPP_NAMESPACE
+namespace MONOCYPHER_CPP_NAMESPACE {
+#endif
+
 /////////////////
 /// Utilities ///
 /////////////////
@@ -407,3 +411,7 @@ void crypto_from_ed25519_private(u8 x25519[32], const u8 eddsa[32])
     COPY(x25519, a, 32);
     WIPE_BUFFER(a);
 }
+
+#ifdef MONOCYPHER_CPP_NAMESPACE
+}
+#endif
