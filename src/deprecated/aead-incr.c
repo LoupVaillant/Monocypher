@@ -87,6 +87,10 @@
 
 #include "aead-incr.h"
 
+#ifdef MONOCYPHER_CPP_NAMESPACE
+namespace MONOCYPHER_CPP_NAMESPACE {
+#endif
+
 #define FOR_T(type, i, start, end) for (type i = (start); i < (end); i++)
 #define FOR(i, start, end)         FOR_T(size_t, i, start, end)
 #define WIPE_CTX(ctx)              crypto_wipe(ctx   , sizeof(*(ctx)))
@@ -227,3 +231,7 @@ int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
     WIPE_BUFFER(real_mac);
     return mismatch;
 }
+
+#ifdef MONOCYPHER_CPP_NAMESPACE
+}
+#endif

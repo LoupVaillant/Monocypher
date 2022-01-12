@@ -55,3 +55,7 @@ Mike Hamburg explained comb algorithms, including the signed
 all-bits-set comb described in his 2012 paper, Fast and compact
 elliptic-curve cryptography.  This made EdDSA signatures over twice as
 fast.
+
+Jens Alfke added some #ifdefs that enabled Monocypher to compile into
+a C++ namespace, preventing symbol collisions with similarly-named
+functions in other crypto libraries.
