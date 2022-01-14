@@ -585,7 +585,7 @@ static int p_sha512()
         // Compare the results (must be the same)
         status |= memcmp(hash_chunk, hash_whole, 64);
     }
-    printf("%s: Sha512 (incremental)\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: SHA-512 (incremental)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
@@ -602,7 +602,7 @@ static int p_sha512_overlap()
         crypto_sha512(input+i, input + 64, SHA_512_BLOCK_SIZE);
         status |= memcmp(hash, input + i, 64);
     }
-    printf("%s: Sha512 (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: SHA-512 (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 

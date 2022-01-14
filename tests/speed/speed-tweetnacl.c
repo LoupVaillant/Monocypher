@@ -160,7 +160,7 @@ int main()
     print("Salsa20          ",salsa20()      *MUL,"megabytes  per second");
     print("Poly1305         ",poly1305()     *MUL,"megabytes  per second");
     print("Auth'd encryption",authenticated()*MUL,"megabytes  per second");
-    print("Sha512           ",sha512()       *MUL,"megabytes  per second");
+    print("SHA-512          ",sha512()       *MUL,"megabytes  per second");
     print("x25519           ",x25519()           ,"exchanges  per second");
     print("EdDSA(sign)      ",edDSA_sign()       ,"signatures per second");
     print("EdDSA(check)     ",edDSA_check()      ,"checks     per second");
