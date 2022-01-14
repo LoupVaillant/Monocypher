@@ -451,7 +451,7 @@ void crypto_poly1305(u8     mac[16],  const u8 *message,
 }
 
 ////////////////
-/// Blake2 b ///
+/// BLAKE2 b ///
 ////////////////
 static const u64 iv[8] = {
     0x6a09e667f3bcc908, 0xbb67ae8584caa73b,
@@ -665,7 +665,7 @@ static void wipe_block(block *b)
     ZERO(a, 128);
 }
 
-// updates a Blake2 hash with a 32 bit word, little endian.
+// updates a BLAKE2 hash with a 32 bit word, little endian.
 static void blake_update_32(crypto_blake2b_ctx *ctx, u32 input)
 {
     u8 buf[4];

@@ -537,11 +537,11 @@ static int p_blake2b()
         // Compare the results (must be the same)
         status |= memcmp(hash_chunk, hash_whole, 64);
     }
-    printf("%s: Blake2b (incremental)\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: BLAKE2b (incremental)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 
-// Tests that the input and output buffers of Blake2b can overlap.
+// Tests that the input and output buffers of BLAKE2b can overlap.
 static int p_blake2b_overlap()
 {
 #undef INPUT_SIZE
@@ -554,7 +554,7 @@ static int p_blake2b_overlap()
         crypto_blake2b(input+i, input + 64, BLAKE2B_BLOCK_SIZE);
         status |= memcmp(hash, input + i, 64);
     }
-    printf("%s: Blake2b (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
+    printf("%s: BLAKE2b (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
     return status;
 }
 

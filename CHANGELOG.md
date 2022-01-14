@@ -89,7 +89,7 @@
 -----
 2018/06/16
 
-- Corrected undefined behaviour in Blake2b
+- Corrected undefined behaviour in BLAKE2b
 - Improved the test suite (faster, better coverage)
 
 2.0.2
@@ -144,7 +144,7 @@ boundaries.  The API changes increase consistency.
 2017/07/23
 
 - Optimised the loading and unloading code of the symmetric crypto
-  (Blake2b, sha512, Chacha20, and Poly1305).
+  (BLAKE2b, sha512, Chacha20, and Poly1305).
 - Fused self contained tests together for easier analysis with Frama-C
   and the TIS interpreter.
 
@@ -175,7 +175,7 @@ boundaries.  The API changes increase consistency.
 - Slightly changed the authenticated encryption API.  Functions are
   now all in "detached" mode.  The reason is better support for
   authenticated encryption _without_ additional data.
-- Rewrote Blake2b from spec, so it can use the same licence as
+- Rewrote BLAKE2b from spec, so it can use the same licence as
   everything else.
 - Added random tests that compare Monocypher with libsodium and
   ed25519-donna.

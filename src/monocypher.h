@@ -90,7 +90,7 @@ typedef struct {
     size_t   c_idx;  // How many bytes are there in the chunk.
 } crypto_poly1305_ctx;
 
-// Hash (Blake2b)
+// Hash (BLAKE2b)
 typedef struct {
     uint64_t hash[8];
     uint64_t input_offset[2];
@@ -160,7 +160,7 @@ int crypto_unlock_aead(uint8_t       *plain_text,
                        const uint8_t *cipher_text, size_t text_size);
 
 
-// General purpose hash (Blake2b)
+// General purpose hash (BLAKE2b)
 // ------------------------------
 
 // Direct interface
@@ -209,7 +209,7 @@ void crypto_key_exchange(uint8_t       shared_key      [32],
                          const uint8_t their_public_key[32]);
 
 
-// Signatures (EdDSA with curve25519 + Blake2b)
+// Signatures (EdDSA with curve25519 + BLAKE2b)
 // --------------------------------------------
 
 // Generate public key

@@ -207,7 +207,7 @@ int main()
     print("Chacha20            ",chacha20()     *MUL ,"megabytes  per second");
     print("Poly1305            ",poly1305()     *MUL ,"megabytes  per second");
     print("Auth'd encryption   ",authenticated()*MUL ,"megabytes  per second");
-    print("Blake2b             ",blake2b()      *MUL ,"megabytes  per second");
+    print("BLAKE2b             ",blake2b()      *MUL ,"megabytes  per second");
     print("Sha512              ",sha512()       *MUL ,"megabytes  per second");
     print("Argon2i, 3 passes   ",argon2i()      *MUL ,"megabytes  per second");
     print("x25519              ",x25519()            ,"exchanges  per second");
