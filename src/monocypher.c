@@ -2790,10 +2790,9 @@ void crypto_key_exchange(u8       shared_key[32],
 //   u = (t/r) % L    (u is always below 2*L, conditional subtraction is enough)
 static void redc(u32 u[8], u32 x[16])
 {
-    static const u32 k[8]  = { 0x12547e1b, 0xd2b51da3, 0xfdba84ff, 0xb1a206f2,
-                               0xffa36bea, 0x14e75438, 0x6fe91836, 0x9db6c6f2,};
-    static const u32 l[8]  = { 0x5cf5d3ed, 0x5812631a, 0xa2f79cd6, 0x14def9de,
-                               0x00000000, 0x00000000, 0x00000000, 0x10000000,};
+    static const u32 k[8] = { 0x12547e1b, 0xd2b51da3, 0xfdba84ff, 0xb1a206f2,
+                              0xffa36bea, 0x14e75438, 0x6fe91836, 0x9db6c6f2, };
+
     // s = x * k (modulo 2^256)
     // This is cheaper than the full multiplication.
     u32 s[8] = {0};
@@ -2806,7 +2805,7 @@ static void redc(u32 u[8], u32 x[16])
         }
     }
     u32 t[16] = {0};
-    multiply(t, s, l);
+    multiply(t, s, L);
 
     // t = t + x
     u64 carry = 0;
@@ -2819,8 +2818,6 @@ static void redc(u32 u[8], u32 x[16])
     // u = (t / 2^256) % L
     // Note that t / 2^256 is always below 2*L,
     // So a constant time conditional subtraction is enough
-    // We work with L directly, in a 2's complement encoding
-    // (-L == ~L + 1)
     remove_l(u, t+8);
 
     WIPE_BUFFER(s);
