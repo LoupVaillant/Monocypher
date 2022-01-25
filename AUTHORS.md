@@ -56,7 +56,7 @@ all-bits-set comb described in his 2012 paper, Fast and compact
 elliptic-curve cryptography.  This made EdDSA signatures over twice as
 fast.
 
-Samuel Lucas found many typos the manual and website.
+Samuel Lucas found many typos in both the manual and the website.
 
 Jens Alfke added some #ifdefs that enabled Monocypher to compile into
 a C++ namespace, preventing symbol collisions with similarly-named
