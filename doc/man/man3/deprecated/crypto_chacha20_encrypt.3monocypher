@@ -93,7 +93,7 @@
 .Sh DESCRIPTION
 These functions provided an incremental interface for the ChaCha20
 cipher.
-They are deprecated in favor of
+They were deprecated in favour of
 .Xr crypto_chacha20 3monocypher ,
 .Xr crypto_chacha20_ctr 3monocypher ,
 .Xr crypto_xchacha20 3monocypher , and
@@ -104,16 +104,17 @@ as the deprecated functions by using
 .Xr crypto_chacha20_ctr 3monocypher
 or
 .Xr crypto_xchacha20_ctr 3monocypher .
-Care needs to be taken with regards to handling the counter value
+However,
+care needs to be taken with regards to handling the counter value
 when migrating old code to use the new functions.
 The new functions
-.Em always return next counter value .
+.Em always return the next counter value .
 This means that input ciphertexts or plaintexts
 whose lengths are not exactly multiples of 64 bytes
 advance the counter, even though there is theoretically some space left
 in a ChaCha20 block.
 New applications should design their code so that either
-the protocl is not reliant on the counter covering the entire text
+the protocol is not reliant on the counter covering the entire text
 (e.g. by cutting input into independent chunks) or
 inputs are always such that their lengths are multiples of 64 bytes
 (e.g. by buffering input until 64 bytes have been obtained).
@@ -122,7 +123,7 @@ To obtain the raw ChaCha20 stream previously provided by
 .Fn crypto_chacha20_stream ,
 pass
 .Dv NULL
-to 
+to
 .Xr crypto_chacha20
 as plaintext.
 .Sh RETURN VALUES
@@ -137,8 +138,9 @@ These functions return nothing.
 .Xr intro 3monocypher
 .Sh HISTORY
 The
-.Fn crypto_chacha20_encrypt ,
-.Fn crypto_chacha20_init ,
+.Fn crypto_chacha20_encrypt
+and
+.Fn crypto_chacha20_init
 functions first appeared in Monocypher 0.1.
 .Fn crypto_chacha20_stream
 was added in Monocypher 0.2.

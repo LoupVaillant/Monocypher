@@ -107,12 +107,12 @@ and
 Prefer those simpler functions if possible.
 .Pp
 These functions provide Ed25519 public key signatures and verification
-with SHA-512 as the underlying hash function;
-they are interoperable with other Ed25519 implementations.
+with SHA-512 as the underlying hash function.
+They are interoperable with other Ed25519 implementations.
 If you have no interoperability requirements, prefer
 .Xr crypto_sign 3monocypher .
 .Pp
-The arguments, security considerations and semantics are the same as
+The arguments, security considerations, and semantics are the same as
 those described in
 .Xr crypto_sign_init_first_pass 3monocypher
 and
@@ -122,7 +122,7 @@ and
 .Fn crypto_ed25519_sign_init_second_pass ,
 .Fn crypto_ed25519_sign_update ,
 .Fn crypto_ed25519_sign_final ,
-.Fn crypto_ed25519_check_init
+.Fn crypto_ed25519_check_init ,
 and
 .Fn crypto_ed25519_check_update
 return nothing.

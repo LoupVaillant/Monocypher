@@ -85,10 +85,10 @@ The arguments are:
 The output point.
 .It Fa private_key
 The private key (scalar) to use.
-First, the value is clamped;
+First, the value is clamped,
 then the clamped value's multiplicative inverse (modulo the curve order)
-is determined;
-the clamped value's multiplicative inverse then has its cofactor
+is determined.
+The clamped value's multiplicative inverse then has its cofactor
 cleared,
 and that final value is then used for scalar multiplication.
 .It Fa curve_point

@@ -67,8 +67,8 @@
 .Sh DESCRIPTION
 .Fn crypto_hchacha20
 provides a not-so-cryptographic hash.
-It may be used for some specific purposes, such as X25519 key
-derivation, or XChaCha20 initialisation.
+It may be used for some specific purposes such as X25519 key
+derivation or XChaCha20 initialisation.
 If in doubt, do not use directly.
 Use
 .Xr crypto_blake2b 3monocypher

@@ -91,20 +91,20 @@ The arguments are:
 .It Fa signature
 The signature.
 .It Fa secret_key
-A 32-byte random number, known only to you.
+A 32-byte random number known only to you.
 See
 .Xr intro 3monocypher
 about random number generation (use your operating system's random
 number generator).
 Do not use the same private key for both signatures and key exchanges.
-The public keys are different, and revealing both may leak information.
+The public keys are different and revealing both may leak information.
 .It Fa public_key
 The public key, generated from
 .Fa secret_key
 with
 .Fn crypto_sign_public_key .
 .It Fa message
-Message to sign.
+The message to sign.
 .It Fa message_size
 Length of
 .Fa message ,
@@ -122,7 +122,7 @@ computes the public key of the specified secret key.
 .Fn crypto_sign
 signs a message with
 .Fa secret_key .
-The public key is optional, and will be recomputed if not provided.
+The public key is optional and will be recomputed if not provided.
 This recomputation doubles the execution time.
 .Pp
 .Fn crypto_check
@@ -130,7 +130,7 @@ checks that a given signature is genuine.
 Meaning, only someone who had the private key could have signed the
 message.
 .Sy \&It does not run in constant time .
-It does not have to in most threat models, because nothing is secret:
+It does not have to in most threat models because nothing is secret:
 everyone knows the public key, and the signature and message are
 rarely secret.
 If the message needs to be secret, use
@@ -235,7 +235,7 @@ The signing procedure is deterministic by specification and
 .Fn crypto_sign
 follows this specification.
 However, someone with the private key can generate arbitrarily many
-valid, canonical, different signatures of the same message.
+valid, canonical, and different signatures of the same message.
 Because of this, never assume that signatures are unique.
 .Ss Fault injection and power analysis
 Fault injection (also known as glitching) and power analysis may be used
@@ -243,9 +243,9 @@ to manipulate the resulting signature and recover the secret key in
 some cases.
 This requires hardware access.
 If attackers are expected to have such access and have the relevant
-equipment, you may try use the incremental interface provided by
+equipment, you could try using the incremental interface provided by
 .Xr crypto_sign_init_first_pass 3monocypher
-to mitigate the side channel attacks.
+to mitigate the side-channel attacks.
 Note that there may still be other power-related side channels (such as
 if the CPU leaks information when an operation overflows a register)
 that must be considered.

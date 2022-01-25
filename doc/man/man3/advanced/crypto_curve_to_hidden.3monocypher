@@ -85,10 +85,10 @@ They are intended for ephemeral (short-lived, possibly just one-time)
 X25519 keys, not for long-term public keys.
 After an initial key exchange involving hidden keys,
 subsequent key exchange messages should be encrypted instead;
-see, for example, the Noise protocol.
+see, for example, the Noise Protocol Framework.
 This is an
-.Em advanced feature
-\(en unless you are implementing an protocol that requires
+.Em advanced feature .
+Unless you are implementing an protocol that requires
 indistinguishability of all communications from random noise,
 consider
 .Xr crypto_key_exchange_public_key 3monocypher
@@ -108,7 +108,7 @@ takes a public key
 .Fa curve
 and a
 .Fa tweak ,
-hiding the public key it so that it is effectively indistinguishable
+hiding the public key so that it is effectively indistinguishable
 from random noise.
 Note that only
 .Xr crypto_x25519_dirty_fast 3monocypher
@@ -123,12 +123,12 @@ The
 must be chosen at random.
 Even then, this operation
 .Em may
-fail:
-Not all curve points are capable of being hidden.
+fail because
+not all curve points are capable of being hidden.
 In this case,
 .Fn crypto_curve_to_hidden
-must be tried again with a new key pair;
-the
+must be tried again with a new key pair,
+though
 .Fa tweak
 does not need to be changed.
 On average, two attempts are needed.
@@ -166,7 +166,7 @@ instead.
 The arguments are:
 .Bl -tag -width Ds
 .It Fa curve
-A point on the curve, which is a Curve25519 public key generated with
+A point on the curve which is a Curve25519 public key generated with
 either
 .Xr crypto_x25519_dirty_fast 3monocypher
 or
@@ -199,14 +199,15 @@ and
 arguments may overlap or point at the same buffer.
 .Sh RETURN VALUES
 .Fn crypto_curve_to_hidden
-returns 0 on success, -1 if the given
+returns 0 on success and -1 if the given
 .Fa curve
 argument is unsuitable for hiding.
 .Pp
 .Fn crypto_hidden_to_curve
 and
 .Fn crypto_hidden_key_pair
-return nothing; they cannot fail.
+return nothing.
+They cannot fail.
 .Sh EXAMPLES
 Generate a key pair manually using
 .Xr crypto_x25519_dirty_small 3monocypher
@@ -268,17 +269,17 @@ functions first appeared in Monocypher 3.1.0.
 .Sh SECURITY CONSIDERATIONS
 The secret keys for the public keys fed into
 .Fn crypto_curve_to_hidden
-.Sy must be chosen randomly ,
+.Sy must be chosen randomly
 rather than deterministically.
 Otherwise, the timing information given by the required number of
 retries also leaks information on the secret keys.
 .Pp
 These functions
 .Em help
-build highly difficult-to-analyze protocols,
+build highly difficult-to-analyse protocols
 but are insufficient by themselves:
-Other metadata, such as the amount of bytes sent in a packet or the size
-of the 32-byte random-looking string that represents the curve point
+Other metadata, such as the number of bytes sent in a packet or the size
+of the 32-byte random looking string that represents the curve point
 itself, can be very strong indicators of the use of cryptography.
 Consider using appropriate padding algorithms, such as PADME,
 and obscure other metadata as much as possible.

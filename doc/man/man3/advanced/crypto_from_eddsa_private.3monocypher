@@ -76,8 +76,8 @@ to keys for use with
 and
 .Xr crypto_x25519 3monocypher .
 This may be useful in some resource-constrained contexts or when no
-other key is available (for example, when retrieving SSH public keys
-from GitHub and reusing the SSH public keys as X25519 public keys).
+other key is available \(en for example when retrieving SSH public keys
+from GitHub and reusing the SSH public keys as X25519 public keys.
 .Pp
 The
 .Fn crypto_from_eddsa_private

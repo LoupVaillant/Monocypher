@@ -109,24 +109,26 @@ It can be decrypted by
 The arguments are:
 .Bl -tag -width Ds
 .It Fa key
-A 32-byte session key, shared between the sender and the recipient.
+A 32-byte session key shared between the sender and the recipient.
 It must be secret and random.
-Different methods can be used to produce and exchange this key, such
-as Diffie-Hellman key exchange, password key derivation (the password
-must be communicated on a secure channel), or even meeting physically.
+Different methods can be used to produce and exchange this key,
+such as Diffie-Hellman key exchange,
+password-based key derivation
+(the password must be communicated on a secure channel),
+or even meeting physically.
 See
 .Xr crypto_key_exchange 3monocypher
-for key exchange, and
+for key exchange and
 .Xr crypto_argon2i 3monocypher
-for password key derivation.
+for password-based key derivation.
 .It Fa nonce
 A 24-byte number, used only once with any given session key.
 It does not need to be secret or random, but it does have to be
 unique.
 .Em Never
 use the same nonce twice with the same key.
-This would reveal the XOR of 2 different messages, which allows
-decryption and forgeries.
+This would basically reveal the affected messages
+and leave you vulnerable to forgeries.
 The easiest (and recommended) way to generate this nonce is to
 select it at random.
 See
@@ -136,15 +138,15 @@ number generator).
 .It Fa mac
 A 16-byte
 .Em message authentication code
-(MAC), that can only be produced by someone who knows the session key.
+(MAC) that can only be produced by someone who knows the session key.
 This guarantee cannot be upheld if a nonce has been reused with the
-session key, because doing so allows the attacker to learn the
+session key because doing so allows the attacker to learn the
 authentication key associated with that nonce.
 The MAC is intended to be sent along with the ciphertext.
 .It Fa plain_text
 The secret message.
 Its contents will be kept hidden from attackers.
-Its length however, will
+Its length, however, will
 .Em not .
 Be careful when combining encryption with compression.
 See
@@ -171,7 +173,7 @@ first checks the integrity of an encrypted message.
 If it has been corrupted,
 .Fn crypto_unlock
 returns -1 immediately.
-Otherwise, it decrypts the message, then returns zero.
+Otherwise, it decrypts the message then returns zero.
 .Em Always check the return value .
 .Pp
 .Fn crypto_lock_aead
@@ -182,7 +184,7 @@ are variants of
 and
 .Fn crypto_unlock ,
 permitting additional data.
-Additional data is authenticated, but
+Additional data is authenticated but
 .Em not
 encrypted.
 This is used to authenticate relevant data that cannot be encrypted.
@@ -218,7 +220,7 @@ return 0 on success or -1 if the message was corrupted (i.e.
 mismatched the combination of
 .Fa key ,
 .Fa nonce ,
-.Fa ad
+.Fa ad ,
 and
 .Fa cipher_text ) .
 Corruption can be caused by transmission errors, programmer error, or an
@@ -317,7 +319,7 @@ if (crypto_unlock(text, key, nonce, mac, text, 12)) {
 .Sh STANDARDS
 These functions implement RFC 8439, with XChaCha20 instead of ChaCha20.
 XChaCha20 derives from ChaCha20 the same way XSalsa20 derives from
-Salsa20, and benefits from the same security reduction (proven secure
+Salsa20 and benefits from the same security reduction (proven secure
 as long as ChaCha20 itself is secure).
 .Sh HISTORY
 The

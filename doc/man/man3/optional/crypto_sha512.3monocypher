@@ -110,7 +110,7 @@ The arguments are:
 .Bl -tag -width Ds
 .It Fa hash
 The output hash,
-which is always 64 bytes long.
+which is always 64-bytes long.
 .It Fa message
 The message to hash.
 May overlap with
@@ -138,7 +138,7 @@ which sets up a context with the hashing parameters;
 .It
 update with
 .Fn crypto_sha512_update ,
-which hashes the message chunk by chunk, and keep the intermediary
+which hashes the message chunk by chunk and keeps the intermediary
 result in the context;
 .It
 and finalisation with
@@ -192,14 +192,14 @@ The
 .Fn crypto_sha512_update ,
 and
 .Fn crypto_sha512_final
-functions first appeared in Monocypher 0.3;
-they were not intended for use outside Monocypher itself and thus
+functions first appeared in Monocypher 0.3,
+but were not intended for use outside Monocypher itself and thus
 undocumented.
 They became part of the official API in Monocypher 3.0.0.
 .Sh SECURITY CONSIDERATIONS
 SHA-512 is a general-purpose cryptographic hash function;
 this means that it is not suited for hashing passwords and deriving
-cryptographic keys from passwords in particular.
+cryptographic keys from passwords.
 While cryptographic keys usually have hundreds of bits of entropy,
 passwords are often much less complex.
 When storing passwords as hashes or when deriving keys from them,

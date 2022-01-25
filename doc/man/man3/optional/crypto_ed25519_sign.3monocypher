@@ -84,8 +84,8 @@ The
 and
 .Fn crypto_ed25519_check
 functions provide Ed25519 public key signatures and verification
-with SHA-512 as the underlying hash function;
-they are interoperable with other Ed25519 implementations.
+with SHA-512 as the underlying hash function.
+They are interoperable with other Ed25519 implementations.
 If you have no interoperability requirements, prefer
 .Xr crypto_sign 3monocypher .
 .Pp
@@ -93,7 +93,7 @@ The arguments and security considerations are the same as those
 described in
 .Xr crypto_sign 3monocypher .
 .Pp
-An incremental interface is available; see
+For an incremental interface, see
 .Xr crypto_ed25519_sign_init_first_pass 3monocypher .
 .Sh RETURN VALUES
 .Fn crypto_ed25519_public_key

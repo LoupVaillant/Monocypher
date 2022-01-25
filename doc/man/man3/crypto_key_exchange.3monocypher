@@ -84,11 +84,11 @@ The arguments are:
 .It Fa shared_key
 The shared secret, known only to those who know a relevant secret key
 (yours or theirs).
-It is cryptographically random, and suitable for use with the
+It is cryptographically random and suitable for use with the
 .Xr crypto_lock 3monocypher
 family of functions.
 .It Fa your_secret_key
-A 32-byte random number, known only to you.
+A 32-byte random number known only to you.
 See
 .Xr intro 3monocypher
 for advice about generating random bytes (use the operating system's
@@ -107,16 +107,16 @@ and
 .Fa your_secret_key
 may overlap if the secret is no longer required.
 .Pp
-Some poorly designed protocols require to test for
+Some poorly designed protocols require a test for
 .Dq contributory
 behaviour, which ensures that no untrusted party forces the shared
 secret to a known constant.
 Protocols should instead be designed in such a way that no such check
-is necessary, namely by authenticating the other party or exchanging
+is necessary; namely, by authenticating the other party or exchanging
 keys over a trusted channel.
 .Pp
 Do not use the same secret key for both key exchanges and signatures.
-The public keys are different, and revealing both may leak information.
+The public keys are different and revealing both may leak information.
 If there really is no room to store or derive two different secret keys,
 consider generating a key pair for signatures and then converting it
 with
@@ -175,7 +175,7 @@ The
 .Fn crypto_key_exchange_public_key
 macro alias first appeared in Monocypher 1.1.0.
 .Sh SECURITY CONSIDERATIONS
-If either of the long term secret keys leaks, it may compromise
+If either of the long-term secret keys leaks, it may compromise
 .Em all past messages .
 This can be avoided by using protocols that provide forward secrecy,
 such as the X3DH key agreement protocol.

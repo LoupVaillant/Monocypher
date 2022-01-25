@@ -94,7 +94,7 @@ implements the Argon2i resource intensive hash algorithm,
 which can be used to hash passwords for storage and to derive keys
 from passwords.
 Argon2 won the password hashing competition in 2015.
-Unlike Scrypt, Argon2i is immune to timing attacks.
+Unlike scrypt, Argon2i is immune to timing attacks.
 .Ss Key exchange (Public Key Cryptography)
 .Xr crypto_key_exchange 3monocypher
 implements X25519, an elliptic curve Diffie Hellman key exchange
@@ -226,7 +226,7 @@ We currently recommend the
 .Ss Random number generation
 Use the facilities of your operating system.
 Avoid user space random number generators.
-They are easy to misuse, which has lead to countless vulnerabilities
+They are easy to misuse, which has led to countless vulnerabilities
 in the past.
 For instance, the random stream may be repeated if one is not careful
 with multi-threading, and forward secrecy is lost without proper key
@@ -241,7 +241,7 @@ in
 .In linux/random.h .
 Do not set any flag.
 .It
-BSD, Darwin/macOS, illumos as well as Solaris provide
+BSD, Darwin/macOS, illumos, and Solaris provide
 .Fn arc4random_buf
 in
 .In stdlib.h
@@ -256,7 +256,7 @@ Windows provides
 .Pp
 The
 .Pa /dev/urandom
-special file may be used on systems that do not provide an easy to use
+special file may be used on systems that do not provide an easy-to-use
 system call.
 Be careful though, being a file makes
 .Pa /dev/urandom
@@ -300,11 +300,11 @@ Researchers have demonstrated an attack on HTTPS to steal session
 cookies when compression is enabled, dubbed
 .Dq CRIME .
 .Ss Forward secrecy
-Long term secrets cannot be expected to stay safe indefinitely.
+Long-term secrets cannot be expected to stay safe indefinitely.
 Users may reveal them by mistake, or the host computer might have a
 vulnerability and be compromised.
 To mitigate this problem, some protocols guarantee that past messages
-are not compromised even if the long term keys are.
+are not compromised even if the long-term keys are.
 This is done by generating temporary keys, then encrypting messages
 using them.
 .Pp
@@ -333,7 +333,7 @@ Finally, swap can be disabled locally \(en this is often the only
 way.
 .Pp
 UNIX systems can disable swap for specific buffers with
-.Fn mlock ,
+.Fn mlock
 and disable swap for the whole process with
 .Fn mlockall .
 Windows can disable swap for specific buffers with

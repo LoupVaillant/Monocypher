@@ -126,11 +126,11 @@ If a protocol requires contributory behaviour,
 compare the output of
 .Fn crypto_x25519
 to an all-zero buffer using
-.Xr crypto_verify32 3monocypher ;
-abort the protocol if the output and the all-zero buffer are equal.
+.Xr crypto_verify32 3monocypher ,
+then abort the protocol if the output and the all-zero buffer are equal.
 .Pp
 Do not use the same secret key for both key exchanges and signatures.
-The public keys are different, and revealing both may leak information.
+The public keys are different and revealing both may leak information.
 If there really is no room to store or derive two different secret keys,
 consider generating a key pair for signatures and then converting it
 with
@@ -153,8 +153,8 @@ does not exist on your system, see
 for advice about how to generate cryptographically secure random bytes.
 .Pp
 Generate a pair of shared keys with your secret key and their public
-key.
-(This can help nonce management for full duplex communications.)
+key
+(this can help nonce management for full duplex communications).
 .Bd -literal -offset indent
 const uint8_t their_pk     [32]; /* Their public key          */
 uint8_t       your_sk      [32]; /* Your secret key           */
@@ -178,12 +178,12 @@ crypto_wipe(shared_secret, 32);
 This function implements X25519, described in RFC 7748.
 .Sh HISTORY
 The
-.Fn crypto_x25519 ,
+.Fn crypto_x25519
 and
 .Fn crypto_x25519_public_key
 functions first appeared in Monocypher 0.1.
 .Sh SECURITY CONSIDERATIONS
-If either of the long term secret keys leaks, it may compromise
+If either of the long-term secret keys leaks, it may compromise
 .Em all past messages .
 This can be avoided by using protocols that provide forward secrecy,
 such as the X3DH key agreement protocol.

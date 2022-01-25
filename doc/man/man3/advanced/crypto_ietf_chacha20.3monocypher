@@ -96,12 +96,12 @@ functions behave the same as
 and
 .Xr crypto_chacha20_ctr ,
 respectively,
-but use differently-sized nonce and counter values.
+but their counter and nonce have different sizes.
 The nonce encompasses 12 bytes and the counter is correspondingly
 reduced to 4 bytes.
-The short counter limits a single pair of key and nonce to 256 GiB of
+The short counter limits a single key and nonce pair to 256 GiB of
 data.
-A nonce of 12 bytes is
+A 12-bytes nonce is
 .Em just barely too short
 to be safely chosen at random;
 use a message counter instead.
@@ -116,7 +116,7 @@ returns the next
 to use with the same key and nonce values;
 this is always
 .Fa text_size
-divided by 64;
+divided by 64,
 plus one if there was a remainder.
 .Sh SEE ALSO
 .Xr crypto_chacha20 3monocypher ,
@@ -138,7 +138,7 @@ When using crypto_ietf_chacha20(),
 this occurs when encrypting more than 256 GiB of data and then
 incrementing the nonce.
 More specifically, this can be triggered by encrypting more than
-512 bytes with crypto_ietf_chacha20_ctr() at ctr = 0xffffffff,
+512 bytes with crypto_ietf_chacha20_ctr() at ctr = 0xffffffff
 then encrypting a message at nonce[0]+1 and ctr = 0;
 it can be observed that the keystreams are identical.
 .Pp
@@ -147,5 +147,5 @@ RFC 8439 only specifies that the upper limit of data per message is
 It does not specify what actions can or should be taken when this limit
 is exceeded.
 Encrypting more than 256 GiB of data is therefore
-.Sy undefined behaviour ;
+.Sy undefined behaviour .
 Monocypher may change the way it handles counter overflows at any time.

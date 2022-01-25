@@ -81,7 +81,7 @@
 .Sh DESCRIPTION
 These functions are variants of the
 .Xr crypto_sign_init_first_pass 3monocypher
-family of functions:
+family of functions.
 They provide the ability to replace the EdDSA hash function with any
 user-provided hash function.
 .Pp
@@ -100,7 +100,7 @@ resources or taking advantage of hardware support for cryptographic
 hash functions).
 Whenever possible, these functions should be avoided.
 .Pp
-To make available a custom hash algorithm for use with these functions,
+To make a custom hash algorithm available for use with these functions,
 a
 .Vt crypto_sign_vtable
 structure must be provided.
@@ -124,8 +124,8 @@ The outer signing context must contain a
 as
 .Em its first member .
 Other than that, the outer signing context may be defined freely.
-Logically, it is required to contain some kind of hash context as well,
-else it cannot work as a custom hash function.
+Logically, it is required to contain some kind of hash context as well;
+otherwise it cannot work as a custom hash function.
 .Pp
 Because the calling code cannot know the real type of the outer signing
 context,
@@ -141,7 +141,7 @@ The hash functions must not fail.
 If they somehow can fail,
 they have no way to propagate its error status,
 and thus the only ways to handle errors
-are to either assume an error never occurs (if reasonable),
+are to either assume an error never occurs (if reasonable)
 or to induce a crash in the code when an error occurs.
 .Pp
 The fields of
@@ -157,7 +157,7 @@ The output length
 be exactly 64 bytes.
 This will normally be constructed using the functions that provide the
 .Fa init ,
-.Fa update
+.Fa update ,
 and
 .Fa final
 members.
@@ -291,5 +291,6 @@ main(void)
 The
 .Fn crypto_sign_init_first_pass_custom_hash ,
 .Fn crypto_sign_public_key_custom_hash ,
+and
 .Fn crypto_check_init_first_pass_custom_hash
 functions first appeared in Monocypher 3.0.0.

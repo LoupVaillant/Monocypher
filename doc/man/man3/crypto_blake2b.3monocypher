@@ -101,7 +101,7 @@
 .Fa "uint8_t *hash"
 .Fc
 .Sh DESCRIPTION
-BLAKE2b is a fast cryptographically secure hash, based on the ideas of
+BLAKE2b is a fast cryptographically secure hash based on the ideas of
 ChaCha20.
 It is faster than MD5, yet just as secure as SHA-3.
 .Pp
@@ -111,8 +111,8 @@ use the
 .Xr crypto_argon2i 3monocypher
 family of functions for that purpose instead.
 .Pp
-BLAKE2b is immune to length extension attacks, and as such does not
-require any specific precautions, such as using the HMAC algorithm.
+BLAKE2b is immune to length extension attacks, and as such, does not
+require specific precautions such as using the HMAC algorithm.
 .Pp
 The arguments are:
 .Bl -tag -width Ds
@@ -172,14 +172,14 @@ The direct interface has two functions,
 and
 .Fn crypto_blake2b_general .
 .Fn crypto_blake2b
-is provided for convenience, and is equivalent to calling
+is provided for convenience and is equivalent to calling
 .Fn crypto_blake2b_general
 with no key and a 64-byte hash.
 .Pp
 .Fn crypto_blake2b_general
-users can specify the size of the hash, and use a secret key to
-make the hash unpredictable \(en useful for message authentication
-codes.
+users can specify the size of the hash and use a secret key to
+make the hash unpredictable,
+\(en which is useful for message authentication codes.
 Even when using a key, you do not have to wipe the context struct with
 .Xr crypto_wipe 3monocypher .
 .Ss Incremental interface
@@ -188,18 +188,18 @@ large files without using too much memory.
 This interface uses three steps:
 .Bl -bullet
 .It
-initialisation with
+Initialisation with
 .Fn crypto_blake2b_general_init
 or
 .Fn crypto_blake2b_init ,
 which sets up a context with the hashing parameters;
 .It
-update with
+Update with
 .Fn crypto_blake2b_update ,
-which hashes the message chunk by chunk, and keep the intermediary
+which hashes the message chunk by chunk and keeps the intermediary
 result in the context;
 .It
-and finalisation with
+and Finalisation with
 .Fn crypto_blake2b_final ,
 which produces the final hash.
 The
@@ -298,14 +298,14 @@ Make sure your inputs are correct.
 .Sh SECURITY CONSIDERATIONS
 BLAKE2b is a general-purpose cryptographic hash function;
 this means that it is not suited for hashing passwords and deriving
-cryptographic keys from passwords in particular.
+cryptographic keys from passwords.
 While cryptographic keys usually have hundreds of bits of entropy,
 passwords are often much less complex.
 When storing passwords as hashes or when deriving keys from them,
 the goal is normally to prevent attackers from quickly iterating all
 possible passwords.
 Because passwords tend to be simple,
-it is important to artificially slow down attackers by using especially
+it is important to artificially slow down attackers by using
 computationally difficult hashing algorithms.
 Monocypher therefore provides
 .Xr crypto_argon2i 3monocypher

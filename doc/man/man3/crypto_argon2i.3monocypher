@@ -55,7 +55,7 @@
 .Os
 .Sh NAME
 .Nm crypto_argon2i
-.Nd password key derivation
+.Nd password-based key derivation
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
@@ -87,11 +87,11 @@
 .Fa "uint32_t ad_size"
 .Fc
 .Sh DESCRIPTION
-Argon2i is a resource intensive password key derivation scheme
+Argon2i is a resource intensive password-based key derivation scheme
 optimised for the typical x86-like processor.
 It runs in constant time with respect to the contents of the password.
 .Pp
-Typical applications are password checking (for online services), and
+Typical applications are password checking (for online services) and
 key derivation (for encryption).
 Derived keys can be used to encrypt, for example, private keys or
 password databases.
@@ -127,7 +127,7 @@ constant time comparison functions.
 Temporary buffer for the algorithm, allocated by the caller.
 It must be
 .Fa nb_blocks
-× 1024 bytes big, and suitably aligned for 64-bit integers.
+× 1024 bytes big and suitably aligned for 64-bit integers.
 If you are not sure how to allocate that buffer, just use
 .Fn malloc .
 .Pp
@@ -177,7 +177,7 @@ The arguments may overlap or point at the same buffer.
 .Pp
 Use
 .Xr crypto_verify16 3monocypher ,
-.Xr crypto_verify32 3monocypher
+.Xr crypto_verify32 3monocypher ,
 or
 .Xr crypto_verify64 3monocypher
 to compare password hashes to prevent timing attacks.
@@ -194,8 +194,9 @@ The computation should use as much memory as can be spared.
 .Pp
 Since parameter selection depends on your hardware, some trial and error
 will be required in order to determine the ideal settings.
-Three iterations and 100000 blocks (that is, one hundred megabytes of
-memory) is a good starting point.
+Three iterations and 100000 blocks
+(one hundred megabytes of memory)
+is a good starting point.
 Adjust
 .Fa nb_blocks
 first.
@@ -217,10 +218,10 @@ if
 is zero.
 The key is generally not needed, but it does have some uses.
 In the context of password derivation, it would be stored separately
-from the password database, and would remain secret even if an
+from the password database and would remain secret even if an
 attacker were to steal the database.
 Note that changing the key requires rehashing the user's password,
-which is only possible upon user login.
+which is only possible upon user log in.
 .It Fa key_size
 Length of
 .Fa key ,

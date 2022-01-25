@@ -125,15 +125,15 @@ This requires five steps:
 .It
 Initialisation of the first pass with
 .Fn crypto_sign_init_first_pass .
-The public key is optional, and will be recomputed if not provided.
+The public key is optional and will be recomputed if not provided.
 This recomputation doubles the execution time for short messages.
 .It
 The first pass proper, with
 .Fn crypto_sign_update .
-.Sy Under no circumstances must you forget the first pass :
+.Sy Under no circumstances must you forget the first pass .
 Forgetting to call
 .Fn crypto_sign_update
-will appear to work in that it produces valid signatures,
+will appear to work in that it produces valid signatures
 but also
 loses all security because attackers may now recover the secret key.
 .It
@@ -166,7 +166,7 @@ Signature verification with
 .Fn crypto_sign_init_second_pass ,
 .Fn crypto_sign_update ,
 .Fn crypto_sign_final ,
-.Fn crypto_check_init
+.Fn crypto_check_init ,
 and
 .Fn crypto_check_update
 return nothing.
@@ -227,8 +227,8 @@ so randomness and padding must fill 32 bytes
 than the block
 size (96 bytes for BLAKE2b and SHA-512).
 Access to a cryptographically secure pseudo-random generator is a
-requirement for effective side channel mitigation.
-Signing a message with increased power-related side channel mitigations:
+requirement for effective side-channel mitigation.
+Signing a message with increased power-related side-channel mitigations:
 .Bd -literal -offset indent
 const uint8_t message  [   500]; /* Message to sign         */
 uint8_t       sk       [    32]; /* Secret key              */
@@ -268,7 +268,7 @@ These functions implement PureEdDSA with Curve25519 and BLAKE2b, as
 described in RFC 8032.
 This is the same as Ed25519, with BLAKE2b instead of SHA-512.
 .Pp
-The example for side channel mitigation follows the methodology outlined
+The example for side-channel mitigation follows the methodology outlined
 in I-D.draft-mattsson-cfrg-det-sigs-with-noise-02.
 .Sh HISTORY
 The
@@ -306,9 +306,8 @@ Do not process messages before calling
 When signing messages, the security considerations documented in
 .Xr crypto_sign 3monocypher
 also apply.
-In particular, if power-related side channels are part of your threat
-model,
-note that there may still be other power-related side channels (such as
+If power-related side-channels are part of your threat model,
+note that there may still be other power-related side-channels (such as
 if the CPU leaks information when an operation overflows a register)
 that must be considered.
 .Sh IMPLEMENTATION DETAILS

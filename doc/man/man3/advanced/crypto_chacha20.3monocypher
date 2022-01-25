@@ -114,8 +114,8 @@ Repeating a nonce with the same key reveals the XOR of two different
 messages, which allows decryption.
 24-byte nonces can be selected at random.
 8-byte nonces
-.Em cannot .
-They are too small, and the same nonce may be selected twice by
+.Em cannot
+because they are too small and the same nonce may be selected twice by
 accident.
 See
 .Xr intro 3monocypher
@@ -125,7 +125,7 @@ random number generator).
 The message to encrypt.
 It is allowed to be
 .Dv NULL ,
-in which case it will be interpreted as an all zero input.
+in which case it will be interpreted as an all-zero input.
 .Fa cipher_text
 will then contain the raw ChaCha20 stream.
 .It Fa cipher_text
@@ -148,7 +148,7 @@ buffers may overlap.
 .Fa plain_text
 and
 .Fa cipher_text
-must either be the same buffer (for in-place encryption), or
+must either be the same buffer (for in-place encryption) or
 non-overlapping.
 .Pp
 .Fn crypto_chacha20
@@ -193,7 +193,7 @@ The
 .Fa plain_text
 pointer is allowed to be
 .Dv NULL ,
-in which case it will be interpreted as an all zero input.
+in which case it will be interpreted as an all-zero input.
 This is useful as a user space random number generator.
 While
 .Sy this should not be used as a random number generator for secrets ,
@@ -204,22 +204,22 @@ Deterministic procedural generation and reproducible property-based
 tests come to mind.
 Additionally, it
 .Em can
-be used to generate large amounts of random-looking data quickly,
-for example to generate padding.
+be used to generate large amounts of random-looking data quickly
+\(en for example to generate padding.
 .Pp
 The
 .Fn crypto_chacha20_ctr
 and
 .Fn crypto_xchacha20_ctr
-perform a ChaCha20 or XChaCha20 encryption, respectively,
+perform ChaCha20 or XChaCha20 encryption,
 starting the stream at the block
 .Fa ctr
 (which is the byte
 .Ql ctr \(mu 64 ) .
-This can be used to encrypt (or decrypt) part of a long message, or to
+This can be used to encrypt (or decrypt) part of a long message or to
 implement some AEAD constructions such as the one described in RFC
 8439.
-Be careful when using this not to accidentally reuse parts of the
+When using this, be careful  not to accidentally reuse parts of the
 random stream as that would destroy confidentiality.
 .Sh RETURN VALUES
 .Fn crypto_chacha20
@@ -234,7 +234,7 @@ functions return the next
 to use with the same key and nonce values;
 this is always
 .Fa text_size
-divided by 64;
+divided by 64,
 plus one if there was a remainder.
 .Sh EXAMPLES
 The following examples assume the existence of
@@ -269,7 +269,7 @@ uint8_t       cipher_text[500]; /* Secret message           */
 crypto_xchacha20(cipher_text, plain_text, 500, key, nonce);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
-/* The plain text likely needs to be processed before you wipe it */
+/* The plaintext likely needs to be processed before you wipe it */
 crypto_wipe(plain_text, 12);
 .Ed
 .Pp
@@ -287,7 +287,7 @@ for(i = 0; i < 500; i += 64) {
     ctr = crypto_xchacha20_ctr(cipher_text+i, plain_text+i, 64,
                                key, nonce, ctr);
 }
-/* Process data that didn't fit into 64 byte pieces */
+/* Process data that didn't fit into 64-byte pieces */
 crypto_xchacha20_ctr(cipher_text+500-(i-64),
                      plain_text+500-(i-64),
                      500-(i-64),
@@ -297,7 +297,7 @@ crypto_wipe(key,        32);
 crypto_wipe(plain_text, 500);
 .Ed
 .Pp
-Encryption by jumping around (do not do that, this is only meant to show
+Encryption by jumping around (do not do this, this is only meant to show
 how
 .Fn crypto_xchacha20_ctr
 works):
@@ -335,7 +335,7 @@ ChaCha20 is described in:
 .Re
 The nonce and counter sizes were modified in RFC 8439.
 XChaCha20 derives from ChaCha20 the same way XSalsa20 derives from
-Salsa20, and benefits from the same security reduction (proven secure
+Salsa20 and benefits from the same security reduction (proven secure
 as long as ChaCha20 itself is secure).
 .Sh HISTORY
 .Fn crypto_chacha20 ,
@@ -357,14 +357,14 @@ that were deprecated in Monocypher 3.0.0.
 ChaCha20 only protects against eavesdropping, not forgeries.
 Most applications need protection against forgeries to be properly
 secure.
-To ensure the integrity of a message, use BLAKE2b in keyed mode, or
+To ensure the integrity of a message, use BLAKE2b in keyed mode or
 authenticated encryption; see
 .Xr crypto_blake2b 3monocypher
 and
 .Xr crypto_lock 3monocypher .
 .Ss Nonce reuse
 Repeating a nonce with the same key exposes the XOR of two or more
-plain text messages, effectively destroying confidentiality.
+plaintext messages, effectively destroying confidentiality.
 .Pp
 For the same reason,
 .Sy do not select small nonces at random .
@@ -373,14 +373,14 @@ The
 nonce spans only 64 bits, which is small enough to trigger accidental
 reuses.
 A message counter should be used instead.
-If multiple parties send out messages, Each can start with an initial
-nonce of 0, 1 .. n-1 respectively, and increment them by n for each
-new message.
+If multiple parties send out messages,
+each can start with an initial nonce of 0, 1, 2 (...) n-1 respectively,
+and increment them by n for each new message.
 Make sure the counters never wrap around.
 .Ss Secure random number generation
 Do not use these functions as a cryptographic random number generator.
 Always use the operating system's random number generator for
-cryptographic purposes, see
+cryptographic purposes; see
 .Xr intro 3monocypher .
 .Ss Protection against side channels
 Secrets should not dwell in memory longer than needed.
@@ -388,4 +388,4 @@ Use
 .Xr crypto_wipe 3monocypher
 to erase secrets you no longer need.
 For ChaCha20, this means the key and in some cases the
-plain text itself.
+plaintext itself.

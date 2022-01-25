@@ -97,7 +97,7 @@ The arguments are:
 .Bl -tag -width Ds
 .It Fa hmac
 The output MAC,
-which is always 64 bytes long.
+which is always 64-bytes long.
 .It Fa key
 Some secret key.
 One cannot predict the final hash without it.
@@ -138,7 +138,7 @@ which sets up a context with the hashing parameters;
 .It
 update with
 .Fn crypto_hmac_sha512_update ,
-which hashes the message chunk by chunk, and keep the intermediary
+which hashes the message chunk by chunk and keeps the intermediary
 result in the context;
 .It
 and finalisation with
@@ -163,7 +163,7 @@ the
 .Xr crypto_verify32 3monocypher ,
 and
 .Xr crypto_verify16 3monocypher
-functions can be used to to compare (possibly truncated) MACs.
+functions can be used to compare (possibly truncated) MACs.
 .Sh RETURN VALUES
 These functions return nothing.
 .Sh EXAMPLES

@@ -4,11 +4,11 @@ Designers
 - **ChaCha20:** Daniel J. Bernstein.
 - **Poly1305:** Daniel J. Bernstein.
 - **BLAKE2:**   Jean-Philippe Aumasson, Christian Winnerlein, Samuel Neves,
-                and Zooko Wilcox-O'Hearn
-- **Argon2:**   Alex Biryukov, Daniel Dinu, and Dmitry Khovratovich
-- **X25519:**   Daniel J. Bernstein
+                and Zooko Wilcox-O'Hearn.
+- **Argon2:**   Alex Biryukov, Daniel Dinu, and Dmitry Khovratovich.
+- **X25519:**   Daniel J. Bernstein.
 - **EdDSA:**    Daniel J. Bernstein, Bo-Yin Yang, Niels Duif, Peter
-                Schwabe, and Tanja Lange
+                Schwabe, and Tanja Lange.
 
 Implementors
 ------------
@@ -42,7 +42,7 @@ Thanks
 
 Fabio Scotoni provided much needed advice about testing, interface,
 packaging, and the general direction of the whole project.  He also
-redesigned monocypher.org style sheets.
+redesigned the monocypher.org style sheets.
 
 Mike Pechkin and André Maroneze found bugs in earlier versions of
 Monocypher.
@@ -55,6 +55,8 @@ Mike Hamburg explained comb algorithms, including the signed
 all-bits-set comb described in his 2012 paper, Fast and compact
 elliptic-curve cryptography.  This made EdDSA signatures over twice as
 fast.
+
+Samuel Lucas found many typos the manual and website.
 
 Jens Alfke added some #ifdefs that enabled Monocypher to compile into
 a C++ namespace, preventing symbol collisions with similarly-named

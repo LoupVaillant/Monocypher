@@ -84,21 +84,20 @@ Expect elliptic curve jargon on this page.
 Both functions generate a Curve25519 public key
 .Fa pk
 from the given secret key
-.Fa sk ;
-the public keys are on the
+.Fa sk .
+The public keys are on the
 .Em whole
 curve, rather than just the main prime-order subgroup.
 Both do the same with different code size and memory characteristics:
 .Fn crypto_x25519_dirty_fast
-uses multiple large temporary variables and uses functions that are
+uses multiple large temporary variables and functions that are
 normally used internally for
-.Xr crypto_sign 3monocypher ;
-accordingly, it uses both more memory (for the temporary variables) and
+.Xr crypto_sign 3monocypher .
+Accordingly, it uses both more memory (for the temporary variables) and
 more code size (unless the signing code is already compiled in
 elsewhere).
 .Fn crypto_x25519_dirty_small
-yields the same result, but does so using less code and memory at a
-large performance penalty compared to
+yields the same result with less code, less memory, and more time than
 .Fn crypto_x25519_dirty_fast .
 .Pp
 The resulting public keys are to be used with

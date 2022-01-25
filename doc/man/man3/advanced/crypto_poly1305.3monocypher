@@ -89,7 +89,7 @@ Poly1305 is a one-time message authentication code.
 .Dq One-time
 means the authentication key can be used only once.
 .Sy This makes Poly1305 easy to misuse .
-On the other hand, Poly1305 is fast, and provably secure if used
+On the other hand, Poly1305 is fast and provably secure if used
 correctly.
 .Pp
 Poly1305 is a low-level primitive.
@@ -99,7 +99,7 @@ Consider using authenticated encryption, implemented by
 The arguments are:
 .Bl -tag -width Ds
 .It Fa mac
-The authentication code.
+The message authentication code.
 .It Fa key
 The secret authentication key.
 Use only once per message.
@@ -130,7 +130,7 @@ to compare the received MAC to the output
 initialises a context.
 .Fa key
 should be wiped once the context is initialised.
-Then,
+Then
 .Fn crypto_poly1305_update
 authenticates the message chunk by chunk.
 Once the message is entirely processed,
@@ -244,7 +244,7 @@ That chunk must be
 .Em dedicated
 to the authentication key:
 if it is reused to encrypt the message itself, the attacker may recover
-that chunk by guessing the message, then forge arbitrary messages.
+that chunk by guessing the message then forge arbitrary messages.
 .Pp
 To get this right, you need a session key, a
 .Em unique
@@ -261,13 +261,13 @@ This is the approach used by
 Use
 .Xr crypto_verify16 3monocypher
 to compare message authentication codes.
-Avoid standard buffer comparison functions.
-They may not run in constant time, enabling an attacker to exploit timing
+Avoid standard buffer comparison functions:
+they may not run in constant time, enabling an attacker to exploit timing
 attacks to recover the MAC.
 .Pp
 The authentication key should be wiped with
 .Xr crypto_wipe 3monocypher
 after use.
 .Pp
-The incremental interface automatically wipes its context when finished
+The incremental interface automatically wipes its context when finished,
 so users do not need to do it themselves.

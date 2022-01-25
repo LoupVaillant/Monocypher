@@ -88,14 +88,14 @@ network along with a message, but the correct MAC is secret.
 If the attacker attempts a forgery, one does not want to reveal
 .Dq your MAC is wrong, Em and it took 384 microseconds to tell .
 If the next attempt takes 462 microseconds instead, it tells the
-attacker they just guessed a byte correctly.
-That way, an attacker can derive the correct MAC byte by byte,
+attacker that they just guessed a byte correctly.
+That way, an attacker can derive the correct MAC byte by byte
 and successfully forge a message.
-This has lead to practical attacks in the past.
+This has led to practical attacks in the past.
 .Pp
 To avoid such catastrophic failure,
 .Fn crypto_verify16 ,
-.Fn crypto_verify32
+.Fn crypto_verify32 ,
 and
 .Fn crypto_verify64
 provide comparison functions whose timing is independent from
@@ -109,7 +109,7 @@ and
 When in doubt, prefer these functions over
 .Fn memcmp .
 .Sh RETURN VALUES
-These functions return 0 if the two memory chunks are the same, -1
+These functions return 0 if the two memory chunks are the same and -1
 otherwise.
 .Sh SEE ALSO
 .Xr intro 3monocypher
@@ -117,7 +117,7 @@ otherwise.
 The
 .Fn crypto_verify16 ,
 .Fn crypto_verify32 ,
-.Fn crypto_verify64
+.Fn crypto_verify64 ,
 functions first appeared in Monocypher 1.1.0.
 They replaced the
 .Fn crypto_memcmp
