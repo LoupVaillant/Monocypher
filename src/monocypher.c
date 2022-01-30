@@ -1690,9 +1690,7 @@ static void mul_add(u8 r[32], const u8 a[32], const u8 b[32], const u8 c[32])
 {
     u32 A[8];  load32_le_buf(A, a, 8);
     u32 B[8];  load32_le_buf(B, b, 8);
-    u32 p[16];
-    load32_le_buf(p, c, 8);
-    ZERO(p + 8, 8);
+    u32 p[16]; load32_le_buf(p, c, 8);  ZERO(p + 8, 8);
     multiply(p, A, B);
     mod_l(r, p);
     WIPE_BUFFER(p);
