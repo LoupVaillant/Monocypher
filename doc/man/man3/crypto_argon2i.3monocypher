@@ -221,7 +221,7 @@ In the context of password derivation, it would be stored separately
 from the password database and would remain secret even if an
 attacker were to steal the database.
 Note that changing the key requires rehashing the user's password,
-which is only possible upon user log in.
+which is only possible upon user login.
 .It Fa key_size
 Length of
 .Fa key ,
