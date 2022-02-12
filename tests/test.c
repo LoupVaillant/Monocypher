@@ -328,9 +328,6 @@ static void elligator_inv(vector_reader *reader)
         printf("Elligator inverse map: failure mismatch\n");
         exit(1);
     }
-    if (check) {
-        out.buf[0] = 0;
-    }
 }
 
 //////////////////////////////

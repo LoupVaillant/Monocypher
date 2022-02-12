@@ -1375,7 +1375,7 @@ static int fe_isequal(const fe f, const fe g)
 }
 
 // Inverse square root.
-// Returns true if x is a non zero square, false otherwise.
+// Returns true if x is a square, false otherwise.
 // After the call:
 //   isr = sqrt(1/x)        if x is a non-zero square.
 //   isr = sqrt(sqrt(-1)/x) if x is not a square.
@@ -1457,6 +1457,7 @@ static int invsqrt(fe isr, const fe x)
     fe_mul(quartic, quartic, x);
 
     i32 *check = t2;
+    fe_0  (check);          int z0 = fe_isequal(x      , check);
     fe_1  (check);          int p1 = fe_isequal(quartic, check);
     fe_neg(check, check );  int m1 = fe_isequal(quartic, check);
     fe_neg(check, sqrtm1);  int ms = fe_isequal(quartic, check);
@@ -1470,7 +1471,7 @@ static int invsqrt(fe isr, const fe x)
     WIPE_BUFFER(t0);
     WIPE_BUFFER(t1);
     WIPE_BUFFER(t2);
-    return p1 | m1;
+    return p1 | m1 | z0;
 }
 
 // Inverse in terms of inverse square root.
@@ -1760,12 +1761,6 @@ static void ge_tobytes(u8 s[32], const ge *h)
 //   isr = invsqrt(num * den)  // abort if not square
 //   x   = num * isr
 // Finally, negate x if its sign is not as specified.
-//
-// Note that using invsqrt causes this function to fail when y = 1.
-// The point (0, 1) *is* on the curve, so in principle we should not
-// reject it.  However, we are only using it to read EdDSA public keys,
-// And the legitimate ones never have low order. Indeed, some libraries
-// reject *all* low order points, on purpose.
 static int ge_frombytes_neg_vartime(ge *h, const u8 s[32])
 {
     fe_frombytes(h->Y, s, 1);

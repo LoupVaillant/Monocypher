@@ -94,7 +94,7 @@ for cofactor in range(8):
             u.print()
             print(format(tweak, '02x') + ":")
             print('ff:') # Failure
-            print('00:') # dummy value for the hash
+            print(':') # dummy value for the hash
             print()
             break
 
