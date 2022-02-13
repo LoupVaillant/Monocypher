@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2017, 2019-2021 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2022 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2021 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2022 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd June 11, 2021
+.Dd February 13, 2022
 .Dt CRYPTO_LOCK 3MONOCYPHER
 .Os
 .Sh NAME
@@ -117,8 +117,8 @@ password-based key derivation
 (the password must be communicated on a secure channel),
 or even meeting physically.
 See
-.Xr crypto_key_exchange 3monocypher
-for key exchange and
+.Xr crypto_x25519 3monocypher
+for a bulding block for a key exchange protocol and
 .Xr crypto_argon2i 3monocypher
 for password-based key derivation.
 .It Fa nonce
@@ -313,7 +313,7 @@ if (crypto_unlock(text, key, nonce, mac, text, 12)) {
 }
 .Ed
 .Sh SEE ALSO
-.Xr crypto_key_exchange 3monocypher ,
+.Xr crypto_x25519 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS

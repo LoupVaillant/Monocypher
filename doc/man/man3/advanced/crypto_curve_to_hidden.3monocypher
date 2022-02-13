@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2020 Fabio Scotoni
+.\" Copyright (c) 2020, 2022 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -38,7 +38,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2020 by Fabio Scotoni
+.\" Written in 2020 and 2022 by Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -48,7 +48,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 31, 2020
+.Dd February 13, 2022
 .Dt CRYPTO_CURVE_TO_HIDDEN 3MONOCYPHER
 .Os
 .Sh NAME
@@ -91,8 +91,11 @@ This is an
 Unless you are implementing an protocol that requires
 indistinguishability of all communications from random noise,
 consider
-.Xr crypto_key_exchange_public_key 3monocypher
+.Xr crypto_x25519 3monocypher
 instead.
+Both this family of functions and
+.Xr crypto_x25519 3monocypher
+should be used as a building block to implement a key exchange protocol.
 .Pp
 For understanding what these functions do, it is important to note that
 a
@@ -234,12 +237,11 @@ uint8_t their_pk  [32]; /* Their unhidden public key */
 uint8_t your_sk   [32]; /* Your secret key           */
 uint8_t shared_key[32]; /* Shared session key        */
 crypto_hidden_to_curve(their_pk, hidden_pk);
-crypto_key_exchange(shared_key, your_sk, their_pk);
+crypto_x25519(shared_key, your_sk, their_pk);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(your_sk, 32);
 .Ed
 .Sh SEE ALSO
-.Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_x25519 3monocypher ,
 .Xr crypto_x25519_dirty_small 3monocypher ,
 .Xr intro 3monocypher

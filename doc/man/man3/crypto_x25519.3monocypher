@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2021 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2017, 2019-2020 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2020, 2022 Fabio Scotoni
 .\" Copyright (c) 2020 Richard Walmsley
 .\" All rights reserved.
 .\"
@@ -41,7 +41,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2021 by Loup Vaillant, Michael Savage, Fabio Scotoni and
+.\" Written in 2017-2022 by Loup Vaillant, Michael Savage, Fabio Scotoni and
 .\" Richard Walmsley
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
@@ -52,7 +52,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd June 6, 2021
+.Dd February 13, 2022
 .Dt CRYPTO_X25519 3MONOCYPHER
 .Os
 .Sh NAME
@@ -78,15 +78,14 @@ computes a shared secret with
 .Fa your_secret_key
 and
 .Fa their_public_key .
-It is a low-level primitive.
-Use
-.Xr crypto_key_exchange 3monocypher
-unless you have a specific reason not to.
+It is a low-level primitive;
+X25519 is a building block for protocols.
+To perform a key exchange,
+use a higher level protocol,
+such as the X3DH key agreement protocol.
 .Pp
 .Fn crypto_x25519_public_key
-is the same as
-.Xr crypto_key_exchange_public_key 3monocypher .
-It deterministically computes the public key from a random secret key.
+deterministically computes the public key from a random secret key.
 .Pp
 The arguments are:
 .Bl -tag -width Ds
@@ -172,7 +171,6 @@ const uint8_t *key_2 = shared_keys + 32; /* Shared key 2 */
 crypto_wipe(shared_secret, 32);
 .Ed
 .Sh SEE ALSO
-.Xr crypto_key_exchange 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
 This function implements X25519, described in RFC 7748.

@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2021 Loup Vaillant
 .\" Copyright (c) 2018 Michael Savage
-.\" Copyright (c) 2017, 2019-2021 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2022 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2021 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2022 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd June 11, 2021
+.Dd February 13, 2022
 .Dt INTRO 3MONOCYPHER
 .Os
 .Sh NAME
@@ -96,7 +96,7 @@ from passwords.
 Argon2 won the password hashing competition in 2015.
 Unlike scrypt, Argon2i is immune to timing attacks.
 .Ss Key exchange (Public Key Cryptography)
-.Xr crypto_key_exchange 3monocypher
+.Xr crypto_x25519 3monocypher
 implements X25519, an elliptic curve Diffie Hellman key exchange
 algorithm based on Curve25519.
 X25519 derives a shared secret from two private/public key pairs.
@@ -165,7 +165,6 @@ and
 .Xr crypto_hidden_to_curve 3monocypher ,
 .Xr crypto_ietf_chacha20 3monocypher ,
 .Xr crypto_ietf_chacha20_ctr 3monocypher ,
-.Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_lock_aead 3monocypher ,
 .Xr crypto_poly1305 3monocypher ,

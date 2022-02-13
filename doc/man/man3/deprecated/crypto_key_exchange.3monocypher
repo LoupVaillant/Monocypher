@@ -80,6 +80,11 @@ computes a shared key with your secret key and their public key.
 .Fn crypto_key_exchange_public_key
 deterministically computes the public key from a random secret key.
 .Pp
+These functions are
+.Sy deprecated
+in favor of using a higher level protocol with
+.Xr crypto_x25519 3monocypher .
+.Pp
 The arguments are:
 .Bl -tag -width Ds
 .It Fa shared_key
@@ -175,6 +180,8 @@ function first appeared in Monocypher 0.2.
 The
 .Fn crypto_key_exchange_public_key
 macro alias first appeared in Monocypher 1.1.0.
+Both were deprecated in Monocypher 3.1.3
+and are planned to be removed in Monocypher 4.0.0.
 .Sh SECURITY CONSIDERATIONS
 If either of the long-term secret keys leaks, it may compromise
 .Em all past messages .

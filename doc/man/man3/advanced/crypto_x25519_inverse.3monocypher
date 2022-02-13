@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2020 Fabio Scotoni
+.\" Copyright (c) 2020, 2022 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -38,7 +38,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2020 by Fabio Scotoni
+.\" Written in 2020 and 2022 by Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -48,7 +48,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 24, 2020
+.Dd February 13, 2022
 .Dt CRYPTO_X25519_INVERSE 3MONOCYPHER
 .Os
 .Sh NAME
@@ -71,8 +71,6 @@ of a scalar for X25519.
 unless you are implementing a protocol that requires this specifically,
 .Sy you likely have no reason to be using these functions
 and are probably looking for
-.Xr crypto_key_exchange 3monocypher
-or
 .Xr crypto_x25519 3monocypher
 instead.
 Expect elliptic curve jargon on this page.
