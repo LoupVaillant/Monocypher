@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2020 Fabio Scotoni
+.\" Copyright (c) 2020, 2022 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -38,7 +38,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2020 by Fabio Scotoni
+.\" Written in 2020 and 2022 by Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -48,7 +48,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 24, 2020
+.Dd February 13, 2022
 .Dt CRYPTO_X25519_DIRTY_FAST 3monocypher
 .Os
 .Sh NAME
@@ -75,8 +75,6 @@ unless you are reading this because you were referred here from
 .Xr crypto_curve_to_hidden 3monocypher ,
 .Sy you likely have no reason to be using these functions
 and are probably looking for
-.Xr crypto_key_exchange 3monocypher
-or
 .Xr crypto_x25519 3monocypher
 instead.
 Expect elliptic curve jargon on this page.
@@ -101,16 +99,13 @@ yields the same result with less code, less memory, and more time than
 .Fn crypto_x25519_dirty_fast .
 .Pp
 The resulting public keys are to be used with
-.Xr crypto_x25519 3monocypher
-or
-.Xr crypto_key_exchange 3monocypher ,
-which clear the cofactor.
+.Xr crypto_x25519 3monocypher ,
+which clears the cofactor.
 .Sh RETURN VALUES
 These functions have no return value.
 They cannot fail.
 .Sh SEE ALSO
 .Xr crypto_curve_to_hidden 3monocypher ,
-.Xr crypto_key_exchange_public_key 3monocypher ,
 .Xr crypto_x25519_public_key 3monocypher ,
 .Xr intro 3monocypher
 .Sh HISTORY
