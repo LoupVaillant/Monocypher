@@ -113,7 +113,6 @@ crypto_wipe(key, 32);
 crypto_wipe(in , 16);
 .Ed
 .Sh SEE ALSO
-.Xr crypto_chacha20_encrypt 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
 This function implements HChaCha20.
