@@ -95,8 +95,6 @@ substitute() {
             -e 's|href="crypto_blake2b_init.html"|           href="../crypto_blake2b_init.html"|           '\
             -e 's|href="crypto_blake2b_update.html"|         href="../crypto_blake2b_update.html"|         '\
             -e 's|href="crypto_check.html"|                  href="../crypto_check.html"|                  '\
-            -e 's|href="crypto_key_exchange.html"|           href="../crypto_key_exchange.html"|           '\
-            -e 's|href="crypto_key_exchange_public_key.html"|href="../crypto_key_exchange_public_key.html"|'\
             -e 's|href="crypto_lock_aead.html"|              href="../crypto_lock_aead.html"|              '\
             -e 's|href="crypto_lock.html"|                   href="../crypto_lock.html"|                   '\
             -e 's|href="crypto_sign.html"|                   href="../crypto_sign.html"|                   '\
@@ -107,6 +105,7 @@ substitute() {
             -e 's|href="crypto_verify32.html"|               href="../crypto_verify32.html"|               '\
             -e 's|href="crypto_verify64.html"|               href="../crypto_verify64.html"|               '\
             -e 's|href="crypto_wipe.html"|                   href="../crypto_wipe.html"|                   '\
+            -e 's|href="crypto_x25519.html"|                 href="../crypto_x25519.html"|                 '\
             -e 's|href="crypto_chacha20_ctr.html"|                      href="../advanced/crypto_chacha20_ctr.html"|                    '\
             -e 's|href="crypto_chacha20_H.html"|                        href="../advanced/crypto_chacha20_H.html"|                      '\
             -e 's|href="crypto_chacha20.html"|                          href="../advanced/crypto_chacha20.html"|                        '\
@@ -134,7 +133,6 @@ substitute() {
             -e 's|href="crypto_sign_update.html"|                       href="../advanced/crypto_sign_update.html"|                     '\
             -e 's|href="crypto_x25519_dirty_fast.html"|                 href="../advanced/crypto_x25519_dirty_fast.html"|               '\
             -e 's|href="crypto_x25519_dirty_small.html"|                href="../advanced/crypto_x25519_dirty_small.html"|              '\
-            -e 's|href="crypto_x25519.html"|                            href="../advanced/crypto_x25519.html"|                          '\
             -e 's|href="crypto_x25519_inverse.html"|                    href="../advanced/crypto_x25519_inverse.html"|                  '\
             -e 's|href="crypto_x25519_public_key.html"|                 href="../advanced/crypto_x25519_public_key.html"|               '\
             -e 's|href="crypto_xchacha20_ctr.html"|                     href="../advanced/crypto_xchacha20_ctr.html"|                   '\

@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2017-2019 Loup Vaillant
+.\" Copyright (c) 2017-2019, 2022 Loup Vaillant
 .\" Copyright (c) 2017 Michael Savage
 .\" Copyright (c) 2017, 2019 Fabio Scotoni
 .\" All rights reserved.
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2019 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2022 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd December 12, 2019
+.Dd February 14, 2022
 .Dt CRYPTO_LOCK_INIT 3MONOCYPHER
 .Os
 .Sh NAME
@@ -177,12 +177,10 @@ Corruption can be caused by transmission errors, programmer error, or an
 attacker's interference.
 .Em Always check the return value .
 .Sh SEE ALSO
-.Xr crypto_key_exchange 3monocypher ,
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_lock_aead 3monocypher ,
 .Xr crypto_unlock 3monocypher ,
 .Xr crypto_unlock_aead 3monocypher ,
-.Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh HISTORY
 The
