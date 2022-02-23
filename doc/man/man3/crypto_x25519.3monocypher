@@ -12,6 +12,7 @@
 .\" Copyright (c) 2017-2018 Michael Savage
 .\" Copyright (c) 2017, 2019-2020, 2022 Fabio Scotoni
 .\" Copyright (c) 2020 Richard Walmsley
+.\" Copyright (c) 2022 Samuel Lucas
 .\" All rights reserved.
 .\"
 .\"
@@ -41,8 +42,8 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2022 by Loup Vaillant, Michael Savage, Fabio Scotoni and
-.\" Richard Walmsley
+.\" Written in 2017-2022 by Loup Vaillant, Michael Savage, Fabio Scotoni,
+.\" Richard Walmsley and Samuel Lucas
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -52,7 +53,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 14, 2022
+.Dd February 23, 2022
 .Dt CRYPTO_X25519 3MONOCYPHER
 .Os
 .Sh NAME
@@ -94,11 +95,13 @@ The shared secret, known only to those who know a relevant secret key
 (yours or theirs).
 It is not cryptographically random.
 Do not use it directly as a key.
-Hash it with
-.Xr crypto_hchacha20 3monocypher
-or
+Hash it concatenated with
+.Fa your_public_key
+and
+.Fa their_public_key
+using
 .Xr crypto_blake2b 3monocypher
-first.
+for key derivation.
 .It Fa your_secret_key
 A 32-byte secret random number.
 See
@@ -192,6 +195,16 @@ If either of the long-term secret keys leaks, it may compromise
 .Em all past messages .
 This can be avoided by using protocols that provide forward secrecy,
 such as the X3DH key agreement protocol.
+.Pp
+Many (private, public) key pairs produce the same shared secret.
+Therefore, not including the public keys in the key derivation can
+lead to subtle vulnerabilities.
+This can be avoided by hashing the shared secret concatenated with
+both public keys.
+For example,
+.D1 BLAKE2b(shared_secret || your_pk || their_pk)
+using
+.Xr crypto_blake2b 3monocypher .
 .Sh IMPLEMENTATION DETAILS
 The most significant bit of the public key is systematically ignored.
 It is not needed because every public key should be smaller than
