@@ -107,7 +107,7 @@ Simple hash:
 .Bd -literal -offset indent
 uint8_t key[32]; /* Must have enough entropy           */
 uint8_t in [16]; /* Does not have to be random         */
-uint8_t out[32]; /* Will be random if the above holds */
+uint8_t out[32]; /* Will be random if the above holds  */
 arc4random_buf(key, 32);
 crypto_hchacha20(out, key, in);
 /* Wipe secrets if they are no longer needed */
