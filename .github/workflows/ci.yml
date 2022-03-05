@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    # Sequence of patterns matched against refs/heads
+    branches:
+      - feat/cfogelkl/github_actions
+      - master
+      - maain
+  workflow_dispatch:
+jobs:
+  # Build all apps signed by polestar
+  build-and-test:
+    name: Build monocypher and run unit tests
+    strategy:
+      matrix:
+        platform: [ubuntu-latest] # , ubuntu-latest
+    runs-on: ${{ matrix.platform }}
+    env:
+      RUN_NUMBER: ${{github.run_number}}
+      GITHUB_WORKFLOW: ${{github.workflow}}
+      GITHUB_REF: ${{github.ref}}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Make test vectors
+        run: |
+          pushd tests/gen
+          make
+          popd
+
+      - name: Run tests
+        run: |
+          make test
+
+      - name: Run speed tests
+        run: |
+          make speed
+
+      - name: Run tests with clang sanitizers and valgrind
+        run: |
+          ./tests/test.sh
+
+      - name: Run code coverage tests
+        run: |
+          ./tests/coverage.sh
