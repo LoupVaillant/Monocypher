@@ -52,8 +52,12 @@ jobs:
 
       - name: Run code coverage tests
         run: |
+          set +e
           ./tests/coverage.sh
+          set -e
 
       - name: Run tests with clang sanitizers and valgrind
         run: |
+          set +e
           ./tests/test.sh
+          set -e
