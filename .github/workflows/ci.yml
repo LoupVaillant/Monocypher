@@ -24,9 +24,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install libsodium
+      - name: Install dependencies
         run: |
-          sudo apt-get install -y libsodium-dev
+          sudo apt-get install -y libsodium-dev valgrind clang
 
       - name: Make test vectors
         run: |
