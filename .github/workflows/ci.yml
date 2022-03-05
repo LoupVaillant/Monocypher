@@ -30,8 +30,8 @@ jobs:
       - name: Install libsodium
         run: sudo apt-get install -y libsodium-dev
 
-      - name: Install clang and llvm
-        run: sudo apt-get install -y clang llvm
+      - name: Install clang
+        run: sudo apt-get install -y clang
 
       - name: Install valgrind
         run: sudo apt-get install -y valgrind
@@ -53,6 +53,9 @@ jobs:
       - name: Run tests with clang sanitizers and valgrind
         run: |
           ./tests/test.sh
+
+      - name: Install llvm
+        run: sudo apt-get install -y llvm
 
       - name: Run code coverage tests
         run: |
