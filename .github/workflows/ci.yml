@@ -39,16 +39,15 @@ jobs:
       - name: Make test vectors
         run: |
           pushd tests/gen
-          make
+          make clean && make
           popd
 
       - name: Run tests
-        run: |
-          make test
+        run: make clean && make test
 
       - name: Run speed tests
         run: |
-          make speed
+          make clean && make speed
 
       - name: Run code coverage tests
         run: |
