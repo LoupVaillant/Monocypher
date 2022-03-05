@@ -24,12 +24,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install libsodium
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libsodium-dev
+      - name: Ubuntu apt-get update
+        run: sudo apt-get update
 
-      - name: Install clang & llvm
+      - name: Install libsodium
+        run: sudo apt-get install -y libsodium-dev
+
+      - name: Install clang and llvm
         run: sudo apt-get install -y clang llvm
 
       - name: Install valgrind
