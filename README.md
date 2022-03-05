@@ -1,5 +1,7 @@
 [![TrustInSoft CI](https://ci.trust-in-soft.com/projects/LoupVaillant/Monocypher.svg?branch=master)](https://ci.trust-in-soft.com/projects/LoupVaillant/Monocypher)
 
+[![Github Actions CI](https://github.com/LoupVaillant/Monocypher/actions/workflows/ci.yml/badge.svg)](https://github.com/LoupVaillant/Monocypher/actions/workflows/ci.yml)
+
 
 Monocypher (Developer Edition)
 ------------------------------
