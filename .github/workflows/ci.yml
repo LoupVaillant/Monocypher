@@ -24,6 +24,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Install libsodium
+        run: |
+          sudo apt-get install -y libsodium-dev
+
       - name: Make test vectors
         run: |
           pushd tests/gen
