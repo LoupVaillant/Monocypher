@@ -23,7 +23,7 @@ jobs:
     name: Build monocypher and run unit tests
     strategy:
       matrix:
-        platform: [ubuntu-latest]
+        platform: [ubuntu-latest] #macos-latest could also be here, but not free for Open Source
     runs-on: ${{ matrix.platform }}
 
     steps:
