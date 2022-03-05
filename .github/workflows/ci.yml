@@ -4,22 +4,17 @@ on:
   push:
     # Sequence of patterns matched against refs/heads
     branches:
-      - feat/cfogelkl/github_actions
       - master
-      - maain
   workflow_dispatch:
 jobs:
-  # Build all apps signed by polestar
+  # Build and run tests. Note that the valgrind tests crash.
   build-and-test:
     name: Build monocypher and run unit tests
     strategy:
       matrix:
-        platform: [ubuntu-latest] # , ubuntu-latest
+        platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
-    env:
-      RUN_NUMBER: ${{github.run_number}}
-      GITHUB_WORKFLOW: ${{github.workflow}}
-      GITHUB_REF: ${{github.ref}}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
