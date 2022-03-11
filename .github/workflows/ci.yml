@@ -1,3 +1,54 @@
+# This file is dual-licensed.  Choose whichever licence you want from
+# the two licences listed below.
+#
+# The first licence is a regular 2-clause BSD licence.  The second licence
+# is the CC-0 from Creative Commons. It is intended to release Monocypher
+# to the public domain.  The BSD licence serves as a fallback option.
+#
+# SPDX-License-Identifier: BSD-2-Clause OR CC0-1.0
+#
+# ------------------------------------------------------------------------
+#
+# Copyright (c) 2017-2022, Loup Vaillant
+# All rights reserved.
+#
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the
+#    distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# ------------------------------------------------------------------------
+#
+# Written in 2017-2022 by Loup Vaillant
+# Written in 2022 by Chris Fogelklou
+#
+# To the extent possible under law, the author(s) have dedicated all copyright
+# and related neighboring rights to this software to the public domain
+# worldwide.  This software is distributed without any warranty.
+#
+# You should have received a copy of the CC0 Public Domain Dedication along
+# with this software.  If not, see
+# <https://creativecommons.org/publicdomain/zero/1.0/>
 name: CI
 
 on:
@@ -39,30 +90,81 @@ jobs:
       - name: Install clang and llvm
         run: sudo apt-get install -y clang llvm
 
-      - name: Install valgrind
-        run: sudo apt-get install -y valgrind
-
       - name: Make test vectors
         run: |
           pushd tests/gen
-          make clean && make
+          make clean && make -j4
           popd
 
       - name: Run tests
-        run: make clean && make test
+        run: make clean && make test -j4
 
       - name: Run speed tests
         run: |
-          make clean && make speed
+          make clean && make speed -j4
 
       - name: Run code coverage tests
         run: |
           ./tests/coverage.sh
 
-      # This test fails with a crash. The set +e handles this for now, but the source of the crash
-      # should be found and fixed.
-      - name: Run tests with clang sanitizers and valgrind (Fails!)
+      - name: Run tests with clang sanitizers
         run: |
-          set +e
-          ./tests/test.sh
-          set -e
+
+          make clean;  make test; make test-legacy -j4
+          echo "Make with O3 optimization and no blake2 loop unrolling"
+          make clean;  make test CFLAGS="-DBLAKE2_NO_UNROLLING -O3" -j4
+
+          echo "Make with address sanitizaton"
+          make clean;  make test CC="clang -std=c99" CFLAGS="-g -fsanitize=address" -j4
+
+          echo "Make with memory sanitizaton"
+          make clean;  make test CC="clang -std=c99" CFLAGS="-g -fsanitize=memory" -j4
+
+          echo "Make with undefined checks"
+          make clean;  make test CC="clang -std=c99" CFLAGS="-g -fsanitize=undefined" -j4
+
+          echo
+          echo "All sanitisers passed!"
+          echo
+
+      - name: Install valgrind
+        run: sudo apt-get install -y valgrind
+
+      - name: Fixme - Build, then run with valgrind (crashy with march=native)
+        run: |
+          echo "Ignore errors in this test suite"
+          set +e # Ignore errors
+
+          echo "Crashy Valgrind on GCC build with O3 and -march=native. TODO: Fix."
+          make clean; make test.out CFLAGS="-g -O3 -march=native" -j4
+          valgrind ./test.out
+
+          echo "Crashy Valgrind on CLANG build with O3 and -march=native. TODO: Fix."
+          make clean; make test.out CC="clang -std=c99" CFLAGS="-g -O3 -march=native" -j4
+          valgrind ./test.out
+
+          echo "Re-enable errors"
+          set -e # Re-enable errors
+
+      - name: Build, then run with valgrind (OK without march=native)
+        run: |
+
+          echo "Valgrind on GCC build with O2"
+          make clean; make test.out CFLAGS="-O2" -j4
+          valgrind ./test.out
+
+          echo "Valgrind on CLANG build with O2"
+          make clean; make test.out CC="clang -std=c99" CFLAGS="-O2" -j4
+          valgrind ./test.out
+
+          echo "Valgrind on GCC build with O3"
+          make clean; make test.out CFLAGS="-O3" -j4
+          valgrind ./test.out
+
+          echo "Valgrind on CLANG build with O3"
+          make clean; make test.out CC="clang -std=c99" CFLAGS="-O3" -j4
+          valgrind ./test.out
+
+          echo
+          echo "All valgrind tests passed!"
+          echo
