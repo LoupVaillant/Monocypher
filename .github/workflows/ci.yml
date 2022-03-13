@@ -148,14 +148,6 @@ jobs:
       - name: Build, then run with valgrind (OK without march=native)
         run: |
 
-          echo "Valgrind on GCC build with O2"
-          make clean; make test.out CFLAGS="-O2" -j4
-          valgrind ./test.out
-
-          echo "Valgrind on CLANG build with O2"
-          make clean; make test.out CC="clang -std=c99" CFLAGS="-O2" -j4
-          valgrind ./test.out
-
           echo "Valgrind on GCC build with O3"
           make clean; make test.out CFLAGS="-O3" -j4
           valgrind ./test.out
