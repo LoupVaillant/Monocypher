@@ -2680,43 +2680,36 @@ void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
 // Let sq = -non_square * u * (u+A)
 // if sq is not a square, or u = -A, there is no mapping
 // Assuming there is a mapping:
-//   if v is positive: r = sqrt(-(u+A) / u)
-//   if v is negative: r = sqrt(-u / (u+A))
+//    if v is positive: r = sqrt(-u     / (non_square * (u+A)))
+//    if v is negative: r = sqrt(-(u+A) / (non_square * u    ))
 //
 // We compute isr = invsqrt(-non_square * u * (u+A))
-// if it wasn't a non-zero square, abort.
+// if it wasn't a square, abort.
 // else, isr = sqrt(-1 / (non_square * u * (u+A))
 //
-// This causes us to abort if u is zero, even though we shouldn't. This
-// never happens in practice, because (i) a random point in the curve has
-// a negligible chance of being zero, and (ii) scalar multiplication with
-// a trimmed scalar *never* yields zero.
+// If v is positive, we return isr * u:
+//   isr * u = sqrt(-1 / (non_square * u * (u+A)) * u
+//   isr * u = sqrt(-u / (non_square * (u+A))
 //
-// Since:
+// If v is negative, we return isr * (u+A):
 //   isr * (u+A) = sqrt(-1     / (non_square * u * (u+A)) * (u+A)
-//   isr * (u+A) = sqrt(-(u+A) / (non_square * u * (u+A))
-// and:
-//   isr = u = sqrt(-1 / (non_square * u * (u+A)) * u
-//   isr = u = sqrt(-u / (non_square * u * (u+A))
-// Therefore:
-//   if v is positive: r = isr * (u+A)
-//   if v is negative: r = isr * u
+//   isr * (u+A) = sqrt(-(u+A) / (non_square * u)
 int crypto_curve_to_hidden(u8 hidden[32], const u8 public_key[32], u8 tweak)
 {
     fe t1, t2, t3;
-    fe_frombytes(t1, public_key, 1);
+    fe_frombytes(t1, public_key, 1); // t1 = u
 
-    fe_add(t2, t1, A);
+    fe_add(t2, t1, A);               // t2 = u + A
     fe_mul(t3, t1, t2);
     fe_mul_small(t3, t3, -2);
-    int is_square = invsqrt(t3, t3);
+    int is_square = invsqrt(t3, t3); // t3 = sqrt(-1 / non_square * u * (u+A))
     if (is_square) {
         // The only variable time bit.  This ultimately reveals how many
         // tries it took us to find a representable key.
         // This does not affect security as long as we try keys at random.
 
-        fe_ccopy    (t1, t2, tweak & 1);
-        fe_mul      (t3, t1, t3);
+        fe_ccopy    (t1, t2, tweak & 1); // multiply by u if v is positive,
+        fe_mul      (t3, t1, t3);        // multiply by u+A otherwise
         fe_mul_small(t1, t3, 2);
         fe_neg      (t2, t3);
         fe_ccopy    (t3, t2, fe_isodd(t1));

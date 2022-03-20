@@ -188,9 +188,9 @@ def curve_to_hash(u, v_is_negative):
 #####################
 
 # Inverse square root.
+# Returns (0               , True ) if x is zero.
 # Returns (sqrt(1/x)       , True ) if x is non-zero square.
 # Returns (sqrt(sqrt(-1)/x), False) if x is not a square.
-# Returns (0               , False) if x is zero.
 # We do not guarantee the sign of the square root.
 #
 # Notes:
@@ -247,7 +247,7 @@ def invsqrt(x):
     quartic = x * isr**2
     if quartic == fe(-1) or quartic == -sqrtm1:
         isr = isr * sqrtm1
-    is_square = quartic == fe(1) or quartic == fe(-1)
+    is_square = quartic == fe(1) or quartic == fe(-1) or x == fe(0)
     return isr, is_square
 
 # From the paper:
@@ -344,27 +344,20 @@ def fast_hash_to_curve(r):
 # Let sq = -non_square * u * (u+A)
 # if sq is not a square, or u = -A, there is no mapping
 # Assuming there is a mapping:
-#   if v is positive: r = sqrt(-(u+A) / u)
-#   if v is negative: r = sqrt(-u / (u+A))
+#    if v is positive: r = sqrt(-u     / (non_square * (u+A)))
+#    if v is negative: r = sqrt(-(u+A) / (non_square * u    ))
 #
 # We compute isr = invsqrt(-non_square * u * (u+A))
-# if it wasn't a non-zero square, abort.
+# if it wasn't a square, abort.
 # else, isr = sqrt(-1 / (non_square * u * (u+A))
 #
-# This causes us to abort if u is zero, even though we shouldn't. This
-# never happens in practice, because (i) a random point in the curve has
-# a negligible chance of being zero, and (ii) scalar multiplication with
-# a trimmed scalar *never* yields zero.
+# If v is positive, we return isr * u:
+#   isr * u = sqrt(-1 / (non_square * u * (u+A)) * u
+#   isr * u = sqrt(-u / (non_square * (u+A))
 #
-# Since:
+# If v is negative, we return isr * (u+A):
 #   isr * (u+A) = sqrt(-1     / (non_square * u * (u+A)) * (u+A)
-#   isr * (u+A) = sqrt(-(u+A) / (non_square * u * (u+A))
-# and:
-#   isr = u = sqrt(-1 / (non_square * u * (u+A)) * u
-#   isr = u = sqrt(-u / (non_square * u * (u+A))
-# Therefore:
-#   if v is positive: r = isr * (u+A)
-#   if v is negative: r = isr * u
+#   isr * (u+A) = sqrt(-(u+A) / (non_square * u)
 def fast_curve_to_hash(u, v_is_negative):
     t = u + A
     r = -non_square * u * t
