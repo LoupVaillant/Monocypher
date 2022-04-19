@@ -1,3 +1,17 @@
+3.1.3
+-----
+2022/04/19
+
+- Fixed many typos in the documentation.
+- Fixed buffer overflow in speed benchmarks.
+- Fixed some MSVC warnings.
+- Added `change-prefix.sh` to help changing the `crypto_` prefix.
+- Added the `MONOCYPHER_CPP_NAMESPACE` preprocessor definition to
+  support namespaces for C++.
+- Deprecated `crypto_key_exchange()`
+- Use GitHub actions to automate the regular test suite.
+
+
 3.1.2
 -----
 2020/12/27
