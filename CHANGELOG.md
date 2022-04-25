@@ -1,10 +1,11 @@
 3.1.3
 -----
-2022/04/19
+2022/04/25
 
 - Fixed many typos in the documentation.
 - Fixed buffer overflow in speed benchmarks.
 - Fixed some MSVC warnings.
+- Fixed a minor violation of the Elligator2 reverse map specs.
 - Added `change-prefix.sh` to help changing the `crypto_` prefix.
 - Added the `MONOCYPHER_CPP_NAMESPACE` preprocessor definition to
   support namespaces for C++.
