@@ -214,6 +214,12 @@ unrolled loop _slower_ (possibly because of the cost of fetching 5KB of
 additional code).  If you're using an embedded platform, try this
 option.  The binary will be about 5KB smaller, and in some cases faster.
 
+The `MONOCYPHER_CPP_NAMESPACE` preprocessor definition allows C++ users
+who compile Monocypher as C++ to wrap it in a namespace. When it is not
+defined (the default), we assume Monocypher is compiled as C, and an
+`extern "C"` declaration is added when we detect that the header is
+included in C++ code.
+
 The `change-prefix.sh` script can rename all functions by replacing
 "crypto_" by a chosen prefix, so you can avoid name clashes. For
 instance, the following command changes all instances of "crypto_" by
