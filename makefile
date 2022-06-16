@@ -131,7 +131,7 @@ ctgrind: ctgrind.out
 
 # Monocypher libraries
 lib/libmonocypher.a: lib/monocypher.o $(LINK_ED25519)
-	ar cr $@ $^
+	$(AR) cr $@ $^
 lib/libmonocypher.so: lib/$(SONAME)
 	@mkdir -p $(@D)
 	ln -sf `basename $<` $@
