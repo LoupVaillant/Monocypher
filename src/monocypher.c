@@ -68,6 +68,7 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 #define WIPE_BUFFER(buffer)        crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)                  ((a) <= (b) ? (a) : (b))
 #define MAX(a, b)                  ((a) >= (b) ? (a) : (b))
+#define IS_32BIT                   (sizeof(size_t) == 4)
 
 typedef int8_t   i8;
 typedef uint8_t  u8;
@@ -2888,8 +2889,14 @@ static void lock_auth(u8 mac[16], const u8  auth_key[32],
                       const u8 *cipher_text, size_t text_size)
 {
     u8 sizes[16]; // Not secret, not wiped
-    store64_le(sizes + 0, ad_size);
-    store64_le(sizes + 8, text_size);
+    if (IS_32BIT) {
+        ZERO(sizes, sizeof(sizes));
+        store32_le(sizes + 0, ad_size);
+        store32_le(sizes + 8, text_size);
+    } else {
+        store64_le(sizes + 0, ad_size);
+        store64_le(sizes + 8, text_size);
+    }
     crypto_poly1305_ctx poly_ctx;           // auto wiped...
     crypto_poly1305_init  (&poly_ctx, auth_key);
     crypto_poly1305_update(&poly_ctx, ad         , ad_size);
