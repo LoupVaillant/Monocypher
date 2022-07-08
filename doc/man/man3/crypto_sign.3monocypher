@@ -124,6 +124,11 @@ signs a message with
 .Fa secret_key .
 The public key is optional and will be recomputed if not provided.
 This recomputation doubles the execution time.
+.Sy Never sign a message with the wrong public key .
+It would expose the private key.
+Either provide
+.Dv NULL
+or store the private and public keys together as a single unit.
 .Pp
 .Fn crypto_check
 checks that a given signature is genuine.
@@ -162,8 +167,8 @@ for advice about how to generate cryptographically secure random bytes.
 .Pp
 Generate a public key from a random secret key:
 .Bd -literal -offset indent
-uint8_t       sk[32]; /* Random secret key   */
-uint8_t       pk[32]; /* Matching public key */
+uint8_t sk[32]; /* Random secret key   */
+uint8_t pk[32]; /* Matching public key */
 arc4random_buf(sk, 32);
 crypto_sign_public_key(pk, sk);
 /* Wipe the secret key if it is no longer needed */
@@ -173,10 +178,9 @@ crypto_wipe(sk, 32);
 Sign a message:
 .Bd -literal -offset indent
 uint8_t       sk       [32]; /* Secret key from above          */
-const uint8_t pk       [32]; /* Matching public key            */
 const uint8_t message  [11] = "Lorem ipsu"; /* Message to sign */
 uint8_t       signature[64];
-crypto_sign(signature, sk, pk, message, 10);
+crypto_sign(signature, sk, NULL, message, 10);
 /* Wipe the secret key if it is no longer needed */
 crypto_wipe(sk, 32);
 .Ed
@@ -191,6 +195,29 @@ if (crypto_check(signature, pk, message, 10)) {
 } else {
     /* Message is genuine */
 }
+.Ed
+.Pp
+To avoid recomputing the public key at each signature,
+we can store it next to the private key.
+Make sure you treat that key pair as a single unit:
+.Bd -literal -offset indent
+uint8_t sk[64];                       /* Fat secret key  */
+uint8_t pk[32];                       /* Public key      */
+arc4random_buf(sk, 32);               /* Secret half     */
+crypto_sign_public_key(sk + 32, sk);  /* Public half     */
+memcmp(pk, sk + 32);                  /* Copy public key */
+/* Wipe the secret key if it is no longer needed */
+crypto_wipe(sk, 64);
+.Ed
+.Pp
+That way signing can use the fat private key alone:
+.Bd -literal -offset indent
+uint8_t       sk       [64]; /* Fat secret key from above      */
+const uint8_t message  [11] = "Lorem ipsu"; /* Message to sign */
+uint8_t       signature[64];
+crypto_sign(signature, sk, sk + 32, message, 10);
+/* Wipe the secret key if it is no longer needed */
+crypto_wipe(sk, 64);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_blake2b 3monocypher ,
@@ -220,6 +247,29 @@ that caused all-zero signatures to be accepted was introduced in
 Monocypher 0.3;
 it was fixed in Monocypher 1.1.1 and 2.0.4.
 .Sh SECURITY CONSIDERATIONS
+.Ss Using the wrong public key exposes the private key
+Performing two signatures on the same message,
+with the same private key,
+but with two different public keys,
+instantly exposes the private key.
+.Pp
+There are two ways to avoid this error.
+The easiest is to call
+.Fn crypto_sign
+with a
+.Dv NULL
+public key so it regenerates the correct one from the private key.
+This method is slower,
+but in practice is often fast enough.
+.Pp
+The fastest is to treat the private and public key as a single unit:
+once generated they must be stored together and treated as one fat
+private key.
+When calling
+.Fn crypto_sign ,
+we give it the public half of that fat private key.
+The public half can be copied and and published separately,
+but the copy itself must never be used for signatures.
 .Ss Signature malleability
 Signature malleability is the ability of an attacker to produce a valid
 signature with knowledge of only an existing signature and the public
