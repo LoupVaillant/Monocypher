@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2017-2019 Loup Vaillant
+.\" Copyright (c) 2017-2019, 2022 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
 .\" Copyright (c) 2017, 2019-2022 Fabio Scotoni
 .\" All rights reserved.
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 13, 2022
+.Dd July 9, 2022
 .Dt CRYPTO_SIGN 3MONOCYPHER
 .Os
 .Sh NAME
