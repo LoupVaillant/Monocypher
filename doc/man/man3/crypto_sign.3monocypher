@@ -201,7 +201,7 @@ if (crypto_check(signature, pk, message, 10)) {
 .Pp
 To avoid recomputing the public key with each signature,
 store it next to the private key
-.Pq Dq fat private key .
+.Pq Dq composite private key .
 Make sure you treat that key pair as a single unit:
 .Bd -literal -offset indent
 uint8_t sk[64];                       /* Fat secret key  */
@@ -213,7 +213,7 @@ memcmp(pk, sk + 32);                  /* Copy public key */
 crypto_wipe(sk, 64);
 .Ed
 .Pp
-That way signing can use the fat private key alone:
+That way signing can use the composite private key alone:
 .Bd -literal -offset indent
 uint8_t       sk       [64]; /* Fat secret key from above      */
 const uint8_t message  [11] = "Lorem ipsu"; /* Message to sign */
@@ -266,11 +266,11 @@ This method is slower,
 but in practice is often fast enough.
 .Pp
 The fastest is to treat the private and public key as a single unit:
-once generated, they must be stored together and treated as one fat
-private key.
+once generated, they must be stored together and treated
+as one composite private key.
 When calling
 .Fn crypto_sign ,
-provide the public half of the fat private key.
+provide the public half of the composite private key.
 The public half can be copied and and published separately,
 but the copy itself must never be used for signatures.
 .Ss Signature malleability
