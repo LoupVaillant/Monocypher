@@ -125,9 +125,11 @@ signs a message with
 The public key is optional and will be recomputed if not provided.
 This recomputation doubles the execution time.
 .Sy Never sign a message with the wrong public key .
-It would expose the private key.
+Doing so would expose the private key.
 Either provide
 .Dv NULL
+as the
+.Fa public_key
 or store the private and public keys together as a single unit.
 .Pp
 .Fn crypto_check
@@ -197,8 +199,9 @@ if (crypto_check(signature, pk, message, 10)) {
 }
 .Ed
 .Pp
-To avoid recomputing the public key at each signature,
-we can store it next to the private key.
+To avoid recomputing the public key with each signature,
+store it next to the private key
+.Pq Dq fat private key .
 Make sure you treat that key pair as a single unit:
 .Bd -literal -offset indent
 uint8_t sk[64];                       /* Fat secret key  */
@@ -248,9 +251,9 @@ Monocypher 0.3;
 it was fixed in Monocypher 1.1.1 and 2.0.4.
 .Sh SECURITY CONSIDERATIONS
 .Ss Using the wrong public key exposes the private key
-Performing two signatures on the same message,
-with the same private key,
-but with two different public keys,
+Performing two signatures on the same message
+with the same private key
+but with two different public keys
 instantly exposes the private key.
 .Pp
 There are two ways to avoid this error.
@@ -263,11 +266,11 @@ This method is slower,
 but in practice is often fast enough.
 .Pp
 The fastest is to treat the private and public key as a single unit:
-once generated they must be stored together and treated as one fat
+once generated, they must be stored together and treated as one fat
 private key.
 When calling
 .Fn crypto_sign ,
-we give it the public half of that fat private key.
+provide the public half of the fat private key.
 The public half can be copied and and published separately,
 but the copy itself must never be used for signatures.
 .Ss Signature malleability
