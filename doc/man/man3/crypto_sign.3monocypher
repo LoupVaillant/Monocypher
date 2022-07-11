@@ -204,18 +204,18 @@ store it next to the private key
 .Pq Dq composite private key .
 Make sure you treat that key pair as a single unit:
 .Bd -literal -offset indent
-uint8_t sk[64];                       /* Fat secret key  */
-uint8_t pk[32];                       /* Public key      */
-arc4random_buf(sk, 32);               /* Secret half     */
-crypto_sign_public_key(sk + 32, sk);  /* Public half     */
-memcpy(pk, sk + 32, 32);              /* Copy public key */
+uint8_t sk[64];                       /* Combined secret key  */
+uint8_t pk[32];                       /* Public key           */
+arc4random_buf(sk, 32);               /* Secret half          */
+crypto_sign_public_key(sk + 32, sk);  /* Public half          */
+memcpy(pk, sk + 32, 32);              /* Copy public key      */
 /* Wipe the secret key if it is no longer needed */
 crypto_wipe(sk, 64);
 .Ed
 .Pp
 That way signing can use the composite private key alone:
 .Bd -literal -offset indent
-uint8_t       sk       [64]; /* Fat secret key from above      */
+uint8_t       sk       [64]; /* Combined secret key from above */
 const uint8_t message  [11] = "Lorem ipsu"; /* Message to sign */
 uint8_t       signature[64];
 crypto_sign(signature, sk, sk + 32, message, 10);
