@@ -146,7 +146,7 @@ static vector vector_of_string(const char *s)
     FOR (i, 0, v.size) {
         int msb = to_num(*s);  s++;
         int lsb = to_num(*s);  s++;
-        v.buf[i] = msb * 16 + lsb;
+        v.buf[i] = (u8)(msb * 16 + lsb);
     }
     return v;
 }

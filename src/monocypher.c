@@ -62,8 +62,8 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 /////////////////
 #define FOR_T(type, i, start, end) for (type i = (start); i < (end); i++)
 #define FOR(i, start, end)         FOR_T(size_t, i, start, end)
-#define COPY(dst, src, size)       FOR(i__, 0, size) (dst)[i__] = (src)[i__]
-#define ZERO(buf, size)            FOR(i__, 0, size) (buf)[i__] = 0
+#define COPY(dst, src, size)       FOR(_i_, 0, size) (dst)[_i_] = (src)[_i_]
+#define ZERO(buf, size)            FOR(_i_, 0, size) (buf)[_i_] = 0
 #define WIPE_CTX(ctx)              crypto_wipe(ctx   , sizeof(*(ctx)))
 #define WIPE_BUFFER(buffer)        crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)                  ((a) <= (b) ? (a) : (b))
@@ -196,7 +196,7 @@ static void chacha20_rounds(u32 out[16], const u32 in[16])
     out[12] = t12;  out[13] = t13;  out[14] = t14;  out[15] = t15;
 }
 
-const u8 *chacha20_constant = (const u8*)"expand 32-byte k"; // 16 bytes
+static const u8 *chacha20_constant = (const u8*)"expand 32-byte k"; // 16 bytes
 
 void crypto_hchacha20(u8 out[32], const u8 key[32], const u8 in [16])
 {
@@ -1162,7 +1162,7 @@ static void fe_ccopy(fe f, const fe g, int b)
 // which means ignoring 2 bits instead.
 static void fe_frombytes_mask(fe h, const u8 s[32], unsigned nb_mask)
 {
-    i32 mask = 0xffffff >> nb_mask;
+    u32 mask = 0xffffff >> nb_mask;
     i64 t0 =  load32_le(s);                        // t0 < 2^32
     i64 t1 =  load24_le(s +  4) << 6;              // t1 < 2^30
     i64 t2 =  load24_le(s +  7) << 5;              // t2 < 2^29
@@ -1634,7 +1634,7 @@ static int is_above_l(const u32 x[8])
 // otherwise the result will be wrong
 static void remove_l(u32 r[8], const u32 x[8])
 {
-    u64 carry = is_above_l(x);
+    u64 carry = (u64)is_above_l(x);
     u32 mask  = ~(u32)carry + 1; // carry == 0 or 1
     FOR (i, 0, 8) {
         carry += (u64)x[i] + (~L[i] & mask);

@@ -86,11 +86,11 @@ static void ietf_chacha20(vector_reader *reader)
     vector key       = next_input(reader);
     vector nonce     = next_input(reader);
     vector plain     = next_input(reader);
-    u64    ctr       = load64_le(next_input(reader).buf);
+    u32    ctr       = load32_le(next_input(reader).buf);
     vector out       = next_output(reader);
     u32    nb_blocks = (u32)(plain.size / 64 + (plain.size % 64 != 0));
     u32    new_ctr   = crypto_ietf_chacha20_ctr(out.buf, plain.buf, plain.size,
-                                                 key.buf, nonce.buf, ctr);
+                                                key.buf, nonce.buf, ctr);
     if (new_ctr - ctr != nb_blocks) {
         printf("FAILURE: IETF Chacha20 returned counter not correct: ");
         exit(1);
