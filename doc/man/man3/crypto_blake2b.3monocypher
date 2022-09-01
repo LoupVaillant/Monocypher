@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2017-2019 Loup Vaillant
+.\" Copyright (c) 2017-2022 Loup Vaillant
 .\" Copyright (c) 2018 Michael Savage
 .\" Copyright (c) 2017, 2020-2022 Fabio Scotoni
 .\" All rights reserved.
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 13, 2022
+.Dd September 1, 2022
 .Dt CRYPTO_BLAKE2B 3MONOCYPHER
 .Os
 .Sh NAME
@@ -310,3 +310,11 @@ computationally difficult hashing algorithms.
 Monocypher therefore provides
 .Xr crypto_argon2i 3monocypher
 for password hashing and deriving keys from passwords.
+.Sh IMPLEMENTATION DETAILS
+The core loop is unrolled by default.
+This speeds up BLAKE2b by about 20% on modern processors.
+On the other hand,
+this inflates the binary size by several kilobytes,
+and is slower on some embedded platforms.
+To roll the loop and generate a smaller binary,
+compile Monocypher with the -DBLAKE2_NO_UNROLLING option.
