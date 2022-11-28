@@ -74,11 +74,9 @@ convert() {
 mkdir -p "$DIR/html"
 mkdir -p "$DIR/html/advanced"
 mkdir -p "$DIR/html/optional"
-mkdir -p "$DIR/html/deprecated"
 convert "$DIR/man/man3"            "."
 convert "$DIR/man/man3/advanced"   "advanced"
 convert "$DIR/man/man3/optional"   "optional"
-convert "$DIR/man/man3/deprecated" "deprecated"
 
 substitute() {
     HTML=$1
@@ -144,7 +142,6 @@ substitute() {
 substitute "$DIR/html"
 substitute "$DIR/html/advanced"
 substitute "$DIR/html/optional"
-substitute "$DIR/html/deprecated"
 
 for file in $(ls -1 "$DIR/html" | grep ".html$")
 do

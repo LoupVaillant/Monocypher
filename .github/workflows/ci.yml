@@ -109,7 +109,7 @@ jobs:
       - name: Run tests with clang sanitizers
         run: |
 
-          make clean;  make test; make test-legacy -j4
+          make clean;  make test -j4
           echo "Make with O3 optimization and no blake2 loop unrolling"
           make clean;  make test CFLAGS="-DBLAKE2_NO_UNROLLING -O3" -j4
 

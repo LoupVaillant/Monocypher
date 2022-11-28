@@ -116,14 +116,13 @@ uninstall:
 
 check: test
 test           : test.out
-test-legacy    : test-legacy.out
 speed          : speed.out
 speed-sodium   : speed-sodium.out
 speed-tweetnacl: speed-tweetnacl.out
 speed-hydrogen : speed-hydrogen.out
 speed-c25519   : speed-c25519.out
 speed-donna    : speed-donna.out
-test test-legacy speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519 speed-donna:
+test speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519 speed-donna:
 	./$<
 
 ctgrind: ctgrind.out
@@ -149,15 +148,13 @@ lib/monocypher.o lib/monocypher-ed25519.o lib/chacha20.o lib/aead-incr.o:
 
 # Test & speed libraries
 TEST_COMMON = tests/utils.h src/monocypher.h src/optional/monocypher-ed25519.h
-TEST_LEGACY = $(TEST_COMMON) src/deprecated/chacha20.h src/deprecated/aead-incr.h
 SPEED       = tests/speed
 lib/utils.o          :tests/utils.c
 lib/test.o           :tests/test.c               $(TEST_COMMON) tests/vectors.h
-lib/test-legacy.o    :tests/test-legacy.c        $(TEST_LEGACY) tests/vectors.h
 lib/ctgrind.o        :tests/ctgrind.c            $(TEST_COMMON)
 lib/speed.o          :$(SPEED)/speed.c           $(TEST_COMMON) $(SPEED)/speed.h
 lib/speed-tweetnacl.o:$(SPEED)/speed-tweetnacl.c $(TEST_COMMON) $(SPEED)/speed.h
-lib/utils.o lib/test.o lib/test-legacy.o lib/speed.o:
+lib/utils.o lib/test.o lib/speed.o:
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS)                     \
             -I src -I src/optional -I tests \
@@ -228,10 +225,9 @@ lib/speed-ed25519.o: tests/externals/ed25519-donna/ed25519.c \
 # test & speed executables
 TEST_OBJ=  lib/utils.o lib/monocypher.o
 test.out       : lib/test.o        $(TEST_OBJ) lib/monocypher-ed25519.o
-test-legacy.out: lib/test-legacy.o $(TEST_OBJ) lib/chacha20.o lib/aead-incr.o
 ctgrind.out    : lib/ctgrind.o     $(TEST_OBJ) lib/monocypher-ed25519.o
 speed.out      : lib/speed.o       $(TEST_OBJ) lib/monocypher-ed25519.o
-test.out test-legacy.out speed.out:
+test.out speed.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
 ctgrind.out:
 	$(CC) $(CFLAGS) -O0 -I src -I src/optional -o $@ $^
