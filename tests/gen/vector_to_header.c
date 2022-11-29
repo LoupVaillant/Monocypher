@@ -61,46 +61,47 @@
 
 static int is_digit(int c)
 {
-    return (c >= '0' && c <= '9')
-        || (c >= 'a' && c <= 'f')
-        || (c >= 'A' && c <= 'F');
+	return
+		(c >= '0' && c <= '9') ||
+		(c >= 'a' && c <= 'f') ||
+		(c >= 'A' && c <= 'F');
 }
 
 int main(int argc, char** argv)
 {
-    if (argc != 2) {
-        fprintf(stderr, "Wrong use of vector transformer. Give one argument\n");
-        return 1;
-    }
+	if (argc != 2) {
+		fprintf(stderr, "Wrong use of vector transformer. Give one argument\n");
+		return 1;
+	}
 
-    char  *prefix = argv[1];
-    int    c      = getchar();
-    size_t nb_vec = 0;
+	char  *prefix = argv[1];
+	int    c      = getchar();
+	size_t nb_vec = 0;
 
-    printf("static const char *%s_vectors[]={\n", prefix);
+	printf("static const char *%s_vectors[]={\n", prefix);
 
-    // seek first line
-    while (!is_digit(c) && c != ':' && c != EOF) {
-        c = getchar();
-    }
+	// seek first line
+	while (!is_digit(c) && c != ':' && c != EOF) {
+		c = getchar();
+	}
 
-    while (c != EOF) {
-        printf("  \"");
-        while (c != ':' && c != EOF) {
-            printf("%c", (char)c);
-            c = getchar();
-        }
-        printf("\",\n");
-        c = getchar();
+	while (c != EOF) {
+		printf("  \"");
+		while (c != ':' && c != EOF) {
+			printf("%c", (char)c);
+			c = getchar();
+		}
+		printf("\",\n");
+		c = getchar();
 
-        // seek next line
-        while (!is_digit(c) && c != ':' && c != EOF) {
-            c = getchar();
-        }
-        nb_vec++;
-    }
-    printf("};\n");
-    printf("static size_t nb_%s_vectors=%zu;\n", prefix, nb_vec);
+		// seek next line
+		while (!is_digit(c) && c != ':' && c != EOF) {
+			c = getchar();
+		}
+		nb_vec++;
+	}
+	printf("};\n");
+	printf("static size_t nb_%s_vectors=%zu;\n", prefix, nb_vec);
 
-    return 0;
+	return 0;
 }

@@ -54,39 +54,39 @@
 
 static u64 edDSA_sign(void)
 {
-    u8 pk       [32];
-    u8 signature[64];
-    RANDOM_INPUT(sk     , 32);
-    RANDOM_INPUT(message, 64);
-    ed25519_publickey(sk, pk);
+	u8 pk       [32];
+	u8 signature[64];
+	RANDOM_INPUT(sk     , 32);
+	RANDOM_INPUT(message, 64);
+	ed25519_publickey(sk, pk);
 
-    TIMING_START {
-        ed25519_sign(message, 64, sk, pk, signature);
-    }
-    TIMING_END;
+	TIMING_START {
+		ed25519_sign(message, 64, sk, pk, signature);
+	}
+	TIMING_END;
 }
 
 static u64 edDSA_check(void)
 {
-    u8 pk       [32];
-    u8 signature[64];
-    RANDOM_INPUT(sk     , 32);
-    RANDOM_INPUT(message, 64);
-    ed25519_publickey(sk, pk);
-    ed25519_sign(message, 64, sk, pk, signature);
+	u8 pk       [32];
+	u8 signature[64];
+	RANDOM_INPUT(sk     , 32);
+	RANDOM_INPUT(message, 64);
+	ed25519_publickey(sk, pk);
+	ed25519_sign(message, 64, sk, pk, signature);
 
-    TIMING_START {
-        if (ed25519_sign_open(message, 64, pk, signature)) {
-            printf("Donna verification failed\n");
-        }
-    }
-    TIMING_END;
+	TIMING_START {
+		if (ed25519_sign_open(message, 64, pk, signature)) {
+			printf("Donna verification failed\n");
+		}
+	}
+	TIMING_END;
 }
 
 int main()
 {
-    print("EdDSA(sign) ",edDSA_sign() , "signatures per second");
-    print("EdDSA(check)",edDSA_check(), "checks     per second");
-    printf("\n");
-    return 0;
+	print("EdDSA(sign) ",edDSA_sign() , "signatures per second");
+	print("EdDSA(check)",edDSA_check(), "checks     per second");
+	printf("\n");
+	return 0;
 }

@@ -71,11 +71,11 @@ extern "C" {
 // Instantiate it to define a custom hash.
 // Its size, contents, and layout, are part of the public API.
 typedef struct {
-    void (*hash)(uint8_t hash[64], const uint8_t *message, size_t message_size);
-    void (*init  )(void *ctx);
-    void (*update)(void *ctx, const uint8_t *message, size_t message_size);
-    void (*final )(void *ctx, uint8_t hash[64]);
-    size_t ctx_size;
+	void (*hash)(uint8_t hash[64], const uint8_t *message, size_t message_size);
+	void (*init  )(void *ctx);
+	void (*update)(void *ctx, const uint8_t *message, size_t message_size);
+	void (*final )(void *ctx, uint8_t hash[64]);
+	size_t ctx_size;
 } crypto_sign_vtable;
 
 // Do not rely on the size or contents of any of the types below,
@@ -83,33 +83,33 @@ typedef struct {
 
 // Poly1305
 typedef struct {
-    uint32_t r[4];   // constant multiplier (from the secret key)
-    uint32_t h[5];   // accumulated hash
-    uint8_t  c[16];  // chunk of the message
-    uint32_t pad[4]; // random number added at the end (from the secret key)
-    size_t   c_idx;  // How many bytes are there in the chunk.
+	uint32_t r[4];   // constant multiplier (from the secret key)
+	uint32_t h[5];   // accumulated hash
+	uint8_t  c[16];  // chunk of the message
+	uint32_t pad[4]; // random number added at the end (from the secret key)
+	size_t   c_idx;  // How many bytes are there in the chunk.
 } crypto_poly1305_ctx;
 
 // Hash (BLAKE2b)
 typedef struct {
-    uint64_t hash[8];
-    uint64_t input_offset[2];
-    uint64_t input[16];
-    size_t   input_idx;
-    size_t   hash_size;
+	uint64_t hash[8];
+	uint64_t input_offset[2];
+	uint64_t input[16];
+	size_t   input_idx;
+	size_t   hash_size;
 } crypto_blake2b_ctx;
 
 // Signatures (EdDSA)
 typedef struct {
-    const crypto_sign_vtable *hash;
-    uint8_t buf[96];
-    uint8_t pk [32];
+	const crypto_sign_vtable *hash;
+	uint8_t buf[96];
+	uint8_t pk [32];
 } crypto_sign_ctx_abstract;
 typedef crypto_sign_ctx_abstract crypto_check_ctx_abstract;
 
 typedef struct {
-    crypto_sign_ctx_abstract ctx;
-    crypto_blake2b_ctx       hash;
+	crypto_sign_ctx_abstract ctx;
+	crypto_blake2b_ctx       hash;
 } crypto_sign_ctx;
 typedef crypto_sign_ctx crypto_check_ctx;
 

@@ -1,0 +1,16 @@
+# https://EditorConfig.org
+
+root = true
+
+# UNIX style line ending rulez
+# End all files with a single line ending OCD
+[*]
+end_of_line = lf
+insert_final_newline = true
+
+# Tabs for indentation for accessibility reasons.
+# Indent size of 4 because that's my preference.
+# Note: line lengths limits (80 columns) assume tabs are 4 columns wide.
+[*.{c,h}]
+indent_style = tab
+indent_size = 4

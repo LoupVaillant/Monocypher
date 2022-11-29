@@ -54,30 +54,30 @@
 
 static void test(size_t size, size_t key_size, size_t hash_size)
 {
-    RANDOM_INPUT(in  , 256);
-    RANDOM_INPUT(key , 64);
-    u8 hash[64];
+	RANDOM_INPUT(in  , 256);
+	RANDOM_INPUT(key , 64);
+	u8 hash[64];
 
-    crypto_generichash(hash, hash_size, in, size, key, key_size);
+	crypto_generichash(hash, hash_size, in, size, key, key_size);
 
-    print_vector(in  , size);
-    print_vector(key , key_size);
-    print_vector(hash, hash_size);
-    printf("\n");
+	print_vector(in  , size);
+	print_vector(key , key_size);
+	print_vector(hash, hash_size);
+	printf("\n");
 }
 
 int main(void)
 {
-    SODIUM_INIT;
-    // Official test vectors test for all message sizes, so no need to
-    // repeat ourselves here. However they only test keys and hashes of size 64.
-    // Here we're testing many possible key and hash sizes.
-    for (size_t key_size = 0; key_size <= 64; key_size += 16) {
-        for (size_t hash_size = 0; hash_size <= 64; hash_size += 16) {
-            for (size_t input_size = 0; input_size <= 256; input_size += 16) {
-                test(input_size, key_size, hash_size);
-            }
-        }
-    }
-    return 0;
+	SODIUM_INIT;
+	// Official test vectors test for all message sizes, so no need to
+	// repeat ourselves here. However they only test keys and hashes of size 64.
+	// Here we're testing many possible key and hash sizes.
+	for (size_t key_size = 0; key_size <= 64; key_size += 16) {
+		for (size_t hash_size = 0; hash_size <= 64; hash_size += 16) {
+			for (size_t input_size = 0; input_size <= 256; input_size += 16) {
+				test(input_size, key_size, hash_size);
+			}
+		}
+	}
+	return 0;
 }
