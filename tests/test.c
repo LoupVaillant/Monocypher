@@ -635,7 +635,7 @@ static int p_hmac_sha512()
 	return status;
 }
 
-// Tests that the input and output buffers of crypto_sha_512 can overlap.
+// Tests that the input and output buffers of HMAC can overlap.
 static int p_hmac_sha512_overlap()
 {
 #undef INPUT_SIZE
@@ -809,41 +809,6 @@ static int p_eddsa_overlap()
 		status |= memcmp(signature, input + i, 64);
 	}
 	printf("%s: EdDSA (overlap)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-static int p_eddsa_incremental()
-{
-	int status = 0;
-	FOR (i, 0, MESSAGE_SIZE) {
-		RANDOM_INPUT(msg, MESSAGE_SIZE);
-		RANDOM_INPUT(sk, 32);
-		u8 pk      [32];  crypto_sign_public_key(pk, sk);
-		u8 sig_mono[64];  crypto_sign(sig_mono, sk, pk, msg, MESSAGE_SIZE);
-		u8 sig_incr[64];
-		{
-			crypto_sign_ctx ctx;
-			crypto_sign_ctx_abstract *actx = (crypto_sign_ctx_abstract*)&ctx;
-			crypto_sign_init_first_pass (actx, sk, pk);
-			crypto_sign_update          (actx, msg  , i);
-			crypto_sign_update          (actx, msg+i, MESSAGE_SIZE-i);
-			crypto_sign_init_second_pass(actx);
-			crypto_sign_update          (actx, msg  , i);
-			crypto_sign_update          (actx, msg+i, MESSAGE_SIZE-i);
-			crypto_sign_final           (actx, sig_incr);
-		}
-		status |= memcmp(sig_mono, sig_incr, 64);
-		status |= crypto_check(sig_mono, pk, msg, MESSAGE_SIZE);
-		{
-			crypto_check_ctx ctx;
-			crypto_check_ctx_abstract *actx = (crypto_check_ctx_abstract*)&ctx;
-			crypto_check_init  (actx, sig_incr, pk);
-			crypto_check_update(actx, msg  , i);
-			crypto_check_update(actx, msg+i, MESSAGE_SIZE-i);
-			status |= crypto_check_final(actx);
-		}
-	}
-	printf("%s: EdDSA (incremental)\n", status != 0 ? "FAILED" : "OK");
 	return status;
 }
 
@@ -1182,7 +1147,6 @@ int main(int argc, char *argv[])
 	status |= p_eddsa_roundtrip();
 	status |= p_eddsa_random();
 	status |= p_eddsa_overlap();
-	status |= p_eddsa_incremental();
 	status |= p_aead();
 	status |= p_elligator_direct_msb();
 	status |= p_elligator_direct_overlap();

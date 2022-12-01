@@ -637,23 +637,6 @@ void crypto_blake2b(u8 hash[64], const u8 *message, size_t message_size)
 	crypto_blake2b_general(hash, 64, 0, 0, message, message_size);
 }
 
-static void blake2b_vtable_init(void *ctx) {
-	crypto_blake2b_init(&((crypto_sign_ctx*)ctx)->hash);
-}
-static void blake2b_vtable_update(void *ctx, const u8 *m, size_t s) {
-	crypto_blake2b_update(&((crypto_sign_ctx*)ctx)->hash, m, s);
-}
-static void blake2b_vtable_final(void *ctx, u8 *h) {
-	crypto_blake2b_final(&((crypto_sign_ctx*)ctx)->hash, h);
-}
-const crypto_sign_vtable crypto_blake2b_vtable = {
-	crypto_blake2b,
-	blake2b_vtable_init,
-	blake2b_vtable_update,
-	blake2b_vtable_final,
-	sizeof(crypto_sign_ctx),
-};
-
 ////////////////
 /// Argon2 i ///
 ////////////////
@@ -1517,11 +1500,12 @@ static void fe_invert(fe out, const fe x)
 }
 
 // trim a scalar for scalar multiplication
-static void trim_scalar(u8 scalar[32])
+void crypto_eddsa_trim_scalar(u8 out[32], const u8 in[32])
 {
-	scalar[ 0] &= 248;
-	scalar[31] &= 127;
-	scalar[31] |= 64;
+	COPY(out, in, 32);
+	out[ 0] &= 248;
+	out[31] &= 127;
+	out[31] |= 64;
 }
 
 // get bit from scalar at position i
@@ -1599,8 +1583,7 @@ void crypto_x25519(u8       raw_shared_secret[32],
 {
 	// restrict the possible scalar values
 	u8 e[32];
-	COPY(e, your_secret_key, 32);
-	trim_scalar(e);
+	crypto_eddsa_trim_scalar(e, your_secret_key);
 	scalarmult(raw_shared_secret, e, their_public_key, 255);
 	WIPE_BUFFER(e);
 }
@@ -1706,16 +1689,17 @@ static void mod_l(u8 reduced[32], const u32 x[16])
 	WIPE_BUFFER(xr);
 }
 
-static void reduce(u8 r[64])
+void crypto_eddsa_reduce(u8 reduced[32], const u8 expanded[64])
 {
 	u32 x[16];
-	load32_le_buf(x, r, 16);
-	mod_l(r, x);
+	load32_le_buf(x, expanded, 16);
+	mod_l(reduced, x);
 	WIPE_BUFFER(x);
 }
 
 // r = (a * b) + c
-static void mul_add(u8 r[32], const u8 a[32], const u8 b[32], const u8 c[32])
+void crypto_eddsa_mul_add(u8 r[32],
+                          const u8 a[32], const u8 b[32], const u8 c[32])
 {
 	u32 A[8];  load32_le_buf(A, a, 8);
 	u32 B[8];  load32_le_buf(B, b, 8);
@@ -2195,7 +2179,7 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 
 	// All bits set form: 1 means 1, 0 means -1
 	u8 s_scalar[32];
-	mul_add(s_scalar, scalar, half_mod_L, half_ones);
+	crypto_eddsa_mul_add(s_scalar, scalar, half_mod_L, half_ones);
 
 	// Double and add ladder
 	fe tmp_a, tmp_b;  // temporaries for addition
@@ -2226,98 +2210,51 @@ static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 	WIPE_BUFFER(s_scalar);
 }
 
-void crypto_sign_public_key_custom_hash(u8       public_key[32],
-                                        const u8 secret_key[32],
-                                        const crypto_sign_vtable *hash)
+void crypto_eddsa_scalarbase(u8 point[32], const u8 scalar[32])
 {
-	u8 a[64];
-	hash->hash(a, secret_key, 32);
-	trim_scalar(a);
+	ge P;
+	ge_scalarmult_base(&P, scalar);
+	ge_tobytes(point, &P);
+	WIPE_CTX(&P);
+}
+
+int crypto_eddsa_r_check(u8 r_check[32], const u8 public_key[32],
+                         const u8 h_ram[32], const u8 s[32])
+{
 	ge A;
-	ge_scalarmult_base(&A, a);
-	ge_tobytes(public_key, &A);
-	WIPE_BUFFER(a);
-	WIPE_CTX(&A);
+	u32 s32[8];                                      // s (different encoding)
+	load32_le_buf(s32, s, 8);
+
+	if (ge_frombytes_neg_vartime(&A, public_key) ||  // A = -pk
+	    is_above_l(s32)) {                           // prevent s malleability
+		return -1;
+	}
+	ge_double_scalarmult_vartime(&A, h_ram, s);      // A = [s]B - [h_ram]pk
+	ge_tobytes(r_check, &A);                         // r_check = A
+	return 0;
 }
 
 void crypto_sign_public_key(u8 public_key[32], const u8 secret_key[32])
 {
-	crypto_sign_public_key_custom_hash(public_key, secret_key,
-	                                   &crypto_blake2b_vtable);
+	u8 a[64];
+	crypto_blake2b(a, secret_key, 32);
+	crypto_eddsa_trim_scalar(a, a);
+	crypto_eddsa_scalarbase(public_key, a);
 }
 
-void crypto_sign_init_first_pass_custom_hash(crypto_sign_ctx_abstract *ctx,
-                                             const u8 secret_key[32],
-                                             const u8 public_key[32],
-                                             const crypto_sign_vtable *hash)
+static void hash_reduce(u8 h[32],
+                        const u8 *a, size_t a_size,
+                        const u8 *b, size_t b_size,
+                        const u8 *c, size_t c_size)
 {
-	ctx->hash  = hash; // set vtable
-	u8 *a      = ctx->buf;
-	u8 *prefix = ctx->buf + 32;
-	ctx->hash->hash(a, secret_key, 32);
-	trim_scalar(a);
-
-	if (public_key == 0) {
-		crypto_sign_public_key_custom_hash(ctx->pk, secret_key, ctx->hash);
-	} else {
-		COPY(ctx->pk, public_key, 32);
-	}
-
-	// Deterministic part of EdDSA: Construct a nonce by hashing the message
-	// instead of generating a random number.
-	// An actual random number would work just fine, and would save us
-	// the trouble of hashing the message twice.  If we did that
-	// however, the user could fuck it up and reuse the nonce.
-	ctx->hash->init  (ctx);
-	ctx->hash->update(ctx, prefix , 32);
-}
-
-void crypto_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
-                                 const u8 secret_key[32],
-                                 const u8 public_key[32])
-{
-	crypto_sign_init_first_pass_custom_hash(ctx, secret_key, public_key,
-	                                        &crypto_blake2b_vtable);
-}
-
-void crypto_sign_update(crypto_sign_ctx_abstract *ctx,
-                        const u8 *msg, size_t msg_size)
-{
-	ctx->hash->update(ctx, msg, msg_size);
-}
-
-void crypto_sign_init_second_pass(crypto_sign_ctx_abstract *ctx)
-{
-	u8 *r        = ctx->buf + 32;
-	u8 *half_sig = ctx->buf + 64;
-	ctx->hash->final(ctx, r);
-	reduce(r);
-
-	// first half of the signature = "random" nonce times the base point
-	ge R;
-	ge_scalarmult_base(&R, r);
-	ge_tobytes(half_sig, &R);
-	WIPE_CTX(&R);
-
-	// Hash R, the public key, and the message together.
-	// It cannot be done in parallel with the first hash.
-	ctx->hash->init  (ctx);
-	ctx->hash->update(ctx, half_sig, 32);
-	ctx->hash->update(ctx, ctx->pk , 32);
-}
-
-void crypto_sign_final(crypto_sign_ctx_abstract *ctx, u8 signature[64])
-{
-	u8 *a        = ctx->buf;
-	u8 *r        = ctx->buf + 32;
-	u8 *half_sig = ctx->buf + 64;
-	u8  h_ram[64];
-	ctx->hash->final(ctx, h_ram);
-	reduce(h_ram);
-	COPY(signature, half_sig, 32);
-	mul_add(signature + 32, h_ram, a, r); // s = h_ram * a + r
-	WIPE_BUFFER(h_ram);
-	crypto_wipe(ctx, ctx->hash->ctx_size);
+	u8 hash[64];
+	crypto_blake2b_ctx ctx;
+	crypto_blake2b_init  (&ctx);
+	crypto_blake2b_update(&ctx, a, a_size);
+	crypto_blake2b_update(&ctx, b, b_size);
+	crypto_blake2b_update(&ctx, c, c_size);
+	crypto_blake2b_final (&ctx, hash);
+	crypto_eddsa_reduce(h, hash);
 }
 
 void crypto_sign(u8        signature[64],
@@ -2325,68 +2262,49 @@ void crypto_sign(u8        signature[64],
                  const u8  public_key[32],
                  const u8 *message, size_t message_size)
 {
-	crypto_sign_ctx ctx;
-	crypto_sign_ctx_abstract *actx = (crypto_sign_ctx_abstract*)&ctx;
-	crypto_sign_init_first_pass (actx, secret_key, public_key);
-	crypto_sign_update          (actx, message, message_size);
-	crypto_sign_init_second_pass(actx);
-	crypto_sign_update          (actx, message, message_size);
-	crypto_sign_final           (actx, signature);
-}
-
-void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
-                                   const u8 signature[64],
-                                   const u8 public_key[32],
-                                   const crypto_sign_vtable *hash)
-{
-	ctx->hash = hash; // set vtable
-	COPY(ctx->buf, signature , 64);
-	COPY(ctx->pk , public_key, 32);
-	ctx->hash->init  (ctx);
-	ctx->hash->update(ctx, signature , 32);
-	ctx->hash->update(ctx, public_key, 32);
-}
-
-void crypto_check_init(crypto_check_ctx_abstract *ctx, const u8 signature[64],
-                       const u8 public_key[32])
-{
-	crypto_check_init_custom_hash(ctx, signature, public_key,
-	                              &crypto_blake2b_vtable);
-}
-
-void crypto_check_update(crypto_check_ctx_abstract *ctx,
-                         const u8 *msg, size_t msg_size)
-{
-	ctx->hash->update(ctx, msg, msg_size);
-}
-
-int crypto_check_final(crypto_check_ctx_abstract *ctx)
-{
-	u8 *s = ctx->buf + 32; // s
-	u8  h_ram[64];
-	u32 s32[8];            // s (different encoding)
-	ge  A;
-
-	ctx->hash->final(ctx, h_ram);
-	reduce(h_ram);
-	load32_le_buf(s32, s, 8);
-	if (ge_frombytes_neg_vartime(&A, ctx->pk) ||  // A = -pk
-	    is_above_l(s32)) {                        // prevent s malleability
-		return -1;
+	u8 a[64];
+	crypto_blake2b(a, secret_key, 32);
+	crypto_eddsa_trim_scalar(a, a);
+	u8 pk[32];  // not secret, not wiped
+	if (public_key == 0) {
+		crypto_eddsa_scalarbase(pk, a);
+	} else {
+		COPY(pk, public_key, 32);
 	}
-	ge_double_scalarmult_vartime(&A, h_ram, s);   // A = [s]B - [h_ram]pk
-	ge_tobytes(ctx->pk, &A);                      // R_check = A
-	return crypto_verify32(ctx->buf, ctx->pk);    // R == R_check ? OK : fail
+
+	// Deterministic part of EdDSA: Construct a nonce by hashing the message
+	// instead of generating a random number.
+	// An actual random number would work just fine, and would save us
+	// the trouble of hashing the message twice.  If we did that
+	// however, the user could fuck it up and reuse the nonce.
+	u8 r[32];
+	hash_reduce(r, a + 32, 32, message, message_size, 0, 0);
+
+	// First half of the signature R = [r]B
+	u8 R[32];  // Not secret, not wiped
+	crypto_eddsa_scalarbase(R, r);
+
+	// Second half of the signature
+	u8 h_ram[32];
+	hash_reduce(h_ram, R, 32, pk, 32, message, message_size);
+	COPY(signature, R, 32);
+	crypto_eddsa_mul_add(signature + 32, h_ram, a, r); // s = h_ram * a + r
+
+	WIPE_BUFFER(a);
+	WIPE_BUFFER(r);
+	WIPE_BUFFER(h_ram);
 }
 
 int crypto_check(const u8  signature[64], const u8 public_key[32],
                  const u8 *message, size_t message_size)
 {
-	crypto_check_ctx ctx;
-	crypto_check_ctx_abstract *actx = (crypto_check_ctx_abstract*)&ctx;
-	crypto_check_init  (actx, signature, public_key);
-	crypto_check_update(actx, message, message_size);
-	return crypto_check_final(actx);
+	u8 h_ram  [32];
+	u8 r_check[32];
+	hash_reduce(h_ram, signature, 32, public_key, 32, message, message_size);
+	if (crypto_eddsa_r_check(r_check, public_key, h_ram, signature + 32)) {
+		return -1;
+	}
+	return crypto_verify32(r_check, signature);  // R == R_check ? OK : fail
 }
 
 ///////////////////////
@@ -2501,8 +2419,7 @@ void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
 	};
 	// separate the main factor & the cofactor of the scalar
 	u8 scalar[32];
-	COPY(scalar, secret_key, 32);
-	trim_scalar(scalar);
+	crypto_eddsa_trim_scalar(scalar, secret_key);
 
 	// Separate the main factor and the cofactor
 	//
@@ -2572,8 +2489,7 @@ void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
 	// Compute clean scalar multiplication
 	u8 scalar[32];
 	ge pk;
-	COPY(scalar, secret_key, 32);
-	trim_scalar(scalar);
+	crypto_eddsa_trim_scalar(scalar, secret_key);
 	ge_scalarmult_base(&pk, scalar);
 
 	// Compute low order point
@@ -2856,8 +2772,7 @@ void crypto_x25519_inverse(u8 blind_salt [32], const u8 private_key[32],
 		0xfffffffe, 0xffffffff, 0xffffffff, 0x0fffffff,};
 
 	u8 scalar[32];
-	COPY(scalar, private_key, 32);
-	trim_scalar(scalar);
+	crypto_eddsa_trim_scalar(scalar, private_key);
 
 	// Convert the scalar in Montgomery form
 	// m_scl = scalar * 2^256 (modulo L)

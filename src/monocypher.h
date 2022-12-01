@@ -67,17 +67,6 @@ extern "C" {
 /// Type definitions ///
 ////////////////////////
 
-// Vtable for EdDSA with a custom hash.
-// Instantiate it to define a custom hash.
-// Its size, contents, and layout, are part of the public API.
-typedef struct {
-	void (*hash)(uint8_t hash[64], const uint8_t *message, size_t message_size);
-	void (*init  )(void *ctx);
-	void (*update)(void *ctx, const uint8_t *message, size_t message_size);
-	void (*final )(void *ctx, uint8_t hash[64]);
-	size_t ctx_size;
-} crypto_sign_vtable;
-
 // Do not rely on the size or contents of any of the types below,
 // they may change without notice.
 
@@ -98,20 +87,6 @@ typedef struct {
 	size_t   input_idx;
 	size_t   hash_size;
 } crypto_blake2b_ctx;
-
-// Signatures (EdDSA)
-typedef struct {
-	const crypto_sign_vtable *hash;
-	uint8_t buf[96];
-	uint8_t pk [32];
-} crypto_sign_ctx_abstract;
-typedef crypto_sign_ctx_abstract crypto_check_ctx_abstract;
-
-typedef struct {
-	crypto_sign_ctx_abstract ctx;
-	crypto_blake2b_ctx       hash;
-} crypto_sign_ctx;
-typedef crypto_sign_ctx crypto_check_ctx;
 
 ////////////////////////////
 /// High level interface ///
@@ -179,9 +154,6 @@ void crypto_blake2b_final (crypto_blake2b_ctx *ctx, uint8_t *hash);
 
 void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
                                  const uint8_t      *key, size_t key_size);
-
-// vtable for signatures
-extern const crypto_sign_vtable crypto_blake2b_vtable;
 
 
 // Password key derivation (Argon2 i)
@@ -319,50 +291,25 @@ void crypto_x25519_inverse(uint8_t       blind_salt [32],
                            const uint8_t private_key[32],
                            const uint8_t curve_point[32]);
 
+// EdDSA
+// -----
+void crypto_eddsa_trim_scalar(uint8_t out[32], const uint8_t in[32]);
+void crypto_eddsa_reduce(uint8_t reduced[32], const uint8_t expanded[64]);
+void crypto_eddsa_mul_add(uint8_t r[32],
+                          const uint8_t a[32],
+						  const uint8_t b[32],
+						  const uint8_t c[32]);
+void crypto_eddsa_scalarbase(uint8_t point[32], const uint8_t scalar[32]);
+int crypto_eddsa_r_check(uint8_t r_check[32],
+						 const uint8_t public_key[32],
+                         const uint8_t h_ram[32],
+						 const uint8_t s[32]);
 
 // EdDSA to X25519
 // ---------------
 void crypto_from_eddsa_private(uint8_t x25519[32], const uint8_t eddsa[32]);
 void crypto_from_eddsa_public (uint8_t x25519[32], const uint8_t eddsa[32]);
 
-
-// EdDSA -- Incremental interface
-// ------------------------------
-
-// Signing (2 passes)
-// Make sure the two passes hash the same message,
-// else you might reveal the private key.
-void crypto_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
-                                 const uint8_t  secret_key[32],
-                                 const uint8_t  public_key[32]);
-void crypto_sign_update(crypto_sign_ctx_abstract *ctx,
-                        const uint8_t *message, size_t message_size);
-void crypto_sign_init_second_pass(crypto_sign_ctx_abstract *ctx);
-// use crypto_sign_update() again.
-void crypto_sign_final(crypto_sign_ctx_abstract *ctx, uint8_t signature[64]);
-
-// Verification (1 pass)
-// Make sure you don't use (parts of) the message
-// before you're done checking it.
-void crypto_check_init  (crypto_check_ctx_abstract *ctx,
-                         const uint8_t signature[64],
-                         const uint8_t public_key[32]);
-void crypto_check_update(crypto_check_ctx_abstract *ctx,
-                         const uint8_t *message, size_t message_size);
-int crypto_check_final  (crypto_check_ctx_abstract *ctx);
-
-// Custom hash interface
-void crypto_sign_public_key_custom_hash(uint8_t       public_key[32],
-                                        const uint8_t secret_key[32],
-                                        const crypto_sign_vtable *hash);
-void crypto_sign_init_first_pass_custom_hash(crypto_sign_ctx_abstract *ctx,
-                                             const uint8_t secret_key[32],
-                                             const uint8_t public_key[32],
-                                             const crypto_sign_vtable *hash);
-void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
-                                   const uint8_t signature[64],
-                                   const uint8_t public_key[32],
-                                   const crypto_sign_vtable *hash);
 
 // Elligator 2
 // -----------

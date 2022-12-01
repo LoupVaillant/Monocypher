@@ -80,11 +80,6 @@ typedef struct {
 	crypto_sha512_ctx ctx;
 } crypto_hmac_sha512_ctx;
 
-typedef struct {
-	crypto_sign_ctx_abstract ctx;
-	crypto_sha512_ctx        hash;
-} crypto_sign_ed25519_ctx;
-typedef crypto_sign_ed25519_ctx crypto_check_ed25519_ctx;
 
 // SHA 512
 // -------
@@ -94,9 +89,6 @@ void crypto_sha512_update(crypto_sha512_ctx *ctx,
 void crypto_sha512_final (crypto_sha512_ctx *ctx, uint8_t hash[64]);
 void crypto_sha512(uint8_t hash[64],
                    const uint8_t *message, size_t message_size);
-
-// vtable for signatures
-extern const crypto_sign_vtable crypto_sha512_vtable;
 
 
 // HMAC SHA 512
@@ -114,11 +106,9 @@ void crypto_hmac_sha512(uint8_t hmac[64],
 // Ed25519
 // -------
 
-// Generate public key
 void crypto_ed25519_public_key(uint8_t       public_key[32],
                                const uint8_t secret_key[32]);
 
-// Direct interface
 void crypto_ed25519_sign(uint8_t        signature [64],
                          const uint8_t  secret_key[32],
                          const uint8_t  public_key[32], // optional, may be 0
@@ -126,21 +116,6 @@ void crypto_ed25519_sign(uint8_t        signature [64],
 int crypto_ed25519_check(const uint8_t  signature [64],
                          const uint8_t  public_key[32],
                          const uint8_t *message, size_t message_size);
-
-// Incremental interface
-void crypto_ed25519_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
-                                         const uint8_t secret_key[32],
-                                         const uint8_t public_key[32]);
-#define crypto_ed25519_sign_update crypto_sign_update
-#define crypto_ed25519_sign_init_second_pass crypto_sign_init_second_pass
-// use crypto_ed25519_sign_update() again.
-#define crypto_ed25519_sign_final crypto_sign_final
-
-void crypto_ed25519_check_init(crypto_check_ctx_abstract *ctx,
-                               const uint8_t signature[64],
-                               const uint8_t public_key[32]);
-#define crypto_ed25519_check_update crypto_check_update
-#define crypto_ed25519_check_final crypto_check_final
 
 void crypto_from_ed25519_private(uint8_t x25519[32], const uint8_t eddsa[32]);
 #define crypto_from_ed25519_public crypto_from_eddsa_public

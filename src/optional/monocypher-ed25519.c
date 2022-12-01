@@ -283,23 +283,6 @@ void crypto_sha512(u8 hash[64], const u8 *message, size_t message_size)
 	crypto_sha512_final (&ctx, hash);
 }
 
-static void sha512_vtable_init(void *ctx) {
-	crypto_sha512_init(&((crypto_sign_ed25519_ctx*)ctx)->hash);
-}
-static void sha512_vtable_update(void *ctx, const u8 *m, size_t s) {
-	crypto_sha512_update(&((crypto_sign_ed25519_ctx*)ctx)->hash, m, s);
-}
-static void sha512_vtable_final(void *ctx, u8 *h) {
-	crypto_sha512_final(&((crypto_sign_ed25519_ctx*)ctx)->hash, h);
-}
-const crypto_sign_vtable crypto_sha512_vtable = {
-	crypto_sha512,
-	sha512_vtable_init,
-	sha512_vtable_update,
-	sha512_vtable_final,
-	sizeof(crypto_sign_ed25519_ctx),
-};
-
 ////////////////////
 /// HMAC SHA 512 ///
 ////////////////////
@@ -355,28 +338,27 @@ void crypto_hmac_sha512(u8 hmac[64], const u8 *key, size_t key_size,
 ///////////////
 /// Ed25519 ///
 ///////////////
-
-void crypto_ed25519_public_key(u8       public_key[32],
-                               const u8 secret_key[32])
+void crypto_ed25519_public_key(u8 public_key[32], const u8 secret_key[32])
 {
-	crypto_sign_public_key_custom_hash(public_key, secret_key,
-	                                   &crypto_sha512_vtable);
+	u8 a[64];
+	crypto_sha512(a, secret_key, 32);
+	crypto_eddsa_trim_scalar(a, a);
+	crypto_eddsa_scalarbase(public_key, a);
 }
 
-void crypto_ed25519_sign_init_first_pass(crypto_sign_ctx_abstract *ctx,
-                                         const u8 secret_key[32],
-                                         const u8 public_key[32])
+static void hash_reduce(u8 h[32],
+                        const u8 *a, size_t a_size,
+                        const u8 *b, size_t b_size,
+                        const u8 *c, size_t c_size)
 {
-	crypto_sign_init_first_pass_custom_hash(ctx, secret_key, public_key,
-	                                        &crypto_sha512_vtable);
-}
-
-void crypto_ed25519_check_init(crypto_check_ctx_abstract *ctx,
-                               const u8 signature[64],
-                               const u8 public_key[32])
-{
-	crypto_check_init_custom_hash(ctx, signature, public_key,
-	                              &crypto_sha512_vtable);
+	u8 hash[64];
+	crypto_sha512_ctx ctx;
+	crypto_sha512_init  (&ctx);
+	crypto_sha512_update(&ctx, a, a_size);
+	crypto_sha512_update(&ctx, b, b_size);
+	crypto_sha512_update(&ctx, c, c_size);
+	crypto_sha512_final (&ctx, hash);
+	crypto_eddsa_reduce(h, hash);
 }
 
 void crypto_ed25519_sign(u8        signature [64],
@@ -384,24 +366,50 @@ void crypto_ed25519_sign(u8        signature [64],
                          const u8  public_key[32],
                          const u8 *message, size_t message_size)
 {
-	crypto_sign_ed25519_ctx ctx;
-	crypto_sign_ctx_abstract *actx = (crypto_sign_ctx_abstract*)&ctx;
-	crypto_ed25519_sign_init_first_pass (actx, secret_key, public_key);
-	crypto_ed25519_sign_update          (actx, message, message_size);
-	crypto_ed25519_sign_init_second_pass(actx);
-	crypto_ed25519_sign_update          (actx, message, message_size);
-	crypto_ed25519_sign_final           (actx, signature);
+	u8 a[64];
+	crypto_sha512(a, secret_key, 32);
+	crypto_eddsa_trim_scalar(a, a);
+	u8 pk[32];  // not secret, not wiped
+	if (public_key == 0) {
+		crypto_eddsa_scalarbase(pk, a);
+	} else {
+		COPY(pk, public_key, 32);
+	}
+
+	// Deterministic part of EdDSA: Construct a nonce by hashing the message
+	// instead of generating a random number.
+	// An actual random number would work just fine, and would save us
+	// the trouble of hashing the message twice.  If we did that
+	// however, the user could fuck it up and reuse the nonce.
+	u8 r[32];
+	hash_reduce(r, a + 32, 32, message, message_size, 0, 0);
+
+	// First half of the signature R = [r]B
+	u8 R[32];  // Not secret, not wiped
+	crypto_eddsa_scalarbase(R, r);
+
+	// Second half of the signature
+	u8 h_ram[32];
+	hash_reduce(h_ram, R, 32, pk, 32, message, message_size);
+	COPY(signature, R, 32);
+	crypto_eddsa_mul_add(signature + 32, h_ram, a, r); // s = h_ram * a + r
+
+	WIPE_BUFFER(a);
+	WIPE_BUFFER(r);
+	WIPE_BUFFER(h_ram);
 }
 
 int crypto_ed25519_check(const u8  signature [64],
                          const u8  public_key[32],
                          const u8 *message, size_t message_size)
 {
-	crypto_check_ed25519_ctx ctx;
-	crypto_check_ctx_abstract *actx = (crypto_check_ctx_abstract*)&ctx;
-	crypto_ed25519_check_init  (actx, signature, public_key);
-	crypto_ed25519_check_update(actx, message, message_size);
-	return crypto_ed25519_check_final(actx);
+	u8 h_ram  [32];
+	u8 r_check[32];
+	hash_reduce(h_ram, signature, 32, public_key, 32, message, message_size);
+	if (crypto_eddsa_r_check(r_check, public_key, h_ram, signature + 32)) {
+		return -1;
+	}
+	return crypto_verify32(r_check, signature);  // R == R_check ? OK : fail
 }
 
 void crypto_from_ed25519_private(u8 x25519[32], const u8 eddsa[32])

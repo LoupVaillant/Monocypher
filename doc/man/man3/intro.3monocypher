@@ -114,11 +114,6 @@ and
 implement EdDSA, with Curve25519 and BLAKE2b.
 This is the same as the more famous Ed25519, with SHA-512 replaced by
 the faster and more secure BLAKE2b.
-.Pp
-For highly specialised needs,
-it is possible to use a custom hash function with EdDSA;
-see
-.Xr crypto_sign_init_first_pass_custom_hash 3monocypher .
 .Ss Constant time comparison
 .Xr crypto_verify16 3monocypher ,
 .Xr crypto_verify32 3monocypher ,
@@ -153,10 +148,6 @@ and
 .Xr crypto_chacha20 3monocypher ,
 .Xr crypto_chacha20_ctr 3monocypher ,
 .Xr crypto_check 3monocypher ,
-.Xr crypto_check_final 3monocypher ,
-.Xr crypto_check_init 3monocypher ,
-.Xr crypto_check_init_custom_hash 3monocypher ,
-.Xr crypto_check_update 3monocypher ,
 .Xr crypto_curve_to_hidden 3monocypher ,
 .Xr crypto_from_eddsa_private 3monocypher ,
 .Xr crypto_from_eddsa_public 3monocypher ,
@@ -172,13 +163,7 @@ and
 .Xr crypto_poly1305_init 3monocypher ,
 .Xr crypto_poly1305_update 3monocypher ,
 .Xr crypto_sign 3monocypher ,
-.Xr crypto_sign_final 3monocypher ,
-.Xr crypto_sign_init_first_pass 3monocypher ,
-.Xr crypto_sign_init_first_pass_custom_hash 3monocypher ,
-.Xr crypto_sign_init_second_pass 3monocypher ,
 .Xr crypto_sign_public_key 3monocypher ,
-.Xr crypto_sign_public_key_custom_hash 3monocypher ,
-.Xr crypto_sign_update 3monocypher ,
 .Xr crypto_unlock 3monocypher ,
 .Xr crypto_unlock_aead 3monocypher ,
 .Xr crypto_verify16 3monocypher ,
@@ -196,14 +181,8 @@ and
 .Xr crypto_from_ed25519_private 3monocypher ,
 .Xr crypto_from_ed25519_public 3monocypher ,
 .Xr crypto_ed25519_check 3monocypher ,
-.Xr crypto_ed25519_check_init 3monocypher ,
-.Xr crypto_ed25519_check_update 3monocypher ,
-.Xr crypto_ed25519_check_final 3monocypher ,
 .Xr crypto_ed25519_public_key 3monocypher ,
 .Xr crypto_ed25519_sign 3monocypher ,
-.Xr crypto_ed25519_sign_init_first_pass 3monocypher ,
-.Xr crypto_ed25519_sign_init_second_pass 3monocypher ,
-.Xr crypto_ed25519_sign_final 3monocypher ,
 .Xr crypto_hmac_sha512 3monocypher ,
 .Xr crypto_hmac_sha512_init 3monocypher ,
 .Xr crypto_hmac_sha512_update 3monocypher ,
