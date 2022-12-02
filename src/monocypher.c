@@ -2581,7 +2581,7 @@ static const fe A = {486662};
 //       u2 = w * -1 * -non_square * r^2
 //       u2 = w * non_square * r^2
 //       u2 = u
-void crypto_hidden_to_curve(uint8_t curve[32], const uint8_t hidden[32])
+void crypto_hidden_to_curve(u8 curve[32], const u8 hidden[32])
 {
 	fe r, u, t1, t2, t3;
 	fe_frombytes_mask(r, hidden, 2); // r is encoded in 254 bits.
