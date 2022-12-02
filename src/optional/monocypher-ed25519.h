@@ -105,13 +105,13 @@ void crypto_hmac_sha512(uint8_t hmac[64],
 
 // Ed25519
 // -------
-
-void crypto_ed25519_public_key(uint8_t       public_key[32],
-                               const uint8_t secret_key[32]);
-
+// Signatures (EdDSA with curve25519 + BLAKE2b)
+// --------------------------------------------
+void crypto_ed25519_key_pair(uint8_t secret_key[64],
+                             uint8_t public_key[32],
+                             uint8_t seed[32]);
 void crypto_ed25519_sign(uint8_t        signature [64],
                          const uint8_t  secret_key[32],
-                         const uint8_t  public_key[32], // optional, may be 0
                          const uint8_t *message, size_t message_size);
 int crypto_ed25519_check(const uint8_t  signature [64],
                          const uint8_t  public_key[32],

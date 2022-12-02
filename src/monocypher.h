@@ -183,19 +183,15 @@ void crypto_key_exchange(uint8_t       shared_key      [32],
 
 // Signatures (EdDSA with curve25519 + BLAKE2b)
 // --------------------------------------------
-
-// Generate public key
-void crypto_sign_public_key(uint8_t        public_key[32],
-                            const uint8_t  secret_key[32]);
-
-// Direct interface
-void crypto_sign(uint8_t        signature [64],
-                 const uint8_t  secret_key[32],
-                 const uint8_t  public_key[32], // optional, may be 0
-                 const uint8_t *message, size_t message_size);
-int crypto_check(const uint8_t  signature [64],
-                 const uint8_t  public_key[32],
-                 const uint8_t *message, size_t message_size);
+void crypto_eddsa_key_pair(uint8_t secret_key[64],
+                           uint8_t public_key[32],
+                           uint8_t seed[32]);
+void crypto_eddsa_sign(uint8_t        signature [64],
+                       const uint8_t  secret_key[32],
+                       const uint8_t *message, size_t message_size);
+int crypto_eddsa_check(const uint8_t  signature [64],
+                       const uint8_t  public_key[32],
+                       const uint8_t *message, size_t message_size);
 
 ////////////////////////////
 /// Low level primitives ///

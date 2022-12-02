@@ -2234,12 +2234,17 @@ int crypto_eddsa_r_check(u8 r_check[32], const u8 public_key[32],
 	return 0;
 }
 
-void crypto_sign_public_key(u8 public_key[32], const u8 secret_key[32])
+void crypto_eddsa_key_pair(u8 secret_key[64], u8 public_key[32], u8 seed[32])
 {
 	u8 a[64];
-	crypto_blake2b(a, secret_key, 32);
-	crypto_eddsa_trim_scalar(a, a);
-	crypto_eddsa_scalarbase(public_key, a);
+	COPY(a, seed, 32);                      // a[ 0..31]  = seed
+	crypto_wipe(seed, 32);
+	COPY(secret_key, a, 32);                // secret key = seed
+	crypto_blake2b(a, a, 32);               // a[ 0..31]  = scalar
+	crypto_eddsa_trim_scalar(a, a);         // a[ 0..31]  = trimmed scalar
+	crypto_eddsa_scalarbase(public_key, a); // public key = [trimmed scalar]B
+	COPY(secret_key + 32, public_key, 32);  // secret key includes public half
+	WIPE_BUFFER(a);
 }
 
 static void hash_reduce(u8 h[32],
@@ -2257,46 +2262,96 @@ static void hash_reduce(u8 h[32],
 	crypto_eddsa_reduce(h, hash);
 }
 
-void crypto_sign(u8        signature[64],
-                 const u8  secret_key[32],
-                 const u8  public_key[32],
-                 const u8 *message, size_t message_size)
+// Digital signature of a message with from a secret key.
+//
+// The secret key comprises two parts:
+// - The seed that generates the key (secret_key[ 0..31])
+// - The public key                  (secret_key[32..63])
+//
+// The seed and the public key are bundled together to make sure users
+// don't use mismatched seeds and public keys, which would instantly
+// leak the secret scalar and allow forgeries (allowing this to happen
+// has resulted in critical vulnerabilities in the wild).
+//
+// The seed is hashed to derive the secret scalar and a secret prefix.
+// The sole purpose of the prefix is to generate a secret random nonce.
+// The properties of that nonce must be as follows:
+// - Unique: we need a different one for each message.
+// - Secret: third parties must not be able to predict it.
+// - Random: any detectable bias would break all security.
+//
+// There are two ways to achieve these properties.  The obvious one is
+// to simply generate a random number.  Here that would be a parameter
+// (Monocypher doesn't have an RNG).  It works, but then users may reuse
+// the nonce by accident, which _also_ leaks the secret scalar and
+// allows forgeries.  This has happened in the wild too.
+//
+// This is no good, so instead we generate that nonce deterministically
+// by reducing modulo L a hash of the secret prefix and the message.
+// The secret prefix makes the nonce unpredictable, the message makes it
+// unique, and the hash/reduce removes all bias.
+//
+// The cost of that safety is hashing the message twice.  If that cost
+// is unacceptable, there are two alternatives:
+//
+// - Signing a hash of the message instead of the message itself.  This
+//   is fine as long as the hash is collision resistant. It is not
+//   compatible with existing "pure" signatures, but at least it's safe.
+//
+// - Using a random nonce.  Please exercise **EXTREME CAUTION** if you
+//   ever do that.  It is absolutely **critical** that the nonce is
+//   really an unbiased random number between 0 and L-1, never reused,
+//   and wiped immediately.
+//
+//   To lower the likelihood of complete catastrophe if the RNG is
+//   either flawed or misused, you can hash the RNG output together with
+//   the secret prefix and the beginning of the message, and use the
+//   reduction of that hash instead of the RNG output itself.  It's not
+//   foolproof (you'd need to hash the whole message) but it helps.
+//
+// Signing a message involves the following operations:
+//
+//   scalar, prefix = HASH(secret_key)
+//   r              = HASH(prefix || message) % L
+//   R              = [r]B
+//   h              = HASH(R || public_key || message) % L
+//   S              = ((h * a) + r) % L
+//   signature      = R || S
+void crypto_eddsa_sign(u8 signature [64], const u8 secret_key[32],
+                       const u8 *message, size_t message_size)
 {
-	u8 a[64];
+	u8 a[64];  // secret scalar and prefix
+	u8 r[32];  // secret deterministic "random" nonce
+	u8 h[32];  // publically verifiable hash of the message (not wiped)
+	u8 R[32];  // first half of the signature (allows overlapping inputs)
+
 	crypto_blake2b(a, secret_key, 32);
 	crypto_eddsa_trim_scalar(a, a);
-	u8 pk[32];  // not secret, not wiped
-	if (public_key == 0) {
-		crypto_eddsa_scalarbase(pk, a);
-	} else {
-		COPY(pk, public_key, 32);
-	}
-
-	// Deterministic part of EdDSA: Construct a nonce by hashing the message
-	// instead of generating a random number.
-	// An actual random number would work just fine, and would save us
-	// the trouble of hashing the message twice.  If we did that
-	// however, the user could fuck it up and reuse the nonce.
-	u8 r[32];
 	hash_reduce(r, a + 32, 32, message, message_size, 0, 0);
-
-	// First half of the signature R = [r]B
-	u8 R[32];  // Not secret, not wiped
 	crypto_eddsa_scalarbase(R, r);
-
-	// Second half of the signature
-	u8 h_ram[32];
-	hash_reduce(h_ram, R, 32, pk, 32, message, message_size);
+	hash_reduce(h, R, 32, secret_key + 32, 32, message, message_size);
 	COPY(signature, R, 32);
-	crypto_eddsa_mul_add(signature + 32, h_ram, a, r); // s = h_ram * a + r
+	crypto_eddsa_mul_add(signature + 32, h, a, r);
 
 	WIPE_BUFFER(a);
 	WIPE_BUFFER(r);
-	WIPE_BUFFER(h_ram);
 }
 
-int crypto_check(const u8  signature[64], const u8 public_key[32],
-                 const u8 *message, size_t message_size)
+// To verify a signature, there are 3 steps:
+//
+//   S, R = signature
+//   h    = HASH(R || public_key || message) % L
+//   R'   = [s]B - [h]public_key
+//
+// For the signature to be valid, **TWO** conditions must hold:
+//
+// - Computing R' must succeed.
+// - R and R' must be identical (duh).
+//
+// Don't you **ever** forget to check the return value of
+// `crypto_eddsa_r_check()`.
+int crypto_eddsa_check(const u8  signature[64], const u8 public_key[32],
+                       const u8 *message, size_t message_size)
 {
 	u8 h_ram  [32];
 	u8 r_check[32];

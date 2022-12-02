@@ -338,12 +338,17 @@ void crypto_hmac_sha512(u8 hmac[64], const u8 *key, size_t key_size,
 ///////////////
 /// Ed25519 ///
 ///////////////
-void crypto_ed25519_public_key(u8 public_key[32], const u8 secret_key[32])
+void crypto_ed25519_key_pair(u8 secret_key[64], u8 public_key[32], u8 seed[32])
 {
 	u8 a[64];
-	crypto_sha512(a, secret_key, 32);
-	crypto_eddsa_trim_scalar(a, a);
-	crypto_eddsa_scalarbase(public_key, a);
+	COPY(a, seed, 32);                      // a[ 0..31]  = seed
+	crypto_wipe(seed, 32);
+	COPY(secret_key, a, 32);                // secret key = seed
+	crypto_sha512(a, a, 32);                // a[ 0..31]  = scalar
+	crypto_eddsa_trim_scalar(a, a);         // a[ 0..31]  = trimmed scalar
+	crypto_eddsa_scalarbase(public_key, a); // public key = [trimmed scalar]B
+	COPY(secret_key + 32, public_key, 32);  // secret key includes public half
+	WIPE_BUFFER(a);
 }
 
 static void hash_reduce(u8 h[32],
@@ -361,46 +366,27 @@ static void hash_reduce(u8 h[32],
 	crypto_eddsa_reduce(h, hash);
 }
 
-void crypto_ed25519_sign(u8        signature [64],
-                         const u8  secret_key[32],
-                         const u8  public_key[32],
+void crypto_ed25519_sign(u8 signature [64], const u8 secret_key[32],
                          const u8 *message, size_t message_size)
 {
-	u8 a[64];
+	u8 a[64];  // secret scalar and prefix
+	u8 r[32];  // secret deterministic "random" nonce
+	u8 h[32];  // publically verifiable hash of the message (not wiped)
+	u8 R[32];  // first half of the signature (allows overlapping inputs)
+
 	crypto_sha512(a, secret_key, 32);
 	crypto_eddsa_trim_scalar(a, a);
-	u8 pk[32];  // not secret, not wiped
-	if (public_key == 0) {
-		crypto_eddsa_scalarbase(pk, a);
-	} else {
-		COPY(pk, public_key, 32);
-	}
-
-	// Deterministic part of EdDSA: Construct a nonce by hashing the message
-	// instead of generating a random number.
-	// An actual random number would work just fine, and would save us
-	// the trouble of hashing the message twice.  If we did that
-	// however, the user could fuck it up and reuse the nonce.
-	u8 r[32];
 	hash_reduce(r, a + 32, 32, message, message_size, 0, 0);
-
-	// First half of the signature R = [r]B
-	u8 R[32];  // Not secret, not wiped
 	crypto_eddsa_scalarbase(R, r);
-
-	// Second half of the signature
-	u8 h_ram[32];
-	hash_reduce(h_ram, R, 32, pk, 32, message, message_size);
+	hash_reduce(h, R, 32, secret_key + 32, 32, message, message_size);
 	COPY(signature, R, 32);
-	crypto_eddsa_mul_add(signature + 32, h_ram, a, r); // s = h_ram * a + r
+	crypto_eddsa_mul_add(signature + 32, h, a, r);
 
 	WIPE_BUFFER(a);
 	WIPE_BUFFER(r);
-	WIPE_BUFFER(h_ram);
 }
 
-int crypto_ed25519_check(const u8  signature [64],
-                         const u8  public_key[32],
+int crypto_ed25519_check(const u8  signature[64], const u8 public_key[32],
                          const u8 *message, size_t message_size)
 {
 	u8 h_ram  [32];
