@@ -144,29 +144,31 @@ static u64 x25519(void)
 
 static u64 edDSA_sign(void)
 {
+	u8 sk       [64];
 	u8 pk       [32];
 	u8 signature[64];
-	RANDOM_INPUT(sk     , 32);
+	RANDOM_INPUT(seed   , 32);
 	RANDOM_INPUT(message, 64);
-	crypto_sign_public_key(pk, sk);
+	crypto_eddsa_key_pair(sk, pk, seed);
 
 	TIMING_START {
-		crypto_sign(signature, sk, pk, message, 64);
+		crypto_eddsa_sign(signature, sk, message, 64);
 	}
 	TIMING_END;
 }
 
 static u64 edDSA_check(void)
 {
+	u8 sk       [64];
 	u8 pk       [32];
 	u8 signature[64];
-	RANDOM_INPUT(sk     , 32);
+	RANDOM_INPUT(seed   , 32);
 	RANDOM_INPUT(message, 64);
-	crypto_sign_public_key(pk, sk);
-	crypto_sign(signature, sk, pk, message, 64);
+	crypto_eddsa_key_pair(sk, pk, seed);
+	crypto_eddsa_sign(signature, sk, message, 64);
 
 	TIMING_START {
-		if (crypto_check(signature, pk, message, 64)) {
+		if (crypto_eddsa_check(signature, pk, message, 64)) {
 			printf("Monocypher verification failed\n");
 		}
 	}
