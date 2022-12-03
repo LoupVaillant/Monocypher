@@ -191,17 +191,10 @@ static void edDSA(vector_reader *reader)
 	vector public_k = next_input(reader);
 	vector msg      = next_input(reader);
 	vector out      = next_output(reader);
-	u8     out2[64];
-
-	// Sign with cached public key, then by reconstructing the key
-	crypto_sign(out.buf, secret_k.buf, public_k.buf, msg.buf, msg.size);
-	crypto_sign(out2   , secret_k.buf, 0           , msg.buf, msg.size);
-	// Compare signatures (must be the same)
-	if (memcmp(out.buf, out2, out.size)) {
-		printf("FAILURE: reconstructing public key"
-		       " yields different signature\n");
-		exit(1);
-	}
+	u8 fat_secret_key[64];
+	memcpy(fat_secret_key     , secret_k.buf, 32);
+	memcpy(fat_secret_key + 32, public_k.buf, 32);
+	crypto_eddsa_sign(out.buf, fat_secret_key, msg.buf, msg.size);
 }
 
 static void ed_25519(vector_reader *reader)
@@ -210,17 +203,10 @@ static void ed_25519(vector_reader *reader)
 	vector public_k = next_input(reader);
 	vector msg      = next_input(reader);
 	vector out      = next_output(reader);
-	u8     out2[64];
-
-	// Sign with cached public key, then by reconstructing the key
-	crypto_ed25519_sign(out.buf, secret_k.buf, public_k.buf, msg.buf, msg.size);
-	crypto_ed25519_sign(out2   , secret_k.buf, 0           , msg.buf, msg.size);
-	// Compare signatures (must be the same)
-	if (memcmp(out.buf, out2, out.size)) {
-		printf("FAILURE: reconstructing public key"
-		       " yields different signature\n");
-		exit(1);
-	}
+	u8 fat_secret_key[64];
+	memcpy(fat_secret_key     , secret_k.buf, 32);
+	memcpy(fat_secret_key + 32, public_k.buf, 32);
+	crypto_ed25519_sign(out.buf, fat_secret_key, msg.buf, msg.size);
 }
 
 static void ed_25519_check(vector_reader *reader)
@@ -260,10 +246,11 @@ static void elligator_inv(vector_reader *reader)
 static int p_from_eddsa()
 {
 	int status = 0;
-	RANDOM_INPUT(ed_private, 32);
-	u8 ed_public[32];  crypto_sign_public_key   (ed_public, ed_private);
-	u8 x_private[32];  crypto_from_eddsa_private(x_private, ed_private);
-	u8 x_public1[32];  crypto_from_eddsa_public (x_public1, ed_public);
+	RANDOM_INPUT(ed_seed, 32);
+	u8 secret   [64];
+	u8 public   [32];  crypto_eddsa_key_pair(secret, public, ed_seed);
+	u8 x_private[32];  crypto_from_eddsa_private(x_private, secret);
+	u8 x_public1[32];  crypto_from_eddsa_public (x_public1, public);
 	u8 x_public2[32];  crypto_x25519_public_key (x_public2, x_private);
 	status |= memcmp(x_public1, x_public2, 32);
 	printf("%s: from_eddsa\n", status != 0 ? "FAILED" : "OK");
@@ -274,11 +261,12 @@ static int p_from_eddsa()
 static int p_from_ed25519()
 {
 	int status = 0;
-	RANDOM_INPUT(ed_private, 32);
-	u8 ed_public[32];  crypto_ed25519_public_key  (ed_public, ed_private);
-	u8 x_private[32];  crypto_from_ed25519_private(x_private, ed_private);
-	u8 x_public1[32];  crypto_from_ed25519_public (x_public1, ed_public);
-	u8 x_public2[32];  crypto_x25519_public_key   (x_public2, x_private);
+	RANDOM_INPUT(ed_seed, 32);
+	u8 secret   [64];
+	u8 public   [32];  crypto_ed25519_key_pair(secret, public, ed_seed);
+	u8 x_private[32];  crypto_from_ed25519_private(x_private, secret);
+	u8 x_public1[32];  crypto_from_ed25519_public (x_public1, public);
+	u8 x_public2[32];  crypto_x25519_public_key (x_public2, x_private);
 	status |= memcmp(x_public1, x_public2, 32);
 	printf("%s: from_ed25519\n", status != 0 ? "FAILED" : "OK");
 	return status;

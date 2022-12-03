@@ -390,13 +390,6 @@ static const char *ed_25519_check_vectors[]={
   "ff",
 };
 static size_t nb_ed_25519_check_vectors=12;
-static const char *x25519_pk_vectors[]={
-  "e4e4c4054fe35a75d9c0f679ad8770d8227e68e4c1e68ce67ee88e6be251a207",
-  "e5410cf8d4524fe8b010158cf7c541420e996b6b1378d4ed88deaaee29263b12",
-  "0000000000000000000000000000000000000000000000000000000000000000",
-  "2fe57da347cd62431528daac5fbb290730fff684afc4cfc2ed90995f58cb3b74",
-};
-static size_t nb_x25519_pk_vectors=4;
 static const char *key_exchange_vectors[]={
   "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
   "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f",

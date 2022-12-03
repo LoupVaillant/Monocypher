@@ -68,7 +68,7 @@ endif
 
 .PHONY: all library static-library dynamic-library                     \
         install install-doc pkg-config-libhydrogen                     \
-        check test ctgrind                                             \
+        check test tis-ci ctgrind                                      \
         speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519 \
         speed-donna                                                    \
         clean uninstall                                                \
@@ -116,13 +116,16 @@ uninstall:
 
 check: test
 test           : test.out
+tis-ci         : tis-ci.out
 speed          : speed.out
 speed-sodium   : speed-sodium.out
 speed-tweetnacl: speed-tweetnacl.out
 speed-hydrogen : speed-hydrogen.out
 speed-c25519   : speed-c25519.out
 speed-donna    : speed-donna.out
-test speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519 speed-donna:
+test tis-ci:
+	./$<
+speed speed-sodium speed-tweetnacl speed-hydrogen speed-c25519 speed-donna:
 	./$<
 
 ctgrind: ctgrind.out
@@ -150,11 +153,12 @@ lib/monocypher.o lib/monocypher-ed25519.o lib/chacha20.o lib/aead-incr.o:
 TEST_COMMON = tests/utils.h src/monocypher.h src/optional/monocypher-ed25519.h
 SPEED       = tests/speed
 lib/utils.o          :tests/utils.c
+lib/tis-ci.o         :tests/tis-ci.c      $(TEST_COMMON) tests/tis-ci-vectors.h
 lib/test.o           :tests/test.c               $(TEST_COMMON) tests/vectors.h
 lib/ctgrind.o        :tests/ctgrind.c            $(TEST_COMMON)
 lib/speed.o          :$(SPEED)/speed.c           $(TEST_COMMON) $(SPEED)/speed.h
 lib/speed-tweetnacl.o:$(SPEED)/speed-tweetnacl.c $(TEST_COMMON) $(SPEED)/speed.h
-lib/utils.o lib/test.o lib/speed.o:
+lib/utils.o lib/test.o lib/tis-ci.o lib/speed.o:
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS)                     \
             -I src -I src/optional -I tests \
@@ -223,11 +227,12 @@ lib/speed-ed25519.o: tests/externals/ed25519-donna/ed25519.c \
             -DED25519_FORCE_32BIT
 
 # test & speed executables
-TEST_OBJ=  lib/utils.o lib/monocypher.o
-test.out       : lib/test.o        $(TEST_OBJ) lib/monocypher-ed25519.o
-ctgrind.out    : lib/ctgrind.o     $(TEST_OBJ) lib/monocypher-ed25519.o
-speed.out      : lib/speed.o       $(TEST_OBJ) lib/monocypher-ed25519.o
-test.out speed.out:
+TEST_OBJ=  lib/utils.o lib/monocypher.o lib/monocypher-ed25519.o
+test.out       : lib/test.o     $(TEST_OBJ)
+tis-ci.out     : lib/tis-ci.o   $(TEST_OBJ)
+ctgrind.out    : lib/ctgrind.o  $(TEST_OBJ)
+speed.out      : lib/speed.o    $(TEST_OBJ)
+test.out speed.out tis-ci.out:
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
 ctgrind.out:
 	$(CC) $(CFLAGS) -O0 -I src -I src/optional -o $@ $^

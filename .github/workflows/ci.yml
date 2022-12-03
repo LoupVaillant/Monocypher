@@ -98,6 +98,9 @@ jobs:
       - name: Run tests
         run: make clean && make test -j4
 
+      - name: Run tis-ci tests
+        run: make clean && make tis-ci -j4
+
       - name: Run speed tests
         run: |
           make clean && make speed -j4
