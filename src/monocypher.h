@@ -63,31 +63,6 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 extern "C" {
 #endif
 
-////////////////////////
-/// Type definitions ///
-////////////////////////
-
-// Do not rely on the size or contents of any of the types below,
-// they may change without notice.
-
-// Poly1305
-typedef struct {
-	uint32_t r[4];   // constant multiplier (from the secret key)
-	uint32_t h[5];   // accumulated hash
-	uint8_t  c[16];  // chunk of the message
-	uint32_t pad[4]; // random number added at the end (from the secret key)
-	size_t   c_idx;  // How many bytes are there in the chunk.
-} crypto_poly1305_ctx;
-
-// Hash (BLAKE2b)
-typedef struct {
-	uint64_t hash[8];
-	uint64_t input_offset[2];
-	uint64_t input[16];
-	size_t   input_idx;
-	size_t   hash_size;
-} crypto_blake2b_ctx;
-
 ////////////////////////////
 /// High level interface ///
 ////////////////////////////
@@ -147,6 +122,16 @@ void crypto_blake2b_general(uint8_t       *hash   , size_t hash_size,
                             const uint8_t *message, size_t message_size);
 
 // Incremental interface
+typedef struct {
+	// Do not rely on the size or contents of this type,
+	// for they may change without notice.
+	uint64_t hash[8];
+	uint64_t input_offset[2];
+	uint64_t input[16];
+	size_t   input_idx;
+	size_t   hash_size;
+} crypto_blake2b_ctx;
+
 void crypto_blake2b_init  (crypto_blake2b_ctx *ctx);
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const uint8_t *message, size_t message_size);
@@ -261,6 +246,16 @@ void crypto_poly1305(uint8_t        mac[16],
                      const uint8_t  key[32]);
 
 // Incremental interface
+typedef struct {
+	// Do not rely on the size or contents of this type,
+	// for they may change without notice.
+	uint32_t r[4];   // constant multiplier (from the secret key)
+	uint32_t h[5];   // accumulated hash
+	uint8_t  c[16];  // chunk of the message
+	uint32_t pad[4]; // random number added at the end (from the secret key)
+	size_t   c_idx;  // How many bytes are there in the chunk.
+} crypto_poly1305_ctx;
+
 void crypto_poly1305_init  (crypto_poly1305_ctx *ctx, const uint8_t key[32]);
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const uint8_t *message, size_t message_size);
