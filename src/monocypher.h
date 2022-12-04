@@ -75,10 +75,9 @@ int crypto_verify16(const uint8_t a[16], const uint8_t b[16]);
 int crypto_verify32(const uint8_t a[32], const uint8_t b[32]);
 int crypto_verify64(const uint8_t a[64], const uint8_t b[64]);
 
+
 // Erase sensitive data
 // --------------------
-
-// Please erase all copies
 void crypto_wipe(void *secret, size_t size);
 
 
@@ -157,6 +156,7 @@ void crypto_argon2i_general(uint8_t       *hash,      uint32_t hash_size,// >= 4
                             const uint8_t *key,       uint32_t key_size,
                             const uint8_t *ad,        uint32_t ad_size);
 
+
 // Key exchange (X-25519)
 // ----------------------
 
@@ -167,7 +167,6 @@ void crypto_x25519_public_key(uint8_t       public_key[32],
 void crypto_x25519(uint8_t       raw_shared_secret[32],
                    const uint8_t your_secret_key  [32],
                    const uint8_t their_public_key [32]);
-
 
 
 // Signatures (EdDSA with curve25519 + BLAKE2b)
@@ -181,6 +180,7 @@ void crypto_eddsa_sign(uint8_t        signature [64],
 int crypto_eddsa_check(const uint8_t  signature [64],
                        const uint8_t  public_key[32],
                        const uint8_t *message, size_t message_size);
+
 
 ////////////////////////////
 /// Low level primitives ///
@@ -233,6 +233,7 @@ uint32_t crypto_ietf_chacha20_ctr(uint8_t       *cipher_text,
                                   const uint8_t  nonce[12],
                                   uint32_t       ctr);
 
+
 // Poly 1305
 // ---------
 
@@ -278,6 +279,7 @@ void crypto_x25519_inverse(uint8_t       blind_salt [32],
                            const uint8_t private_key[32],
                            const uint8_t curve_point[32]);
 
+
 // EdDSA building blocks
 // ---------------------
 void crypto_eddsa_trim_scalar(uint8_t out[32], const uint8_t in[32]);
@@ -291,6 +293,7 @@ int crypto_eddsa_r_check(uint8_t r_check[32],
 						 const uint8_t public_key[32],
                          const uint8_t h_ram[32],
 						 const uint8_t s[32]);
+
 
 // EdDSA to X25519
 // ---------------
@@ -309,7 +312,6 @@ int  crypto_curve_to_hidden(uint8_t hidden[32], const uint8_t curve [32],
 // Easy to use key pair generation
 void crypto_hidden_key_pair(uint8_t hidden[32], uint8_t secret_key[32],
                             uint8_t seed[32]);
-
 
 #ifdef __cplusplus
 }
