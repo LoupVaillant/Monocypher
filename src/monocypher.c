@@ -2395,8 +2395,8 @@ void crypto_from_eddsa_public(u8 x25519[32], const u8 eddsa[32])
 // private key.  Use only to generate ephemeral keys that will be hidden
 // with crypto_curve_to_hidden().
 //
-// The public key is otherwise compatible with crypto_x25519() and
-// crypto_key_exchange() (those properly clear the cofactor).
+// The public key is otherwise compatible with crypto_x25519(), which
+// properly clears the cofactor.
 //
 // Note that the distribution of the resulting public keys is almost
 // uniform.  Flipping the sign of the v coordinate (not provided by this
@@ -2747,17 +2747,6 @@ void crypto_hidden_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
 	COPY(secret_key, buf     , 32);
 	WIPE_BUFFER(buf);
 	WIPE_BUFFER(pk);
-}
-
-////////////////////
-/// Key exchange ///
-////////////////////
-void crypto_key_exchange(u8       shared_key[32],
-                         const u8 your_secret_key [32],
-                         const u8 their_public_key[32])
-{
-	crypto_x25519(shared_key, your_secret_key, their_public_key);
-	crypto_hchacha20(shared_key, shared_key, zero);
 }
 
 ///////////////////////

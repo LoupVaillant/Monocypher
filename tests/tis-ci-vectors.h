@@ -390,12 +390,12 @@ static const char *ed_25519_check_vectors[]={
   "ff",
 };
 static size_t nb_ed_25519_check_vectors=12;
-static const char *key_exchange_vectors[]={
-  "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
-  "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f",
-  "8e47ca376bdc7e59d2ced8107ceb2c27f4a80e8575f996baffb1a869ffcd5179",
+static const char *x25519_vectors[]={
+  "e4e4c4054fe35a75d9c0f679ad8770d8227e68e4c1e68ce67ee88e6be251a207",
+  "6531e5010ab797ec0dc3c7038a94cbfcbb8ff1d1aad061b802b3c3232a42b352",
+  "600e94ef1d60878dd40c330704b7648bdd32901bbfdbdef0e59e600229384642",
 };
-static size_t nb_key_exchange_vectors=3;
+static size_t nb_x25519_vectors=3;
 static const char *elligator_inv_vectors[]={
   "2920d46f2f37b04d00ff73df4115fda3876810c2144e94a7e6d0c09290ff7359",
   "d5",

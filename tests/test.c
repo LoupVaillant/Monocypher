@@ -200,14 +200,6 @@ static void x25519_pk(vector_reader *reader)
 	crypto_x25519_public_key(out.buf, in.buf);
 }
 
-static void key_exchange(vector_reader *reader)
-{
-	vector secret_key = next_input(reader);
-	vector public_key = next_input(reader);
-	vector out        = next_output(reader);
-	crypto_key_exchange(out.buf, secret_key.buf, public_key.buf);
-}
-
 static void edDSA(vector_reader *reader)
 {
 	vector secret_k = next_input(reader);
@@ -747,25 +739,6 @@ static int p_x25519_overlap()
 	return status;
 }
 
-// Tests that the shared key and secret key buffers of
-// crypto_key_exchange can overlap.
-static int p_key_exchange_overlap()
-{
-	int status = 0;
-	FOR (i, 0, 62) {
-		u8 overlapping[94];
-		u8 separate[32];
-		RANDOM_INPUT(sk, 32);
-		RANDOM_INPUT(pk, 32);
-		memcpy(overlapping + 31, sk, 32);
-		crypto_key_exchange(overlapping + i, overlapping + 31, pk);
-		crypto_key_exchange(separate, sk, pk);
-		status |= memcmp(separate, overlapping + i, 32);
-	}
-	printf("%s: key_exchange (overlapping i/o)\n", status != 0 ? "FAILED":"OK");
-	return status;
-}
-
 static int p_eddsa_roundtrip()
 {
 #define MESSAGE_SIZE 30
@@ -1149,7 +1122,6 @@ int main(int argc, char *argv[])
 	status |= TEST(argon2i);
 	status |= TEST(x25519);
 	status |= TEST(x25519_pk);
-	status |= TEST(key_exchange);
 	status |= TEST(edDSA);
 	status |= TEST(edDSA_pk);
 	status |= TEST(ed_25519);
@@ -1178,7 +1150,6 @@ int main(int argc, char *argv[])
 	status |= p_argon2i_easy();
 	status |= p_argon2i_overlap();
 	status |= p_x25519_overlap();
-	status |= p_key_exchange_overlap();
 	status |= p_eddsa_roundtrip();
 	status |= p_eddsa_random();
 	status |= p_eddsa_overlap();

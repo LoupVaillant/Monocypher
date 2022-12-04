@@ -172,13 +172,17 @@ void crypto_argon2i_general(uint8_t       *hash,      uint32_t hash_size,// >= 4
                             const uint8_t *key,       uint32_t key_size,
                             const uint8_t *ad,        uint32_t ad_size);
 
+// Key exchange (X-25519)
+// ----------------------
 
-// Key exchange (x25519 + HChacha20)
-// ---------------------------------
-#define crypto_key_exchange_public_key crypto_x25519_public_key
-void crypto_key_exchange(uint8_t       shared_key      [32],
-                         const uint8_t your_secret_key [32],
-                         const uint8_t their_public_key[32]);
+// Shared secrets are not quite random.
+// Hash them to derive an actual shared key.
+void crypto_x25519_public_key(uint8_t       public_key[32],
+                              const uint8_t secret_key[32]);
+void crypto_x25519(uint8_t       raw_shared_secret[32],
+                   const uint8_t your_secret_key  [32],
+                   const uint8_t their_public_key [32]);
+
 
 
 // Signatures (EdDSA with curve25519 + BLAKE2b)
@@ -263,16 +267,8 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
 void crypto_poly1305_final (crypto_poly1305_ctx *ctx, uint8_t mac[16]);
 
 
-// X-25519
-// -------
-
-// Shared secrets are not quite random.
-// Hash them to derive an actual shared key.
-void crypto_x25519_public_key(uint8_t       public_key[32],
-                              const uint8_t secret_key[32]);
-void crypto_x25519(uint8_t       raw_shared_secret[32],
-                   const uint8_t your_secret_key  [32],
-                   const uint8_t their_public_key [32]);
+// X-25519 extras
+// --------------
 
 // "Dirty" versions of x25519_public_key()
 // Only use to generate ephemeral keys you want to hide.
@@ -287,8 +283,8 @@ void crypto_x25519_inverse(uint8_t       blind_salt [32],
                            const uint8_t private_key[32],
                            const uint8_t curve_point[32]);
 
-// EdDSA
-// -----
+// EdDSA building blocks
+// ---------------------
 void crypto_eddsa_trim_scalar(uint8_t out[32], const uint8_t in[32]);
 void crypto_eddsa_reduce(uint8_t reduced[32], const uint8_t expanded[64]);
 void crypto_eddsa_mul_add(uint8_t r[32],

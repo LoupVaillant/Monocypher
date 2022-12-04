@@ -177,12 +177,12 @@ static void argon2i(vector_reader *reader)
 	free(work_area);
 }
 
-static void key_exchange(vector_reader *reader)
+static void x25519(vector_reader *reader)
 {
-	vector secret_key = next_input(reader);
-	vector public_key = next_input(reader);
-	vector out        = next_output(reader);
-	crypto_key_exchange(out.buf, secret_key.buf, public_key.buf);
+	vector scalar = next_input(reader);
+	vector point  = next_input(reader);
+	vector out    = next_output(reader);
+	crypto_x25519(out.buf, scalar.buf, point.buf);
 }
 
 static void edDSA(vector_reader *reader)
@@ -390,7 +390,7 @@ TEST(hmac_sha512)
 //@ ensures \result == 0;
 TEST(argon2i)
 //@ ensures \result == 0;
-TEST(key_exchange)
+TEST(x25519)
 //@ ensures \result == 0;
 TEST(edDSA)
 //@ ensures \result == 0;
@@ -415,7 +415,7 @@ int main(void) {
 	status |= v_sha512        ();
 	status |= v_hmac_sha512   ();
 	status |= v_argon2i       ();
-	status |= v_key_exchange  ();
+	status |= v_x25519        ();
 	status |= v_edDSA         ();
 	status |= v_ed_25519      ();
 	status |= v_ed_25519_check();
