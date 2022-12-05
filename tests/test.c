@@ -57,14 +57,54 @@
 #include "utils.h"
 #include "vectors.h"
 
-#define CHACHA_BLOCK_SIZE    64
-#define POLY1305_BLOCK_SIZE  16
-#define BLAKE2B_BLOCK_SIZE  128
-#define SHA_512_BLOCK_SIZE  128
+#define VECTORS(n) ASSERT_OK(vector_test(n, #n, nb_##n##_vectors, n##_vectors))
 
-////////////////////////////
-/// Tests aginst vectors ///
-////////////////////////////
+////////////////////////////////
+/// Constant time comparison ///
+////////////////////////////////
+static void p_verify(size_t size, int (*compare)(const u8*, const u8*))
+{
+	printf("\tcrypto_verify%zu\n", size);
+	u8 a[64]; // size <= 64
+	u8 b[64]; // size <= 64
+	FOR (i, 0, 2) {
+		FOR (j, 0, 2) {
+			// Set every byte to the chosen value, then compare
+			FOR (k, 0, size) {
+				a[k] = (u8)i;
+				b[k] = (u8)j;
+			}
+			int cmp = compare(a, b);
+			if (i == j) { ASSERT(cmp == 0); }
+			else        { ASSERT(cmp != 0); }
+			// Set only two bytes to the chosen value, then compare
+			FOR (k, 0, size / 2) {
+				FOR (l, 0, size) {
+					a[l] = 0;
+					b[l] = 0;
+				}
+				a[k] = (u8)i; a[k + size/2 - 1] = (u8)i;
+				b[k] = (u8)j; b[k + size/2 - 1] = (u8)j;
+				cmp = compare(a, b);
+				if (i == j) { ASSERT(cmp == 0); }
+				else        { ASSERT(cmp != 0); }
+			}
+		}
+	}
+}
+
+static void test_verify()
+{
+	p_verify(16, crypto_verify16);
+	p_verify(32, crypto_verify32);
+	p_verify(64, crypto_verify64);
+}
+
+////////////////
+/// Chacha20 ///
+////////////////
+#define CHACHA_BLOCK_SIZE 64
+
 static void chacha20(vector_reader *reader)
 {
 	vector key       = next_input(reader);
@@ -97,14 +137,6 @@ static void ietf_chacha20(vector_reader *reader)
 	}
 }
 
-static void hchacha20(vector_reader *reader)
-{
-	vector key   = next_input(reader);
-	vector nonce = next_input(reader);
-	vector out   = next_output(reader);
-	crypto_hchacha20(out.buf, key.buf, nonce.buf);
-}
-
 static void xchacha20(vector_reader *reader)
 {
 	vector key       = next_input(reader);
@@ -121,6 +153,114 @@ static void xchacha20(vector_reader *reader)
 	}
 }
 
+static void hchacha20(vector_reader *reader)
+{
+	vector key   = next_input(reader);
+	vector nonce = next_input(reader);
+	vector out   = next_output(reader);
+	crypto_hchacha20(out.buf, key.buf, nonce.buf);
+}
+
+static void test_chacha20()
+{
+	VECTORS(chacha20);
+	printf("\tChacha20 (ctr)\n");
+	{
+		RANDOM_INPUT(key  ,  32);
+		RANDOM_INPUT(nonce,  24);
+		RANDOM_INPUT(plain, 128);
+		u8 out_full[128];
+		u8 out1     [64];
+		u8 out2     [64];
+		crypto_chacha20    (out_full, plain     , 128, key, nonce);
+		crypto_chacha20_ctr(out1    , plain +  0,  64, key, nonce, 0);
+		crypto_chacha20_ctr(out2    , plain + 64,  64, key, nonce, 1);
+		ASSERT_EQUAL(out_full     , out1, 64);
+		ASSERT_EQUAL(out_full + 64, out2, 64);
+	}
+
+	printf("\tChacha20 (nullptr == zeroes)\n");
+#define INPUT_SIZE (CHACHA_BLOCK_SIZE * 2 + 1)
+	FOR (i, 0, INPUT_SIZE) {
+		u8 output_normal[INPUT_SIZE];
+		u8 output_stream[INPUT_SIZE];
+		u8 zeroes       [INPUT_SIZE] = {0};
+		RANDOM_INPUT(key  , 32);
+		RANDOM_INPUT(nonce, 8);
+		crypto_chacha20(output_normal, zeroes, i, key, nonce);
+		crypto_chacha20(output_stream, 0     , i, key, nonce);
+		ASSERT_EQUAL(output_normal, output_stream, i);
+	}
+
+	printf("\tChacha20 (output == input)\n");
+	{
+#undef INPUT_SIZE
+#define INPUT_SIZE (CHACHA_BLOCK_SIZE * 4) // total input size
+		u8  output[INPUT_SIZE];
+		RANDOM_INPUT(input, INPUT_SIZE);
+		RANDOM_INPUT(key  , 32);
+		RANDOM_INPUT(nonce, 8);
+		crypto_chacha20(output, input, INPUT_SIZE, key, nonce);
+		crypto_chacha20(input , input, INPUT_SIZE, key, nonce);
+		ASSERT_EQUAL(output, input, INPUT_SIZE);
+	}
+
+	VECTORS(ietf_chacha20);
+	printf("\tietf Chacha20 (ctr)\n");
+	{
+		RANDOM_INPUT(key  ,  32);
+		RANDOM_INPUT(nonce,  24);
+		RANDOM_INPUT(plain, 128);
+		u8 out_full[128];
+		u8 out1     [64];
+		u8 out2     [64];
+		crypto_ietf_chacha20    (out_full, plain     , 128, key, nonce);
+		crypto_ietf_chacha20_ctr(out1    , plain +  0,  64, key, nonce, 0);
+		crypto_ietf_chacha20_ctr(out2    , plain + 64,  64, key, nonce, 1);
+		ASSERT_EQUAL(out_full     , out1, 64);
+		ASSERT_EQUAL(out_full + 64, out2, 64);
+	}
+
+	VECTORS(xchacha20);
+	printf("\tXChacha20 (ctr)\n");
+	{
+		RANDOM_INPUT(key  ,  32);
+		RANDOM_INPUT(nonce,  24);
+		RANDOM_INPUT(plain, 128);
+		u8 out_full[128];
+		u8 out1     [64];
+		u8 out2     [64];
+		crypto_xchacha20    (out_full, plain     , 128, key, nonce);
+		crypto_xchacha20_ctr(out1    , plain +  0,  64, key, nonce, 0);
+		crypto_xchacha20_ctr(out2    , plain + 64,  64, key, nonce, 1);
+		ASSERT_EQUAL(out_full     , out1, 64);
+		ASSERT_EQUAL(out_full + 64, out2, 64);
+	}
+
+	VECTORS(hchacha20);
+	printf("\tHChacha20 (overlap)\n");
+	FOR (i, 0, 100) {
+		RANDOM_INPUT(buffer, 80);
+		size_t out_idx = rand64() % 48;
+		size_t key_idx = rand64() % 48;
+		size_t in_idx  = rand64() % 64;
+		u8 key[32]; FOR (j, 0, 32) { key[j] = buffer[j + key_idx]; }
+		u8 in [16]; FOR (j, 0, 16) { in [j] = buffer[j +  in_idx]; }
+
+		// Run with and without overlap, then compare
+		u8 out[32];
+		crypto_hchacha20(out, key, in);
+		crypto_hchacha20(buffer + out_idx, buffer + key_idx, buffer + in_idx);
+		ASSERT_EQUAL(out, buffer + out_idx, 32);
+	}
+}
+
+
+/////////////////
+/// Poly 1305 ///
+/////////////////
+#define POLY1305_BLOCK_SIZE 16
+
 static void poly1305(vector_reader *reader)
 {
 	vector key = next_input(reader);
@@ -129,6 +269,51 @@ static void poly1305(vector_reader *reader)
 	crypto_poly1305(out.buf, msg.buf, msg.size, key.buf);
 }
 
+static void test_poly1305()
+{
+	VECTORS(poly1305);
+
+	printf("\tPoly1305 (incremental)\n");
+#undef INPUT_SIZE
+#define INPUT_SIZE (POLY1305_BLOCK_SIZE * 4) // total input size
+	FOR (i, 0, INPUT_SIZE) {
+		// outputs
+		u8 mac_chunk[16];
+		u8 mac_whole[16];
+		// inputs
+		RANDOM_INPUT(input, INPUT_SIZE);
+		RANDOM_INPUT(key  , 32);
+
+		// Authenticate bit by bit
+		crypto_poly1305_ctx ctx;
+		crypto_poly1305_init(&ctx, key);
+		crypto_poly1305_update(&ctx, input    , i);
+		crypto_poly1305_update(&ctx, input + i, INPUT_SIZE - i);
+		crypto_poly1305_final(&ctx, mac_chunk);
+
+		// Authenticate all at once
+		crypto_poly1305(mac_whole, input, INPUT_SIZE, key);
+
+		// Compare the results
+		ASSERT_EQUAL(mac_chunk, mac_whole, 16);
+	}
+
+	printf("\tPoly1305 (overlapping i/o)\n");
+#undef INPUT_SIZE
+#define INPUT_SIZE (POLY1305_BLOCK_SIZE + (2 * 16)) // total input size
+	FOR (i, 0, POLY1305_BLOCK_SIZE + 16) {
+		RANDOM_INPUT(input, INPUT_SIZE);
+		RANDOM_INPUT(key  , 32);
+		u8 mac  [16];
+		crypto_poly1305(mac    , input + 16, POLY1305_BLOCK_SIZE, key);
+		crypto_poly1305(input+i, input + 16, POLY1305_BLOCK_SIZE, key);
+		ASSERT_EQUAL(mac, input + i, 16);
+	}
+}
+
+////////////////////////////////
+/// Authenticated encryption ///
+////////////////////////////////
 static void aead_ietf(vector_reader *reader)
 {
 	vector key   = next_input(reader);
@@ -140,6 +325,46 @@ static void aead_ietf(vector_reader *reader)
 	                 ad.buf, ad.size, text.buf, text.size);
 }
 
+static void test_aead()
+{
+	VECTORS(aead_ietf);
+
+	printf("\taead (roundtrip)\n");
+	FOR (i, 0, 1000) {
+		RANDOM_INPUT(key      , 32);
+		RANDOM_INPUT(nonce    , 24);
+		RANDOM_INPUT(ad       ,  4);
+		RANDOM_INPUT(plaintext,  8);
+		u8 box[24], box2[24];
+		u8 out[8];
+		// AEAD roundtrip
+		crypto_lock_aead(box, box+16, key, nonce, ad, 4, plaintext, 8);
+		ASSERT_OK(crypto_unlock_aead(out, key, nonce, box, ad, 4, box+16, 8));
+		ASSERT_EQUAL(plaintext, out, 8);
+		box[0]++;
+		ASSERT_KO(crypto_unlock_aead(out, key, nonce, box, ad, 4, box+16, 8));
+
+		// Authenticated roundtrip (easy interface)
+		// Make and accept message
+		crypto_lock(box, box + 16, key, nonce, plaintext, 8);
+		ASSERT_OK(crypto_unlock(out, key, nonce, box, box + 16, 8));
+		// Make sure decrypted text and original text are the same
+		ASSERT_EQUAL(plaintext, out, 8);
+		// Make and reject forgery
+		box[0]++;
+		ASSERT_KO(crypto_unlock(out, key, nonce, box, box + 16, 8));
+		box[0]--; // undo forgery
+
+		// Same result for both interfaces
+		crypto_lock_aead(box2, box2 + 16, key, nonce, 0, 0, plaintext, 8);
+		ASSERT_EQUAL(box, box2, 24);
+	}
+}
+
+///////////////
+/// Blake2b ///
+///////////////
+#define BLAKE2B_BLOCK_SIZE 128
 
 static void blake2b(vector_reader *reader)
 {
@@ -151,6 +376,54 @@ static void blake2b(vector_reader *reader)
 	                       msg.buf, msg.size);
 }
 
+static void test_blake2b()
+{
+	VECTORS(blake2b);
+
+	printf("\tBLAKE2b (incremental)\n");
+	// Note: I figured we didn't need to test keyed mode, or different
+	// hash sizes, a second time.  This test sticks to the simplified
+	// interface.
+#undef INPUT_SIZE
+#define INPUT_SIZE (BLAKE2B_BLOCK_SIZE * 4 - 32) // total input size
+	FOR (i, 0, INPUT_SIZE) {
+		// outputs
+		u8 hash_chunk[64];
+		u8 hash_whole[64];
+		// inputs
+		RANDOM_INPUT(input, INPUT_SIZE);
+
+		// Authenticate bit by bit
+		crypto_blake2b_ctx ctx;
+		crypto_blake2b_init(&ctx);
+		crypto_blake2b_update(&ctx, input    , i);
+		crypto_blake2b_update(&ctx, input + i, INPUT_SIZE - i);
+		crypto_blake2b_final(&ctx, hash_chunk);
+
+		// Authenticate all at once
+		crypto_blake2b(hash_whole, input, INPUT_SIZE);
+
+		// Compare the results (must be the same)
+		ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+	}
+
+	printf("\tBLAKE2b (overlapping i/o)\n");
+#undef INPUT_SIZE
+#define INPUT_SIZE (BLAKE2B_BLOCK_SIZE + (2 * 64)) // total input size
+	FOR (i, 0, BLAKE2B_BLOCK_SIZE + 64) {
+		u8 hash [64];
+		RANDOM_INPUT(input, INPUT_SIZE);
+		crypto_blake2b(hash   , input + 64, BLAKE2B_BLOCK_SIZE);
+		crypto_blake2b(input+i, input + 64, BLAKE2B_BLOCK_SIZE);
+		ASSERT_EQUAL(hash, input + i, 64);
+	}
+}
+
+///////////////
+/// SHA 512 ///
+///////////////
+#define SHA_512_BLOCK_SIZE 128
+
 static void sha512(vector_reader *reader)
 {
 	vector in  = next_input(reader);
@@ -158,6 +431,50 @@ static void sha512(vector_reader *reader)
 	crypto_sha512(out.buf, in.buf, in.size);
 }
 
+static void test_sha512()
+{
+	VECTORS(sha512);
+
+	printf("\tSHA-512 (incremental)\n");
+#undef INPUT_SIZE
+#define INPUT_SIZE (SHA_512_BLOCK_SIZE * 4 - 32) // total input size
+	FOR (i, 0, INPUT_SIZE) {
+		// outputs
+		u8 hash_chunk[64];
+		u8 hash_whole[64];
+		// inputs
+		RANDOM_INPUT(input, INPUT_SIZE);
+
+		// Authenticate bit by bit
+		crypto_sha512_ctx ctx;
+		crypto_sha512_init(&ctx);
+		crypto_sha512_update(&ctx, input    , i);
+		crypto_sha512_update(&ctx, input + i, INPUT_SIZE - i);
+		crypto_sha512_final(&ctx, hash_chunk);
+
+		// Authenticate all at once
+		crypto_sha512(hash_whole, input, INPUT_SIZE);
+
+		// Compare the results (must be the same)
+		ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+	}
+
+	printf("\tSHA-512 (overlapping i/o)\n");
+#undef INPUT_SIZE
+#define INPUT_SIZE (SHA_512_BLOCK_SIZE + (2 * 64)) // total input size
+	FOR (i, 0, SHA_512_BLOCK_SIZE + 64) {
+		u8 hash [64];
+		RANDOM_INPUT(input, INPUT_SIZE);
+		crypto_sha512(hash   , input + 64, SHA_512_BLOCK_SIZE);
+		crypto_sha512(input+i, input + 64, SHA_512_BLOCK_SIZE);
+		ASSERT_EQUAL(hash, input + i, 64);
+	}
+}
+
+
+////////////////////
+/// HMAC SHA 512 ///
+////////////////////
 static void hmac_sha512(vector_reader *reader)
 {
 	vector key = next_input(reader);
@@ -166,6 +483,52 @@ static void hmac_sha512(vector_reader *reader)
 	crypto_hmac_sha512(out.buf, key.buf, key.size, msg.buf, msg.size);
 }
 
+static void test_hmac_sha512()
+{
+	VECTORS(hmac_sha512);
+
+
+	printf("\tHMAC SHA-512 (incremental)\n");
+#undef INPUT_SIZE
+#define INPUT_SIZE (SHA_512_BLOCK_SIZE * 4 - 32) // total input size
+	FOR (i, 0, INPUT_SIZE) {
+		// outputs
+		u8 hash_chunk[64];
+		u8 hash_whole[64];
+		// inputs
+		RANDOM_INPUT(key  , 32);
+		RANDOM_INPUT(input, INPUT_SIZE);
+
+		// Authenticate bit by bit
+		crypto_hmac_sha512_ctx ctx;
+		crypto_hmac_sha512_init(&ctx, key, 32);
+		crypto_hmac_sha512_update(&ctx, input    , i);
+		crypto_hmac_sha512_update(&ctx, input + i, INPUT_SIZE - i);
+		crypto_hmac_sha512_final(&ctx, hash_chunk);
+
+		// Authenticate all at once
+		crypto_hmac_sha512(hash_whole, key, 32, input, INPUT_SIZE);
+
+		// Compare the results (must be the same)
+		ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+	}
+
+	printf("\tHMAC SHA-512 (overlapping i/o)\n");
+#undef INPUT_SIZE
+#define INPUT_SIZE (SHA_512_BLOCK_SIZE + (2 * 64)) // total input size
+	FOR (i, 0, SHA_512_BLOCK_SIZE + 64) {
+		u8 hash [64];
+		RANDOM_INPUT(key  , 32);
+		RANDOM_INPUT(input, INPUT_SIZE);
+		crypto_hmac_sha512(hash   , key, 32, input + 64, SHA_512_BLOCK_SIZE);
+		crypto_hmac_sha512(input+i, key, 32, input + 64, SHA_512_BLOCK_SIZE);
+		ASSERT_EQUAL(hash, input + i, 64);
+	}
+}
+
+///////////////
+/// Argon2i ///
+///////////////
 static void argon2i(vector_reader *reader)
 {
 	u64    nb_blocks     = load64_le(next_input(reader).buf);
@@ -185,6 +548,57 @@ static void argon2i(vector_reader *reader)
 	free(work_area);
 }
 
+static void test_argon2i()
+{
+	VECTORS(argon2i);
+
+	printf("\tArgon2i (easy interface)\n");
+	{
+		void *work_area = alloc(8 * 1024);
+		RANDOM_INPUT(password , 32);
+		RANDOM_INPUT(salt     , 16);
+		u8 hash_general[32];
+		u8 hash_easy   [32];
+		crypto_argon2i_general(hash_general, 32, work_area, 8, 1,
+		                       password, 32, salt, 16, 0, 0, 0, 0);
+		crypto_argon2i(hash_easy, 32, work_area, 8, 1, password, 32, salt, 16);
+		ASSERT_EQUAL(hash_general, hash_easy, 32);
+		free(work_area);
+	}
+
+	printf("\tArgon2i (overlapping i/o)\n");
+	u8 *work_area       = (u8*)alloc(8 * 1024);
+	u8 *clean_work_area = (u8*)alloc(8 * 1024);
+	FOR (i, 0, 10) {
+		p_random(work_area, 8 * 1024);
+		u32 hash_offset = rand64() % 64;
+		u32 pass_offset = rand64() % 64;
+		u32 salt_offset = rand64() % 64;
+		u32 key_offset  = rand64() % 64;
+		u32 ad_offset   = rand64() % 64;
+		u8  hash1[32];
+		u8 *hash2 = work_area + hash_offset;
+		u8  pass [16];  FOR (j, 0, 16) { pass[j] = work_area[j + pass_offset]; }
+		u8  salt [16];  FOR (j, 0, 16) { salt[j] = work_area[j + salt_offset]; }
+		u8  key  [32];  FOR (j, 0, 32) { key [j] = work_area[j +  key_offset]; }
+		u8  ad   [32];  FOR (j, 0, 32) { ad  [j] = work_area[j +   ad_offset]; }
+
+		crypto_argon2i_general(hash1, 32, clean_work_area, 8, 1,
+		                       pass, 16, salt, 16, key, 32, ad, 32);
+		crypto_argon2i_general(hash2, 32, work_area, 8, 1,
+		                       work_area + pass_offset, 16,
+		                       work_area + salt_offset, 16,
+		                       work_area +  key_offset, 32,
+		                       work_area +   ad_offset, 32);
+		ASSERT_EQUAL(hash1, hash2, 32);
+	}
+	free(work_area);
+	free(clean_work_area);
+}
+
+//////////////
+/// X25519 ///
+//////////////
 static void x25519(vector_reader *reader)
 {
 	vector scalar = next_input(reader);
@@ -200,6 +614,120 @@ static void x25519_pk(vector_reader *reader)
 	crypto_x25519_public_key(out.buf, in.buf);
 }
 
+static void iterate_x25519(u8 k[32], u8 u[32])
+{
+	u8 tmp[32];
+	crypto_x25519(tmp , k, u);
+	memcpy(u, k  , 32);
+	memcpy(k, tmp, 32);
+}
+
+static void test_x25519()
+{
+	VECTORS(x25519);
+	VECTORS(x25519_pk);
+
+	{
+		printf("\tx25519 1\n");
+		u8 _1   [32] = {
+			0x42, 0x2c, 0x8e, 0x7a, 0x62, 0x27, 0xd7, 0xbc,
+			0xa1, 0x35, 0x0b, 0x3e, 0x2b, 0xb7, 0x27, 0x9f,
+			0x78, 0x97, 0xb8, 0x7b, 0xb6, 0x85, 0x4b, 0x78,
+			0x3c, 0x60, 0xe8, 0x03, 0x11, 0xae, 0x30, 0x79
+		};
+		u8 k[32] = {9};
+		u8 u[32] = {9};
+		crypto_x25519_public_key(k, u);
+		ASSERT_EQUAL(k, _1, 32);
+
+		printf("\tx25519 1K\n");
+		u8 _1k  [32] = {
+			0x68, 0x4c, 0xf5, 0x9b, 0xa8, 0x33, 0x09, 0x55,
+			0x28, 0x00, 0xef, 0x56, 0x6f, 0x2f, 0x4d, 0x3c,
+			0x1c, 0x38, 0x87, 0xc4, 0x93, 0x60, 0xe3, 0x87,
+			0x5f, 0x2e, 0xb9, 0x4d, 0x99, 0x53, 0x2c, 0x51
+		};
+		FOR (i, 1, 1000) { iterate_x25519(k, u); }
+		ASSERT_EQUAL(k, _1k, 32);
+
+		// too long; didn't run
+		//printf("\tx25519 1M\n");
+		//u8 _1M[32] = {
+		//	0x7c, 0x39, 0x11, 0xe0, 0xab, 0x25, 0x86, 0xfd,
+		//	0x86, 0x44, 0x97, 0x29, 0x7e, 0x57, 0x5e, 0x6f,
+		//	0x3b, 0xc6, 0x01, 0xc0, 0x88, 0x3c, 0x30, 0xdf,
+		//	0x5f, 0x4d, 0xd2, 0xd2, 0x4f, 0x66, 0x54, 0x24
+		//};
+		//FOR (i, 1000, 1000000) { iterate_x25519(k, u); }
+		//ASSERT_EQUAL(k, _1M, 32);
+	}
+
+	printf("\tx25519 (overlapping i/o)\n");
+	FOR (i, 0, 62) {
+		u8 overlapping[94];
+		u8 separate[32];
+		RANDOM_INPUT(sk, 32);
+		RANDOM_INPUT(pk, 32);
+		memcpy(overlapping + 31, sk, 32);
+		crypto_x25519(overlapping + i, overlapping + 31, pk);
+		crypto_x25519(separate, sk, pk);
+		ASSERT_EQUAL(separate, overlapping + i, 32);
+	}
+
+	printf("\tx25519_inverse\n");
+	{
+		RANDOM_INPUT(b, 32);
+		u8 base[32];  // random point (cofactor is cleared).
+		crypto_x25519_public_key(base, b);
+		// check round trip
+		FOR (i, 0, 50) {
+			RANDOM_INPUT(sk, 32);
+			u8 pk   [32];
+			u8 blind[32];
+			crypto_x25519(pk, sk, base);
+			crypto_x25519_inverse(blind, sk, pk);
+			ASSERT_EQUAL(blind, base, 32);
+		}
+
+		// check cofactor clearing
+		// (Multiplying by a low order point yields zero
+		u8 low_order[4][32] = {
+			{0}, {1},
+			{0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24,
+			 0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b,
+			 0x04, 0x44, 0x5c, 0xc4, 0x58, 0x1c, 0x8e, 0x86,
+			 0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57,},
+			{0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae,
+			 0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a,
+			 0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd,
+			 0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00,},
+		};
+		u8 zero[32] = {0};
+		FOR (i, 0, 32) {
+			u8 blind[32];
+			RANDOM_INPUT(sk, 32);
+			crypto_x25519_inverse(blind, sk, low_order[i%4]);
+			ASSERT_EQUAL(blind, zero, 32);
+		}
+	}
+
+	printf("\tx25519 inverse (overlapping i/o)\n");
+	FOR (i, 0, 62) {
+		u8 overlapping[94];
+		u8 separate[32];
+		RANDOM_INPUT(sk, 32);
+		RANDOM_INPUT(pk, 32);
+		memcpy(overlapping + 31, sk, 32);
+		crypto_x25519_inverse(overlapping + i, overlapping + 31, pk);
+		crypto_x25519_inverse(separate, sk, pk);
+		ASSERT_EQUAL(separate, overlapping + i, 32);
+	}
+}
+
+
+/////////////
+/// EdDSA ///
+/////////////
 static void edDSA(vector_reader *reader)
 {
 	vector secret_k = next_input(reader);
@@ -238,6 +766,78 @@ static void edDSA_pk(vector_reader *reader)
 	}
 }
 
+static void test_edDSA()
+{
+	VECTORS(edDSA);
+	VECTORS(edDSA_pk);
+
+	printf("\tEdDSA (roundtrip)\n");
+#define MESSAGE_SIZE 30
+	FOR (i, 0, MESSAGE_SIZE) {
+		RANDOM_INPUT(message, MESSAGE_SIZE);
+		RANDOM_INPUT(seed, 32);
+		u8 sk       [64];
+		u8 pk       [32];
+		u8 signature[64];
+		crypto_eddsa_key_pair(sk, pk, seed);
+		crypto_eddsa_sign(signature, sk, message, i);
+		ASSERT_OK(crypto_eddsa_check(signature, pk, message, i));
+
+		// reject forgeries
+		u8 zero   [64] = {0};
+		ASSERT_KO(crypto_eddsa_check(zero , pk, message, i));
+		FOR (j, 0, 64) {
+			u8 forgery[64];
+			memcpy(forgery, signature, 64);
+			forgery[j] = signature[j] + 1;
+			ASSERT_KO(crypto_eddsa_check(forgery, pk, message, i));
+		}
+	}
+
+	printf("\tEdDSA (random)\n");
+	{
+		// Verifies that random signatures are all invalid.  Uses random
+		// public keys to see what happens outside of the curve (it should
+		// yield an invalid signature).
+		FOR (i, 0, 100) {
+			RANDOM_INPUT(message, MESSAGE_SIZE);
+			RANDOM_INPUT(pk, 32);
+			RANDOM_INPUT(signature , 64);
+			ASSERT_KO(crypto_eddsa_check(signature, pk, message, MESSAGE_SIZE));
+		}
+		// Testing S == L (for code coverage)
+		RANDOM_INPUT(message, MESSAGE_SIZE);
+		RANDOM_INPUT(pk, 32);
+		static const u8 signature[64] = {
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
+			0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
+		};
+		ASSERT_KO(crypto_eddsa_check(signature, pk, message, MESSAGE_SIZE));
+	}
+
+	printf("\tEdDSA (overlap)\n");
+	FOR(i, 0, MESSAGE_SIZE + 64) {
+#undef INPUT_SIZE
+#define INPUT_SIZE (MESSAGE_SIZE + (2 * 64)) // total input size
+		RANDOM_INPUT(input, INPUT_SIZE);
+		RANDOM_INPUT(seed, 32);
+		u8 sk       [64];
+		u8 pk       [32];
+		u8 signature[64];
+		crypto_eddsa_key_pair(sk, pk, seed);
+		crypto_eddsa_sign(signature, sk, input + 64, MESSAGE_SIZE);
+		crypto_eddsa_sign(input+i  , sk, input + 64, MESSAGE_SIZE);
+		ASSERT_EQUAL(signature, input + i, 64);
+	}
+}
+
+///////////////
+/// Ed25519 ///
+///////////////
 static void ed_25519(vector_reader *reader)
 {
 	vector secret_k = next_input(reader);
@@ -286,46 +886,16 @@ static void ed_25519_check(vector_reader *reader)
 	                                      msg.buf, msg.size);
 }
 
-static void iterate_x25519(u8 k[32], u8 u[32])
+static void test_ed25519()
 {
-	u8 tmp[32];
-	crypto_x25519(tmp , k, u);
-	memcpy(u, k  , 32);
-	memcpy(k, tmp, 32);
+	VECTORS(ed_25519);
+	VECTORS(ed_25519_pk);
+	VECTORS(ed_25519_check);
 }
 
-static int test_x25519()
-{
-	u8 _1   [32] = {0x42, 0x2c, 0x8e, 0x7a, 0x62, 0x27, 0xd7, 0xbc,
-		0xa1, 0x35, 0x0b, 0x3e, 0x2b, 0xb7, 0x27, 0x9f,
-		0x78, 0x97, 0xb8, 0x7b, 0xb6, 0x85, 0x4b, 0x78,
-		0x3c, 0x60, 0xe8, 0x03, 0x11, 0xae, 0x30, 0x79};
-	u8 k[32] = {9};
-	u8 u[32] = {9};
-
-	crypto_x25519_public_key(k, u);
-	int status = memcmp(k, _1, 32);
-	printf("%s: x25519 1\n", status != 0 ? "FAILED" : "OK");
-
-	u8 _1k  [32] = {0x68, 0x4c, 0xf5, 0x9b, 0xa8, 0x33, 0x09, 0x55,
-		0x28, 0x00, 0xef, 0x56, 0x6f, 0x2f, 0x4d, 0x3c,
-		0x1c, 0x38, 0x87, 0xc4, 0x93, 0x60, 0xe3, 0x87,
-		0x5f, 0x2e, 0xb9, 0x4d, 0x99, 0x53, 0x2c, 0x51};
-	FOR (i, 1, 1000) { iterate_x25519(k, u); }
-	status |= memcmp(k, _1k, 32);
-	printf("%s: x25519 1K\n", status != 0 ? "FAILED" : "OK");
-
-	// too long; didn't run
-	//u8 _1M[32] = {0x7c, 0x39, 0x11, 0xe0, 0xab, 0x25, 0x86, 0xfd,
-	//              0x86, 0x44, 0x97, 0x29, 0x7e, 0x57, 0x5e, 0x6f,
-	//              0x3b, 0xc6, 0x01, 0xc0, 0x88, 0x3c, 0x30, 0xdf,
-	//              0x5f, 0x4d, 0xd2, 0xd2, 0x4f, 0x66, 0x54, 0x24};
-	//FOR (i, 1000, 1000000) { iterate_x25519(k, u); }
-	//status |= memcmp(k, _1M, 32);
-	//printf("%s: x25519 1M\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
+/////////////////
+/// Elligator ///
+/////////////////
 static void elligator_dir(vector_reader *reader)
 {
 	vector in  = next_input(reader);
@@ -346,518 +916,11 @@ static void elligator_inv(vector_reader *reader)
 	}
 }
 
-//////////////////////////////
-/// Self consistency tests ///
-//////////////////////////////
-static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
+static void test_elligator()
 {
-	int status = 0;
-	u8 a[64]; // size <= 64
-	u8 b[64]; // size <= 64
-	FOR (i, 0, 2) {
-		FOR (j, 0, 2) {
-			// Set every byte to the chosen value, then compare
-			FOR (k, 0, size) {
-				a[k] = (u8)i;
-				b[k] = (u8)j;
-			}
-			int cmp = compare(a, b);
-			status |= (i == j ? cmp : ~cmp);
-			// Set only two bytes to the chosen value, then compare
-			FOR (k, 0, size / 2) {
-				FOR (l, 0, size) {
-					a[l] = 0;
-					b[l] = 0;
-				}
-				a[k] = (u8)i; a[k + size/2 - 1] = (u8)i;
-				b[k] = (u8)j; b[k + size/2 - 1] = (u8)j;
-				cmp = compare(a, b);
-				status |= (i == j ? cmp : ~cmp);
-			}
-		}
-	}
-	printf("%s: crypto_verify%zu\n", status != 0 ? "FAILED" : "OK", size);
-	return status;
-}
-static int p_verify16(){ return p_verify(16, crypto_verify16); }
-static int p_verify32(){ return p_verify(32, crypto_verify32); }
-static int p_verify64(){ return p_verify(64, crypto_verify64); }
+	VECTORS(elligator_dir);
 
-static int p_chacha20_ctr()
-{
-	int status = 0;
-	RANDOM_INPUT(key  ,  32);
-	RANDOM_INPUT(nonce,  24);
-	RANDOM_INPUT(plain, 128);
-	u8 out_full[128];
-	u8 out1     [64];
-	u8 out2     [64];
-	crypto_chacha20    (out_full, plain     , 128, key, nonce);
-	crypto_chacha20_ctr(out1    , plain +  0,  64, key, nonce, 0);
-	crypto_chacha20_ctr(out2    , plain + 64,  64, key, nonce, 1);
-	status |= memcmp(out_full     , out1, 64);
-	status |= memcmp(out_full + 64, out2, 64);
-
-	crypto_ietf_chacha20    (out_full, plain     , 128, key, nonce);
-	crypto_ietf_chacha20_ctr(out1    , plain +  0,  64, key, nonce, 0);
-	crypto_ietf_chacha20_ctr(out2    , plain + 64,  64, key, nonce, 1);
-	status |= memcmp(out_full     , out1, 64);
-	status |= memcmp(out_full + 64, out2, 64);
-
-	crypto_xchacha20    (out_full, plain     , 128, key, nonce);
-	crypto_xchacha20_ctr(out1    , plain +  0,  64, key, nonce, 0);
-	crypto_xchacha20_ctr(out2    , plain + 64,  64, key, nonce, 1);
-	status |= memcmp(out_full     , out1, 64);
-	status |= memcmp(out_full + 64, out2, 64);
-
-	printf("%s: Chacha20 (ctr)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Tests that Chacha20(nullptr) == Chacha20(all-zeroes)
-static int p_chacha20_stream()
-{
-	int status = 0;
-#define INPUT_SIZE (CHACHA_BLOCK_SIZE * 2 + 1)
-	FOR (i, 0, INPUT_SIZE) {
-		u8 output_normal[INPUT_SIZE];
-		u8 output_stream[INPUT_SIZE];
-		u8 zeroes       [INPUT_SIZE] = {0};
-		RANDOM_INPUT(key  , 32);
-		RANDOM_INPUT(nonce, 8);
-		crypto_chacha20(output_normal, zeroes, i, key, nonce);
-		crypto_chacha20(output_stream, 0     , i, key, nonce);
-		status |= memcmp(output_normal, output_stream, i);
-	}
-	printf("%s: Chacha20 (nullptr == zeroes)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Tests that output and input can be the same pointer
-static int p_chacha20_same_ptr()
-{
-#undef INPUT_SIZE
-#define INPUT_SIZE (CHACHA_BLOCK_SIZE * 4) // total input size
-	int status = 0;
-	u8  output[INPUT_SIZE];
-	RANDOM_INPUT(input, INPUT_SIZE);
-	RANDOM_INPUT(key  , 32);
-	RANDOM_INPUT(nonce, 8);
-	crypto_chacha20(output, input, INPUT_SIZE, key, nonce);
-	crypto_chacha20(input , input, INPUT_SIZE, key, nonce);
-	status |= memcmp(output, input, INPUT_SIZE);
-	printf("%s: Chacha20 (output == input)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-static int p_hchacha20()
-{
-	int status = 0;
-	FOR (i, 0, 100) {
-		RANDOM_INPUT(buffer, 80);
-		size_t out_idx = rand64() % 48;
-		size_t key_idx = rand64() % 48;
-		size_t in_idx  = rand64() % 64;
-		u8 key[32]; FOR (j, 0, 32) { key[j] = buffer[j + key_idx]; }
-		u8 in [16]; FOR (j, 0, 16) { in [j] = buffer[j +  in_idx]; }
-
-		// Run with and without overlap, then compare
-		u8 out[32];
-		crypto_hchacha20(out, key, in);
-		crypto_hchacha20(buffer + out_idx, buffer + key_idx, buffer + in_idx);
-		status |= memcmp(out, buffer + out_idx, 32);
-	}
-	printf("%s: HChacha20 (overlap)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Tests that authenticating bit by bit yields the same mac than
-// authenticating all at once
-static int p_poly1305()
-{
-#undef INPUT_SIZE
-#define INPUT_SIZE (POLY1305_BLOCK_SIZE * 4) // total input size
-	int status = 0;
-	FOR (i, 0, INPUT_SIZE) {
-		// outputs
-		u8 mac_chunk[16];
-		u8 mac_whole[16];
-		// inputs
-		RANDOM_INPUT(input, INPUT_SIZE);
-		RANDOM_INPUT(key  , 32);
-
-		// Authenticate bit by bit
-		crypto_poly1305_ctx ctx;
-		crypto_poly1305_init(&ctx, key);
-		crypto_poly1305_update(&ctx, input    , i);
-		crypto_poly1305_update(&ctx, input + i, INPUT_SIZE - i);
-		crypto_poly1305_final(&ctx, mac_chunk);
-
-		// Authenticate all at once
-		crypto_poly1305(mac_whole, input, INPUT_SIZE, key);
-
-		// Compare the results (must be the same)
-		status |= memcmp(mac_chunk, mac_whole, 16);
-	}
-	printf("%s: Poly1305 (incremental)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Tests that the input and output buffers of poly1305 can overlap.
-static int p_poly1305_overlap()
-{
-#undef INPUT_SIZE
-#define INPUT_SIZE (POLY1305_BLOCK_SIZE + (2 * 16)) // total input size
-	int status = 0;
-	FOR (i, 0, POLY1305_BLOCK_SIZE + 16) {
-		RANDOM_INPUT(input, INPUT_SIZE);
-		RANDOM_INPUT(key  , 32);
-		u8 mac  [16];
-		crypto_poly1305(mac    , input + 16, POLY1305_BLOCK_SIZE, key);
-		crypto_poly1305(input+i, input + 16, POLY1305_BLOCK_SIZE, key);
-		status |= memcmp(mac, input + i, 16);
-	}
-	printf("%s: Poly1305 (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Tests that hashing bit by bit yields the same hash than hashing all
-// at once.  Note: I figured we didn't need to test keyed mode, or
-// different hash sizes, again.  This test sticks to the simplified
-// interface.
-static int p_blake2b()
-{
-#undef INPUT_SIZE
-#define INPUT_SIZE (BLAKE2B_BLOCK_SIZE * 4 - 32) // total input size
-	int status = 0;
-	FOR (i, 0, INPUT_SIZE) {
-		// outputs
-		u8 hash_chunk[64];
-		u8 hash_whole[64];
-		// inputs
-		RANDOM_INPUT(input, INPUT_SIZE);
-
-		// Authenticate bit by bit
-		crypto_blake2b_ctx ctx;
-		crypto_blake2b_init(&ctx);
-		crypto_blake2b_update(&ctx, input    , i);
-		crypto_blake2b_update(&ctx, input + i, INPUT_SIZE - i);
-		crypto_blake2b_final(&ctx, hash_chunk);
-
-		// Authenticate all at once
-		crypto_blake2b(hash_whole, input, INPUT_SIZE);
-
-		// Compare the results (must be the same)
-		status |= memcmp(hash_chunk, hash_whole, 64);
-	}
-	printf("%s: BLAKE2b (incremental)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Tests that the input and output buffers of BLAKE2b can overlap.
-static int p_blake2b_overlap()
-{
-#undef INPUT_SIZE
-#define INPUT_SIZE (BLAKE2B_BLOCK_SIZE + (2 * 64)) // total input size
-	int status = 0;
-	FOR (i, 0, BLAKE2B_BLOCK_SIZE + 64) {
-		u8 hash [64];
-		RANDOM_INPUT(input, INPUT_SIZE);
-		crypto_blake2b(hash   , input + 64, BLAKE2B_BLOCK_SIZE);
-		crypto_blake2b(input+i, input + 64, BLAKE2B_BLOCK_SIZE);
-		status |= memcmp(hash, input + i, 64);
-	}
-	printf("%s: BLAKE2b (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Tests that hashing bit by bit yields the same hash than hashing all
-// at once. (for sha512)
-static int p_sha512()
-{
-#undef INPUT_SIZE
-#define INPUT_SIZE (SHA_512_BLOCK_SIZE * 4 - 32) // total input size
-	int status = 0;
-	FOR (i, 0, INPUT_SIZE) {
-		// outputs
-		u8 hash_chunk[64];
-		u8 hash_whole[64];
-		// inputs
-		RANDOM_INPUT(input, INPUT_SIZE);
-
-		// Authenticate bit by bit
-		crypto_sha512_ctx ctx;
-		crypto_sha512_init(&ctx);
-		crypto_sha512_update(&ctx, input    , i);
-		crypto_sha512_update(&ctx, input + i, INPUT_SIZE - i);
-		crypto_sha512_final(&ctx, hash_chunk);
-
-		// Authenticate all at once
-		crypto_sha512(hash_whole, input, INPUT_SIZE);
-
-		// Compare the results (must be the same)
-		status |= memcmp(hash_chunk, hash_whole, 64);
-	}
-	printf("%s: SHA-512 (incremental)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Tests that the input and output buffers of crypto_sha_512 can overlap.
-static int p_sha512_overlap()
-{
-#undef INPUT_SIZE
-#define INPUT_SIZE (SHA_512_BLOCK_SIZE + (2 * 64)) // total input size
-	int status = 0;
-	FOR (i, 0, SHA_512_BLOCK_SIZE + 64) {
-		u8 hash [64];
-		RANDOM_INPUT(input, INPUT_SIZE);
-		crypto_sha512(hash   , input + 64, SHA_512_BLOCK_SIZE);
-		crypto_sha512(input+i, input + 64, SHA_512_BLOCK_SIZE);
-		status |= memcmp(hash, input + i, 64);
-	}
-	printf("%s: SHA-512 (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Tests that hashing bit by bit yields the same hash than hashing all
-// at once. (for hmac)
-static int p_hmac_sha512()
-{
-#undef INPUT_SIZE
-#define INPUT_SIZE (SHA_512_BLOCK_SIZE * 4 - 32) // total input size
-	int status = 0;
-	FOR (i, 0, INPUT_SIZE) {
-		// outputs
-		u8 hash_chunk[64];
-		u8 hash_whole[64];
-		// inputs
-		RANDOM_INPUT(key  , 32);
-		RANDOM_INPUT(input, INPUT_SIZE);
-
-		// Authenticate bit by bit
-		crypto_hmac_sha512_ctx ctx;
-		crypto_hmac_sha512_init(&ctx, key, 32);
-		crypto_hmac_sha512_update(&ctx, input    , i);
-		crypto_hmac_sha512_update(&ctx, input + i, INPUT_SIZE - i);
-		crypto_hmac_sha512_final(&ctx, hash_chunk);
-
-		// Authenticate all at once
-		crypto_hmac_sha512(hash_whole, key, 32, input, INPUT_SIZE);
-
-		// Compare the results (must be the same)
-		status |= memcmp(hash_chunk, hash_whole, 64);
-	}
-	printf("%s: HMAC SHA-512 (incremental)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Tests that the input and output buffers of HMAC can overlap.
-static int p_hmac_sha512_overlap()
-{
-#undef INPUT_SIZE
-#define INPUT_SIZE (SHA_512_BLOCK_SIZE + (2 * 64)) // total input size
-	int status = 0;
-	FOR (i, 0, SHA_512_BLOCK_SIZE + 64) {
-		u8 hash [64];
-		RANDOM_INPUT(key  , 32);
-		RANDOM_INPUT(input, INPUT_SIZE);
-		crypto_hmac_sha512(hash   , key, 32, input + 64, SHA_512_BLOCK_SIZE);
-		crypto_hmac_sha512(input+i, key, 32, input + 64, SHA_512_BLOCK_SIZE);
-		status |= memcmp(hash, input + i, 64);
-	}
-	printf("%s: HMAC SHA-512 (overlapping i/o)\n", status != 0 ? "FAILED":"OK");
-	return status;
-}
-
-static int p_argon2i_easy()
-{
-	int   status    = 0;
-	void *work_area = alloc(8 * 1024);
-	RANDOM_INPUT(password , 32);
-	RANDOM_INPUT(salt     , 16);
-	u8 hash_general[32];
-	u8 hash_easy   [32];
-	crypto_argon2i_general(hash_general, 32, work_area, 8, 1,
-	                       password, 32, salt, 16, 0, 0, 0, 0);
-	crypto_argon2i(hash_easy, 32, work_area, 8, 1, password, 32, salt, 16);
-	status |= memcmp(hash_general, hash_easy, 32);
-	free(work_area);
-	printf("%s: Argon2i (easy interface)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-static int p_argon2i_overlap()
-{
-	int status          = 0;
-	u8 *work_area       = (u8*)alloc(8 * 1024);
-	u8 *clean_work_area = (u8*)alloc(8 * 1024);
-	FOR (i, 0, 10) {
-		p_random(work_area, 8 * 1024);
-		u32 hash_offset = rand64() % 64;
-		u32 pass_offset = rand64() % 64;
-		u32 salt_offset = rand64() % 64;
-		u32 key_offset  = rand64() % 64;
-		u32 ad_offset   = rand64() % 64;
-		u8  hash1[32];
-		u8 *hash2 = work_area + hash_offset;
-		u8  pass [16];  FOR (j, 0, 16) { pass[j] = work_area[j + pass_offset]; }
-		u8  salt [16];  FOR (j, 0, 16) { salt[j] = work_area[j + salt_offset]; }
-		u8  key  [32];  FOR (j, 0, 32) { key [j] = work_area[j +  key_offset]; }
-		u8  ad   [32];  FOR (j, 0, 32) { ad  [j] = work_area[j +   ad_offset]; }
-
-		crypto_argon2i_general(hash1, 32, clean_work_area, 8, 1,
-		                       pass, 16, salt, 16, key, 32, ad, 32);
-		crypto_argon2i_general(hash2, 32, work_area, 8, 1,
-		                       work_area + pass_offset, 16,
-		                       work_area + salt_offset, 16,
-		                       work_area +  key_offset, 32,
-		                       work_area +   ad_offset, 32);
-		status |= memcmp(hash1, hash2, 32);
-	}
-	free(work_area);
-	free(clean_work_area);
-	printf("%s: Argon2i (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Tests that the shared key and secret key buffers of crypto_x25519 can
-// overlap.
-static int p_x25519_overlap()
-{
-	int status = 0;
-	FOR (i, 0, 62) {
-		u8 overlapping[94];
-		u8 separate[32];
-		RANDOM_INPUT(sk, 32);
-		RANDOM_INPUT(pk, 32);
-		memcpy(overlapping + 31, sk, 32);
-		crypto_x25519(overlapping + i, overlapping + 31, pk);
-		crypto_x25519(separate, sk, pk);
-		status |= memcmp(separate, overlapping + i, 32);
-	}
-	printf("%s: x25519 (overlapping i/o)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-static int p_eddsa_roundtrip()
-{
-#define MESSAGE_SIZE 30
-	int status = 0;
-	FOR (i, 0, MESSAGE_SIZE) {
-		RANDOM_INPUT(message, MESSAGE_SIZE);
-		RANDOM_INPUT(seed, 32);
-		u8 sk       [64];
-		u8 pk       [32];
-		u8 signature[64];
-		crypto_eddsa_key_pair(sk, pk, seed);
-		crypto_eddsa_sign(signature, sk, message, i);
-		status |= crypto_eddsa_check(signature, pk, message, i);
-
-		// reject forgeries
-		u8 zero   [64] = {0};
-		status |= !crypto_eddsa_check(zero , pk, message, i);
-		FOR (j, 0, 64) {
-			u8 forgery[64];
-			memcpy(forgery, signature, 64);
-			forgery[j] = signature[j] + 1;
-			status |= !crypto_eddsa_check(forgery, pk, message, i);
-		}
-	}
-	printf("%s: EdDSA (roundtrip)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Verifies that random signatures are all invalid.  Uses random
-// public keys to see what happens outside of the curve (it should
-// yield an invalid signature).
-static int p_eddsa_random()
-{
-	int status = 0;
-	FOR (i, 0, 100) {
-		RANDOM_INPUT(message, MESSAGE_SIZE);
-		RANDOM_INPUT(pk, 32);
-		RANDOM_INPUT(signature , 64);
-		status |= ~crypto_eddsa_check(signature, pk, message, MESSAGE_SIZE);
-	}
-	// Testing S == L (for code coverage)
-	RANDOM_INPUT(message, MESSAGE_SIZE);
-	RANDOM_INPUT(pk, 32);
-	static const u8 signature[64] =
-		{
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-			0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
-		};
-	status |= ~crypto_eddsa_check(signature, pk, message, MESSAGE_SIZE);
-
-	printf("%s: EdDSA (random)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Tests that the input and output buffers of crypto_sign() can overlap.
-static int p_eddsa_overlap()
-{
-	int status = 0;
-	FOR(i, 0, MESSAGE_SIZE + 64) {
-#undef INPUT_SIZE
-#define INPUT_SIZE (MESSAGE_SIZE + (2 * 64)) // total input size
-		RANDOM_INPUT(input, INPUT_SIZE);
-		RANDOM_INPUT(seed, 32);
-		u8 sk       [64];
-		u8 pk       [32];
-		u8 signature[64];
-		crypto_eddsa_key_pair(sk, pk, seed);
-		crypto_eddsa_sign(signature, sk, input + 64, MESSAGE_SIZE);
-		crypto_eddsa_sign(input+i  , sk, input + 64, MESSAGE_SIZE);
-		status |= memcmp(signature, input + i, 64);
-	}
-	printf("%s: EdDSA (overlap)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-static int p_aead()
-{
-	int status = 0;
-	FOR (i, 0, 1000) {
-		RANDOM_INPUT(key      , 32);
-		RANDOM_INPUT(nonce    , 24);
-		RANDOM_INPUT(ad       ,  4);
-		RANDOM_INPUT(plaintext,  8);
-		u8 box[24], box2[24];
-		u8 out[8];
-		// AEAD roundtrip
-		crypto_lock_aead(box, box+16, key, nonce, ad, 4, plaintext, 8);
-		status |= crypto_unlock_aead(out, key, nonce, box, ad, 4, box+16, 8);
-		status |= memcmp(plaintext, out, 8);
-		box[0]++;
-		status |= !crypto_unlock_aead(out, key, nonce, box, ad, 4, box+16, 8);
-
-		// Authenticated roundtrip (easy interface)
-		// Make and accept message
-		crypto_lock(box, box + 16, key, nonce, plaintext, 8);
-		status |= crypto_unlock(out, key, nonce, box, box + 16, 8);
-		// Make sure decrypted text and original text are the same
-		status |= memcmp(plaintext, out, 8);
-		// Make and reject forgery
-		box[0]++;
-		status |= !crypto_unlock(out, key, nonce, box, box + 16, 8);
-		box[0]--; // undo forgery
-
-		// Same result for both interfaces
-		crypto_lock_aead(box2, box2 + 16, key, nonce, 0, 0, plaintext, 8);
-		status |= memcmp(box, box2, 24);
-	}
-	printf("%s: aead (roundtrip)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-// Elligator direct mapping must ignore the most significant bits
-static int p_elligator_direct_msb()
-{
-	int status = 0;
+	printf("\telligator direct (msb)\n");
 	FOR (i, 0, 20) {
 		RANDOM_INPUT(r, 32);
 		u8 r1[32];  memcpy(r1, r, 32);  r1[31] = (r[31] & 0x3f) | 0x00;
@@ -869,18 +932,13 @@ static int p_elligator_direct_msb()
 		u8 u2[32];  crypto_hidden_to_curve(u2, r2);
 		u8 u3[32];  crypto_hidden_to_curve(u3, r3);
 		u8 u4[32];  crypto_hidden_to_curve(u4, r4);
-		status |= memcmp(u, u1, 32);
-		status |= memcmp(u, u2, 32);
-		status |= memcmp(u, u3, 32);
-		status |= memcmp(u, u4, 32);
+		ASSERT_EQUAL(u, u1, 32);
+		ASSERT_EQUAL(u, u2, 32);
+		ASSERT_EQUAL(u, u3, 32);
+		ASSERT_EQUAL(u, u4, 32);
 	}
-	printf("%s: elligator direct (msb)\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
 
-static int p_elligator_direct_overlap()
-{
-	int status = 0;
+	printf("\telligator direct (overlapping i/o)\n");
 	FOR (i, 0, 62) {
 		u8 overlapping[94];
 		u8 separate[32];
@@ -888,16 +946,12 @@ static int p_elligator_direct_overlap()
 		memcpy(overlapping + 31, r, 32);
 		crypto_hidden_to_curve(overlapping + i, overlapping + 31);
 		crypto_hidden_to_curve(separate, r);
-		status |= memcmp(separate, overlapping + i, 32);
+		ASSERT_EQUAL(separate, overlapping + i, 32);
 	}
-	printf("%s: elligator direct (overlapping i/o)\n",
-	       status != 0 ? "FAILED" : "OK");
-	return status;
-}
 
-static int p_elligator_inverse_overlap()
-{
-	int status = 0;
+	VECTORS(elligator_inv);
+
+	printf("\telligator inverse (overlapping i/o)\n");
 	FOR (i, 0, 62) {
 		u8 overlapping[94];
 		u8 separate[32];
@@ -906,20 +960,14 @@ static int p_elligator_inverse_overlap()
 		memcpy(overlapping + 31, pk, 32);
 		int a = crypto_curve_to_hidden(overlapping+i, overlapping+31, tweak);
 		int b = crypto_curve_to_hidden(separate, pk, tweak);
-		status |= a - b;
+		ASSERT(a == b);
 		if (a == 0) {
 			// The buffers are the same only if written to to begin with
-			status |= memcmp(separate, overlapping + i, 32);
+			ASSERT_EQUAL(separate, overlapping + i, 32);
 		}
 	}
-	printf("%s: elligator inverse (overlapping i/o)\n",
-	       status != 0 ? "FAILED" : "OK");
-	return status;
-}
 
-static int p_elligator_x25519()
-{
-	int status = 0;
+	printf("\telligator x25519\n");
 	int i = 0;
 	while (i < 64) {
 		RANDOM_INPUT(sk1, 32);
@@ -932,16 +980,16 @@ static int p_elligator_x25519()
 		u8 pk1 [32];  crypto_x25519_public_key (pk1 , sk1);
 
 		// Both dirty functions behave the same
-		status |= memcmp(pks, pkf, 32);
+		ASSERT_EQUAL(pks, pkf, 32);
 
 		// Dirty functions behave cleanly if we clear the 3 lsb first
-		status |= memcmp(pksc, pk1, 32);
-		status |= memcmp(pkfc, pk1, 32);
+		ASSERT_EQUAL(pksc, pk1, 32);
+		ASSERT_EQUAL(pkfc, pk1, 32);
 
 		// Dirty functions behave the same as the clean one if the lsb
 		// are 0, differently if it is not
-		if ((sk1[0] & 7) == 0) { status |= memcmp(pk1, pkf, 32);      }
-		else                   { status |= memcmp(pk1, pkf, 32) == 0; }
+		if ((sk1[0] & 7) == 0) { ASSERT_EQUAL    (pk1, pkf, 32); }
+		else                   { ASSERT_DIFFERENT(pk1, pkf, 32); }
 
 		// Maximise tweak diversity.
 		// We want to set the bits 1 (sign) and 6-7 (padding)
@@ -951,25 +999,20 @@ static int p_elligator_x25519()
 			continue; // retry untill success (doesn't increment the tweak)
 		}
 		// Verify that the tweak's msb are copied to the representative
-		status |= (tweak >> 6) ^ (r[31] >> 6);
+		ASSERT((tweak >> 6) == (r[31] >> 6));
 
 		// Round trip
 		u8 pkr[32];  crypto_hidden_to_curve(pkr, r);
-		status |= memcmp(pkr, pkf, 32);
+		ASSERT_EQUAL(pkr, pkf, 32);
 
 		// Dirty and safe keys are compatible
 		u8 e1 [32];  crypto_x25519(e1, sk2, pk1);
 		u8 e2 [32];  crypto_x25519(e2, sk2, pkr);
-		status |= memcmp(e1, e2, 32);
+		ASSERT_EQUAL(e1, e2, 32);
 		i++;
 	}
-	printf("%s: elligator x25519\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
 
-static int p_elligator_key_pair()
-{
-	int status = 0;
+	printf("\telligator key pair\n");
 	FOR(i, 0, 32) {
 		RANDOM_INPUT(seed, 32);
 		RANDOM_INPUT(sk2 , 32);
@@ -979,16 +1022,10 @@ static int p_elligator_key_pair()
 		u8 pk1[32];  crypto_x25519_public_key(pk1, sk1);
 		u8 e1 [32];  crypto_x25519(e1, sk2, pk1);
 		u8 e2 [32];  crypto_x25519(e2, sk2, pkr);
-		status |= memcmp(e1, e2, 32);
+		ASSERT_EQUAL(e1, e2, 32);
 	}
 
-	printf("%s: elligator key pair\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-static int p_elligator_key_pair_overlap()
-{
-	int status = 0;
+	printf("\telligator key pair (overlapping i/o)\n");
 	FOR (i, 0, 94) {
 		u8 over[158];
 		u8 sep [ 64];
@@ -997,75 +1034,17 @@ static int p_elligator_key_pair_overlap()
 		memcpy(s2, s1, 32);
 		crypto_hidden_key_pair(sep     , sep      + 32, s1);
 		crypto_hidden_key_pair(over + i, over + i + 32, s2);
-		status |= memcmp(sep, over + i, 64);
+		ASSERT_EQUAL(sep, over + i, 64);
 	}
-
-	printf("%s: elligator key pair (overlapping i/o)\n",
-	       status != 0 ? "FAILED" : "OK");
-	return status;
 }
 
-static int p_x25519_inverse()
-{
-	int status = 0;
-	RANDOM_INPUT(b, 32);
-	u8 base[32];  // random point (cofactor is cleared).
-	crypto_x25519_public_key(base, b);
-	// check round trip
-	FOR (i, 0, 50) {
-		RANDOM_INPUT(sk, 32);
-		u8 pk   [32];
-		u8 blind[32];
-		crypto_x25519(pk, sk, base);
-		crypto_x25519_inverse(blind, sk, pk);
-		status |= memcmp(blind, base, 32);
-	}
 
-	// check cofactor clearing
-	// (Multiplying by a low order point yields zero
-	u8 low_order[4][32] = {
-		{0}, {1},
-		{0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24,
-		 0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b,
-		 0x04, 0x44, 0x5c, 0xc4, 0x58, 0x1c, 0x8e, 0x86,
-		 0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57,},
-		{0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae,
-		 0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a,
-		 0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd,
-		 0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00,},
-	};
-	u8 zero[32] = {0};
-	FOR (i, 0, 32) {
-		u8 blind[32];
-		RANDOM_INPUT(sk, 32);
-		crypto_x25519_inverse(blind, sk, low_order[i%4]);
-		status |= memcmp(blind, zero, 32);
-	}
-	printf("%s: x25519_inverse\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-static int p_x25519_inverse_overlap()
+////////////////////////
+/// X25519 <-> EdDSA ///
+////////////////////////
+static void test_conversions()
 {
-	int status = 0;
-	FOR (i, 0, 62) {
-		u8 overlapping[94];
-		u8 separate[32];
-		RANDOM_INPUT(sk, 32);
-		RANDOM_INPUT(pk, 32);
-		memcpy(overlapping + 31, sk, 32);
-		crypto_x25519_inverse(overlapping + i, overlapping + 31, pk);
-		crypto_x25519_inverse(separate, sk, pk);
-		status |= memcmp(separate, overlapping + i, 32);
-	}
-	printf("%s: x25519 inverse (overlapping i/o)\n",
-	       status != 0 ? "FAILED" : "OK");
-	return status;
-}
-
-static int p_from_eddsa()
-{
-	int status = 0;
+	printf("\tfrom_eddsa\n");
 	FOR (i, 0, 32) {
 		RANDOM_INPUT(ed_seed, 32);
 		u8 secret   [64];
@@ -1073,15 +1052,10 @@ static int p_from_eddsa()
 		u8 x_private[32]; crypto_from_eddsa_private(x_private, secret);
 		u8 x_public1[32]; crypto_from_eddsa_public (x_public1, public);
 		u8 x_public2[32]; crypto_x25519_public_key (x_public2, x_private);
-		status |= memcmp(x_public1, x_public2, 32);
+		ASSERT_EQUAL(x_public1, x_public2, 32);
 	}
-	printf("%s: from_eddsa\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
 
-static int p_from_ed25519()
-{
-	int status = 0;
+	printf("\tfrom_ed25519\n");
 	FOR (i, 0, 32) {
 		RANDOM_INPUT(ed_seed, 32);
 		u8 secret   [64];
@@ -1089,81 +1063,44 @@ static int p_from_ed25519()
 		u8 x_private[32]; crypto_from_ed25519_private(x_private, secret);
 		u8 x_public1[32]; crypto_from_ed25519_public (x_public1, public);
 		u8 x_public2[32]; crypto_x25519_public_key (x_public2, x_private);
-		status |= memcmp(x_public1, x_public2, 32);
+		ASSERT_EQUAL(x_public1, x_public2, 32);
 	}
-	printf("%s: from_ed25519\n", status != 0 ? "FAILED" : "OK");
-	return status;
 }
-
-int vector_test(void (*f)(vector_reader*),
-                const char *name, size_t nb_vectors, const char *vectors[]);
-
-#define TEST(name) vector_test(name, #name, nb_##name##_vectors, name##_vectors)
 
 int main(int argc, char *argv[])
 {
 	if (argc > 1) {
 		sscanf(argv[1], "%" PRIu64 "", &random_state);
 	}
-	printf("\nRandom seed: %" PRIu64 "\n", random_state);
+	printf("\nRandom seed = %" PRIu64 "\n\n", random_state);
 
-	int status = 0;
-	printf("\nTest against vectors");
-	printf("\n--------------------\n");
-	status |= TEST(chacha20);
-	status |= TEST(ietf_chacha20);
-	status |= TEST(hchacha20);
-	status |= TEST(xchacha20);
-	status |= TEST(poly1305);
-	status |= TEST(aead_ietf);
-	status |= TEST(blake2b);
-	status |= TEST(sha512);
-	status |= TEST(hmac_sha512);
-	status |= TEST(argon2i);
-	status |= TEST(x25519);
-	status |= TEST(x25519_pk);
-	status |= TEST(edDSA);
-	status |= TEST(edDSA_pk);
-	status |= TEST(ed_25519);
-	status |= TEST(ed_25519_pk);
-	status |= TEST(ed_25519_check);
-	status |= TEST(elligator_dir);
-	status |= TEST(elligator_inv);
-	status |= test_x25519();
-	printf("\nProperty based tests");
-	printf("\n--------------------\n");
-	status |= p_verify16();
-	status |= p_verify32();
-	status |= p_verify64();
-	status |= p_chacha20_ctr();
-	status |= p_chacha20_stream();
-	status |= p_chacha20_same_ptr();
-	status |= p_hchacha20();
-	status |= p_poly1305();
-	status |= p_poly1305_overlap();
-	status |= p_blake2b();
-	status |= p_blake2b_overlap();
-	status |= p_sha512();
-	status |= p_sha512_overlap();
-	status |= p_hmac_sha512();
-	status |= p_hmac_sha512_overlap();
-	status |= p_argon2i_easy();
-	status |= p_argon2i_overlap();
-	status |= p_x25519_overlap();
-	status |= p_eddsa_roundtrip();
-	status |= p_eddsa_random();
-	status |= p_eddsa_overlap();
-	status |= p_aead();
-	status |= p_elligator_direct_msb();
-	status |= p_elligator_direct_overlap();
-	status |= p_elligator_inverse_overlap();
-	status |= p_elligator_x25519();
-	status |= p_elligator_key_pair();
-	status |= p_elligator_key_pair_overlap();
-	status |= p_x25519_inverse();
-	status |= p_x25519_inverse_overlap();
-	status |= p_from_eddsa();
-	status |= p_from_ed25519();
-	printf("\n%s\n\n", status != 0 ? "SOME TESTS FAILED" : "All tests OK!");
-	return status;
+	printf("Comparisons:\n");
+	test_verify();
+
+	printf("Encryption:\n");
+	test_chacha20();
+	test_aead();
+
+	printf("Hashes:\n");
+	test_poly1305();
+	test_blake2b();
+	test_sha512();
+	test_hmac_sha512();
+	test_argon2i();
+
+	printf("X25519:\n");
+	test_x25519();
+
+	printf("EdDSA:\n");
+	test_edDSA();
+	test_ed25519();
+
+	printf("Elligator:\n");
+	test_elligator();
+
+	printf("Curve25519 conversions:\n");
+	test_conversions();
+
+	printf("\nAll tests OK!\n");
+	return 0;
 }

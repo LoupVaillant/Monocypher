@@ -185,8 +185,9 @@ vector next_output(vector_reader *reader)
 int vector_test(void (*f)(vector_reader*),
                 const char *name, size_t nb_vectors, const char *vectors[])
 {
-	int status   = 0;
-	int nb_tests = 0;
+	int status = 0;
+	printf("\t%s\n", name);
+
 	vector_reader in;
 	in.size = nb_vectors;
 	in.next = vectors;
@@ -202,10 +203,6 @@ int vector_test(void (*f)(vector_reader*),
 		}
 		free(in.out.buf);
 		free(in.expected.buf);
-		nb_tests++;
 	}
-	printf("%s %4d tests: %s\n",
-	       status != 0 ? "FAILED" : "OK", nb_tests, name);
 	return status;
 }
-

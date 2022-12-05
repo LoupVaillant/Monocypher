@@ -63,14 +63,19 @@ typedef int64_t  i64;
 typedef uint64_t u64;
 
 #define FOR(i, start, end) for (size_t i = (start); i < (end); i++)
-#define SODIUM_INIT	\
-	do { \
-		if (sodium_init() == -1) { \
-			printf("libsodium init failed.  Abort.\n"); \
-			return 1; \
+#define SODIUM_INIT	ASSERT(sodium_init() != -1)
+#define RANDOM_INPUT(name, size) u8 name[size]; p_random(name, size)
+#define ASSERT(condition) do {	\
+		if (!(condition)) { \
+			fprintf(stderr, "Assert failure(%s, %d): %s\n", \
+			        __FILE__, __LINE__, #condition); \
+			exit(1); \
 		} \
 	} while (0)
-#define RANDOM_INPUT(name, size) u8 name[size]; p_random(name, size)
+#define ASSERT_EQUAL(a, b, size)     ASSERT( memcmp(a, b, size) == 0)
+#define ASSERT_DIFFERENT(a, b, size) ASSERT(!memcmp(a, b, size) == 0)
+#define ASSERT_OK(exp)               ASSERT((exp) == 0)
+#define ASSERT_KO(exp)               ASSERT((exp) != 0)
 
 extern u64 random_state; // state of the RNG
 
@@ -99,7 +104,7 @@ void* alloc(size_t size);
 
 vector next_input (vector_reader *vectors);
 vector next_output(vector_reader *vectors);
-int vector_test(void (*f)(vector_reader*),
-                const char *name, size_t nb_vectors, const char *vectors[]);
+int  vector_test(void (*f)(vector_reader*),
+                 const char *name, size_t nb_vectors, const char *vectors[]);
 
 #endif // UTILS_H
