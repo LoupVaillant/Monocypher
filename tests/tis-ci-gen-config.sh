@@ -54,7 +54,7 @@
 DIR=$(dirname "$0")
 TIS_CONFIG=$DIR/../tis.config
 
-echo "// auto generated with tests/gen-tis-config.sh" > $TIS_CONFIG
+echo "// auto generated with $0" > $TIS_CONFIG
 echo "[" >> $TIS_CONFIG
 
 for entry_point in      \
@@ -68,7 +68,6 @@ for entry_point in      \
     "v_sha512"          \
     "v_hmac_sha512"     \
     "v_argon2i"         \
-    "v_key_exchange"    \
     "v_edDSA"           \
     "v_ed_25519"        \
     "v_ed_25519_check"  \
