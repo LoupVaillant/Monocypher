@@ -289,11 +289,9 @@ void crypto_eddsa_mul_add(uint8_t r[32],
 						  const uint8_t b[32],
 						  const uint8_t c[32]);
 void crypto_eddsa_scalarbase(uint8_t point[32], const uint8_t scalar[32]);
-int crypto_eddsa_r_check(uint8_t r_check[32],
-						 const uint8_t public_key[32],
-                         const uint8_t h_ram[32],
-						 const uint8_t s[32]);
-
+int crypto_eddsa_check_equation(const uint8_t signature[64],
+                                const uint8_t public_key[32],
+                                const uint8_t h_ram[32]);
 
 // EdDSA to X25519
 // ---------------

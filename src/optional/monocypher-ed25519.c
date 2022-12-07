@@ -390,12 +390,8 @@ int crypto_ed25519_check(const u8  signature[64], const u8 public_key[32],
                          const u8 *message, size_t message_size)
 {
 	u8 h_ram  [32];
-	u8 r_check[32];
 	hash_reduce(h_ram, signature, 32, public_key, 32, message, message_size);
-	if (crypto_eddsa_r_check(r_check, public_key, h_ram, signature + 32)) {
-		return -1;
-	}
-	return crypto_verify32(r_check, signature);  // R == R_check ? OK : fail
+	return crypto_eddsa_check_equation(signature, public_key, h_ram);
 }
 
 void crypto_from_ed25519_private(u8 x25519[32], const u8 eddsa[32])

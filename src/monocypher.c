@@ -2218,20 +2218,21 @@ void crypto_eddsa_scalarbase(u8 point[32], const u8 scalar[32])
 	WIPE_CTX(&P);
 }
 
-int crypto_eddsa_r_check(u8 r_check[32], const u8 public_key[32],
-                         const u8 h_ram[32], const u8 s[32])
+int crypto_eddsa_check_equation(const u8 signature[64], const u8 public_key[32],
+                                const u8 h_ram[32])
 {
 	ge A;
+	const u8 *s = signature + 32;
 	u32 s32[8];                                      // s (different encoding)
 	load32_le_buf(s32, s, 8);
-
 	if (ge_frombytes_neg_vartime(&A, public_key) ||  // A = -pk
 	    is_above_l(s32)) {                           // prevent s malleability
 		return -1;
 	}
 	ge_double_scalarmult_vartime(&A, h_ram, s);      // A = [s]B - [h_ram]pk
+	u8 r_check[32];
 	ge_tobytes(r_check, &A);                         // r_check = A
-	return 0;
+	return crypto_verify32(r_check, signature);      // R == R_check ? OK : fail
 }
 
 void crypto_eddsa_key_pair(u8 secret_key[64], u8 public_key[32], u8 seed[32])
@@ -2337,29 +2338,20 @@ void crypto_eddsa_sign(u8 signature [64], const u8 secret_key[32],
 	WIPE_BUFFER(r);
 }
 
-// To verify a signature, there are 3 steps:
+// To check the signature R, S of the message M with the public key A,
+// there are 3 steps:
 //
-//   S, R = signature
-//   h    = HASH(R || public_key || message) % L
-//   R'   = [s]B - [h]public_key
+//   compute h = HASH(R || A || message) % L
+//   check that A is on the curve.
+//   check that R == [s]B - [h]A
 //
-// For the signature to be valid, **TWO** conditions must hold:
-//
-// - Computing R' must succeed.
-// - R and R' must be identical (duh).
-//
-// Don't you **ever** forget to check the return value of
-// `crypto_eddsa_r_check()`.
+// The last two steps are done in crypto_eddsa_check_equation()
 int crypto_eddsa_check(const u8  signature[64], const u8 public_key[32],
                        const u8 *message, size_t message_size)
 {
 	u8 h_ram  [32];
-	u8 r_check[32];
 	hash_reduce(h_ram, signature, 32, public_key, 32, message, message_size);
-	if (crypto_eddsa_r_check(r_check, public_key, h_ram, signature + 32)) {
-		return -1;
-	}
-	return crypto_verify32(r_check, signature);  // R == R_check ? OK : fail
+	return crypto_eddsa_check_equation(signature, public_key, h_ram);
 }
 
 ///////////////////////
