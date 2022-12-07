@@ -1999,42 +1999,59 @@ static int slide_step(slide_ctx *ctx, int width, int i, const u8 scalar[32])
 #define B_W_WIDTH 5 // Affects the size of the binary
 #define P_W_SIZE  (1<<(P_W_WIDTH-2))
 
-// P = [b]B + [p]P, where B is the base point
-//
-// Variable time! Internal buffers are not wiped! Inputs must not be secret!
-// => Use only to *check* signatures.
-static void ge_double_scalarmult_vartime(ge *P, const u8 p[32], const u8 b[32])
+int crypto_eddsa_check_equation(const u8 signature[64], const u8 public_key[32],
+                                const u8 h[32])
 {
-	// cache P window for addition
-	ge_cached cP[P_W_SIZE];
+	ge A; // -public_key
+	const u8 *s = signature + 32;
+
+	// Check that public_key is on the curve
+	// Compute A = -public_key
+	// Prevent s malleability
 	{
-		ge P2, tmp;
-		ge_double(&P2, P, &tmp);
-		ge_cache(&cP[0], P);
-		FOR (i, 1, P_W_SIZE) {
-			ge_add(&tmp, &P2, &cP[i-1]);
-			ge_cache(&cP[i], &tmp);
+		u32 s32[8];
+		load32_le_buf(s32, s, 8);
+		if (ge_frombytes_neg_vartime(&A, public_key) || is_above_l(s32)) {
+			return -1;
 		}
 	}
 
+	// look-up table for A
+	ge_cached lutA[P_W_SIZE];
+	{
+		ge A2, tmp;
+		ge_double(&A2, &A, &tmp);
+		ge_cache(&lutA[0], &A);
+		FOR (i, 1, P_W_SIZE) {
+			ge_add(&tmp, &A2, &lutA[i-1]);
+			ge_cache(&lutA[i], &tmp);
+		}
+	}
+
+	// A = [s]B - [h]A
 	// Merged double and add ladder, fused with sliding
-	slide_ctx p_slide;  slide_init(&p_slide, p);
-	slide_ctx b_slide;  slide_init(&b_slide, b);
-	int i = MAX(p_slide.next_check, b_slide.next_check);
-	ge *sum = P;
+	slide_ctx h_slide;  slide_init(&h_slide, h);
+	slide_ctx s_slide;  slide_init(&s_slide, s);
+	int i = MAX(h_slide.next_check, s_slide.next_check);
+	ge *sum = &A;
 	ge_zero(sum);
 	while (i >= 0) {
 		ge tmp;
 		ge_double(sum, sum, &tmp);
-		int p_digit = slide_step(&p_slide, P_W_WIDTH, i, p);
-		int b_digit = slide_step(&b_slide, B_W_WIDTH, i, b);
-		if (p_digit > 0) { ge_add(sum, sum, &cP[ p_digit / 2]); }
-		if (p_digit < 0) { ge_sub(sum, sum, &cP[-p_digit / 2]); }
+		int h_digit = slide_step(&h_slide, P_W_WIDTH, i, h);
+		int s_digit = slide_step(&s_slide, B_W_WIDTH, i, s);
+		if (h_digit > 0) { ge_add(sum, sum, &lutA[ h_digit / 2]); }
+		if (h_digit < 0) { ge_sub(sum, sum, &lutA[-h_digit / 2]); }
 		fe t1, t2;
-		if (b_digit > 0) { ge_madd(sum, sum, b_window +  b_digit/2, t1, t2); }
-		if (b_digit < 0) { ge_msub(sum, sum, b_window + -b_digit/2, t1, t2); }
+		if (s_digit > 0) { ge_madd(sum, sum, b_window +  s_digit/2, t1, t2); }
+		if (s_digit < 0) { ge_msub(sum, sum, b_window + -s_digit/2, t1, t2); }
 		i--;
 	}
+
+	// Compare R and A (originally [s]B - [h]A)
+	u8 r_check[32];
+	ge_tobytes(r_check, &A);                    // r_check = A
+	return crypto_verify32(r_check, signature); // R == R_check ? OK : fail
 }
 
 // 5-bit signed comb in cached format (Niels coordinates, Z=1)
@@ -2216,23 +2233,6 @@ void crypto_eddsa_scalarbase(u8 point[32], const u8 scalar[32])
 	ge_scalarmult_base(&P, scalar);
 	ge_tobytes(point, &P);
 	WIPE_CTX(&P);
-}
-
-int crypto_eddsa_check_equation(const u8 signature[64], const u8 public_key[32],
-                                const u8 h_ram[32])
-{
-	ge A;
-	const u8 *s = signature + 32;
-	u32 s32[8];                                      // s (different encoding)
-	load32_le_buf(s32, s, 8);
-	if (ge_frombytes_neg_vartime(&A, public_key) ||  // A = -pk
-	    is_above_l(s32)) {                           // prevent s malleability
-		return -1;
-	}
-	ge_double_scalarmult_vartime(&A, h_ram, s);      // A = [s]B - [h_ram]pk
-	u8 r_check[32];
-	ge_tobytes(r_check, &A);                         // r_check = A
-	return crypto_verify32(r_check, signature);      // R == R_check ? OK : fail
 }
 
 void crypto_eddsa_key_pair(u8 secret_key[64], u8 public_key[32], u8 seed[32])
