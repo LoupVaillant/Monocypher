@@ -105,7 +105,7 @@ void crypto_hmac_sha512(uint8_t hmac[64],
 
 // Ed25519
 // -------
-// Signatures (EdDSA with curve25519 + BLAKE2b)
+// Signatures (EdDSA with curve25519 + SHA-512)
 // --------------------------------------------
 void crypto_ed25519_key_pair(uint8_t secret_key[64],
                              uint8_t public_key[32],
