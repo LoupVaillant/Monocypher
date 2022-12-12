@@ -168,12 +168,18 @@ static void argon2i(vector_reader *reader)
 	vector ad            = next_input(reader);
 	vector out           = next_output(reader);
 	void  *work_area     = alloc(nb_blocks * 1024);
-	crypto_argon2i_general(out.buf, (u32)out.size,
-	                       work_area, (u32)nb_blocks, (u32)nb_iterations,
-	                       password.buf, (u32)password.size,
-	                       salt    .buf, (u32)salt    .size,
-	                       key     .buf, (u32)key     .size,
-	                       ad      .buf, (u32)ad      .size);
+
+	crypto_argon2_settings s = crypto_argon2i_defaults;
+	s.nb_blocks     = nb_blocks;
+	s.nb_iterations = nb_iterations;
+	s.hash_size     = out.size;
+	s.salt_size     = salt.size;
+	s.key           = key.buf;
+	s.key_size      = key.size;
+	s.ad            = ad.buf;
+	s.ad_size       = ad.size;
+
+	crypto_argon2(out.buf, work_area, password.buf, password.size, salt.buf, s);
 	free(work_area);
 }
 

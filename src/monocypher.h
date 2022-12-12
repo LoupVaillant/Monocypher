@@ -142,19 +142,29 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
 
 // Password key derivation (Argon2 i)
 // ----------------------------------
-void crypto_argon2i(uint8_t       *hash,      uint32_t hash_size,     // >= 4
-                    void          *work_area, uint32_t nb_blocks,     // >= 8
-                    uint32_t       nb_iterations,                     // >= 3
-                    const uint8_t *password,  uint32_t password_size,
-                    const uint8_t *salt,      uint32_t salt_size);    // >= 8
 
-void crypto_argon2i_general(uint8_t       *hash,      uint32_t hash_size,// >= 4
-                            void          *work_area, uint32_t nb_blocks,// >= 8
-                            uint32_t       nb_iterations,                // >= 3
-                            const uint8_t *password,  uint32_t password_size,
-                            const uint8_t *salt,      uint32_t salt_size,// >= 8
-                            const uint8_t *key,       uint32_t key_size,
-                            const uint8_t *ad,        uint32_t ad_size);
+typedef struct {
+	uint32_t algorithm;     // Argon2i, Argon2d, Argon2id
+	uint32_t nb_blocks;     // memory hardness, >= 8
+	uint32_t nb_iterations; // CPU hardness, >= 1 (>= 3 recommended for Argon2i)
+	uint32_t nb_lanes;      // parallelism level (single threaded anyway)
+	uint32_t salt_size;     // we recommend 16 bytes
+	uint32_t hash_size;     // we recommend 32 bytes per key
+	const uint8_t *key;     // pointers are aligned to 8 bytes
+	const uint8_t *ad;
+	uint32_t key_size;
+	uint32_t ad_size;
+} crypto_argon2_settings;
+
+#define CRYPTO_ARGON2_I  1
+
+extern const crypto_argon2_settings crypto_argon2i_defaults;
+
+void crypto_argon2(uint8_t       *hash,
+                   void          *work_area,
+                   const uint8_t *password,  uint32_t password_size,
+                   const uint8_t *salt,
+                   crypto_argon2_settings s);
 
 
 // Key exchange (X-25519)

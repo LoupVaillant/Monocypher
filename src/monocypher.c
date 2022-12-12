@@ -848,35 +848,36 @@ static u32 gidx_next(gidx_ctx *ctx)
 	return (u32)(ref < ctx->nb_blocks ? ref : ref - ctx->nb_blocks);
 }
 
+const crypto_argon2_settings crypto_argon2i_defaults = {
+		CRYPTO_ARGON2_I, // algorithm
+		100000, 3, 1,    // nb_blocks, nb_iterations, nb_lanes
+		16, 32,          // salt_size, hash_size
+		0, 0, 0, 0,      // no key, no ad
+};
+
 // Main algorithm
-void crypto_argon2i_general(u8       *hash,      u32 hash_size,
-                            void     *work_area, u32 nb_blocks,
-                            u32 nb_iterations,
-                            const u8 *password,  u32 password_size,
-                            const u8 *salt,      u32 salt_size,
-                            const u8 *key,       u32 key_size,
-                            const u8 *ad,        u32 ad_size)
+void crypto_argon2(u8 *hash, void *work_area, const u8 *password,
+                   u32 password_size, const u8 *salt, crypto_argon2_settings s)
 {
 	// work area seen as blocks (must be suitably aligned)
 	block *blocks = (block*)work_area;
 	{
 		crypto_blake2b_ctx ctx;
 		crypto_blake2b_init(&ctx);
-
-		blake_update_32      (&ctx, 1            ); // p: number of threads
-		blake_update_32      (&ctx, hash_size    );
-		blake_update_32      (&ctx, nb_blocks    );
-		blake_update_32      (&ctx, nb_iterations);
-		blake_update_32      (&ctx, 0x13         ); // v: version number
-		blake_update_32      (&ctx, 1            ); // y: Argon2i
+		blake_update_32      (&ctx, s.nb_lanes     ); // p: number of "threads"
+		blake_update_32      (&ctx, s.hash_size    );
+		blake_update_32      (&ctx, s.nb_blocks    );
+		blake_update_32      (&ctx, s.nb_iterations);
+		blake_update_32      (&ctx, 0x13           ); // v: version number
+		blake_update_32      (&ctx, s.algorithm    ); // y: Argon2i, Argon2d...
 		blake_update_32      (&ctx,           password_size);
 		crypto_blake2b_update(&ctx, password, password_size);
-		blake_update_32      (&ctx,           salt_size);
-		crypto_blake2b_update(&ctx, salt,     salt_size);
-		blake_update_32      (&ctx,           key_size);
-		crypto_blake2b_update(&ctx, key,      key_size);
-		blake_update_32      (&ctx,           ad_size);
-		crypto_blake2b_update(&ctx, ad,       ad_size);
+		blake_update_32      (&ctx,           s.salt_size);
+		crypto_blake2b_update(&ctx, salt,     s.salt_size);
+		blake_update_32      (&ctx,           s.key_size);
+		crypto_blake2b_update(&ctx, s.key,    s.key_size);
+		blake_update_32      (&ctx,           s.ad_size);
+		crypto_blake2b_update(&ctx, s.ad,     s.ad_size);
 
 		u8 initial_hash[72]; // 64 bytes plus 2 words for future hashes
 		crypto_blake2b_final(&ctx, initial_hash);
@@ -896,18 +897,18 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
 		WIPE_BUFFER(hash_area);
 	}
 
-	// Actual number of blocks
-	nb_blocks -= nb_blocks & 3; // round down to 4 p (p == 1 thread)
+	// Actual number of blocks (must be a multiple of 4 p)
+	u32 nb_blocks = s.nb_blocks - s.nb_blocks % (4 * s.nb_lanes);
 	const u32 segment_size = nb_blocks >> 2;
 
 	// fill (then re-fill) the rest of the blocks
 	block tmp;
 	gidx_ctx ctx; // public information, no need to wipe
-	FOR_T (u32, pass_number, 0, nb_iterations) {
+	FOR_T (u32, pass_number, 0, s.nb_iterations) {
 		int first_pass = pass_number == 0;
 
 		FOR_T (u32, segment, 0, 4) {
-			gidx_init(&ctx, pass_number, segment, nb_blocks, nb_iterations);
+			gidx_init(&ctx, pass_number, segment, nb_blocks, s.nb_iterations);
 
 			// On the first segment of the first pass,
 			// blocks 0 and 1 are already filled.
@@ -942,17 +943,8 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
 	ZERO(p, 128 * nb_blocks);
 
 	// hash the very last block with H' into the output hash
-	extended_hash(hash, hash_size, final_block, 1024);
+	extended_hash(hash, s.hash_size, final_block, 1024);
 	WIPE_BUFFER(final_block);
-}
-
-void crypto_argon2i(u8   *hash,      u32 hash_size,
-                    void *work_area, u32 nb_blocks, u32 nb_iterations,
-                    const u8 *password,  u32 password_size,
-                    const u8 *salt,      u32 salt_size)
-{
-	crypto_argon2i_general(hash, hash_size, work_area, nb_blocks, nb_iterations,
-	                       password, password_size, salt , salt_size, 0,0,0,0);
 }
 
 ////////////////////////////////////
