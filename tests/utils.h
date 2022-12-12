@@ -72,8 +72,8 @@ typedef uint64_t u64;
 			exit(1); \
 		} \
 	} while (0)
-#define ASSERT_EQUAL(a, b, size)     ASSERT( memcmp(a, b, size) == 0)
-#define ASSERT_DIFFERENT(a, b, size) ASSERT(!memcmp(a, b, size) == 0)
+#define ASSERT_EQUAL(a, b, size)     ASSERT(memcmp(a, b, size) == 0)
+#define ASSERT_DIFFERENT(a, b, size) ASSERT(memcmp(a, b, size) != 0)
 #define ASSERT_OK(exp)               ASSERT((exp) == 0)
 #define ASSERT_KO(exp)               ASSERT((exp) != 0)
 
