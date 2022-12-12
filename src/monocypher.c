@@ -2002,38 +2002,41 @@ static int slide_step(slide_ctx *ctx, int width, int i, const u8 scalar[32])
 int crypto_eddsa_check_equation(const u8 signature[64], const u8 public_key[32],
                                 const u8 h[32])
 {
-	ge A; // -public_key
+	ge minus_A; // -public_key
+	ge minus_R; // -first_half_of_signature
 	const u8 *s = signature + 32;
 
-	// Check that public_key is on the curve
-	// Compute A = -public_key
-	// Prevent s malleability
+	// Check that A and R are on the curve
+	// Check that 0 <= S < L (prevents malleability)
+	// *Allow* non-cannonical encoding for A and R
 	{
 		u32 s32[8];
 		load32_le_buf(s32, s, 8);
-		if (ge_frombytes_neg_vartime(&A, public_key) || is_above_l(s32)) {
+		if (ge_frombytes_neg_vartime(&minus_A, public_key) ||
+		    ge_frombytes_neg_vartime(&minus_R, signature)  ||
+		    is_above_l(s32)) {
 			return -1;
 		}
 	}
 
-	// look-up table for A
+	// look-up table for minus_A
 	ge_cached lutA[P_W_SIZE];
 	{
-		ge A2, tmp;
-		ge_double(&A2, &A, &tmp);
-		ge_cache(&lutA[0], &A);
+		ge minus_A2, tmp;
+		ge_double(&minus_A2, &minus_A, &tmp);
+		ge_cache(&lutA[0], &minus_A);
 		FOR (i, 1, P_W_SIZE) {
-			ge_add(&tmp, &A2, &lutA[i-1]);
+			ge_add(&tmp, &minus_A2, &lutA[i-1]);
 			ge_cache(&lutA[i], &tmp);
 		}
 	}
 
-	// A = [s]B - [h]A
+	// sum = [s]B - [h]A
 	// Merged double and add ladder, fused with sliding
 	slide_ctx h_slide;  slide_init(&h_slide, h);
 	slide_ctx s_slide;  slide_init(&s_slide, s);
 	int i = MAX(h_slide.next_check, s_slide.next_check);
-	ge *sum = &A;
+	ge *sum = &minus_A; // reuse minus_A for the sum
 	ge_zero(sum);
 	while (i >= 0) {
 		ge tmp;
@@ -2048,10 +2051,19 @@ int crypto_eddsa_check_equation(const u8 signature[64], const u8 public_key[32],
 		i--;
 	}
 
-	// Compare R and A (originally [s]B - [h]A)
-	u8 r_check[32];
-	ge_tobytes(r_check, &A);                    // r_check = A
-	return crypto_verify32(r_check, signature); // R == R_check ? OK : fail
+	// Compare [8](sum-R) and the zero point
+	// The multiplication by 8 eliminates any low-order component
+	// and ensures consistency with batched verification.
+	ge_cached cached;
+	u8 check[32];
+	static const u8 zero_point[32] = {1}; // Point of order 1
+	ge_cache(&cached, &minus_R);
+	ge_add(sum, sum, &cached);
+	ge_double(sum, sum, &minus_R); // reuse minus_R as temporary
+	ge_double(sum, sum, &minus_R); // reuse minus_R as temporary
+	ge_double(sum, sum, &minus_R); // reuse minus_R as temporary
+	ge_tobytes(check, sum);
+	return crypto_verify32(check, zero_point);
 }
 
 // 5-bit signed comb in cached format (Niels coordinates, Z=1)
