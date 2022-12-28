@@ -125,10 +125,7 @@ void* alloc(size_t size)
 		return NULL;
 	}
 	void *buf = malloc(size);
-	if (buf == NULL) {
-		fprintf(stderr, "Allocation failed: 0x%zx bytes\n", size);
-		exit(1);
-	}
+	ASSERT(buf != NULL);
 	return buf;
 }
 
@@ -154,10 +151,9 @@ static vector vector_of_string(const char *s)
 
 vector next_input(vector_reader *reader)
 {
-	if (reader->size == 0 || reader->nb_inputs >= 10) {
-		fprintf(stderr, "Input reader overload (no more vectors)\n");
-		exit(1);
-	}
+	ASSERT(reader->size > 0);
+	ASSERT(reader->nb_inputs < 10);
+
 	const char *next = *(reader->next);
 	vector *input = reader->inputs + reader->nb_inputs;
 	reader->next++;
@@ -169,10 +165,9 @@ vector next_input(vector_reader *reader)
 
 vector next_output(vector_reader *reader)
 {
-	if (reader->size == 0 || reader->nb_inputs >= 10) {
-		fprintf(stderr, "Input reader overload (no more vectors)\n");
-		exit(1);
-	}
+	ASSERT(reader->size > 0);
+	ASSERT(reader->nb_inputs < 10);
+
 	const char *next = *(reader->next);
 	reader->next++;
 	reader->size--;

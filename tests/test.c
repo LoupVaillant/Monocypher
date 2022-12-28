@@ -115,10 +115,7 @@ static void chacha20(vector_reader *reader)
 	u64    nb_blocks = plain.size / 64 + (plain.size % 64 != 0);
 	u64    new_ctr   = crypto_chacha20_ctr(out.buf, plain.buf, plain.size,
 	                                       key.buf, nonce.buf, ctr);
-	if (new_ctr - ctr != nb_blocks) {
-		printf("FAILURE: Chacha20 returned counter not correct: ");
-		exit(1);
-	}
+	ASSERT(new_ctr - ctr == nb_blocks);
 }
 
 static void ietf_chacha20(vector_reader *reader)
@@ -131,10 +128,7 @@ static void ietf_chacha20(vector_reader *reader)
 	u32    nb_blocks = (u32)(plain.size / 64 + (plain.size % 64 != 0));
 	u32    new_ctr   = crypto_ietf_chacha20_ctr(out.buf, plain.buf, plain.size,
 	                                            key.buf, nonce.buf, ctr);
-	if (new_ctr - ctr != nb_blocks) {
-		printf("FAILURE: IETF Chacha20 returned counter not correct: ");
-		exit(1);
-	}
+	ASSERT(new_ctr - ctr == nb_blocks);
 }
 
 static void xchacha20(vector_reader *reader)
@@ -147,10 +141,7 @@ static void xchacha20(vector_reader *reader)
 	u64    nb_blocks = plain.size / 64 + (plain.size % 64 != 0);
 	u64    new_ctr   = crypto_xchacha20_ctr(out.buf, plain.buf, plain.size,
 	                                        key.buf, nonce.buf, ctr);
-	if (new_ctr - ctr != nb_blocks) {
-		printf("FAILURE: XChacha20 returned counter not correct: ");
-		exit(1);
-	}
+	ASSERT(new_ctr - ctr == nb_blocks);
 }
 
 static void hchacha20(vector_reader *reader)
@@ -754,18 +745,9 @@ static void edDSA_pk(vector_reader *reader)
 	memcpy(out.buf, public_key, 32);
 
 	u8 zeroes[32] = {0};
-	if (memcmp(seed, zeroes, 32)) {
-		printf("FAILURE: seed has not been wiped\n");
-		exit(1);
-	}
-	if (memcmp(secret_key, in.buf, 32)) {
-		printf("FAILURE: first half of secret key is not the seed\n");
-		exit(1);
-	}
-	if (memcmp(secret_key + 32, public_key, 32)) {
-		printf("FAILURE: second half of secret key is not the public key\n");
-		exit(1);
-	}
+	ASSERT(memcmp(seed           , zeroes    , 32) == 0);
+	ASSERT(memcmp(secret_key     , in.buf    , 32) == 0);
+	ASSERT(memcmp(secret_key + 32, public_key, 32) == 0);
 }
 
 static void test_edDSA()
@@ -864,18 +846,9 @@ static void ed_25519_pk(vector_reader *reader)
 	memcpy(out.buf, public_key, 32);
 
 	u8 zeroes[32] = {0};
-	if (memcmp(seed, zeroes, 32)) {
-		printf("FAILURE: seed has not been wiped\n");
-		exit(1);
-	}
-	if (memcmp(secret_key, in.buf, 32)) {
-		printf("FAILURE: first half of secret key is not the seed\n");
-		exit(1);
-	}
-	if (memcmp(secret_key + 32, public_key, 32)) {
-		printf("FAILURE: second half of secret key is not the public key\n");
-		exit(1);
-	}
+	ASSERT(memcmp(seed           , zeroes    , 32) == 0);
+	ASSERT(memcmp(secret_key     , in.buf    , 32) == 0);
+	ASSERT(memcmp(secret_key + 32, public_key, 32) == 0);
 }
 
 static void ed_25519_check(vector_reader *reader)
@@ -912,10 +885,7 @@ static void elligator_inv(vector_reader *reader)
 	u8     failure = next_input(reader).buf[0];
 	vector out     = next_output(reader);
 	int    check   = crypto_curve_to_hidden(out.buf, point.buf, tweak);
-	if ((u8)check != failure) {
-		printf("Elligator inverse map: failure mismatch\n");
-		exit(1);
-	}
+	ASSERT((u8)check == failure);
 }
 
 static void test_elligator()

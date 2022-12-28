@@ -239,10 +239,7 @@ static void elligator_inv(vector_reader *reader)
 	u8     failure = next_input(reader).buf[0];
 	vector out     = next_output(reader);
 	int    check   = crypto_curve_to_hidden(out.buf, point.buf, tweak);
-	if ((u8)check != failure) {
-		printf("Elligator inverse map: failure mismatch\n");
-		exit(1);
-	}
+	ASSERT((u8)check == failure);
 	if (check) {
 		out.buf[0] = 0;
 	}
@@ -410,30 +407,29 @@ TEST(elligator_inv)
 
 //@ ensures \result == 0;
 int main(void) {
-	int status = 0;
-	status |= v_chacha20      ();
-	status |= v_ietf_chacha20 ();
-	status |= v_hchacha20     ();
-	status |= v_xchacha20     ();
-	status |= v_poly1305      ();
-	status |= v_aead_ietf     ();
-	status |= v_blake2b       ();
-	status |= v_sha512        ();
-	status |= v_hmac_sha512   ();
-	status |= v_argon2i       ();
-	status |= v_x25519        ();
-	status |= v_edDSA         ();
-	status |= v_ed_25519      ();
-	status |= v_ed_25519_check();
-	status |= v_elligator_dir ();
-	status |= v_elligator_inv ();
+	ASSERT(v_chacha20      () == 0);
+	ASSERT(v_ietf_chacha20 () == 0);
+	ASSERT(v_hchacha20     () == 0);
+	ASSERT(v_xchacha20     () == 0);
+	ASSERT(v_poly1305      () == 0);
+	ASSERT(v_aead_ietf     () == 0);
+	ASSERT(v_blake2b       () == 0);
+	ASSERT(v_sha512        () == 0);
+	ASSERT(v_hmac_sha512   () == 0);
+	ASSERT(v_argon2i       () == 0);
+	ASSERT(v_x25519        () == 0);
+	ASSERT(v_edDSA         () == 0);
+	ASSERT(v_ed_25519      () == 0);
+	ASSERT(v_ed_25519_check() == 0);
+	ASSERT(v_elligator_dir () == 0);
+	ASSERT(v_elligator_inv () == 0);
 
-	status |= p_from_eddsa    ();
-	status |= p_from_ed25519  ();
-	status |= p_dirty         ();
-	status |= p_x25519_inverse();
-	status |= p_verify16      ();
-	status |= p_verify32      ();
-	status |= p_verify64      ();
-	return status;
+	ASSERT(p_from_eddsa    () == 0);
+	ASSERT(p_from_ed25519  () == 0);
+	ASSERT(p_dirty         () == 0);
+	ASSERT(p_x25519_inverse() == 0);
+	ASSERT(p_verify16      () == 0);
+	ASSERT(p_verify32      () == 0);
+	ASSERT(p_verify64      () == 0);
+	return 0;
 }
