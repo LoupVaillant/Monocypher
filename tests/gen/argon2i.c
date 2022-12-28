@@ -73,7 +73,9 @@ static void test(size_t nb_blocks, size_t hash_size, size_t nb_iterations)
 	print_number(nb_iterations                    );
 	print_vector(password, 16                     );
 	print_vector(salt    , crypto_pwhash_SALTBYTES);
-	printf(":\n:\n"); // no key, no additionnal data
+	print_number(1);  // one lane (no parallelism)
+	printf(":\n");    // no key
+	printf(":\n");    // no additionnal data
 	print_vector(hash    , hash_size              );
 	printf("\n");
 }

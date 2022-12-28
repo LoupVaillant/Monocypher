@@ -144,13 +144,13 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
 // ----------------------------------
 
 typedef struct {
-	uint32_t algorithm;     // Argon2i, Argon2d, Argon2id
-	uint32_t nb_blocks;     // memory hardness, >= 8
-	uint32_t nb_iterations; // CPU hardness, >= 1 (>= 3 recommended for Argon2i)
-	uint32_t nb_lanes;      // parallelism level (single threaded anyway)
-	uint32_t salt_size;     // we recommend 16 bytes
-	uint32_t hash_size;     // we recommend 32 bytes per key
-	const uint8_t *key;     // pointers are aligned to 8 bytes
+	uint32_t algorithm;  // Argon2i, Argon2d, Argon2id
+	uint32_t nb_blocks;  // memory hardness, >= 8
+	uint32_t nb_passes;  // CPU hardness, >= 1 (>= 3 recommended for Argon2i)
+	uint32_t nb_lanes;   // parallelism level (single threaded anyway)
+	uint32_t salt_size;  // we recommend 16 bytes
+	uint32_t hash_size;  // we recommend 32 bytes per key
+	const uint8_t *key;  // pointers are aligned to 8 bytes
 	const uint8_t *ad;
 	uint32_t key_size;
 	uint32_t ad_size;

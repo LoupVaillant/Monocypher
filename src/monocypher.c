@@ -660,16 +660,6 @@ static void blake_update_32(crypto_blake2b_ctx *ctx, u32 input)
 	WIPE_BUFFER(buf);
 }
 
-static void load_block(block *b, const u8 bytes[1024])
-{
-	load64_le_buf(b->a, bytes, 128);
-}
-
-static void store_block(u8 bytes[1024], const block *b)
-{
-	store64_le_buf(bytes, b->a, 128);
-}
-
 static void copy_block(block *o,const block*in){FOR(i,0,128)o->a[i] = in->a[i];}
 static void  xor_block(block *o,const block*in){FOR(i,0,128)o->a[i]^= in->a[i];}
 
@@ -747,18 +737,59 @@ static void g_rounds(block *work_block)
 	}
 }
 
+typedef struct {
+	u32 nb_blocks;
+	u32 nb_lanes;
+	u32 nb_passes;
+} argon_hardness;
+
+typedef struct {
+	u32 pass;
+	u32 slice;
+	u32 lane;
+	u32 block;
+} argon_index;
+
+static u32 ref_index(u64 seed, argon_hardness h, argon_index idx)
+{
+	u64 j1 = seed & 0xffffffff; // block selector (inside a lane)
+	u64 j2 = seed >> 32;        // lane selector
+
+	// Blocks may be picked from any of:
+	// - The last 3 slices (if they exist yet)
+	// - The already constructed blocks in this segment (except the last)
+	int first_pass   = idx.pass == 0;
+	u32 lane_size    = h.nb_blocks / h.nb_lanes;
+	u32 segment_size = lane_size / 4;
+	u32 lane         = j2 % h.nb_lanes;
+
+	// Start of the reference set
+	u32 next_slice   = ((idx.slice + 1) % 4) * segment_size;
+	u32 start        = first_pass ? 0 : next_slice;
+
+	// Size of the reference set
+	u32 nb_segments  = first_pass       ? idx.slice     : 3;
+	u32 nb_blocks    = lane == idx.lane ? idx.block - 1 : 0;
+	nb_blocks       -= lane != idx.lane && idx.block == 0; // why the fuck?
+	u32 w_size       = nb_segments * segment_size + nb_blocks;
+
+	// Generate offset from J1 and J2
+	u64 x   = (j1 * j1)    >> 32;
+	u64 y   = (w_size * x) >> 32;
+	u64 z   = (w_size - 1) - y;
+	u64 ref = (start + z) % lane_size;
+	return lane * lane_size + (u32)ref;
+}
+
 // Argon2i uses a kind of stream cipher to determine which reference
 // block it will take to synthesise the next block.  This context hold
 // that stream's state.  (It's very similar to Chacha20.  The block b
 // is analogous to Chacha's own pool)
 typedef struct {
 	block b;
-	u32 pass_number;
-	u32 slice_number;
-	u32 nb_blocks;
-	u32 nb_iterations;
+	argon_hardness h;
+	argon_index idx;
 	u32 ctr;
-	u32 offset;
 } gidx_ctx;
 
 // The block in the context will determine array indices. To avoid
@@ -767,12 +798,14 @@ typedef struct {
 // easier, but timing attacks are the bigger threat in many settings.
 static void gidx_refresh(gidx_ctx *ctx)
 {
+	ctx->ctr++;
+
 	// seed the beginning of the block...
-	ctx->b.a[0] = ctx->pass_number;
-	ctx->b.a[1] = 0;  // lane number (we have only one)
-	ctx->b.a[2] = ctx->slice_number;
-	ctx->b.a[3] = ctx->nb_blocks;
-	ctx->b.a[4] = ctx->nb_iterations;
+	ctx->b.a[0] = ctx->idx.pass;
+	ctx->b.a[1] = ctx->idx.lane;
+	ctx->b.a[2] = ctx->idx.slice;
+	ctx->b.a[3] = ctx->h.nb_blocks;
+	ctx->b.a[4] = ctx->h.nb_passes;
 	ctx->b.a[5] = 1;  // type: Argon2i
 	ctx->b.a[6] = ctx->ctr;
 	ZERO(ctx->b.a + 7, 121); // ...then zero the rest out
@@ -789,87 +822,60 @@ static void gidx_refresh(gidx_ctx *ctx)
 	wipe_block(&tmp);
 }
 
-static void gidx_init(gidx_ctx *ctx,
-                      u32 pass_number, u32 slice_number,
-                      u32 nb_blocks,   u32 nb_iterations)
+static void gidx_init(gidx_ctx *ctx, argon_hardness h, argon_index idx)
 {
-	ctx->pass_number   = pass_number;
-	ctx->slice_number  = slice_number;
-	ctx->nb_blocks     = nb_blocks;
-	ctx->nb_iterations = nb_iterations;
-	ctx->ctr           = 0;
+	ctx->h   = h;
+	ctx->idx = idx;
+	ctx->ctr = 0;
 
-	// Offset from the beginning of the segment.  For the first slice
-	// of the first pass, we start at the *third* block, so the offset
-	// starts at 2, not 0.
-	if (pass_number != 0 || slice_number != 0) {
-		ctx->offset = 0;
-	} else {
-		ctx->offset = 2;
-		ctx->ctr++;         // Compensates for missed lazy creation
-		gidx_refresh(ctx);  // at the start of gidx_next()
+	// On the first slice of the first pass, 2 blocks are already
+	// filled, and idx.block == 2 instead of zero. In this case the lazy
+	// refresh does not happen, so we need to refresh manually.
+	//
+	// We could instead unconditionally refresh, and use an eager
+	// refresh instead, but this wastes up to one refresh per segment.
+	if (idx.block != 0) {
+		gidx_refresh(ctx);
 	}
 }
 
 static u32 gidx_next(gidx_ctx *ctx)
 {
 	// lazily creates the offset block we need
-	if ((ctx->offset & 127) == 0) {
-		ctx->ctr++;
+	if ((ctx->idx.block & 127) == 0) {
 		gidx_refresh(ctx);
 	}
-	u32 index  = ctx->offset & 127; // save index  for current call
-	u32 offset = ctx->offset;       // save offset for current call
-	ctx->offset++;                  // update offset for next call
+	u32 index = ref_index(ctx->b.a[ctx->idx.block], ctx->h, ctx->idx);
+	ctx->idx.block++;
+	return index;
 
-	// Computes the area size.
-	// Pass 0 : all already finished segments plus already constructed
-	//          blocks in this segment
-	// Pass 1+: 3 last segments plus already constructed
-	//          blocks in this segment.  THE SPEC SUGGESTS OTHERWISE.
-	//          I CONFORM TO THE REFERENCE IMPLEMENTATION.
-	int first_pass  = ctx->pass_number == 0;
-	u32 slice_size  = ctx->nb_blocks >> 2;
-	u32 nb_segments = first_pass ? ctx->slice_number : 3;
-	u32 area_size   = nb_segments * slice_size + offset - 1;
-
-	// Computes the starting position of the reference area.
-	// CONTRARY TO WHAT THE SPEC SUGGESTS, IT STARTS AT THE
-	// NEXT SEGMENT, NOT THE NEXT BLOCK.
-	u32 next_slice = ((ctx->slice_number + 1) & 3) * slice_size;
-	u32 start_pos  = first_pass ? 0 : next_slice;
-
-	// Generate offset from J1 (no need for J2, there's only one lane)
-	u64 j1  = ctx->b.a[index] & 0xffffffff; // pseudo-random number
-	u64 x   = (j1 * j1)       >> 32;
-	u64 y   = (area_size * x) >> 32;
-	u64 z   = (area_size - 1) - y;
-	u64 ref = start_pos + z;                // ref < 2 * nb_blocks
-	return (u32)(ref < ctx->nb_blocks ? ref : ref - ctx->nb_blocks);
 }
 
 const crypto_argon2_settings crypto_argon2i_defaults = {
 		CRYPTO_ARGON2_I, // algorithm
-		100000, 3, 1,    // nb_blocks, nb_iterations, nb_lanes
+		100000, 3, 1,    // nb_blocks, nb_passes, nb_lanes
 		16, 32,          // salt_size, hash_size
 		0, 0, 0, 0,      // no key, no ad
 };
 
-// Main algorithm
 void crypto_argon2(u8 *hash, void *work_area, const u8 *password,
                    u32 password_size, const u8 *salt, crypto_argon2_settings s)
 {
+	const u32 segment_size = s.nb_blocks / s.nb_lanes / 4;
+	const u32 lane_size    = segment_size * 4;
+	const u32 nb_blocks    = lane_size * s.nb_lanes; // s.nb_blocks rounded down
+
 	// work area seen as blocks (must be suitably aligned)
 	block *blocks = (block*)work_area;
 	{
 		crypto_blake2b_ctx ctx;
 		crypto_blake2b_init(&ctx);
-		blake_update_32      (&ctx, s.nb_lanes     ); // p: number of "threads"
-		blake_update_32      (&ctx, s.hash_size    );
-		blake_update_32      (&ctx, s.nb_blocks    );
-		blake_update_32      (&ctx, s.nb_iterations);
-		blake_update_32      (&ctx, 0x13           ); // v: version number
-		blake_update_32      (&ctx, s.algorithm    ); // y: Argon2i, Argon2d...
+		blake_update_32      (&ctx, s.nb_lanes ); // p: number of "threads"
+		blake_update_32      (&ctx, s.hash_size);
+		blake_update_32      (&ctx, s.nb_blocks);
+		blake_update_32      (&ctx, s.nb_passes);
+		blake_update_32      (&ctx, 0x13       ); // v: version number
+		blake_update_32      (&ctx, s.algorithm); // y: Argon2i, Argon2d...
 		blake_update_32      (&ctx,           password_size);
 		crypto_blake2b_update(&ctx, password, password_size);
 		blake_update_32      (&ctx,           s.salt_size);
@@ -882,67 +888,87 @@ void crypto_argon2(u8 *hash, void *work_area, const u8 *password,
 		u8 initial_hash[72]; // 64 bytes plus 2 words for future hashes
 		crypto_blake2b_final(&ctx, initial_hash);
 
-		// fill first 2 blocks
+		// fill first 2 blocks of each lane
 		u8 hash_area[1024];
-		store32_le(initial_hash + 64, 0); // first  additional word
-		store32_le(initial_hash + 68, 0); // second additional word
-		extended_hash(hash_area, 1024, initial_hash, 72);
-		load_block(blocks, hash_area);
-
-		store32_le(initial_hash + 64, 1); // slight modification
-		extended_hash(hash_area, 1024, initial_hash, 72);
-		load_block(blocks + 1, hash_area);
+		FOR_T(u32, l, 0, s.nb_lanes) {
+			FOR_T(u32, i, 0, 2) {
+				store32_le(initial_hash + 64, i); // first  additional word
+				store32_le(initial_hash + 68, l); // second additional word
+				extended_hash(hash_area, 1024, initial_hash, 72);
+				load64_le_buf(blocks[l * lane_size + i].a, hash_area, 128);
+			}
+		}
 
 		WIPE_BUFFER(initial_hash);
 		WIPE_BUFFER(hash_area);
 	}
 
-	// Actual number of blocks (must be a multiple of 4 p)
-	u32 nb_blocks = s.nb_blocks - s.nb_blocks % (4 * s.nb_lanes);
-	const u32 segment_size = nb_blocks >> 2;
-
 	// fill (then re-fill) the rest of the blocks
 	block tmp;
-	gidx_ctx ctx; // public information, no need to wipe
-	FOR_T (u32, pass_number, 0, s.nb_iterations) {
-		int first_pass = pass_number == 0;
+	FOR_T(u32, pass, 0, s.nb_passes) {
+		FOR_T(u32, slice, 0, 4) {
+			// Each segment within the same slice are independent of
+			// each other, and can be computed in parallel (one thread
+			// per lane).  We only need to wait for all segments to be
+			// finished before starting the next slice
+			//
+			// Monocpher has no support for threads, so segments are
+			// computed sequentially here.  Note: optimal performance
+			// (and therefore security) requires one thread per lane.
+			// Without threads, multi-lane support is only there for
+			// compatibility, or as a reference.
+			FOR_T(u32, segment, 0, s.nb_lanes) {
+				// On the first slice of the first pass,
+				// blocks 0 and 1 are already filled.
+				// We use the offset to skip them.
+				u32    pass_offset   = pass == 0 && slice == 0 ? 2 : 0;
+				u32    lane_offset   = segment * lane_size;
+				u32    slice_offset  = slice * segment_size;
+				block *segment_start = blocks + lane_offset + slice_offset;
 
-		FOR_T (u32, segment, 0, 4) {
-			gidx_init(&ctx, pass_number, segment, nb_blocks, s.nb_iterations);
+				gidx_ctx ctx; // public information, not wiped
+				gidx_init(&ctx,
+				          (argon_hardness){ nb_blocks, s.nb_lanes, s.nb_passes},
+				          (argon_index)   { pass, slice, segment, pass_offset});
+				FOR_T (u32, current_block, pass_offset, segment_size) {
+					block *reference = blocks + gidx_next(&ctx);
+					block *current   = segment_start + current_block;
+					block *previous  =
+						current_block == 0 && slice_offset == 0
+						? segment_start + lane_size - 1
+						: segment_start + current_block - 1;
 
-			// On the first segment of the first pass,
-			// blocks 0 and 1 are already filled.
-			// We use the offset to skip them.
-			u32 start_offset  = first_pass && segment == 0 ? 2 : 0;
-			u32 segment_start = segment * segment_size + start_offset;
-			u32 segment_end   = (segment + 1) * segment_size;
-			FOR_T (u32, current_block, segment_start, segment_end) {
-				block *reference = blocks + gidx_next(&ctx);
-				block *current   = blocks + current_block;
-				block *previous  =
-					current_block == 0
-					? blocks + nb_blocks - 1
-					: blocks + current_block - 1;
-				// Apply compression function G,
-				// And copy it (or XOR it) to the current block.
-				copy_block(&tmp, previous);
-				xor_block (&tmp, reference);
-				if (first_pass) { copy_block(current, &tmp); }
-				else            { xor_block (current, &tmp); }
-				g_rounds  (&tmp);
-				xor_block (current, &tmp);
+					// Apply compression function G,
+					// And copy it (or XOR it) to the current block.
+					copy_block(&tmp, previous);
+					xor_block (&tmp, reference);
+					if (pass == 0) { copy_block(current, &tmp); }
+					else           { xor_block (current, &tmp); }
+					g_rounds  (&tmp);
+					xor_block (current, &tmp);
+				}
 			}
 		}
 	}
 	wipe_block(&tmp);
-	u8 final_block[1024];
-	store_block(final_block, blocks + (nb_blocks - 1));
 
-	// wipe work area
+	// XOR last blocks of each lane
+	block *last_block = blocks + lane_size - 1;
+	FOR_T (u32, lane, 1, s.nb_lanes) {
+		block *next_block = last_block + lane_size;
+		xor_block(next_block, last_block);
+		last_block = next_block;
+	}
+
+	// Serialize last block
+	u8 final_block[1024];
+	store64_le_buf(final_block, last_block->a, 128);
+
+	// Wipe work area
 	volatile u64 *p = (u64*)work_area;
 	ZERO(p, 128 * nb_blocks);
 
-	// hash the very last block with H' into the output hash
+	// Hash the very last block with H' into the output hash
 	extended_hash(hash, s.hash_size, final_block, 1024);
 	WIPE_BUFFER(final_block);
 }
