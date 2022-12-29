@@ -831,7 +831,7 @@ void crypto_argon2(u8 *hash, void *work_area, const u8 *password,
 					u32 window_size  = nb_segments * segment_size + block - 1;
 
 					// Generate offset from pseudo-random seed
-					u64 seed  = index_block.a[block];
+					u64 seed  = index_block.a[block % 128];
 					u64 j1    = seed & 0xffffffff; // block selector
 					u64 j2    = seed >> 32;        // lane selector
 					u64 x     = (j1 * j1)         >> 32;
@@ -862,6 +862,7 @@ void crypto_argon2(u8 *hash, void *work_area, const u8 *password,
 			}
 		}
 	}
+
 	// Wipe temporary block
 	volatile u64* p = tmp.a;
 	ZERO(p, 128);
