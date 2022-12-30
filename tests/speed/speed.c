@@ -120,14 +120,20 @@ static u64 argon2i(void)
 {
 	u64 work_area[SIZE / 8];
 	u8  hash     [32];
-	RANDOM_INPUT(password,  16);
-	RANDOM_INPUT(salt    ,  16);
+	RANDOM_INPUT(pass,  16);
+	RANDOM_INPUT(salt,  16);
 
-	crypto_argon2_settings s = crypto_argon2i_defaults;
+	crypto_argon2_ctx s;
+	memset(&s, 0, sizeof(s));
+	s.algorithm = CRYPTO_ARGON2_I;
 	s.nb_blocks = (u32)(SIZE / 1024);
+	s.nb_passes = 3;
+	s.nb_lanes  = 1;
+	s.salt_size = sizeof(salt);
+	s.hash_size = sizeof(hash);
 
 	TIMING_START {
-		crypto_argon2(hash, work_area, password, 16, salt, s);
+		crypto_argon2(hash, work_area, pass, sizeof(pass), salt, &s);
 	}
 	TIMING_END;
 }

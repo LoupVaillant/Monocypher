@@ -140,8 +140,8 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
                                  const uint8_t      *key, size_t key_size);
 
 
-// Password key derivation (Argon2 i)
-// ----------------------------------
+// Password key derivation (Argon2)
+// --------------------------------
 
 typedef struct {
 	uint32_t algorithm;  // Argon2i, Argon2d, Argon2id
@@ -154,17 +154,17 @@ typedef struct {
 	const uint8_t *ad;
 	uint32_t key_size;
 	uint32_t ad_size;
-} crypto_argon2_settings;
+} crypto_argon2_ctx;
 
+#define CRYPTO_ARGON2_D  0
 #define CRYPTO_ARGON2_I  1
-
-extern const crypto_argon2_settings crypto_argon2i_defaults;
+#define CRYPTO_ARGON2_ID 2
 
 void crypto_argon2(uint8_t       *hash,
                    void          *work_area,
                    const uint8_t *password,  uint32_t password_size,
                    const uint8_t *salt,
-                   crypto_argon2_settings s);
+                   const crypto_argon2_ctx *s);
 
 
 // Key exchange (X-25519)

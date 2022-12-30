@@ -637,9 +637,9 @@ void crypto_blake2b(u8 hash[64], const u8 *message, size_t message_size)
 	crypto_blake2b_general(hash, 64, 0, 0, message, message_size);
 }
 
-////////////////
-/// Argon2 i ///
-////////////////
+//////////////
+/// Argon2 ///
+//////////////
 // references to R, Z, Q etc. come from the spec
 
 // Argon2 operates on 1024 byte blocks.
@@ -723,46 +723,40 @@ static void g_rounds(blk *b)
 	}
 }
 
-const crypto_argon2_settings crypto_argon2i_defaults = {
-		CRYPTO_ARGON2_I, // algorithm
-		100000, 3, 1,    // nb_blocks, nb_passes, nb_lanes
-		16, 32,          // salt_size, hash_size
-		0, 0, 0, 0,      // no key, no ad
-};
-
-void crypto_argon2(u8 *hash, void *work_area, const u8 *password,
-                   u32 password_size, const u8 *salt, crypto_argon2_settings s)
+void crypto_argon2(u8 *hash, void *work_area,
+                   const u8 *password, u32 password_size, const u8 *salt,
+                   const crypto_argon2_ctx *s)
 {
-	const u32 segment_size = s.nb_blocks / s.nb_lanes / 4;
+	const u32 segment_size = s->nb_blocks / s->nb_lanes / 4;
 	const u32 lane_size    = segment_size * 4;
-	const u32 nb_blocks    = lane_size * s.nb_lanes; // s.nb_blocks rounded down
+	const u32 nb_blocks    = lane_size * s->nb_lanes; // nb_blocks rounded down
 
 	// work area seen as blocks (must be suitably aligned)
 	blk *blocks = (blk*)work_area;
 	{
 		crypto_blake2b_ctx ctx;
 		crypto_blake2b_init(&ctx);
-		blake_update_32      (&ctx, s.nb_lanes ); // p: number of "threads"
-		blake_update_32      (&ctx, s.hash_size);
-		blake_update_32      (&ctx, s.nb_blocks);
-		blake_update_32      (&ctx, s.nb_passes);
+		blake_update_32      (&ctx, s->nb_lanes ); // p: number of "threads"
+		blake_update_32      (&ctx, s->hash_size);
+		blake_update_32      (&ctx, s->nb_blocks);
+		blake_update_32      (&ctx, s->nb_passes);
 		blake_update_32      (&ctx, 0x13       ); // v: version number
-		blake_update_32      (&ctx, s.algorithm); // y: Argon2i, Argon2d...
+		blake_update_32      (&ctx, s->algorithm); // y: Argon2i, Argon2d...
 		blake_update_32      (&ctx,           password_size);
 		crypto_blake2b_update(&ctx, password, password_size);
-		blake_update_32      (&ctx,           s.salt_size);
-		crypto_blake2b_update(&ctx, salt,     s.salt_size);
-		blake_update_32      (&ctx,           s.key_size);
-		crypto_blake2b_update(&ctx, s.key,    s.key_size);
-		blake_update_32      (&ctx,           s.ad_size);
-		crypto_blake2b_update(&ctx, s.ad,     s.ad_size);
+		blake_update_32      (&ctx,           s->salt_size);
+		crypto_blake2b_update(&ctx, salt,     s->salt_size);
+		blake_update_32      (&ctx,           s->key_size);
+		crypto_blake2b_update(&ctx, s->key,   s->key_size);
+		blake_update_32      (&ctx,           s->ad_size);
+		crypto_blake2b_update(&ctx, s->ad,    s->ad_size);
 
 		u8 initial_hash[72]; // 64 bytes plus 2 words for future hashes
 		crypto_blake2b_final(&ctx, initial_hash);
 
 		// fill first 2 blocks of each lane
 		u8 hash_area[1024];
-		FOR_T(u32, l, 0, s.nb_lanes) {
+		FOR_T(u32, l, 0, s->nb_lanes) {
 			FOR_T(u32, i, 0, 2) {
 				store32_le(initial_hash + 64, i); // first  additional word
 				store32_le(initial_hash + 68, l); // second additional word
@@ -785,7 +779,7 @@ void crypto_argon2(u8 *hash, void *work_area, const u8 *password,
 	// thread per lane. The only reason Monocypher supports multiple
 	// lanes is compatibility.
 	blk tmp;
-	FOR_T(u32, pass, 0, s.nb_passes) {
+	FOR_T(u32, pass, 0, s->nb_passes) {
 		FOR_T(u32, slice, 0, 4) {
 			// On the first slice of the first pass,
 			// blocks 0 and 1 are already filled, hence pass_offset.
@@ -795,7 +789,7 @@ void crypto_argon2(u8 *hash, void *work_area, const u8 *password,
 			// Each iteration of the following loop may be performed in
 			// a separate thread.  All iterations must be done before we
 			// fill the next slice.
-			FOR_T(u32, segment, 0, s.nb_lanes) {
+			FOR_T(u32, segment, 0, s->nb_lanes) {
 				u32 index_ctr = 1;
 				blk index_block;
 				FOR_T (u32, block, pass_offset, segment_size) {
@@ -807,7 +801,7 @@ void crypto_argon2(u8 *hash, void *work_area, const u8 *password,
 						index_block.a[1] = segment;
 						index_block.a[2] = slice;
 						index_block.a[3] = nb_blocks;
-						index_block.a[4] = s.nb_passes;
+						index_block.a[4] = s->nb_passes;
 						index_block.a[5] = 1;  // type: Argon2i
 						index_block.a[6] = index_ctr;
 						index_ctr++;
@@ -838,7 +832,7 @@ void crypto_argon2(u8 *hash, void *work_area, const u8 *password,
 					u64 y     = (window_size * x) >> 32;
 					u64 z     = (window_size - 1) - y;
 					u64 ref   = (window_start + z) % lane_size;
-					u32 index = (j2 % s.nb_lanes) * lane_size + (u32)ref;
+					u32 index = (j2 % s->nb_lanes) * lane_size + (u32)ref;
 
 					// Find current, previous, and reference blocks
 					u32  lane_offset   = segment * lane_size;
@@ -869,7 +863,7 @@ void crypto_argon2(u8 *hash, void *work_area, const u8 *password,
 
 	// XOR last blocks of each lane
 	blk *last_block = blocks + lane_size - 1;
-	FOR_T (u32, lane, 1, s.nb_lanes) {
+	FOR_T (u32, lane, 1, s->nb_lanes) {
 		blk *next_block = last_block + lane_size;
 		xor_block(next_block, last_block);
 		last_block = next_block;
@@ -884,7 +878,7 @@ void crypto_argon2(u8 *hash, void *work_area, const u8 *password,
 	ZERO(p, 128 * nb_blocks);
 
 	// Hash the very last block with H' into the output hash
-	extended_hash(hash, s.hash_size, final_block, 1024);
+	extended_hash(hash, s->hash_size, final_block, 1024);
 	WIPE_BUFFER(final_block);
 }
 

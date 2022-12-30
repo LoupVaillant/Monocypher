@@ -55,7 +55,7 @@ CFLAGS = -pedantic -Wall -Wextra
 .PHONY: all clean
 
 VEC     = chacha20  hchacha20  xchacha20     ietf_chacha20 aead_ietf      \
-          poly1305  blake2b    sha512        hmac_sha512   argon2i        \
+          poly1305  blake2b    sha512        hmac_sha512   argon2         \
           edDSA     edDSA_pk   ed_25519      ed_25519_pk   ed_25519_check \
           x25519    x25519_pk  elligator_inv elligator_dir
 VEC2    = $(patsubst %, %.all.vec, $(VEC))
@@ -116,7 +116,7 @@ aead_ietf.all.vec     : aead_ietf.vec
 blake2b.all.vec       : blake2b.vec       vectors/blake2b
 sha512.all.vec        : sha512.vec
 hmac_sha512.all.vec   : hmac_sha512.vec   vectors/hmac_sha512
-argon2i.all.vec       : argon2i.vec       vectors/argon2i
+argon2.all.vec        : argon2.vec       vectors/argon2
 edDSA.all.vec         : edDSA.vec
 edDSA_pk.all.vec      : edDSA_pk.vec
 ed_25519.all.vec      : ed_25519.vec

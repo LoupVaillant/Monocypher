@@ -517,18 +517,18 @@ static void test_hmac_sha512()
 	}
 }
 
-///////////////
-/// Argon2i ///
-///////////////
-static void argon2i(vector_reader *reader)
+//////////////
+/// Argon2 ///
+//////////////
+static void argon2(vector_reader *reader)
 {
-	crypto_argon2_settings s = crypto_argon2i_defaults;
-
+	crypto_argon2_ctx s;
+	s.algorithm      = load32_le(next_input(reader).buf);
 	s.nb_blocks      = load32_le(next_input(reader).buf);
 	s.nb_passes      = load32_le(next_input(reader).buf);
-	vector password  = next_input(reader);
-	vector salt      = next_input(reader);
 	s.nb_lanes       = load32_le(next_input(reader).buf);
+	vector pass      = next_input(reader);
+	vector salt      = next_input(reader);
 	vector key       = next_input(reader);
 	vector ad        = next_input(reader);
 	vector out       = next_output(reader);
@@ -541,15 +541,15 @@ static void argon2i(vector_reader *reader)
 	s.ad        = ad.buf;
 	s.ad_size   = ad.size;
 
-	crypto_argon2(out.buf, work_area, password.buf, password.size, salt.buf, s);
+	crypto_argon2(out.buf, work_area, pass.buf, pass.size, salt.buf, &s);
 	free(work_area);
 }
 
-static void test_argon2i()
+static void test_argon2()
 {
-	VECTORS(argon2i);
+	VECTORS(argon2);
 
-	printf("\tArgon2i (overlapping i/o)\n");
+	printf("\tArgon2 (overlapping i/o)\n");
 	u8 *work_area       = (u8*)alloc(8 * 1024);
 	u8 *clean_work_area = (u8*)alloc(8 * 1024);
 	FOR (i, 0, 10) {
@@ -561,27 +561,30 @@ static void test_argon2i()
 		u32 ad_offset   = rand64() % 64;
 		u8  hash1[32];
 		u8 *hash2 = work_area + hash_offset;
-		u8  pass [16];  FOR (j, 0, 16) { pass[j] = work_area[j + pass_offset]; }
-		u8  salt [16];  FOR (j, 0, 16) { salt[j] = work_area[j + salt_offset]; }
-		u8  key  [32];  FOR (j, 0, 32) { key [j] = work_area[j +  key_offset]; }
-		u8  ad   [32];  FOR (j, 0, 32) { ad  [j] = work_area[j +   ad_offset]; }
+		u8  pass[16];  FOR (j, 0, 16) { pass[j] = work_area[j + pass_offset]; }
+		u8  salt[16];  FOR (j, 0, 16) { salt[j] = work_area[j + salt_offset]; }
+		u8  key [32];  FOR (j, 0, 32) { key [j] = work_area[j +  key_offset]; }
+		u8  ad  [32];  FOR (j, 0, 32) { ad  [j] = work_area[j +   ad_offset]; }
 
-		// without overlap
-		crypto_argon2_settings s = crypto_argon2i_defaults;
+		crypto_argon2_ctx s;
+		s.algorithm = CRYPTO_ARGON2_I;
 		s.nb_blocks = 8;
 		s.nb_passes = 1;
+		s.nb_lanes  = 1;
+		s.salt_size = sizeof(salt);
+		s.hash_size = sizeof(hash1);
+		s.key_size  = sizeof(key);
+		s.ad_size   = sizeof(ad);
 		s.key       = key;
 		s.ad        = ad;
-		s.key_size  = 32;
-		s.ad_size   = 32;
-		crypto_argon2(hash1, clean_work_area, pass, 16, salt, s);
+		crypto_argon2(hash1, clean_work_area, pass, 16, salt, &s);
 
 		// with overlap
 		s.key = work_area + key_offset;
 		s.ad  = work_area +  ad_offset;
 		crypto_argon2(hash2, work_area,
 		              work_area + pass_offset, 16,
-		              work_area + salt_offset, s);
+		              work_area + salt_offset, &s);
 
 		ASSERT_EQUAL(hash1, hash2, 32);
 	}
@@ -1058,7 +1061,7 @@ int main(int argc, char *argv[])
 	test_blake2b();
 	test_sha512();
 	test_hmac_sha512();
-	test_argon2i();
+	test_argon2();
 
 	printf("X25519:\n");
 	test_x25519();

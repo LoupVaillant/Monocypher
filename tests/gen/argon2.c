@@ -52,39 +52,47 @@
 #include <sodium.h>
 #include "utils.h"
 
-static void test(size_t nb_blocks, size_t hash_size, size_t nb_iterations)
+static void test(u32 alg, size_t nb_blocks, size_t hash_size, size_t nb_passes)
 {
 	RANDOM_INPUT(password, 16                     );
 	RANDOM_INPUT(salt    , crypto_pwhash_SALTBYTES);
 	u8 hash[256];
 
+	int algorithm = -1;
+	switch (alg) {
+	case 0:  fprintf(stderr, "Libsodium does not support Argon2d");  break;
+	case 1:  algorithm = crypto_pwhash_ALG_ARGON2I13;                break;
+	case 2:  algorithm = crypto_pwhash_ALG_ARGON2ID13;               break;
+	default: fprintf(stderr, "Unknown algorithm");
+	}
+
 	if (crypto_pwhash(hash, hash_size, (char*)password, 16, salt,
-	                  nb_iterations, nb_blocks * 1024,
-	                  crypto_pwhash_ALG_ARGON2I13)) {
+	                  nb_passes, nb_blocks * 1024, algorithm)) {
 		fprintf(stderr, "Argon2i failed.  "
 		        "nb_blocks = %lu, "
 		        "hash_size = %lu "
-		        "nb_iterations = %lu\n",
-		        nb_blocks, hash_size, nb_iterations);
+		        "nb_passes = %lu\n",
+		        nb_blocks, hash_size, nb_passes);
 		printf(":deadbeef:\n"); // prints a canary to fail subsequent tests
 	}
 
-	print_number(nb_blocks                        );
-	print_number(nb_iterations                    );
-	print_vector(password, 16                     );
-	print_vector(salt    , crypto_pwhash_SALTBYTES);
+	print_number(alg);
+	print_number(nb_blocks);
+	print_number(nb_passes);
 	print_number(1);  // one lane (no parallelism)
+	print_vector(password, 16);
+	print_vector(salt    , crypto_pwhash_SALTBYTES);
 	printf(":\n");    // no key
 	printf(":\n");    // no additionnal data
-	print_vector(hash    , hash_size              );
+	print_vector(hash, hash_size);
 	printf("\n");
 }
 
 int main(void)
 {
 	SODIUM_INIT;
-	FOR (nb_blocks    , 508, 517) { test(nb_blocks, 32       , 3            ); }
-	FOR (hash_size    ,  63,  65) { test(8        , hash_size, 3            ); }
-	FOR (nb_iterations,   3,   6) { test(8        , 32       , nb_iterations); }
+	FOR (nb_blocks, 508, 517) { test(1, nb_blocks, 32       , 3        ); }
+	FOR (hash_size,  63,  65) { test(1, 8        , hash_size, 3        ); }
+	FOR (nb_passes,   3,   6) { test(1, 8        , 32       , nb_passes); }
 	return 0;
 }

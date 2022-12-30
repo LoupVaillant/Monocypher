@@ -158,15 +158,15 @@ static void hmac_sha512(vector_reader *reader)
 	crypto_hmac_sha512(out.buf, key.buf, key.size, msg.buf, msg.size);
 }
 
-static void argon2i(vector_reader *reader)
+static void argon2(vector_reader *reader)
 {
-	crypto_argon2_settings s = crypto_argon2i_defaults;
-
+	crypto_argon2_ctx s;
+	s.algorithm      = load32_le(next_input(reader).buf);
 	s.nb_blocks      = load32_le(next_input(reader).buf);
 	s.nb_passes      = load32_le(next_input(reader).buf);
-	vector password  = next_input(reader);
-	vector salt      = next_input(reader);
 	s.nb_lanes       = load32_le(next_input(reader).buf);
+	vector pass      = next_input(reader);
+	vector salt      = next_input(reader);
 	vector key       = next_input(reader);
 	vector ad        = next_input(reader);
 	vector out       = next_output(reader);
@@ -179,7 +179,7 @@ static void argon2i(vector_reader *reader)
 	s.ad        = ad.buf;
 	s.ad_size   = ad.size;
 
-	crypto_argon2(out.buf, work_area, password.buf, password.size, salt.buf, s);
+	crypto_argon2(out.buf, work_area, pass.buf, pass.size, salt.buf, &s);
 	free(work_area);
 }
 
@@ -391,7 +391,7 @@ TEST(sha512)
 //@ ensures \result == 0;
 TEST(hmac_sha512)
 //@ ensures \result == 0;
-TEST(argon2i)
+TEST(argon2)
 //@ ensures \result == 0;
 TEST(x25519)
 //@ ensures \result == 0;
@@ -416,7 +416,7 @@ int main(void) {
 	ASSERT(v_blake2b       () == 0);
 	ASSERT(v_sha512        () == 0);
 	ASSERT(v_hmac_sha512   () == 0);
-	ASSERT(v_argon2i       () == 0);
+	ASSERT(v_argon2        () == 0);
 	ASSERT(v_x25519        () == 0);
 	ASSERT(v_edDSA         () == 0);
 	ASSERT(v_ed_25519      () == 0);
