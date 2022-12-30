@@ -740,7 +740,7 @@ void crypto_argon2(u8 *hash, void *work_area,
 		blake_update_32      (&ctx, s->hash_size);
 		blake_update_32      (&ctx, s->nb_blocks);
 		blake_update_32      (&ctx, s->nb_passes);
-		blake_update_32      (&ctx, 0x13       ); // v: version number
+		blake_update_32      (&ctx, 0x13        ); // v: version number
 		blake_update_32      (&ctx, s->algorithm); // y: Argon2i, Argon2d...
 		blake_update_32      (&ctx,           password_size);
 		crypto_blake2b_update(&ctx, password, password_size);
@@ -769,6 +769,9 @@ void crypto_argon2(u8 *hash, void *work_area,
 		WIPE_BUFFER(hash_area);
 	}
 
+	// Argon2i and Argon2id start with constant time indexing
+	int constant_time = s->algorithm != CRYPTO_ARGON2_D;
+
 	// Fill (and re-fill) the rest of the blocks
 	//
 	// Note: even though each segment within the same slice can be
@@ -786,34 +789,55 @@ void crypto_argon2(u8 *hash, void *work_area,
 			u32 pass_offset  = pass == 0 && slice == 0 ? 2 : 0;
 			u32 slice_offset = slice * segment_size;
 
+			// Argon2id switches back to non-constant time indexing
+			// after the first two slices of the first pass
+			if (slice == 2 && s->algorithm == CRYPTO_ARGON2_ID) {
+				constant_time = 0;
+			}
+
 			// Each iteration of the following loop may be performed in
 			// a separate thread.  All iterations must be done before we
 			// fill the next slice.
 			FOR_T(u32, segment, 0, s->nb_lanes) {
 				u32 index_ctr = 1;
-				blk index_block;
 				FOR_T (u32, block, pass_offset, segment_size) {
-					// Fill or refresh deterministic indices block
-					if (block == pass_offset || (block % 128) == 0) {
-						// seed the beginning of the block...
-						ZERO(index_block.a, 128);
-						index_block.a[0] = pass;
-						index_block.a[1] = segment;
-						index_block.a[2] = slice;
-						index_block.a[3] = nb_blocks;
-						index_block.a[4] = s->nb_passes;
-						index_block.a[5] = 1;  // type: Argon2i
-						index_block.a[6] = index_ctr;
-						index_ctr++;
+					// Current and previous blocks
+					u32  lane_offset   = segment * lane_size;
+					blk *segment_start = blocks + lane_offset + slice_offset;
+					blk *current       = segment_start + block;
+					blk *previous      =
+						block == 0 && slice_offset == 0
+						? segment_start + lane_size - 1
+						: segment_start + block - 1;
 
-						// Shuffle the block: block = G((G(block, zero)), zero)
-						// (G "square" function), to get pseudo-random numbers.
-						copy_block(&tmp, &index_block);
-						g_rounds  (&index_block);
-						xor_block (&index_block, &tmp);
-						copy_block(&tmp, &index_block);
-						g_rounds  (&index_block);
-						xor_block (&index_block, &tmp);
+					blk index_block;
+					u64 index_seed;
+					if (constant_time) {
+						if (block == pass_offset || (block % 128) == 0) {
+							// Fill or refresh deterministic indices block
+
+							// seed the beginning of the block...
+							ZERO(index_block.a, 128);
+							index_block.a[0] = pass;
+							index_block.a[1] = segment;
+							index_block.a[2] = slice;
+							index_block.a[3] = nb_blocks;
+							index_block.a[4] = s->nb_passes;
+							index_block.a[5] = s->algorithm;
+							index_block.a[6] = index_ctr;
+							index_ctr++;
+
+							// ... then shuffle it
+							copy_block(&tmp, &index_block);
+							g_rounds  (&index_block);
+							xor_block (&index_block, &tmp);
+							copy_block(&tmp, &index_block);
+							g_rounds  (&index_block);
+							xor_block (&index_block, &tmp);
+						}
+						index_seed = index_block.a[block % 128];
+					} else {
+						index_seed = previous->a[0];
 					}
 
 					// Establish the reference set.  *Approximately* comprises:
@@ -824,28 +848,18 @@ void crypto_argon2(u8 *hash, void *work_area,
 					u32 nb_segments  = pass == 0 ? slice : 3;
 					u32 window_size  = nb_segments * segment_size + block - 1;
 
-					// Generate offset from pseudo-random seed
-					u64 seed  = index_block.a[block % 128];
-					u64 j1    = seed & 0xffffffff; // block selector
-					u64 j2    = seed >> 32;        // lane selector
-					u64 x     = (j1 * j1)         >> 32;
-					u64 y     = (window_size * x) >> 32;
-					u64 z     = (window_size - 1) - y;
-					u64 ref   = (window_start + z) % lane_size;
-					u32 index = (j2 % s->nb_lanes) * lane_size + (u32)ref;
+					// Find reference block
+					u64  j1        = index_seed & 0xffffffff; // block selector
+					u64  j2        = index_seed >> 32;        // lane selector
+					u64  x         = (j1 * j1)         >> 32;
+					u64  y         = (window_size * x) >> 32;
+					u64  z         = (window_size - 1) - y;
+					u64  ref       = (window_start + z) % lane_size;
+					u32  index     = (j2 % s->nb_lanes) * lane_size + (u32)ref;
+					blk *reference = blocks + index;
 
-					// Find current, previous, and reference blocks
-					u32  lane_offset   = segment * lane_size;
-					blk *segment_start = blocks + lane_offset + slice_offset;
-					blk *reference     = blocks + index;
-					blk *current       = segment_start + block;
-					blk *previous      =
-						block == 0 && slice_offset == 0
-						? segment_start + lane_size - 1
-						: segment_start + block - 1;
-
-					// Apply compression function G,
-					// And copy it (or XOR it) to the current block.
+					// Shuffle the previous & reference block
+					// into the current block
 					copy_block(&tmp, previous);
 					xor_block (&tmp, reference);
 					if (pass == 0) { copy_block(current, &tmp); }

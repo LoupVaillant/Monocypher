@@ -92,6 +92,7 @@ int main(void)
 {
 	SODIUM_INIT;
 	FOR (nb_blocks, 508, 517) { test(1, nb_blocks, 32       , 3        ); }
+	FOR (nb_blocks, 508, 517) { test(2, nb_blocks, 32       , 3        ); }
 	FOR (hash_size,  63,  65) { test(1, 8        , hash_size, 3        ); }
 	FOR (nb_passes,   3,   6) { test(1, 8        , 32       , nb_passes); }
 	return 0;
