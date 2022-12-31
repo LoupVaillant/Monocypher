@@ -799,6 +799,7 @@ void crypto_argon2(u8 *hash, void *work_area,
 			// a separate thread.  All iterations must be done before we
 			// fill the next slice.
 			FOR_T(u32, segment, 0, s->nb_lanes) {
+				blk index_block;
 				u32 index_ctr = 1;
 				FOR_T (u32, block, pass_offset, segment_size) {
 					// Current and previous blocks
@@ -810,7 +811,6 @@ void crypto_argon2(u8 *hash, void *work_area,
 						? segment_start + lane_size - 1
 						: segment_start + block - 1;
 
-					blk index_block;
 					u64 index_seed;
 					if (constant_time) {
 						if (block == pass_offset || (block % 128) == 0) {
