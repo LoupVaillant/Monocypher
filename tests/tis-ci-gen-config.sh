@@ -67,7 +67,7 @@ for entry_point in      \
     "v_blake2b"         \
     "v_sha512"          \
     "v_hmac_sha512"     \
-    "v_argon2i"         \
+    "v_argon2"          \
     "v_edDSA"           \
     "v_ed_25519"        \
     "v_ed_25519_check"  \
