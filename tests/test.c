@@ -522,26 +522,32 @@ static void test_hmac_sha512()
 //////////////
 static void argon2(vector_reader *reader)
 {
-	crypto_argon2_ctx s;
-	s.algorithm      = load32_le(next_input(reader).buf);
-	s.nb_blocks      = load32_le(next_input(reader).buf);
-	s.nb_passes      = load32_le(next_input(reader).buf);
-	s.nb_lanes       = load32_le(next_input(reader).buf);
+	crypto_argon2_config config;
+	config.algorithm      = load32_le(next_input(reader).buf);
+	config.nb_blocks      = load32_le(next_input(reader).buf);
+	config.nb_passes      = load32_le(next_input(reader).buf);
+	config.nb_lanes       = load32_le(next_input(reader).buf);
+
 	vector pass      = next_input(reader);
 	vector salt      = next_input(reader);
 	vector key       = next_input(reader);
 	vector ad        = next_input(reader);
 	vector out       = next_output(reader);
-	void  *work_area = alloc(s.nb_blocks * 1024);
+	void  *work_area = alloc(config.nb_blocks * 1024);
 
-	s.hash_size = out.size;
-	s.salt_size = salt.size;
-	s.key       = key.buf;
-	s.key_size  = key.size;
-	s.ad        = ad.buf;
-	s.ad_size   = ad.size;
+	crypto_argon2_inputs inputs;
+	inputs.pass      = pass.buf;
+	inputs.salt      = salt.buf;
+	inputs.pass_size = pass.size;
+	inputs.salt_size = salt.size;
 
-	crypto_argon2(out.buf, work_area, pass.buf, pass.size, salt.buf, &s);
+	crypto_argon2_extras extras;
+	extras.key       = key.buf;
+	extras.ad        = ad.buf;
+	extras.key_size  = key.size;
+	extras.ad_size   = ad.size;
+
+	crypto_argon2(out.buf, out.size, work_area, config, inputs, extras);
 	free(work_area);
 }
 
@@ -566,25 +572,32 @@ static void test_argon2()
 		u8  key [32];  FOR (j, 0, 32) { key [j] = work_area[j +  key_offset]; }
 		u8  ad  [32];  FOR (j, 0, 32) { ad  [j] = work_area[j +   ad_offset]; }
 
-		crypto_argon2_ctx s;
-		s.algorithm = CRYPTO_ARGON2_I;
-		s.nb_blocks = 8;
-		s.nb_passes = 1;
-		s.nb_lanes  = 1;
-		s.salt_size = sizeof(salt);
-		s.hash_size = sizeof(hash1);
-		s.key_size  = sizeof(key);
-		s.ad_size   = sizeof(ad);
-		s.key       = key;
-		s.ad        = ad;
-		crypto_argon2(hash1, clean_work_area, pass, 16, salt, &s);
+		crypto_argon2_config config;
+		config.algorithm = CRYPTO_ARGON2_I;
+		config.nb_blocks = 8;
+		config.nb_passes = 1;
+		config.nb_lanes  = 1;
+
+		crypto_argon2_inputs inputs;
+		inputs.pass      = pass;
+		inputs.salt      = salt;
+		inputs.pass_size = sizeof(pass);
+		inputs.salt_size = sizeof(salt);
+
+		crypto_argon2_extras extras;
+		extras.key       = key;
+		extras.ad        = ad;
+		extras.key_size  = sizeof(key);
+		extras.ad_size   = sizeof(ad);
+
+		crypto_argon2(hash1, 32, clean_work_area, config, inputs, extras);
 
 		// with overlap
-		s.key = work_area + key_offset;
-		s.ad  = work_area +  ad_offset;
-		crypto_argon2(hash2, work_area,
-		              work_area + pass_offset, 16,
-		              work_area + salt_offset, &s);
+		inputs.pass = work_area + pass_offset;
+		inputs.salt = work_area + salt_offset;
+		extras.key  = work_area + key_offset;
+		extras.ad   = work_area + ad_offset;
+		crypto_argon2(hash2, 32, work_area, config, inputs, extras);
 
 		ASSERT_EQUAL(hash1, hash2, 32);
 	}

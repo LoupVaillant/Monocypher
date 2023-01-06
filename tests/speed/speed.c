@@ -123,17 +123,21 @@ static u64 argon2i(void)
 	RANDOM_INPUT(pass,  16);
 	RANDOM_INPUT(salt,  16);
 
-	crypto_argon2_ctx s;
-	memset(&s, 0, sizeof(s));
-	s.algorithm = CRYPTO_ARGON2_I;
-	s.nb_blocks = (u32)(SIZE / 1024);
-	s.nb_passes = 3;
-	s.nb_lanes  = 1;
-	s.salt_size = sizeof(salt);
-	s.hash_size = sizeof(hash);
+	crypto_argon2_config config;
+	config.algorithm = CRYPTO_ARGON2_I;
+	config.nb_blocks = (u32)(SIZE / 1024);
+	config.nb_passes = 3;
+	config.nb_lanes  = 1;
+
+	crypto_argon2_inputs inputs;
+	inputs.pass      = pass;
+	inputs.salt      = salt;
+	inputs.pass_size = sizeof(pass);
+	inputs.salt_size = sizeof(salt);
 
 	TIMING_START {
-		crypto_argon2(hash, work_area, pass, sizeof(pass), salt, &s);
+		crypto_argon2(hash, sizeof(hash), work_area,
+		              config, inputs, crypto_argon2_no_extras);
 	}
 	TIMING_END;
 }

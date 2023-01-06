@@ -142,30 +142,37 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
 
 // Password key derivation (Argon2)
 // --------------------------------
-
-typedef struct {
-	uint32_t algorithm;  // Argon2i, Argon2d, Argon2id
-	uint32_t nb_blocks;  // memory hardness, >= 8
-	uint32_t nb_passes;  // CPU hardness, >= 1 (>= 3 recommended for Argon2i)
-	uint32_t nb_lanes;   // parallelism level (single threaded anyway)
-	uint32_t salt_size;  // we recommend 16 bytes
-	uint32_t hash_size;  // we recommend 32 bytes per key
-	const uint8_t *key;  // pointers are aligned to 8 bytes
-	const uint8_t *ad;
-	uint32_t key_size;
-	uint32_t ad_size;
-} crypto_argon2_ctx;
-
 #define CRYPTO_ARGON2_D  0
 #define CRYPTO_ARGON2_I  1
 #define CRYPTO_ARGON2_ID 2
 
-void crypto_argon2(uint8_t       *hash,
-                   void          *work_area,
-                   const uint8_t *password,  uint32_t password_size,
-                   const uint8_t *salt,
-                   const crypto_argon2_ctx *s);
+typedef struct {
+	uint32_t algorithm;  // Argon2d, Argon2i, Argon2id
+	uint32_t nb_blocks;  // memory hardness, >= 8 * nb_lanes
+	uint32_t nb_passes;  // CPU hardness, >= 1 (>= 3 recommended for Argon2i)
+	uint32_t nb_lanes;   // parallelism level (single threaded anyway)
+} crypto_argon2_config;
 
+typedef struct {
+	const uint8_t *pass;
+	const uint8_t *salt;
+	uint32_t pass_size;
+	uint32_t salt_size;  // 16 bytes recommended
+} crypto_argon2_inputs;
+
+typedef struct {
+	const uint8_t *key; // may be NULL if no key
+	const uint8_t *ad;  // may be NULL if no additional data
+	uint32_t key_size;  // 0 if no key (32 bytes recommended otherwise)
+	uint32_t ad_size;   // 0 if no additional data
+} crypto_argon2_extras;
+
+extern const crypto_argon2_extras crypto_argon2_no_extras;
+
+void crypto_argon2(uint8_t *hash, uint32_t hash_size, void *work_area,
+                   crypto_argon2_config config,
+                   crypto_argon2_inputs inputs,
+                   crypto_argon2_extras extras);
 
 // Key exchange (X-25519)
 // ----------------------

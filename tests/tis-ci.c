@@ -160,26 +160,32 @@ static void hmac_sha512(vector_reader *reader)
 
 static void argon2(vector_reader *reader)
 {
-	crypto_argon2_ctx s;
-	s.algorithm      = load32_le(next_input(reader).buf);
-	s.nb_blocks      = load32_le(next_input(reader).buf);
-	s.nb_passes      = load32_le(next_input(reader).buf);
-	s.nb_lanes       = load32_le(next_input(reader).buf);
+	crypto_argon2_config config;
+	config.algorithm      = load32_le(next_input(reader).buf);
+	config.nb_blocks      = load32_le(next_input(reader).buf);
+	config.nb_passes      = load32_le(next_input(reader).buf);
+	config.nb_lanes       = load32_le(next_input(reader).buf);
+
 	vector pass      = next_input(reader);
 	vector salt      = next_input(reader);
 	vector key       = next_input(reader);
 	vector ad        = next_input(reader);
 	vector out       = next_output(reader);
-	void  *work_area = alloc(s.nb_blocks * 1024);
+	void  *work_area = alloc(config.nb_blocks * 1024);
 
-	s.hash_size = out.size;
-	s.salt_size = salt.size;
-	s.key       = key.buf;
-	s.key_size  = key.size;
-	s.ad        = ad.buf;
-	s.ad_size   = ad.size;
+	crypto_argon2_inputs inputs;
+	inputs.pass      = pass.buf;
+	inputs.salt      = salt.buf;
+	inputs.pass_size = pass.size;
+	inputs.salt_size = salt.size;
 
-	crypto_argon2(out.buf, work_area, pass.buf, pass.size, salt.buf, &s);
+	crypto_argon2_extras extras;
+	extras.key       = key.buf;
+	extras.ad        = ad.buf;
+	extras.key_size  = key.size;
+	extras.ad_size   = ad.size;
+
+	crypto_argon2(out.buf, out.size, work_area, config, inputs, extras);
 	free(work_area);
 }
 
