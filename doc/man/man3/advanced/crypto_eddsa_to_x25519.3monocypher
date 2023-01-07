@@ -9,6 +9,7 @@
 .\" ----------------------------------------------------------------------------
 .\"
 .\" Copyright (c) 2020, 2022 Fabio Scotoni
+.\" Copyright (c) 2023 Loup Vaillant
 .\" All rights reserved.
 .\"
 .\"
@@ -38,7 +39,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2020 and 2022 by Fabio Scotoni
+.\" Written in 2020, 2022, and 2023 by Fabio Scotoni and Loup Vaillant
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -48,65 +49,47 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 13, 2022
-.Dt CRYPTO_FROM_EDDSA_PRIVATE 3MONOCYPHER
+.Dd January 7, 2023
+.Dt CRYPTO_FROM_EDDSA_TO_X25519 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_from_eddsa_private ,
-.Nm crypto_from_eddsa_public
-.Nd conversion of key pairs for EdDSA with BLAKE2b to X25519 key pairs
+.Nm crypto_eddsa_to_x25519 ,
+.Nm crypto_x25519_to_eddsa
+.Nd conversion of public keys between EdDSA and X25519
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
-.Fo crypto_from_eddsa_private
+.Fo crypto_eddsa_to_x25519
 .Fa "uint8_t x25519[32]"
 .Fa "const uint8_t eddsa[32]"
 .Fc
 .Ft void
-.Fo crypto_from_eddsa_public
-.Fa "uint8_t x25519[32]"
-.Fa "const uint8_t eddsa[32]"
+.Fo crypto_x25519_to_eddsa
+.Fa "uint8_t eddsa[32]"
+.Fa "const uint8_t x25519[32]"
 .Fc
 .Sh DESCRIPTION
-These functions convert keys for use with
-.Xr crypto_sign 3monocypher
-(EdDSA with the BLAKE2b hash function)
-to keys for use with
-.Xr crypto_x25519 3monocypher
-and
+These functions convert between public keys for use with
+.Xr crypto_eddsa_sign 3monocypher
+and keys for use with
 .Xr crypto_x25519 3monocypher .
 This may be useful in some resource-constrained contexts or when no
 other key is available \(en for example when retrieving SSH public keys
 from GitHub and reusing the SSH public keys as X25519 public keys.
 .Pp
 The
-.Fn crypto_from_eddsa_private
-function converts an EdDSA (with BLAKE2b) private key to an X25519
-private key.
-The
-.Fn crypto_from_eddsa_public
+.Fn crypto_eddsa_to_x25519
 function converts an EdDSA public key to an X25519 public key.
-.Pp
-X25519 key pairs cannot be converted back to EdDSA key pairs.
-The conversion of private keys is specific to EdDSA with BLAKE2b because
-of the way EdDSA works.
-In particular, this means that the output of
-.Fn crypto_from_eddsa_private
-differs from
-.Xr crypto_from_ed25519_private 3monocypher
-in the optional code.
-However, the output of
-.Fn crypto_from_eddsa_public
-is identical to
-.Xr crypto_from_ed25519_public 3monocypher .
+The
+.Fn crypto_x25519_to_eddsa
+function converts an X25519 public key to an EdDSA public key.
 .Pp
 The arguments are:
 .Bl -tag -width Ds
 .It Fa eddsa
-The signing public key or private key to convert to a X25519 public key
-or private key, respectively.
+The EdDSA signing public key.
 .It Fa x25519
-The converted private key or public key.
+The X25519 key exchange public key.
 .El
 .Pp
 The arguments may overlap or point at the same buffer.
@@ -115,7 +98,7 @@ These functions return nothing.
 They cannot fail.
 .Sh SEE ALSO
 .Xr crypto_x25519 3monocypher ,
-.Xr crypto_sign_public_key 3monocypher ,
+.Xr crypto_eddsa_key_pair 3monocypher ,
 .Xr intro 3monocypher
 .Sh HISTORY
 The
@@ -123,6 +106,15 @@ The
 and
 .Fn crypto_from_eddsa_public
 functions first appeared in Monocypher 3.1.0.
+In Monocypher 4.0.0,
+.Fn crypto_from_eddsa_private
+was removed,
+.Fn crypto_x25519_to_eddsa
+was added,
+and
+.Fn crypto_from_eddsa_public
+was renamed
+.Fn crypto_eddsa_to_x25519 .
 .Sh SECURITY CONSIDERATIONS
 It is generally considered poor form to reuse the same key for different
 purposes.

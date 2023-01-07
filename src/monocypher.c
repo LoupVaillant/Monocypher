@@ -2313,19 +2313,13 @@ int crypto_eddsa_check(const u8  signature[64], const u8 public_key[32],
 	return crypto_eddsa_check_equation(signature, public_key, h_ram);
 }
 
-///////////////////////
-/// EdDSA to X25519 ///
-///////////////////////
-void crypto_from_eddsa_private(u8 x25519[32], const u8 eddsa[32])
+/////////////////////////
+/// EdDSA <--> X25519 ///
+/////////////////////////
+void crypto_eddsa_to_x25519(u8 x25519[32], const u8 eddsa[32])
 {
-	u8 a[64];
-	crypto_blake2b(a, eddsa, 32);
-	COPY(x25519, a, 32);
-	WIPE_BUFFER(a);
-}
-
-void crypto_from_eddsa_public(u8 x25519[32], const u8 eddsa[32])
-{
+	// (u, v) = ((1+y)/(1-y), sqrt(-486664)*u/x)
+	// Only converting y to u, the sign of x is ignored.
 	fe t1, t2;
 	fe_frombytes(t2, eddsa);
 	fe_add(t1, fe_one, t2);
@@ -2333,6 +2327,21 @@ void crypto_from_eddsa_public(u8 x25519[32], const u8 eddsa[32])
 	fe_invert(t2, t2);
 	fe_mul(t1, t1, t2);
 	fe_tobytes(x25519, t1);
+	WIPE_BUFFER(t1);
+	WIPE_BUFFER(t2);
+}
+
+void crypto_x25519_to_eddsa(uint8_t eddsa[32], const uint8_t x25519[32])
+{
+	// (x, y) = (sqrt(-486664)*u/v, (u-1)/(u+1))
+	// Only converting u to y, x is assumed positive.
+	fe t1, t2;
+	fe_frombytes(t2, x25519);
+	fe_sub(t1, t2, fe_one);
+	fe_add(t2, t2, fe_one);
+	fe_invert(t2, t2);
+	fe_mul(t1, t1, t2);
+	fe_tobytes(eddsa, t1);
 	WIPE_BUFFER(t1);
 	WIPE_BUFFER(t2);
 }

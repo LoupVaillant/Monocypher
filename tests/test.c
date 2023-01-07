@@ -246,7 +246,6 @@ static void test_chacha20()
 	}
 }
 
-
 /////////////////
 /// Poly 1305 ///
 /////////////////
@@ -461,7 +460,6 @@ static void test_sha512()
 		ASSERT_EQUAL(hash, input + i, 64);
 	}
 }
-
 
 ////////////////////
 /// HMAC SHA 512 ///
@@ -732,7 +730,6 @@ static void test_x25519()
 		ASSERT_EQUAL(separate, overlapping + i, 32);
 	}
 }
-
 
 /////////////
 /// EdDSA ///
@@ -1026,32 +1023,26 @@ static void test_elligator()
 	}
 }
 
-
 ////////////////////////
 /// X25519 <-> EdDSA ///
 ////////////////////////
 static void test_conversions()
 {
-	printf("\tfrom_eddsa\n");
+	printf("\tX25519 <-> EdDSA\n");
 	FOR (i, 0, 32) {
-		RANDOM_INPUT(ed_seed, 32);
-		u8 secret   [64];
-		u8 public   [32]; crypto_eddsa_key_pair(secret, public, ed_seed);
-		u8 x_private[32]; crypto_from_eddsa_private(x_private, secret);
-		u8 x_public1[32]; crypto_from_eddsa_public (x_public1, public);
-		u8 x_public2[32]; crypto_x25519_public_key (x_public2, x_private);
+		RANDOM_INPUT(e_seed, 32);
+		u8 secret    [64];
+		u8 e_public1[32]; crypto_eddsa_key_pair(secret, e_public1, e_seed);
+		u8 x_private[64]; crypto_blake2b          (x_private, secret, 32);
+		u8 x_public1[32]; crypto_eddsa_to_x25519  (x_public1, e_public1);
+		u8 x_public2[32]; crypto_x25519_public_key(x_public2, x_private);
 		ASSERT_EQUAL(x_public1, x_public2, 32);
-	}
 
-	printf("\tfrom_ed25519\n");
-	FOR (i, 0, 32) {
-		RANDOM_INPUT(ed_seed, 32);
-		u8 secret   [64];
-		u8 public   [32]; crypto_ed25519_key_pair(secret, public, ed_seed);
-		u8 x_private[32]; crypto_from_ed25519_private(x_private, secret);
-		u8 x_public1[32]; crypto_from_ed25519_public (x_public1, public);
-		u8 x_public2[32]; crypto_x25519_public_key (x_public2, x_private);
-		ASSERT_EQUAL(x_public1, x_public2, 32);
+		u8 e_public2[32]; crypto_x25519_to_eddsa  (e_public2, x_public1);
+		ASSERT((e_public2[31] & 0x80) == 0); // x coordinate always positive
+
+		e_public1[31] &= 0x7f;               // y coordinate back to original
+		ASSERT_EQUAL(e_public1, e_public2, 32);
 	}
 }
 

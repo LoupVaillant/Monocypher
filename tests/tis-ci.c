@@ -252,33 +252,22 @@ static void elligator_inv(vector_reader *reader)
 }
 
 //@ ensures \result == 0;
-static int p_from_eddsa()
+static int p_eddsa_x25519()
 {
-	int status = 0;
-	RANDOM_INPUT(ed_seed, 32);
-	u8 secret   [64];
-	u8 public   [32];  crypto_eddsa_key_pair(secret, public, ed_seed);
-	u8 x_private[32];  crypto_from_eddsa_private(x_private, secret);
-	u8 x_public1[32];  crypto_from_eddsa_public (x_public1, public);
-	u8 x_public2[32];  crypto_x25519_public_key (x_public2, x_private);
-	status |= memcmp(x_public1, x_public2, 32);
-	printf("%s: from_eddsa\n", status != 0 ? "FAILED" : "OK");
-	return status;
-}
+	RANDOM_INPUT(e_seed, 32);
+	u8 secret    [64];
+	u8 e_public1[32]; crypto_eddsa_key_pair(secret, e_public1, e_seed);
+	u8 x_private[64]; crypto_blake2b          (x_private, secret, 32);
+	u8 x_public1[32]; crypto_eddsa_to_x25519  (x_public1, e_public1);
+	u8 x_public2[32]; crypto_x25519_public_key(x_public2, x_private);
+	ASSERT_EQUAL(x_public1, x_public2, 32);
 
-//@ ensures \result == 0;
-static int p_from_ed25519()
-{
-	int status = 0;
-	RANDOM_INPUT(ed_seed, 32);
-	u8 secret   [64];
-	u8 public   [32];  crypto_ed25519_key_pair(secret, public, ed_seed);
-	u8 x_private[32];  crypto_from_ed25519_private(x_private, secret);
-	u8 x_public1[32];  crypto_from_ed25519_public (x_public1, public);
-	u8 x_public2[32];  crypto_x25519_public_key (x_public2, x_private);
-	status |= memcmp(x_public1, x_public2, 32);
-	printf("%s: from_ed25519\n", status != 0 ? "FAILED" : "OK");
-	return status;
+	u8 e_public2[32]; crypto_x25519_to_eddsa  (e_public2, x_public1);
+	ASSERT((e_public2[31] & 0x80) == 0); // x coordinate always positive
+
+	e_public1[31] &= 0x7f;               // y coordinate back to original
+	ASSERT_EQUAL(e_public1, e_public2, 32);
+	return 0;
 }
 
 //@ ensures \result == 0;
@@ -430,8 +419,7 @@ int main(void) {
 	ASSERT(v_elligator_dir () == 0);
 	ASSERT(v_elligator_inv () == 0);
 
-	ASSERT(p_from_eddsa    () == 0);
-	ASSERT(p_from_ed25519  () == 0);
+	ASSERT(p_eddsa_x25519  () == 0);
 	ASSERT(p_dirty         () == 0);
 	ASSERT(p_x25519_inverse() == 0);
 	ASSERT(p_verify16      () == 0);

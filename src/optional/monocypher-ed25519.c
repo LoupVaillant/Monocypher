@@ -394,14 +394,6 @@ int crypto_ed25519_check(const u8  signature[64], const u8 public_key[32],
 	return crypto_eddsa_check_equation(signature, public_key, h_ram);
 }
 
-void crypto_from_ed25519_private(u8 x25519[32], const u8 eddsa[32])
-{
-	u8 a[64];
-	crypto_sha512(a, eddsa, 32);
-	COPY(x25519, a, 32);
-	WIPE_BUFFER(a);
-}
-
 #ifdef MONOCYPHER_CPP_NAMESPACE
 }
 #endif

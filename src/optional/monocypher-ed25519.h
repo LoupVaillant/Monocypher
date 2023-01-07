@@ -117,9 +117,6 @@ int crypto_ed25519_check(const uint8_t  signature [64],
                          const uint8_t  public_key[32],
                          const uint8_t *message, size_t message_size);
 
-void crypto_from_ed25519_private(uint8_t x25519[32], const uint8_t eddsa[32]);
-#define crypto_from_ed25519_public crypto_from_eddsa_public
-
 #ifdef __cplusplus
 }
 #endif

@@ -310,10 +310,10 @@ int crypto_eddsa_check_equation(const uint8_t signature[64],
                                 const uint8_t public_key[32],
                                 const uint8_t h_ram[32]);
 
-// EdDSA to X25519
-// ---------------
-void crypto_from_eddsa_private(uint8_t x25519[32], const uint8_t eddsa[32]);
-void crypto_from_eddsa_public (uint8_t x25519[32], const uint8_t eddsa[32]);
+// EdDSA <--> X25519
+// -----------------
+void crypto_eddsa_to_x25519(uint8_t x25519[32], const uint8_t eddsa[32]);
+void crypto_x25519_to_eddsa(uint8_t eddsa[32], const uint8_t x25519[32]);
 
 
 // Elligator 2
