@@ -325,7 +325,7 @@ static int p_x25519_inverse()
 }
 
 //@ ensures \result == 0;
-static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
+static int p_verify(size_t size, int (*compare)(const u8*, const u8*, size_t))
 {
 	int status = 0;
 	u8 a[64]; // size <= 64
@@ -337,7 +337,7 @@ static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
 				a[k] = (u8)i;
 				b[k] = (u8)j;
 			}
-			int cmp = compare(a, b);
+			int cmp = compare(a, b, size);
 			status |= (i == j ? cmp : ~cmp);
 			// Set only two bytes to the chosen value, then compare
 			FOR (k, 0, size / 2) {
@@ -347,7 +347,7 @@ static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
 				}
 				a[k] = (u8)i; a[k + size/2 - 1] = (u8)i;
 				b[k] = (u8)j; b[k + size/2 - 1] = (u8)j;
-				cmp = compare(a, b);
+				cmp = compare(a, b, size);
 				status |= (i == j ? cmp : ~cmp);
 			}
 		}
@@ -356,11 +356,11 @@ static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
 	return status;
 }
 //@ ensures \result == 0;
-static int p_verify16(){ return p_verify(16, crypto_verify16); }
+static int p_verify16(){ return p_verify(16, crypto_verify); }
 //@ ensures \result == 0;
-static int p_verify32(){ return p_verify(32, crypto_verify32); }
+static int p_verify32(){ return p_verify(32, crypto_verify); }
 //@ ensures \result == 0;
-static int p_verify64(){ return p_verify(64, crypto_verify64); }
+static int p_verify64(){ return p_verify(64, crypto_verify); }
 
 #define TEST(name)                                                      \
 	int v_##name() { \

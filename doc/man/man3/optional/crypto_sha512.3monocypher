@@ -103,7 +103,7 @@ The
 .Xr crypto_hmac_sha512 3monocypher
 family of functions provides HMAC with SHA-512.
 Use
-.Xr crypto_verify64 3monocypher
+.Xr crypto_verify 3monocypher
 to compare MACs created this way.
 .Pp
 The arguments are:

@@ -99,9 +99,7 @@ substitute() {
             -e 's|href="crypto_sign_public_key.html"|        href="../crypto_sign_public_key.html"|        '\
             -e 's|href="crypto_unlock_aead.html"|            href="../crypto_unlock_aead.html"|            '\
             -e 's|href="crypto_unlock.html"|                 href="../crypto_unlock.html"|                 '\
-            -e 's|href="crypto_verify16.html"|               href="../crypto_verify16.html"|               '\
-            -e 's|href="crypto_verify32.html"|               href="../crypto_verify32.html"|               '\
-            -e 's|href="crypto_verify64.html"|               href="../crypto_verify64.html"|               '\
+            -e 's|href="crypto_verify.html"|                 href="../crypto_verify.html"|               '\
             -e 's|href="crypto_wipe.html"|                   href="../crypto_wipe.html"|                   '\
             -e 's|href="crypto_x25519.html"|                 href="../crypto_x25519.html"|                 '\
             -e 's|href="crypto_chacha20_ctr.html"|                      href="../advanced/crypto_chacha20_ctr.html"|                    '\

@@ -115,10 +115,7 @@ implement EdDSA, with Curve25519 and BLAKE2b.
 This is the same as the more famous Ed25519, with SHA-512 replaced by
 the faster and more secure BLAKE2b.
 .Ss Constant time comparison
-.Xr crypto_verify16 3monocypher ,
-.Xr crypto_verify32 3monocypher ,
-and
-.Xr crypto_verify64 3monocypher
+.Xr crypto_verify 3monocypher ,
 compare buffers in constant time.
 They should be used to compare secrets to prevent timing attacks.
 .Ss Memory wipe
@@ -166,9 +163,7 @@ and
 .Xr crypto_sign_public_key 3monocypher ,
 .Xr crypto_unlock 3monocypher ,
 .Xr crypto_unlock_aead 3monocypher ,
-.Xr crypto_verify16 3monocypher ,
-.Xr crypto_verify32 3monocypher ,
-.Xr crypto_verify64 3monocypher ,
+.Xr crypto_verify 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr crypto_x25519 3monocypher ,
 .Xr crypto_x25519_dirty_fast 3monocypher ,
@@ -250,10 +245,7 @@ Nevertheless, there are a couple important caveats.
 .Pp
 Comparing secrets should be done with constant-time comparison
 functions, such as
-.Xr crypto_verify16 3monocypher ,
-.Xr crypto_verify32 3monocypher ,
-or
-.Xr crypto_verify64 3monocypher .
+.Xr crypto_verify 3monocypher .
 Do not use standard comparison functions.
 They tend to stop as soon as a difference is spotted.
 In many cases, this enables attackers to recover the secrets and

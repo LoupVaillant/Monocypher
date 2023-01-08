@@ -122,7 +122,7 @@ in bytes.
 produces a message authentication code for the given message and
 authentication key.
 To verify the integrity of a message, use
-.Xr crypto_verify16 3monocypher
+.Xr crypto_verify 3monocypher
 to compare the received MAC to the output
 .Fa mac .
 .Ss Incremental interface
@@ -168,7 +168,7 @@ uint8_t       real_mac[16];           /* The actual MAC    */
 crypto_poly1305(real_mac, msg, 5, key);
 /* Wipe the key */
 crypto_wipe(key, 32);
-if (crypto_verify16(mac, real_mac)) {
+if (crypto_verify(mac, real_mac, 16)) {
     /* Corrupted message, abort processing */
 } else {
     /* Genuine message */
@@ -195,7 +195,7 @@ crypto_poly1305_final(&ctx, mac);
 .Sh SEE ALSO
 .Xr crypto_blake2b 3monocypher ,
 .Xr crypto_lock 3monocypher ,
-.Xr crypto_verify16 3monocypher ,
+.Xr crypto_verify 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
 These functions implement Poly1305, described in RFC 8439.
@@ -259,7 +259,7 @@ This is the approach used by
 .Xr crypto_lock_aead 3monocypher .
 .Ss Protection against side channels
 Use
-.Xr crypto_verify16 3monocypher
+.Xr crypto_verify 3monocypher
 to compare message authentication codes.
 Avoid standard buffer comparison functions:
 they may not run in constant time, enabling an attacker to exploit timing

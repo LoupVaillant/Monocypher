@@ -120,9 +120,6 @@ the output value.
 Length of
 .Fa hash ,
 in bytes.
-This argument should be set to 32 or 64 for compatibility with the
-.Fn crypto_verify*
-constant time comparison functions.
 .It Fa work_area
 Temporary buffer for the algorithm, allocated by the caller.
 It must be
@@ -176,10 +173,7 @@ Must be at least 8.
 The arguments may overlap or point at the same buffer.
 .Pp
 Use
-.Xr crypto_verify16 3monocypher ,
-.Xr crypto_verify32 3monocypher ,
-or
-.Xr crypto_verify64 3monocypher
+.Xr crypto_verify 3monocypher
 to compare password hashes to prevent timing attacks.
 .Pp
 To select the
@@ -284,7 +278,7 @@ if (work_area == NULL) {
 .Ed
 .Sh SEE ALSO
 .Xr crypto_lock 3monocypher ,
-.Xr crypto_verify16 3monocypher ,
+.Xr crypto_verify 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS

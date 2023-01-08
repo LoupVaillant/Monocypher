@@ -137,10 +137,7 @@ if
 is 0, in which case no key is used.
 Keys can be used to create a message authentication code (MAC).
 Use
-.Xr crypto_verify16 3monocypher ,
-.Xr crypto_verify32 3monocypher ,
-or
-.Xr crypto_verify64 3monocypher
+.Xr crypto_verify 3monocypher
 to compare MACs created this way.
 Choose the size of the hash accordingly.
 Users may want to wipe the key with

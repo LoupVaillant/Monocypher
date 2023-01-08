@@ -128,7 +128,7 @@ If a protocol requires contributory behaviour,
 compare the output of
 .Fn crypto_x25519
 to an all-zero buffer using
-.Xr crypto_verify32 3monocypher ,
+.Xr crypto_verify 3monocypher ,
 then abort the protocol if the output and the all-zero buffer are equal.
 .Pp
 Do not use the same secret key for both key exchanges and signatures.

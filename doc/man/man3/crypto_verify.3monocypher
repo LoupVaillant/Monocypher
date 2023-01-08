@@ -54,26 +54,15 @@
 .Dt CRYPTO_VERIFY16 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_verify16 ,
-.Nm crypto_verify32 ,
-.Nm crypto_verify64
+.Nm crypto_verify
 .Nd timing-safe data comparison
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft int
-.Fo crypto_verify16
+.Fo crypto_verify
 .Fa "const uint8_t a[16]"
 .Fa "const uint8_t b[16]"
-.Fc
-.Ft int
-.Fo crypto_verify32
-.Fa "const uint8_t a[32]"
-.Fa "const uint8_t b[32]"
-.Fc
-.Ft int
-.Fo crypto_verify64
-.Fa "const uint8_t a[64]"
-.Fa "const uint8_t b[64]"
+.Fa "size_t size"
 .Fc
 .Sh DESCRIPTION
 Cryptographic operations often require comparison of secrets or values
@@ -94,31 +83,25 @@ and successfully forge a message.
 This has led to practical attacks in the past.
 .Pp
 To avoid such catastrophic failure,
-.Fn crypto_verify16 ,
-.Fn crypto_verify32 ,
-and
-.Fn crypto_verify64
-provide comparison functions whose timing is independent from
-the content of their input.
-They compare the first
-16, 32, or 64 bytes of the two byte arrays
-.Fa a
-and
-.Fa b .
+.Fn crypto_verify,
+provides a comparison function whose timing is independent from
+the content of its input.
 .Pp
 When in doubt, prefer these functions over
 .Fn memcmp .
 .Sh RETURN VALUES
-These functions return 0 if the two memory chunks are the same and -1
+This function return 0 if the two memory chunks are the same and -1
 otherwise.
 .Sh SEE ALSO
 .Xr intro 3monocypher
 .Sh HISTORY
-The
+.Fn crypto_verify
+first appeared in Monocypher 3.2.0.
+It replaced the
 .Fn crypto_verify16 ,
 .Fn crypto_verify32 ,
 .Fn crypto_verify64 ,
-functions first appeared in Monocypher 1.1.0.
+functions, which first appeared in Monocypher 1.1.0.
 They replaced the
 .Fn crypto_memcmp
 and

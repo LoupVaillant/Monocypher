@@ -67,13 +67,10 @@ extern "C" {
 /// High level interface ///
 ////////////////////////////
 
-// Constant time comparisons
+// Constant time comparison
 // -------------------------
-
 // Return 0 if a and b are equal, -1 otherwise
-int crypto_verify16(const uint8_t a[16], const uint8_t b[16]);
-int crypto_verify32(const uint8_t a[32], const uint8_t b[32]);
-int crypto_verify64(const uint8_t a[64], const uint8_t b[64]);
+int crypto_verify(const uint8_t *a, const uint8_t *b, size_t size);
 
 
 // Erase sensitive data

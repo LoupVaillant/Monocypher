@@ -62,7 +62,7 @@
 ////////////////////////////////
 /// Constant time comparison ///
 ////////////////////////////////
-static void p_verify(size_t size, int (*compare)(const u8*, const u8*))
+static void p_verify(size_t size, int (*compare)(const u8*, const u8*, size_t))
 {
 	printf("\tcrypto_verify%zu\n", size);
 	u8 a[64]; // size <= 64
@@ -74,7 +74,7 @@ static void p_verify(size_t size, int (*compare)(const u8*, const u8*))
 				a[k] = (u8)i;
 				b[k] = (u8)j;
 			}
-			int cmp = compare(a, b);
+			int cmp = compare(a, b, size);
 			if (i == j) { ASSERT(cmp == 0); }
 			else        { ASSERT(cmp != 0); }
 			// Set only two bytes to the chosen value, then compare
@@ -85,7 +85,7 @@ static void p_verify(size_t size, int (*compare)(const u8*, const u8*))
 				}
 				a[k] = (u8)i; a[k + size/2 - 1] = (u8)i;
 				b[k] = (u8)j; b[k + size/2 - 1] = (u8)j;
-				cmp = compare(a, b);
+				cmp = compare(a, b, size);
 				if (i == j) { ASSERT(cmp == 0); }
 				else        { ASSERT(cmp != 0); }
 			}
@@ -95,9 +95,9 @@ static void p_verify(size_t size, int (*compare)(const u8*, const u8*))
 
 static void test_verify()
 {
-	p_verify(16, crypto_verify16);
-	p_verify(32, crypto_verify32);
-	p_verify(64, crypto_verify64);
+	p_verify(16, crypto_verify);
+	p_verify(32, crypto_verify);
+	p_verify(64, crypto_verify);
 }
 
 ////////////////

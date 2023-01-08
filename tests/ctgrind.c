@@ -60,21 +60,21 @@ static void verify16()
 {
 	u8 a[16];
 	u8 b[16];
-	crypto_verify16(a, b);
+	crypto_verify(a, b, 16);
 }
 
 static void verify32()
 {
 	u8 a[32];
 	u8 b[32];
-	crypto_verify32(a, b);
+	crypto_verify(a, b, 32);
 }
 
 static void verify64()
 {
 	u8 a[64];
 	u8 b[64];
-	crypto_verify64(a, b);
+	crypto_verify(a, b, 64);
 }
 
 static void wipe()

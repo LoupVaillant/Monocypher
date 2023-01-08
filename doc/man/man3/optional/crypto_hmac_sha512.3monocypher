@@ -157,13 +157,7 @@ performs
 and
 .Fn crypto_hmac_sha512_final .
 .Pp
-MACs may be truncated safely down to at most 16 bytes;
-the
-.Xr crypto_verify64 3monocypher ,
-.Xr crypto_verify32 3monocypher ,
-and
-.Xr crypto_verify16 3monocypher
-functions can be used to compare (possibly truncated) MACs.
+MACs may be truncated safely down to at most 16 bytes.
 .Sh RETURN VALUES
 These functions return nothing.
 .Sh EXAMPLES

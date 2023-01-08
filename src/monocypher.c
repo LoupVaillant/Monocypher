@@ -141,24 +141,12 @@ static void store64_le_buf(u8 *dst, const u64 *src, size_t size) {
 static u64 rotr64(u64 x, u64 n) { return (x >> n) ^ (x << (64 - n)); }
 static u32 rotl32(u32 x, u32 n) { return (x << n) ^ (x >> (32 - n)); }
 
-static int neq0(u64 diff)
+int crypto_verify(const u8 *a, const u8 *b, size_t size)
 {
-	// constant time comparison to zero
-	// return diff != 0 ? -1 : 0
-	u64 half = (diff >> 32) | ((u32)diff);
-	return (1 & ((half - 1) >> 32)) - 1;
+	int result = 0;
+	FOR(i, 0, size) { result |= a[i] ^ b[i]; }
+	return (1 & ((result - 1) >> 8)) - 1;
 }
-
-static u64 x16(const u8 a[16], const u8 b[16])
-{
-	return (load64_le(a + 0) ^ load64_le(b + 0))
-		|  (load64_le(a + 8) ^ load64_le(b + 8));
-}
-static u64 x32(const u8 a[32],const u8 b[32]){return x16(a,b)| x16(a+16, b+16);}
-static u64 x64(const u8 a[64],const u8 b[64]){return x32(a,b)| x32(a+32, b+32);}
-int crypto_verify16(const u8 a[16], const u8 b[16]){ return neq0(x16(a, b)); }
-int crypto_verify32(const u8 a[32], const u8 b[32]){ return neq0(x32(a, b)); }
-int crypto_verify64(const u8 a[64], const u8 b[64]){ return neq0(x64(a, b)); }
 
 void crypto_wipe(void *secret, size_t size)
 {
@@ -1322,7 +1310,7 @@ static int fe_isequal(const fe f, const fe g)
 	u8 gs[32];
 	fe_tobytes(fs, f);
 	fe_tobytes(gs, g);
-	int isdifferent = crypto_verify32(fs, gs);
+	int isdifferent = crypto_verify(fs, gs, 32);
 	WIPE_BUFFER(fs);
 	WIPE_BUFFER(gs);
 	return 1 + isdifferent;
@@ -2010,7 +1998,7 @@ int crypto_eddsa_check_equation(const u8 signature[64], const u8 public_key[32],
 	ge_double(sum, sum, &minus_R); // reuse minus_R as temporary
 	ge_double(sum, sum, &minus_R); // reuse minus_R as temporary
 	ge_tobytes(check, sum);
-	return crypto_verify32(check, zero_point);
+	return crypto_verify(check, zero_point, 32);
 }
 
 // 5-bit signed comb in cached format (Niels coordinates, Z=1)
@@ -2873,7 +2861,7 @@ int crypto_unlock_aead(u8 *plain_text, const u8 key[32], const u8 nonce[24],
 	u8 real_mac[16];
 	lock_auth(real_mac, auth_key, ad, ad_size, cipher_text, text_size);
 	WIPE_BUFFER(auth_key);
-	int mismatch = crypto_verify16(mac, real_mac);
+	int mismatch = crypto_verify(mac, real_mac, 16);
 	if (!mismatch) {
 		crypto_chacha20_ctr(plain_text, cipher_text, text_size,
 		                    sub_key, nonce + 16, 1);
