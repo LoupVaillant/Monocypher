@@ -2308,9 +2308,9 @@ void crypto_eddsa_sign(u8 signature [64], const u8 secret_key[32],
 int crypto_eddsa_check(const u8  signature[64], const u8 public_key[32],
                        const u8 *message, size_t message_size)
 {
-	u8 h_ram  [32];
-	hash_reduce(h_ram, signature, 32, public_key, 32, message, message_size);
-	return crypto_eddsa_check_equation(signature, public_key, h_ram);
+	u8 h[32];
+	hash_reduce(h, signature, 32, public_key, 32, message, message_size);
+	return crypto_eddsa_check_equation(signature, public_key, h);
 }
 
 /////////////////////////
