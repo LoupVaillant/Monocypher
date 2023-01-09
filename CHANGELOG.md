@@ -151,6 +151,8 @@ boundaries.  The API changes increase consistency.
 - Rewrote the manual into proper man pages.
 - Added incremental interfaces for authenticated encryption and
   signatures.
+- Replaced `crypto_memcmp()` by 3 fixed size buffer comparisons (16, 32,
+  and 64 bytes), to make sure the generated code remains constant time.
 - A couple breaking API changes, easily fixed by renaming the affected
   functions.
 
