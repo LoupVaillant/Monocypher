@@ -113,7 +113,7 @@ static void chacha20(vector_reader *reader)
 	u64    ctr       = load64_le(next_input(reader).buf);
 	vector out       = next_output(reader);
 	u64    nb_blocks = plain.size / 64 + (plain.size % 64 != 0);
-	u64    new_ctr   = crypto_chacha20_ctr(out.buf, plain.buf, plain.size,
+	u64    new_ctr   = crypto_chacha20_djb(out.buf, plain.buf, plain.size,
 	                                       key.buf, nonce.buf, ctr);
 	ASSERT(new_ctr - ctr == nb_blocks);
 }
@@ -126,8 +126,8 @@ static void ietf_chacha20(vector_reader *reader)
 	u32    ctr       = load32_le(next_input(reader).buf);
 	vector out       = next_output(reader);
 	u32    nb_blocks = (u32)(plain.size / 64 + (plain.size % 64 != 0));
-	u32    new_ctr   = crypto_ietf_chacha20_ctr(out.buf, plain.buf, plain.size,
-	                                            key.buf, nonce.buf, ctr);
+	u32    new_ctr   = crypto_chacha20_ietf(out.buf, plain.buf, plain.size,
+	                                        key.buf, nonce.buf, ctr);
 	ASSERT(new_ctr - ctr == nb_blocks);
 }
 
@@ -139,8 +139,8 @@ static void xchacha20(vector_reader *reader)
 	u64    ctr       = load64_le(next_input(reader).buf);
 	vector out       = next_output(reader);
 	u64    nb_blocks = plain.size / 64 + (plain.size % 64 != 0);
-	u64    new_ctr   = crypto_xchacha20_ctr(out.buf, plain.buf, plain.size,
-	                                        key.buf, nonce.buf, ctr);
+	u64    new_ctr   = crypto_chacha20_x(out.buf, plain.buf, plain.size,
+	                                     key.buf, nonce.buf, ctr);
 	ASSERT(new_ctr - ctr == nb_blocks);
 }
 
@@ -149,7 +149,7 @@ static void hchacha20(vector_reader *reader)
 	vector key   = next_input(reader);
 	vector nonce = next_input(reader);
 	vector out   = next_output(reader);
-	crypto_hchacha20(out.buf, key.buf, nonce.buf);
+	crypto_chacha20_h(out.buf, key.buf, nonce.buf);
 }
 
 static void test_chacha20()
@@ -163,9 +163,9 @@ static void test_chacha20()
 		u8 out_full[128];
 		u8 out1     [64];
 		u8 out2     [64];
-		crypto_chacha20    (out_full, plain     , 128, key, nonce);
-		crypto_chacha20_ctr(out1    , plain +  0,  64, key, nonce, 0);
-		crypto_chacha20_ctr(out2    , plain + 64,  64, key, nonce, 1);
+		crypto_chacha20_djb(out_full, plain     , 128, key, nonce, 0);
+		crypto_chacha20_djb(out1    , plain +  0,  64, key, nonce, 0);
+		crypto_chacha20_djb(out2    , plain + 64,  64, key, nonce, 1);
 		ASSERT_EQUAL(out_full     , out1, 64);
 		ASSERT_EQUAL(out_full + 64, out2, 64);
 	}
@@ -178,8 +178,8 @@ static void test_chacha20()
 		u8 zeroes       [INPUT_SIZE] = {0};
 		RANDOM_INPUT(key  , 32);
 		RANDOM_INPUT(nonce, 8);
-		crypto_chacha20(output_normal, zeroes, i, key, nonce);
-		crypto_chacha20(output_stream, 0     , i, key, nonce);
+		crypto_chacha20_djb(output_normal, zeroes, i, key, nonce, 0);
+		crypto_chacha20_djb(output_stream, 0     , i, key, nonce, 0);
 		ASSERT_EQUAL(output_normal, output_stream, i);
 	}
 
@@ -191,8 +191,8 @@ static void test_chacha20()
 		RANDOM_INPUT(input, INPUT_SIZE);
 		RANDOM_INPUT(key  , 32);
 		RANDOM_INPUT(nonce, 8);
-		crypto_chacha20(output, input, INPUT_SIZE, key, nonce);
-		crypto_chacha20(input , input, INPUT_SIZE, key, nonce);
+		crypto_chacha20_djb(output, input, INPUT_SIZE, key, nonce, 0);
+		crypto_chacha20_djb(input , input, INPUT_SIZE, key, nonce, 0);
 		ASSERT_EQUAL(output, input, INPUT_SIZE);
 	}
 
@@ -205,9 +205,9 @@ static void test_chacha20()
 		u8 out_full[128];
 		u8 out1     [64];
 		u8 out2     [64];
-		crypto_ietf_chacha20    (out_full, plain     , 128, key, nonce);
-		crypto_ietf_chacha20_ctr(out1    , plain +  0,  64, key, nonce, 0);
-		crypto_ietf_chacha20_ctr(out2    , plain + 64,  64, key, nonce, 1);
+		crypto_chacha20_ietf(out_full, plain     , 128, key, nonce, 0);
+		crypto_chacha20_ietf(out1    , plain +  0,  64, key, nonce, 0);
+		crypto_chacha20_ietf(out2    , plain + 64,  64, key, nonce, 1);
 		ASSERT_EQUAL(out_full     , out1, 64);
 		ASSERT_EQUAL(out_full + 64, out2, 64);
 	}
@@ -221,9 +221,9 @@ static void test_chacha20()
 		u8 out_full[128];
 		u8 out1     [64];
 		u8 out2     [64];
-		crypto_xchacha20    (out_full, plain     , 128, key, nonce);
-		crypto_xchacha20_ctr(out1    , plain +  0,  64, key, nonce, 0);
-		crypto_xchacha20_ctr(out2    , plain + 64,  64, key, nonce, 1);
+		crypto_chacha20_x(out_full, plain     , 128, key, nonce, 0);
+		crypto_chacha20_x(out1    , plain +  0,  64, key, nonce, 0);
+		crypto_chacha20_x(out2    , plain + 64,  64, key, nonce, 1);
 		ASSERT_EQUAL(out_full     , out1, 64);
 		ASSERT_EQUAL(out_full + 64, out2, 64);
 	}
@@ -240,8 +240,8 @@ static void test_chacha20()
 
 		// Run with and without overlap, then compare
 		u8 out[32];
-		crypto_hchacha20(out, key, in);
-		crypto_hchacha20(buffer + out_idx, buffer + key_idx, buffer + in_idx);
+		crypto_chacha20_h(out, key, in);
+		crypto_chacha20_h(buffer + out_idx, buffer + key_idx, buffer + in_idx);
 		ASSERT_EQUAL(out, buffer + out_idx, 32);
 	}
 }

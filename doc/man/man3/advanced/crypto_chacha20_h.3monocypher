@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2017-2019 Loup Vaillant
+.\" Copyright (c) 2017-2019, 2023 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
 .\" Copyright (c) 2019-2022 Fabio Scotoni
 .\" All rights reserved.
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2022 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2023 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,22 +50,22 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 13, 2022
-.Dt CRYPTO_HCHACHA20 3MONOCYPHER
+.Dd January 9, 2023
+.Dt CRYPTO_CHACHA20_H 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_hchacha20
+.Nm crypto_chacha20_h
 .Nd HChaCha20 special-purpose hashing
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
-.Fo crypto_hchacha20
+.Fo crypto_chacha20_h
 .Fa "uint8_t out[32]"
 .Fa "const uint8_t key[32]"
 .Fa "const uint8_t in[16]"
 .Fc
 .Sh DESCRIPTION
-.Fn crypto_hchacha20
+.Fn crypto_chacha20_h
 provides a not-so-cryptographic hash.
 It may be used for some specific purposes such as X25519 key
 derivation or XChaCha20 initialisation.
@@ -107,7 +107,7 @@ uint8_t key[32]; /* Must have enough entropy           */
 uint8_t in [16]; /* Does not have to be random         */
 uint8_t out[32]; /* Will be random iff the above holds */
 arc4random_buf(key, 32);
-crypto_hchacha20(out, key, in);
+crypto_chacha20_h(out, key, in);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key, 32);
 crypto_wipe(in , 16);
@@ -120,11 +120,13 @@ HChaCha20 derives from ChaCha20 the same way HSalsa20 derives from
 Salsa20.
 .Sh HISTORY
 The
-.Fn crypto_hchacha20
+.Fn crypto_chacha20_h
 function first appeared in Monocypher 0.1 as
 .Fn crypto_chacha20_H .
 It was renamed to
 .Fn crypto_hchacha20
-in Monocypher 3.0.0.
+in Monocypher 3.0.0, then
+.Fn crypto_chacha20_h
+in Monocypher 4.0.0.
 .Sh CAVEATS
 .Sy This is not a general-purpose cryptographic hash function .

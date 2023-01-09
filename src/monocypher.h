@@ -210,45 +210,30 @@ int crypto_eddsa_check(const uint8_t  signature [64],
 
 // Specialised hash.
 // Used to hash X25519 shared secrets.
-void crypto_hchacha20(uint8_t       out[32],
-                      const uint8_t key[32],
-                      const uint8_t in [16]);
+void crypto_chacha20_h(uint8_t       out[32],
+                       const uint8_t key[32],
+                       const uint8_t in [16]);
 
 // Unauthenticated stream cipher.
 // Don't forget to add authentication.
-void crypto_chacha20(uint8_t       *cipher_text,
-                     const uint8_t *plain_text,
-                     size_t         text_size,
-                     const uint8_t  key[32],
-                     const uint8_t  nonce[8]);
-void crypto_xchacha20(uint8_t       *cipher_text,
-                      const uint8_t *plain_text,
-                      size_t         text_size,
-                      const uint8_t  key[32],
-                      const uint8_t  nonce[24]);
-void crypto_ietf_chacha20(uint8_t       *cipher_text,
-                          const uint8_t *plain_text,
-                          size_t         text_size,
-                          const uint8_t  key[32],
-                          const uint8_t  nonce[12]);
-uint64_t crypto_chacha20_ctr(uint8_t       *cipher_text,
+uint64_t crypto_chacha20_djb(uint8_t       *cipher_text,
                              const uint8_t *plain_text,
                              size_t         text_size,
                              const uint8_t  key[32],
                              const uint8_t  nonce[8],
                              uint64_t       ctr);
-uint64_t crypto_xchacha20_ctr(uint8_t       *cipher_text,
+uint32_t crypto_chacha20_ietf(uint8_t       *cipher_text,
                               const uint8_t *plain_text,
                               size_t         text_size,
                               const uint8_t  key[32],
-                              const uint8_t  nonce[24],
-                              uint64_t       ctr);
-uint32_t crypto_ietf_chacha20_ctr(uint8_t       *cipher_text,
-                                  const uint8_t *plain_text,
-                                  size_t         text_size,
-                                  const uint8_t  key[32],
-                                  const uint8_t  nonce[12],
-                                  uint32_t       ctr);
+                              const uint8_t  nonce[12],
+                              uint32_t       ctr);
+uint64_t crypto_chacha20_x(uint8_t       *cipher_text,
+                           const uint8_t *plain_text,
+                           size_t         text_size,
+                           const uint8_t  key[32],
+                           const uint8_t  nonce[24],
+                           uint64_t       ctr);
 
 
 // Poly 1305

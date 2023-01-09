@@ -201,7 +201,7 @@ static void chacha20_rounds(u32 out[16], const u32 in[16])
 
 static const u8 *chacha20_constant = (const u8*)"expand 32-byte k"; // 16 bytes
 
-void crypto_hchacha20(u8 out[32], const u8 key[32], const u8 in [16])
+void crypto_chacha20_h(u8 out[32], const u8 key[32], const u8 in [16])
 {
 	u32 block[16];
 	load32_le_buf(block     , chacha20_constant, 4);
@@ -216,7 +216,7 @@ void crypto_hchacha20(u8 out[32], const u8 key[32], const u8 in [16])
 	WIPE_BUFFER(block);
 }
 
-u64 crypto_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
+u64 crypto_chacha20_djb(u8 *cipher_text, const u8 *plain_text,
                         size_t text_size, const u8 key[32], const u8 nonce[8],
                         u64 ctr)
 {
@@ -275,44 +275,25 @@ u64 crypto_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
 	return ctr;
 }
 
-u32 crypto_ietf_chacha20_ctr(u8 *cipher_text, const u8 *plain_text,
-                             size_t text_size,
-                             const u8 key[32], const u8 nonce[12], u32 ctr)
+u32 crypto_chacha20_ietf(u8 *cipher_text, const u8 *plain_text,
+                         size_t text_size,
+                         const u8 key[32], const u8 nonce[12], u32 ctr)
 {
 	u64 big_ctr = ctr + ((u64)load32_le(nonce) << 32);
-	return (u32)crypto_chacha20_ctr(cipher_text, plain_text, text_size,
+	return (u32)crypto_chacha20_djb(cipher_text, plain_text, text_size,
 	                                key, nonce + 4, big_ctr);
 }
 
-u64 crypto_xchacha20_ctr(u8 *cipher_text, const u8 *plain_text,
-                         size_t text_size,
-                         const u8 key[32], const u8 nonce[24], u64 ctr)
+u64 crypto_chacha20_x(u8 *cipher_text, const u8 *plain_text,
+                      size_t text_size,
+                      const u8 key[32], const u8 nonce[24], u64 ctr)
 {
 	u8 sub_key[32];
-	crypto_hchacha20(sub_key, key, nonce);
-	ctr = crypto_chacha20_ctr(cipher_text, plain_text, text_size,
-	                          sub_key, nonce+16, ctr);
+	crypto_chacha20_h(sub_key, key, nonce);
+	ctr = crypto_chacha20_djb(cipher_text, plain_text, text_size,
+	                          sub_key, nonce + 16, ctr);
 	WIPE_BUFFER(sub_key);
 	return ctr;
-}
-
-void crypto_chacha20(u8 *cipher_text, const u8 *plain_text, size_t text_size,
-                     const u8 key[32], const u8 nonce[8])
-{
-	crypto_chacha20_ctr(cipher_text, plain_text, text_size, key, nonce, 0);
-
-}
-void crypto_ietf_chacha20(u8 *cipher_text, const u8 *plain_text,
-                          size_t text_size,
-                          const u8 key[32], const u8 nonce[12])
-{
-	crypto_ietf_chacha20_ctr(cipher_text, plain_text, text_size, key, nonce, 0);
-}
-
-void crypto_xchacha20(u8 *cipher_text, const u8 *plain_text, size_t text_size,
-                      const u8 key[32], const u8 nonce[24])
-{
-	crypto_xchacha20_ctr(cipher_text, plain_text, text_size, key, nonce, 0);
 }
 
 /////////////////
@@ -2693,7 +2674,7 @@ void crypto_hidden_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
 	u8 buf[64]; // seed + representative
 	COPY(buf + 32, seed, 32);
 	do {
-		crypto_chacha20(buf, 0, 64, buf+32, zero);
+		crypto_chacha20_djb(buf, 0, 64, buf+32, zero, 0);
 		crypto_x25519_dirty_fast(pk, buf); // or the "small" version
 	} while(crypto_curve_to_hidden(buf+32, pk, buf[32]));
 	// Note that the return value of crypto_curve_to_hidden() is
@@ -2852,9 +2833,9 @@ void crypto_lock_aead(u8 mac[16], u8 *cipher_text,
 {
 	u8 sub_key[32];
 	u8 auth_key[64]; // "Wasting" the whole Chacha block is faster
-	crypto_hchacha20(sub_key, key, nonce);
-	crypto_chacha20(auth_key, 0, 64, sub_key, nonce + 16);
-	crypto_chacha20_ctr(cipher_text, plain_text, text_size,
+	crypto_chacha20_h(sub_key, key, nonce);
+	crypto_chacha20_djb(auth_key, 0, 64, sub_key, nonce + 16, 0);
+	crypto_chacha20_djb(cipher_text, plain_text, text_size,
 	                    sub_key, nonce + 16, 1);
 	lock_auth(mac, auth_key, ad, ad_size, cipher_text, text_size);
 	WIPE_BUFFER(sub_key);
@@ -2868,14 +2849,14 @@ int crypto_unlock_aead(u8 *plain_text, const u8 key[32], const u8 nonce[24],
 {
 	u8 sub_key[32];
 	u8 auth_key[64]; // "Wasting" the whole Chacha block is faster
-	crypto_hchacha20(sub_key, key, nonce);
-	crypto_chacha20(auth_key, 0, 64, sub_key, nonce + 16);
+	crypto_chacha20_h(sub_key, key, nonce);
+	crypto_chacha20_djb(auth_key, 0, 64, sub_key, nonce + 16, 0);
 	u8 real_mac[16];
 	lock_auth(real_mac, auth_key, ad, ad_size, cipher_text, text_size);
 	WIPE_BUFFER(auth_key);
 	int mismatch = crypto_verify16(mac, real_mac);
 	if (!mismatch) {
-		crypto_chacha20_ctr(plain_text, cipher_text, text_size,
+		crypto_chacha20_djb(plain_text, cipher_text, text_size,
 		                    sub_key, nonce + 16, 1);
 	}
 	WIPE_BUFFER(sub_key);

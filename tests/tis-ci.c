@@ -69,7 +69,7 @@ static void chacha20(vector_reader *reader)
 	u64    ctr       = load64_le(next_input(reader).buf);
 	vector out       = next_output(reader);
 	u64    nb_blocks = plain.size / 64 + (plain.size % 64 != 0);
-	u64    new_ctr   = crypto_chacha20_ctr(out.buf, plain.buf, plain.size,
+	u64    new_ctr   = crypto_chacha20_djb(out.buf, plain.buf, plain.size,
 	                                       key.buf, nonce.buf, ctr);
 	if (new_ctr - ctr != nb_blocks) {
 		printf("FAILURE: Chacha20 returned counter not correct: ");
@@ -84,8 +84,8 @@ static void ietf_chacha20(vector_reader *reader)
 	u64    ctr       = load64_le(next_input(reader).buf);
 	vector out       = next_output(reader);
 	u32    nb_blocks = (u32)(plain.size / 64 + (plain.size % 64 != 0));
-	u32    new_ctr   = crypto_ietf_chacha20_ctr(out.buf, plain.buf, plain.size,
-	                                            key.buf, nonce.buf, ctr);
+	u32    new_ctr   = crypto_chacha20_ietf(out.buf, plain.buf, plain.size,
+	                                        key.buf, nonce.buf, ctr);
 	if (new_ctr - ctr != nb_blocks) {
 		printf("FAILURE: IETF Chacha20 returned counter not correct: ");
 	}
@@ -96,7 +96,7 @@ static void hchacha20(vector_reader *reader)
 	vector key   = next_input(reader);
 	vector nonce = next_input(reader);
 	vector out   = next_output(reader);
-	crypto_hchacha20(out.buf, key.buf, nonce.buf);
+	crypto_chacha20_h(out.buf, key.buf, nonce.buf);
 }
 
 static void xchacha20(vector_reader *reader)
@@ -107,8 +107,8 @@ static void xchacha20(vector_reader *reader)
 	u64    ctr       = load64_le(next_input(reader).buf);
 	vector out       = next_output(reader);
 	u64    nb_blocks = plain.size / 64 + (plain.size % 64 != 0);
-	u64    new_ctr   = crypto_xchacha20_ctr(out.buf, plain.buf, plain.size,
-	                                        key.buf, nonce.buf, ctr);
+	u64    new_ctr   = crypto_chacha20_x(out.buf, plain.buf, plain.size,
+	                                     key.buf, nonce.buf, ctr);
 	if (new_ctr - ctr != nb_blocks) {
 		printf("FAILURE: XChacha20 returned counter not correct: ");
 	}
