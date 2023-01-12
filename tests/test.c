@@ -928,11 +928,43 @@ static void ed_25519_check(vector_reader *reader)
 	                                      msg.buf, msg.size);
 }
 
+static void ed_25519ph(vector_reader *reader)
+{
+    vector sk  = next_input(reader);
+    vector pk  = next_input(reader);
+    vector msg = next_input(reader);
+    vector out = next_output(reader);
+
+    // Test that we generate the correct public key
+    uint8_t secret_key[64];
+    uint8_t public_key[32];
+    crypto_ed25519_key_pair(secret_key, public_key, sk.buf);
+    ASSERT_EQUAL(public_key, pk.buf, 32);
+    ASSERT_EQUAL(public_key, secret_key + 32, 32);
+
+    // Generate output signature for comparison
+    uint8_t digest[64];
+    crypto_sha512(digest, msg.buf, msg.size);
+    crypto_ed25519_ph_sign(out.buf, secret_key, digest);
+
+    // Test that the correct signature is accepted
+    ASSERT_OK(crypto_ed25519_ph_check(out.buf, pk.buf, digest));
+
+    // Test that corrupted signatures are rejected
+    for (size_t i = 0; i < 64; i++) {
+        uint8_t corrupt_signature[64];
+        memcpy(corrupt_signature, out.buf, 64);
+        corrupt_signature[i] ^= 1; // corrupt one bit
+        ASSERT_KO(crypto_ed25519_ph_check(corrupt_signature, pk.buf, digest));
+    }
+}
+
 static void test_ed25519()
 {
 	VECTORS(ed_25519);
 	VECTORS(ed_25519_pk);
 	VECTORS(ed_25519_check);
+	VECTORS(ed_25519ph);
 }
 
 /////////////////

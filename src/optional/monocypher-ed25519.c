@@ -354,7 +354,8 @@ void crypto_ed25519_key_pair(u8 secret_key[64], u8 public_key[32], u8 seed[32])
 static void hash_reduce(u8 h[32],
                         const u8 *a, size_t a_size,
                         const u8 *b, size_t b_size,
-                        const u8 *c, size_t c_size)
+                        const u8 *c, size_t c_size,
+                        const u8 *d, size_t d_size)
 {
 	u8 hash[64];
 	crypto_sha512_ctx ctx;
@@ -362,23 +363,26 @@ static void hash_reduce(u8 h[32],
 	crypto_sha512_update(&ctx, a, a_size);
 	crypto_sha512_update(&ctx, b, b_size);
 	crypto_sha512_update(&ctx, c, c_size);
+	crypto_sha512_update(&ctx, d, d_size);
 	crypto_sha512_final (&ctx, hash);
 	crypto_eddsa_reduce(h, hash);
 }
 
-void crypto_ed25519_sign(u8 signature [64], const u8 secret_key[32],
-                         const u8 *message, size_t message_size)
+static void ed25519_dom_sign(u8 signature [64], const u8 secret_key[32],
+                             const u8 *dom,     size_t dom_size,
+                             const u8 *message, size_t message_size)
 {
 	u8 a[64];  // secret scalar and prefix
 	u8 r[32];  // secret deterministic "random" nonce
 	u8 h[32];  // publically verifiable hash of the message (not wiped)
 	u8 R[32];  // first half of the signature (allows overlapping inputs)
+	const u8 *pk = secret_key + 32;
 
 	crypto_sha512(a, secret_key, 32);
 	crypto_eddsa_trim_scalar(a, a);
-	hash_reduce(r, a + 32, 32, message, message_size, 0, 0);
+	hash_reduce(r, dom, dom_size, a + 32, 32, message, message_size, 0, 0);
 	crypto_eddsa_scalarbase(R, r);
-	hash_reduce(h, R, 32, secret_key + 32, 32, message, message_size);
+	hash_reduce(h, dom, dom_size, R, 32, pk, 32, message, message_size);
 	COPY(signature, R, 32);
 	crypto_eddsa_mul_add(signature + 32, h, a, r);
 
@@ -386,13 +390,37 @@ void crypto_ed25519_sign(u8 signature [64], const u8 secret_key[32],
 	WIPE_BUFFER(r);
 }
 
-int crypto_ed25519_check(const u8  signature[64], const u8 public_key[32],
+void crypto_ed25519_sign(u8 signature [64], const u8 secret_key[32],
                          const u8 *message, size_t message_size)
 {
-	u8 h_ram  [32];
-	hash_reduce(h_ram, signature, 32, public_key, 32, message, message_size);
+	ed25519_dom_sign(signature, secret_key, 0, 0, message, message_size);
+}
+
+int crypto_ed25519_check(const u8 signature[64], const u8 public_key[32],
+                         const u8 *msg, size_t msg_size)
+{
+	u8 h_ram[32];
+	hash_reduce(h_ram, signature, 32, public_key, 32, msg, msg_size, 0, 0);
 	return crypto_eddsa_check_equation(signature, public_key, h_ram);
 }
+
+static const u8 domain[34] = "SigEd25519 no Ed25519 collisions\1\0";
+
+void crypto_ed25519_ph_sign(uint8_t signature[64], const uint8_t secret_key[32],
+                            const uint8_t message_hash[64])
+{
+	ed25519_dom_sign(signature, secret_key, domain, sizeof(domain),
+	                 message_hash, 64);
+}
+
+int crypto_ed25519_ph_check(const uint8_t sig[64], const uint8_t pk[32],
+                            const uint8_t msg_hash[64])
+{
+	u8 h_ram[32];
+	hash_reduce(h_ram, domain, sizeof(domain), sig, 32, pk, 32, msg_hash, 64);
+	return crypto_eddsa_check_equation(sig, pk, h_ram);
+}
+
 
 #ifdef MONOCYPHER_CPP_NAMESPACE
 }

@@ -58,6 +58,7 @@ VEC     = chacha20  hchacha20  xchacha20     ietf_chacha20                \
           aead_ietf aead_8439                                             \
           poly1305  blake2b    sha512        hmac_sha512   argon2         \
           edDSA     edDSA_pk   ed_25519      ed_25519_pk   ed_25519_check \
+          ed_25519ph                                                      \
           x25519    x25519_pk  elligator_inv elligator_dir
 VEC2    = $(patsubst %, %.all.vec, $(VEC))
 HEADERS = $(patsubst %, %.h.vec  , $(VEC))
@@ -124,6 +125,7 @@ edDSA_pk.all.vec      : edDSA_pk.vec
 ed_25519.all.vec      : ed_25519.vec
 ed_25519_pk.all.vec   : ed_25519_pk.vec
 ed_25519_check.all.vec:                   vectors/ed_25519_check
+ed_25519ph.all.vec    :                   vectors/ed_25519ph
 elligator_dir.all.vec : elligator_dir.vec vectors/elligator_dir
 elligator_inv.all.vec : elligator_inv.vec vectors/elligator_inv
 $(VEC2):
