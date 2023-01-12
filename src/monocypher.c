@@ -2167,34 +2167,20 @@ void crypto_eddsa_scalarbase(u8 point[32], const u8 scalar[32])
 	WIPE_CTX(&P);
 }
 
-// Input:
-// - seed.
-// Outputs:
-// - secret_key[ 0..31] = seed
-// - secret_key[32..63] = [trim(hash(seed)[0..31])]B
-// - public_key         = [trim(hash(seed)[0..31])]B
-// - seed               = zeroes
-//
-// Writes happen in the following order:
-// 1. seed
-// 2. secret_key[0..31]
-// 3. public_key
-// 4. secret_key[32..63]
-//
-// The point of it all is to be robust to overly clever users who
-// overlap input arguments:
-// - We don' care if the seed is overwritten.
-// - Everything still works when public_key == secret_key + 32.
 void crypto_eddsa_key_pair(u8 secret_key[64], u8 public_key[32], u8 seed[32])
 {
+	// To allow overlaps, observable writes happen in this order:
+	// 1. seed
+	// 2. secret_key
+	// 3. public_key
 	u8 a[64];
 	COPY(a, seed, 32);
 	crypto_wipe(seed, 32);
 	COPY(secret_key, a, 32);
 	crypto_blake2b(a, crypto_blake2b_defaults, a, 32);
 	crypto_eddsa_trim_scalar(a, a);
-	crypto_eddsa_scalarbase(public_key, a);
-	COPY(secret_key + 32, public_key, 32);
+	crypto_eddsa_scalarbase(secret_key + 32, a);
+	COPY(public_key, secret_key + 32, 32);
 	WIPE_BUFFER(a);
 }
 
