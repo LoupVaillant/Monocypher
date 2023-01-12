@@ -415,9 +415,8 @@ static void blake2b(vector_reader *reader)
 	vector msg = next_input(reader);
 	vector key = next_input(reader);
 	vector out = next_output(reader);
-	crypto_blake2b_general(out.buf, out.size,
-	                       key.buf, key.size,
-	                       msg.buf, msg.size);
+	crypto_blake2b_config config = { key.buf, key.size, out.size, };
+	crypto_blake2b(out.buf, config, msg.buf, msg.size);
 }
 
 static void test_blake2b()
@@ -439,13 +438,13 @@ static void test_blake2b()
 
 		// Authenticate bit by bit
 		crypto_blake2b_ctx ctx;
-		crypto_blake2b_init(&ctx);
+		crypto_blake2b_init(&ctx, crypto_blake2b_defaults);
 		crypto_blake2b_update(&ctx, input    , i);
 		crypto_blake2b_update(&ctx, input + i, INPUT_SIZE - i);
 		crypto_blake2b_final(&ctx, hash_chunk);
 
 		// Authenticate all at once
-		crypto_blake2b(hash_whole, input, INPUT_SIZE);
+		crypto_blake2b(hash_whole, crypto_blake2b_defaults, input, INPUT_SIZE);
 
 		// Compare the results (must be the same)
 		ASSERT_EQUAL(hash_chunk, hash_whole, 64);
@@ -457,8 +456,9 @@ static void test_blake2b()
 	FOR (i, 0, BLAKE2B_BLOCK_SIZE + 64) {
 		u8 hash [64];
 		RANDOM_INPUT(input, INPUT_SIZE);
-		crypto_blake2b(hash   , input + 64, BLAKE2B_BLOCK_SIZE);
-		crypto_blake2b(input+i, input + 64, BLAKE2B_BLOCK_SIZE);
+		crypto_blake2b_config config = crypto_blake2b_defaults;
+		crypto_blake2b(hash   , config, input + 64, BLAKE2B_BLOCK_SIZE);
+		crypto_blake2b(input+i, config, input + 64, BLAKE2B_BLOCK_SIZE);
 		ASSERT_EQUAL(hash, input + i, 64);
 	}
 }
@@ -1084,10 +1084,11 @@ static void test_conversions()
 {
 	printf("\tX25519 <-> EdDSA\n");
 	FOR (i, 0, 32) {
+		crypto_blake2b_config config = crypto_blake2b_defaults;
 		RANDOM_INPUT(e_seed, 32);
-		u8 secret    [64];
+		u8 secret   [64];
 		u8 e_public1[32]; crypto_eddsa_key_pair(secret, e_public1, e_seed);
-		u8 x_private[64]; crypto_blake2b          (x_private, secret, 32);
+		u8 x_private[64]; crypto_blake2b(x_private, config, secret, 32);
 		u8 x_public1[32]; crypto_eddsa_to_x25519  (x_public1, e_public1);
 		u8 x_public2[32]; crypto_x25519_public_key(x_public2, x_private);
 		ASSERT_EQUAL(x_public1, x_public2, 32);

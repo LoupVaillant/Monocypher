@@ -138,9 +138,8 @@ static void blake2b(vector_reader *reader)
 	vector msg = next_input(reader);
 	vector key = next_input(reader);
 	vector out = next_output(reader);
-	crypto_blake2b_general(out.buf, out.size,
-	                       key.buf, key.size,
-	                       msg.buf, msg.size);
+	crypto_blake2b_config config = { key.buf, key.size, out.size, };
+	crypto_blake2b(out.buf, config, msg.buf, msg.size);
 }
 
 static void sha512(vector_reader *reader)
@@ -255,9 +254,10 @@ static void elligator_inv(vector_reader *reader)
 static int p_eddsa_x25519()
 {
 	RANDOM_INPUT(e_seed, 32);
+	crypto_blake2b_config config = crypto_blake2b_defaults;
 	u8 secret    [64];
 	u8 e_public1[32]; crypto_eddsa_key_pair(secret, e_public1, e_seed);
-	u8 x_private[64]; crypto_blake2b          (x_private, secret, 32);
+	u8 x_private[64]; crypto_blake2b(x_private, config, secret, 32);
 	u8 x_public1[32]; crypto_eddsa_to_x25519  (x_public1, e_public1);
 	u8 x_public2[32]; crypto_x25519_public_key(x_public2, x_private);
 	ASSERT_EQUAL(x_public1, x_public2, 32);

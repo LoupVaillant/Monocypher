@@ -100,7 +100,8 @@ static u64 blake2b(void)
 	RANDOM_INPUT(key,   32);
 
 	TIMING_START {
-		crypto_blake2b_general(hash, 64, key, 32, in, SIZE);
+		crypto_blake2b_config config = {key, 32, 64};
+		crypto_blake2b(hash, config, in, SIZE);
 	}
 	TIMING_END;
 }

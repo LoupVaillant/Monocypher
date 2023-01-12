@@ -523,31 +523,28 @@ static void blake2b_set_input(crypto_blake2b_ctx *ctx, u8 input, size_t index)
 	ctx->input[word] |= (u64)input << (byte << 3);
 }
 
-void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
-                                 const u8           *key, size_t key_size)
+// Defaults are no key, 64 byte hash
+crypto_blake2b_config crypto_blake2b_defaults = { 0, 0, 64 };
+
+void crypto_blake2b_init(crypto_blake2b_ctx *ctx, crypto_blake2b_config config)
 {
 	// initial hash
 	COPY(ctx->hash, iv, 8);
-	ctx->hash[0] ^= 0x01010000 ^ (key_size << 8) ^ hash_size;
+	ctx->hash[0] ^= 0x01010000 ^ (config.key_size << 8) ^ config.hash_size;
 
-	ctx->input_offset[0] = 0;         // beginning of the input, no offset
-	ctx->input_offset[1] = 0;         // beginning of the input, no offset
-	ctx->hash_size       = hash_size; // remember the hash size we want
+	ctx->input_offset[0] = 0;  // beginning of the input, no offset
+	ctx->input_offset[1] = 0;  // beginning of the input, no offset
+	ctx->hash_size       = config.hash_size;
 	ctx->input_idx       = 0;
 
 	// if there is a key, the first block is that key (padded with zeroes)
-	if (key_size > 0) {
+	if (config.key_size > 0) {
 		u8 key_block[128] = {0};
-		COPY(key_block, key, key_size);
+		COPY(key_block, config.key, config.key_size);
 		// same as calling crypto_blake2b_update(ctx, key_block , 128)
 		load64_le_buf(ctx->input, key_block, 16);
 		ctx->input_idx = 128;
 	}
-}
-
-void crypto_blake2b_init(crypto_blake2b_ctx *ctx)
-{
-	crypto_blake2b_general_init(ctx, 64, 0, 0);
 }
 
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
@@ -603,19 +600,13 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
 	WIPE_CTX(ctx);
 }
 
-void crypto_blake2b_general(u8       *hash   , size_t hash_size,
-                            const u8 *key    , size_t key_size,
-                            const u8 *message, size_t message_size)
+void crypto_blake2b(u8 *hash, crypto_blake2b_config config,
+                    const u8 *message, size_t message_size)
 {
 	crypto_blake2b_ctx ctx;
-	crypto_blake2b_general_init(&ctx, hash_size, key, key_size);
+	crypto_blake2b_init  (&ctx, config);
 	crypto_blake2b_update(&ctx, message, message_size);
-	crypto_blake2b_final(&ctx, hash);
-}
-
-void crypto_blake2b(u8 hash[64], const u8 *message, size_t message_size)
-{
-	crypto_blake2b_general(hash, 64, 0, 0, message, message_size);
+	crypto_blake2b_final (&ctx, hash);
 }
 
 //////////////
@@ -654,11 +645,12 @@ static void  xor_block(blk *o,const blk*in){FOR(i, 0, 128) o->a[i] ^= in->a[i];}
 static void extended_hash(u8       *digest, u32 digest_size,
                           const u8 *input , u32 input_size)
 {
+	crypto_blake2b_config config = { 0, 0, MIN(digest_size, 64) };
 	crypto_blake2b_ctx ctx;
-	crypto_blake2b_general_init(&ctx, MIN(digest_size, 64), 0, 0);
-	blake_update_32            (&ctx, digest_size);
-	crypto_blake2b_update      (&ctx, input, input_size);
-	crypto_blake2b_final       (&ctx, digest);
+	crypto_blake2b_init  (&ctx, config);
+	blake_update_32      (&ctx, digest_size);
+	crypto_blake2b_update(&ctx, input, input_size);
+	crypto_blake2b_final (&ctx, digest);
 
 	if (digest_size > 64) {
 		// the conversion to u64 avoids integer overflow on
@@ -669,14 +661,14 @@ static void extended_hash(u8       *digest, u32 digest_size,
 		u32 out = 32;
 		while (i < r) {
 			// Input and output overlap. This is intentional
-			crypto_blake2b(digest + out, digest + in, 64);
+			crypto_blake2b(digest + out, crypto_blake2b_defaults,
+			               digest + in, 64);
 			i   +=  1;
 			in  += 32;
 			out += 32;
 		}
-		crypto_blake2b_general(digest + out, digest_size - (32 * r),
-		                       0, 0, // no key
-		                       digest + in , 64);
+		config.hash_size = digest_size - (32 * r);
+		crypto_blake2b(digest + out, config, digest + in , 64);
 	}
 }
 
@@ -728,7 +720,7 @@ void crypto_argon2(u8 *hash, u32 hash_size, void *work_area,
 	{
 		u8 initial_hash[72]; // 64 bytes plus 2 words for future hashes
 		crypto_blake2b_ctx ctx;
-		crypto_blake2b_init (&ctx);
+		crypto_blake2b_init (&ctx, crypto_blake2b_defaults);
 		blake_update_32     (&ctx, config.nb_lanes ); // p: number of "threads"
 		blake_update_32     (&ctx, hash_size);
 		blake_update_32     (&ctx, config.nb_blocks);
@@ -2175,16 +2167,34 @@ void crypto_eddsa_scalarbase(u8 point[32], const u8 scalar[32])
 	WIPE_CTX(&P);
 }
 
+// Input:
+// - seed.
+// Outputs:
+// - secret_key[ 0..31] = seed
+// - secret_key[32..63] = [trim(hash(seed)[0..31])]B
+// - public_key         = [trim(hash(seed)[0..31])]B
+// - seed               = zeroes
+//
+// Writes happen in the following order:
+// 1. seed
+// 2. secret_key[0..31]
+// 3. public_key
+// 4. secret_key[32..63]
+//
+// The point of it all is to be robust to overly clever users who
+// overlap input arguments:
+// - We don' care if the seed is overwritten.
+// - Everything still works when public_key == secret_key + 32.
 void crypto_eddsa_key_pair(u8 secret_key[64], u8 public_key[32], u8 seed[32])
 {
 	u8 a[64];
-	COPY(a, seed, 32);                      // a[ 0..31]  = seed
+	COPY(a, seed, 32);
 	crypto_wipe(seed, 32);
-	COPY(secret_key, a, 32);                // secret key = seed
-	crypto_blake2b(a, a, 32);               // a[ 0..31]  = scalar
-	crypto_eddsa_trim_scalar(a, a);         // a[ 0..31]  = trimmed scalar
-	crypto_eddsa_scalarbase(public_key, a); // public key = [trimmed scalar]B
-	COPY(secret_key + 32, public_key, 32);  // secret key includes public half
+	COPY(secret_key, a, 32);
+	crypto_blake2b(a, crypto_blake2b_defaults, a, 32);
+	crypto_eddsa_trim_scalar(a, a);
+	crypto_eddsa_scalarbase(public_key, a);
+	COPY(secret_key + 32, public_key, 32);
 	WIPE_BUFFER(a);
 }
 
@@ -2195,7 +2205,7 @@ static void hash_reduce(u8 h[32],
 {
 	u8 hash[64];
 	crypto_blake2b_ctx ctx;
-	crypto_blake2b_init  (&ctx);
+	crypto_blake2b_init  (&ctx, crypto_blake2b_defaults);
 	crypto_blake2b_update(&ctx, a, a_size);
 	crypto_blake2b_update(&ctx, b, b_size);
 	crypto_blake2b_update(&ctx, c, c_size);
@@ -2266,7 +2276,7 @@ void crypto_eddsa_sign(u8 signature [64], const u8 secret_key[32],
 	u8 h[32];  // publically verifiable hash of the message (not wiped)
 	u8 R[32];  // first half of the signature (allows overlapping inputs)
 
-	crypto_blake2b(a, secret_key, 32);
+	crypto_blake2b(a, crypto_blake2b_defaults, secret_key, 32);
 	crypto_eddsa_trim_scalar(a, a);
 	hash_reduce(r, a + 32, 32, message, message_size, 0, 0);
 	crypto_eddsa_scalarbase(R, r);
