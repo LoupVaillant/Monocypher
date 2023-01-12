@@ -234,7 +234,7 @@ static void elligator_dir(vector_reader *reader)
 {
 	vector in  = next_input(reader);
 	vector out = next_output(reader);
-	crypto_hidden_to_curve(out.buf, in.buf);
+	crypto_elligator_map(out.buf, in.buf);
 }
 
 static void elligator_inv(vector_reader *reader)
@@ -243,7 +243,7 @@ static void elligator_inv(vector_reader *reader)
 	u8     tweak   = next_input(reader).buf[0];
 	u8     failure = next_input(reader).buf[0];
 	vector out     = next_output(reader);
-	int    check   = crypto_curve_to_hidden(out.buf, point.buf, tweak);
+	int    check   = crypto_elligator_rev(out.buf, point.buf, tweak);
 	ASSERT((u8)check == failure);
 	if (check) {
 		out.buf[0] = 0;

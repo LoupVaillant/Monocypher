@@ -332,13 +332,13 @@ void crypto_x25519_to_eddsa(uint8_t eddsa[32], const uint8_t x25519[32]);
 // -----------
 
 // Elligator mappings proper
-void crypto_hidden_to_curve(uint8_t curve [32], const uint8_t hidden[32]);
-int  crypto_curve_to_hidden(uint8_t hidden[32], const uint8_t curve [32],
-                            uint8_t tweak);
+void crypto_elligator_map(uint8_t curve [32], const uint8_t hidden[32]);
+int  crypto_elligator_rev(uint8_t hidden[32], const uint8_t curve [32],
+                          uint8_t tweak);
 
 // Easy to use key pair generation
-void crypto_hidden_key_pair(uint8_t hidden[32], uint8_t secret_key[32],
-                            uint8_t seed[32]);
+void crypto_elligator_key_pair(uint8_t hidden[32], uint8_t secret_key[32],
+                               uint8_t seed[32]);
 
 #ifdef __cplusplus
 }

@@ -2573,7 +2573,7 @@ static const fe A = {486662};
 //       u2 = w * -1 * -non_square * r^2
 //       u2 = w * non_square * r^2
 //       u2 = u
-void crypto_hidden_to_curve(u8 curve[32], const u8 hidden[32])
+void crypto_elligator_map(u8 curve[32], const u8 hidden[32])
 {
 	fe r, u, t1, t2, t3;
 	fe_frombytes_mask(r, hidden, 2); // r is encoded in 254 bits.
@@ -2633,7 +2633,7 @@ void crypto_hidden_to_curve(u8 curve[32], const u8 hidden[32])
 // If v is negative, we return isr * (u+A):
 //   isr * (u+A) = sqrt(-1     / (non_square * u * (u+A)) * (u+A)
 //   isr * (u+A) = sqrt(-(u+A) / (non_square * u)
-int crypto_curve_to_hidden(u8 hidden[32], const u8 public_key[32], u8 tweak)
+int crypto_elligator_rev(u8 hidden[32], const u8 public_key[32], u8 tweak)
 {
 	fe t1, t2, t3;
 	fe_frombytes(t1, public_key);    // t1 = u
@@ -2664,7 +2664,7 @@ int crypto_curve_to_hidden(u8 hidden[32], const u8 public_key[32], u8 tweak)
 	return is_square - 1;
 }
 
-void crypto_hidden_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
+void crypto_elligator_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
 {
 	u8 pk [32]; // public key
 	u8 buf[64]; // seed + representative
@@ -2672,7 +2672,7 @@ void crypto_hidden_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
 	do {
 		crypto_chacha20_djb(buf, 0, 64, buf+32, zero, 0);
 		crypto_x25519_dirty_fast(pk, buf); // or the "small" version
-	} while(crypto_curve_to_hidden(buf+32, pk, buf[32]));
+	} while(crypto_elligator_rev(buf+32, pk, buf[32]));
 	// Note that the return value of crypto_curve_to_hidden() is
 	// independent from its tweak parameter.
 	// Therefore, buf[32] is not actually reused.  Either we loop one

@@ -974,7 +974,7 @@ static void elligator_dir(vector_reader *reader)
 {
 	vector in  = next_input(reader);
 	vector out = next_output(reader);
-	crypto_hidden_to_curve(out.buf, in.buf);
+	crypto_elligator_map(out.buf, in.buf);
 }
 
 static void elligator_inv(vector_reader *reader)
@@ -983,7 +983,7 @@ static void elligator_inv(vector_reader *reader)
 	u8     tweak   = next_input(reader).buf[0];
 	u8     failure = next_input(reader).buf[0];
 	vector out     = next_output(reader);
-	int    check   = crypto_curve_to_hidden(out.buf, point.buf, tweak);
+	int    check   = crypto_elligator_rev(out.buf, point.buf, tweak);
 	ASSERT((u8)check == failure);
 }
 
@@ -998,11 +998,11 @@ static void test_elligator()
 		u8 r2[32];  memcpy(r2, r, 32);  r2[31] = (r[31] & 0x3f) | 0x40;
 		u8 r3[32];  memcpy(r3, r, 32);  r3[31] = (r[31] & 0x3f) | 0x80;
 		u8 r4[32];  memcpy(r4, r, 32);  r4[31] = (r[31] & 0x3f) | 0xc0;
-		u8 u [32];  crypto_hidden_to_curve(u , r );
-		u8 u1[32];  crypto_hidden_to_curve(u1, r1);
-		u8 u2[32];  crypto_hidden_to_curve(u2, r2);
-		u8 u3[32];  crypto_hidden_to_curve(u3, r3);
-		u8 u4[32];  crypto_hidden_to_curve(u4, r4);
+		u8 u [32];  crypto_elligator_map(u , r );
+		u8 u1[32];  crypto_elligator_map(u1, r1);
+		u8 u2[32];  crypto_elligator_map(u2, r2);
+		u8 u3[32];  crypto_elligator_map(u3, r3);
+		u8 u4[32];  crypto_elligator_map(u4, r4);
 		ASSERT_EQUAL(u, u1, 32);
 		ASSERT_EQUAL(u, u2, 32);
 		ASSERT_EQUAL(u, u3, 32);
@@ -1015,8 +1015,8 @@ static void test_elligator()
 		u8 separate[32];
 		RANDOM_INPUT(r, 32);
 		memcpy(overlapping + 31, r, 32);
-		crypto_hidden_to_curve(overlapping + i, overlapping + 31);
-		crypto_hidden_to_curve(separate, r);
+		crypto_elligator_map(overlapping + i, overlapping + 31);
+		crypto_elligator_map(separate, r);
 		ASSERT_EQUAL(separate, overlapping + i, 32);
 	}
 
@@ -1029,8 +1029,8 @@ static void test_elligator()
 		RANDOM_INPUT(pk, 33);
 		u8 tweak = pk[32];
 		memcpy(overlapping + 31, pk, 32);
-		int a = crypto_curve_to_hidden(overlapping+i, overlapping+31, tweak);
-		int b = crypto_curve_to_hidden(separate, pk, tweak);
+		int a = crypto_elligator_rev(overlapping+i, overlapping+31, tweak);
+		int b = crypto_elligator_rev(separate, pk, tweak);
 		ASSERT(a == b);
 		if (a == 0) {
 			// The buffers are the same only if written to to begin with
@@ -1066,14 +1066,14 @@ static void test_elligator()
 		// We want to set the bits 1 (sign) and 6-7 (padding)
 		u8 tweak = (u8)((i & 1) + (i << 5));
 		u8 r[32];
-		if (crypto_curve_to_hidden(r, pkf, tweak)) {
+		if (crypto_elligator_rev(r, pkf, tweak)) {
 			continue; // retry untill success (doesn't increment the tweak)
 		}
 		// Verify that the tweak's msb are copied to the representative
 		ASSERT((tweak >> 6) == (r[31] >> 6));
 
 		// Round trip
-		u8 pkr[32];  crypto_hidden_to_curve(pkr, r);
+		u8 pkr[32];  crypto_elligator_map(pkr, r);
 		ASSERT_EQUAL(pkr, pkf, 32);
 
 		// Dirty and safe keys are compatible
@@ -1088,8 +1088,8 @@ static void test_elligator()
 		RANDOM_INPUT(seed, 32);
 		RANDOM_INPUT(sk2 , 32);
 		u8 r  [32];
-		u8 sk1[32];  crypto_hidden_key_pair(r, sk1, seed);
-		u8 pkr[32];  crypto_hidden_to_curve(pkr, r);
+		u8 sk1[32];  crypto_elligator_key_pair(r, sk1, seed);
+		u8 pkr[32];  crypto_elligator_map(pkr, r);
 		u8 pk1[32];  crypto_x25519_public_key(pk1, sk1);
 		u8 e1 [32];  crypto_x25519(e1, sk2, pk1);
 		u8 e2 [32];  crypto_x25519(e2, sk2, pkr);
@@ -1103,8 +1103,8 @@ static void test_elligator()
 		RANDOM_INPUT(s1, 32);
 		u8 *s2 = over + 63;
 		memcpy(s2, s1, 32);
-		crypto_hidden_key_pair(sep     , sep      + 32, s1);
-		crypto_hidden_key_pair(over + i, over + i + 32, s2);
+		crypto_elligator_key_pair(sep     , sep      + 32, s1);
+		crypto_elligator_key_pair(over + i, over + i + 32, s2);
 		ASSERT_EQUAL(sep, over + i, 64);
 	}
 }
