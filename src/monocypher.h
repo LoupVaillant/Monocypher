@@ -83,29 +83,17 @@ void crypto_wipe(void *secret, size_t size);
 
 // Authenticated encryption
 // ------------------------
-void crypto_lock(uint8_t        mac[16],
-                 uint8_t       *cipher_text,
-                 const uint8_t  key[32],
-                 const uint8_t  nonce[24],
-                 const uint8_t *plain_text, size_t text_size);
-int crypto_unlock(uint8_t       *plain_text,
-                  const uint8_t  key[32],
-                  const uint8_t  nonce[24],
-                  const uint8_t  mac[16],
-                  const uint8_t *cipher_text, size_t text_size);
-
-// With additional data
-void crypto_lock_aead(uint8_t        mac[16],
-                      uint8_t       *cipher_text,
-                      const uint8_t  key[32],
+void crypto_aead_lock(uint8_t       *cipher_text,
+                      uint8_t        mac  [16],
+                      const uint8_t  key  [32],
                       const uint8_t  nonce[24],
-                      const uint8_t *ad        , size_t ad_size,
+                      const uint8_t *ad,         size_t ad_size,
                       const uint8_t *plain_text, size_t text_size);
-int crypto_unlock_aead(uint8_t       *plain_text,
-                       const uint8_t  key[32],
+int crypto_aead_unlock(uint8_t       *plain_text,
+                       const uint8_t  mac  [16],
+                       const uint8_t  key  [32],
                        const uint8_t  nonce[24],
-                       const uint8_t  mac[16],
-                       const uint8_t *ad         , size_t ad_size,
+                       const uint8_t *ad,          size_t ad_size,
                        const uint8_t *cipher_text, size_t text_size);
 
 // Authenticated stream

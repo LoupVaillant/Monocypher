@@ -129,7 +129,7 @@ static void aead_ietf(vector_reader *reader)
 	vector ad    = next_input(reader);
 	vector text  = next_input(reader);
 	vector out   = next_output(reader);
-	crypto_lock_aead(out.buf, out.buf + 16, key.buf, nonce.buf,
+	crypto_aead_lock(out.buf + 16, out.buf, key.buf, nonce.buf,
 	                 ad.buf, ad.size, text.buf, text.size);
 }
 

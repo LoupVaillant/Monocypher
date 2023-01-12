@@ -311,7 +311,7 @@ static void aead_ietf(vector_reader *reader)
 	vector ad    = next_input(reader);
 	vector text  = next_input(reader);
 	vector out   = next_output(reader);
-	crypto_lock_aead(out.buf, out.buf + 16, key.buf, nonce.buf,
+	crypto_aead_lock(out.buf + 16, out.buf, key.buf, nonce.buf,
 	                 ad.buf, ad.size, text.buf, text.size);
 }
 
@@ -339,29 +339,14 @@ static void test_aead()
 		RANDOM_INPUT(nonce    , 24);
 		RANDOM_INPUT(ad       ,  4);
 		RANDOM_INPUT(plaintext,  8);
-		u8 box[24], box2[24];
+		u8 box[24];
 		u8 out[8];
 		// AEAD roundtrip
-		crypto_lock_aead(box, box+16, key, nonce, ad, 4, plaintext, 8);
-		ASSERT_OK(crypto_unlock_aead(out, key, nonce, box, ad, 4, box+16, 8));
+		crypto_aead_lock(box+16, box, key, nonce, ad, 4, plaintext, 8);
+		ASSERT_OK(crypto_aead_unlock(out, box, key, nonce, ad, 4, box+16, 8));
 		ASSERT_EQUAL(plaintext, out, 8);
 		box[0]++;
-		ASSERT_KO(crypto_unlock_aead(out, key, nonce, box, ad, 4, box+16, 8));
-
-		// Authenticated roundtrip (easy interface)
-		// Make and accept message
-		crypto_lock(box, box + 16, key, nonce, plaintext, 8);
-		ASSERT_OK(crypto_unlock(out, key, nonce, box, box + 16, 8));
-		// Make sure decrypted text and original text are the same
-		ASSERT_EQUAL(plaintext, out, 8);
-		// Make and reject forgery
-		box[0]++;
-		ASSERT_KO(crypto_unlock(out, key, nonce, box, box + 16, 8));
-		box[0]--; // undo forgery
-
-		// Same result for both interfaces
-		crypto_lock_aead(box2, box2 + 16, key, nonce, 0, 0, plaintext, 8);
-		ASSERT_EQUAL(box, box2, 24);
+		ASSERT_KO(crypto_aead_unlock(out, box, key, nonce, ad, 4, box+16, 8));
 	}
 
 	printf("\taead incr (roundtrip)\n");

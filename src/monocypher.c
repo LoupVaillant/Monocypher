@@ -2878,7 +2878,7 @@ int crypto_aead_read(crypto_aead_ctx *ctx, u8 *plain_text, const u8 mac[16],
 	return mismatch;
 }
 
-void crypto_lock_aead(u8 mac[16], u8 *cipher_text, const u8 key[32],
+void crypto_aead_lock(u8 *cipher_text, u8 mac[16], const u8 key[32],
                       const u8  nonce[24], const u8 *ad, size_t ad_size,
                       const u8 *plain_text, size_t text_size)
 {
@@ -2889,8 +2889,8 @@ void crypto_lock_aead(u8 mac[16], u8 *cipher_text, const u8 key[32],
 	crypto_wipe(&ctx, sizeof(ctx));
 }
 
-int crypto_unlock_aead(u8 *plain_text, const u8 key[32], const u8 nonce[24],
-                       const u8  mac[16], const u8 *ad, size_t ad_size,
+int crypto_aead_unlock(u8 *plain_text, const u8  mac[16], const u8 key[32],
+                       const u8 nonce[24], const u8 *ad, size_t ad_size,
                        const u8 *cipher_text, size_t text_size)
 {
 	crypto_aead_ctx ctx;
@@ -2899,19 +2899,6 @@ int crypto_unlock_aead(u8 *plain_text, const u8 key[32], const u8 nonce[24],
 	                                cipher_text, text_size);
 	crypto_wipe(&ctx, sizeof(ctx));
 	return mismatch;
-}
-
-void crypto_lock(u8 mac[16], u8 *cipher_text, const u8 key[32],
-                 const u8 nonce[24], const u8 *plain_text, size_t text_size)
-{
-	crypto_lock_aead(mac, cipher_text, key, nonce, 0, 0, plain_text, text_size);
-}
-
-int crypto_unlock(u8 *plain_text, const u8 key[32], const u8 nonce[24],
-                  const u8 mac[16], const u8 *cipher_text, size_t text_size)
-{
-	return crypto_unlock_aead(plain_text, key, nonce, mac, 0, 0,
-	                          cipher_text, text_size);
 }
 
 #ifdef MONOCYPHER_CPP_NAMESPACE
