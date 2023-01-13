@@ -524,7 +524,7 @@ static void blake2b_set_input(crypto_blake2b_ctx *ctx, u8 input, size_t index)
 }
 
 // Defaults are no key, 64 byte hash
-crypto_blake2b_config crypto_blake2b_defaults = { 0, 0, 64 };
+const crypto_blake2b_config crypto_blake2b_defaults = { 0, 0, 64 };
 
 void crypto_blake2b_init(crypto_blake2b_ctx *ctx, crypto_blake2b_config config)
 {

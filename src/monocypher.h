@@ -132,7 +132,7 @@ typedef struct {
 	size_t hash_size;
 } crypto_blake2b_config;
 
-extern crypto_blake2b_config crypto_blake2b_defaults;
+extern const crypto_blake2b_config crypto_blake2b_defaults;
 
 // Direct interface
 void crypto_blake2b(uint8_t *hash, crypto_blake2b_config config,
