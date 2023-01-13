@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2017-2022 Loup Vaillant
+.\" Copyright (c) 2017-2023 Loup Vaillant
 .\" Copyright (c) 2018 Michael Savage
 .\" Copyright (c) 2017, 2020-2022 Fabio Scotoni
 .\" All rights reserved.
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2022 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2023 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,44 +50,40 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd September 1, 2022
+.Dd January 13, 2023
 .Dt CRYPTO_BLAKE2B 3MONOCYPHER
 .Os
 .Sh NAME
 .Nm crypto_blake2b ,
-.Nm crypto_blake2b_general ,
-.Nm crypto_blake2b_general_init ,
 .Nm crypto_blake2b_init ,
 .Nm crypto_blake2b_update ,
 .Nm crypto_blake2b_final
+.Nm crypto_blake2b_defaults
 .Nd cryptographic hashing
 .Sh SYNOPSIS
 .In monocypher.h
+.Bd -literal -offset
+typedef struct {
+	const uint8_t *key;
+	size_t key_size;
+	size_t hash_size;
+} crypto_blake2b_config;
+.Ed
+.Bd -literal -offset
+extern const crypto_blake2b_config crypto_blake2b_defaults;
+.Ed
+.Pp
 .Ft void
 .Fo crypto_blake2b
 .Fa "uint8_t hash[64]"
-.Fa "const uint8_t *message"
-.Fa "size_t message_size"
-.Fc
-.Ft void
-.Fo crypto_blake2b_general
-.Fa "uint8_t *hash"
-.Fa "size_t hash_size"
-.Fa "const uint8_t *key"
-.Fa "size_t key_size"
+.Fa "crypto_blake2b_config config"
 .Fa "const uint8_t *message"
 .Fa "size_t message_size"
 .Fc
 .Ft void
 .Fo crypto_blake2b_init
 .Fa "crypto_blake2b_ctx *ctx"
-.Fc
-.Ft void
-.Fo crypto_blake2b_general_init
-.Fa "crypto_blake2b_ctx *ctx"
-.Fa "size_t hash_size"
-.Fa "const uint8_t *key"
-.Fa "size_t key_size"
+.Fa "crypto_blake2b_config config"
 .Fc
 .Ft void
 .Fo crypto_blake2b_update
@@ -116,9 +112,10 @@ require specific precautions such as using the HMAC algorithm.
 .Pp
 The arguments are:
 .Bl -tag -width Ds
-.It Fa hash
-The output hash.
-.It Fa hash_size
+.It Fa config
+The Configuration parameters, comprising:
+.Bl -tag -width Ds
+.It Fa config.hash_size
 Length of
 .Fa hash ,
 in bytes.
@@ -127,13 +124,13 @@ Anything below 32 is discouraged when using BLAKE2b as a general-purpose
 hash function;
 anything below 16 is discouraged when using BLAKE2b as a message
 authentication code.
-.It Fa key
+.It Fa config.key
 Some secret key.
 One cannot predict the final hash without it.
 May be
 .Dv NULL
 if
-.Fa key_size
+.Fa config.key_size
 is 0, in which case no key is used.
 Keys can be used to create a message authentication code (MAC).
 Use
@@ -146,12 +143,15 @@ Choose the size of the hash accordingly.
 Users may want to wipe the key with
 .Xr crypto_wipe 3monocypher
 once they are done with it.
-.It Fa key_size
+.It Fa config.key_size
 Length of
 .Fa key ,
 in bytes.
 Must be between 0 and 64.
 32 is a good default.
+.El
+.It Fa hash
+The output hash.
 .It Fa message
 The message to hash.
 May overlap with
@@ -166,31 +166,21 @@ Length of
 .Fa message ,
 in bytes.
 .El
-.Ss Direct interface
-The direct interface has two functions,
-.Fn crypto_blake2b
-and
-.Fn crypto_blake2b_general .
-.Fn crypto_blake2b
-is provided for convenience and is equivalent to calling
-.Fn crypto_blake2b_general
-with no key and a 64-byte hash.
 .Pp
-.Fn crypto_blake2b_general
-users can specify the size of the hash and use a secret key to
-make the hash unpredictable,
-\(en which is useful for message authentication codes.
-Even when using a key, you do not have to wipe the context struct with
-.Xr crypto_wipe 3monocypher .
-.Ss Incremental interface
-The incremental interface is useful for handling streams of data or
+The
+.Fa crypto_blake2b_defaults
+constant provides default
+.Fa config
+parameters:
+no key and a hash size of 64 bytes.
+.Pp
+An incremental interface is provided.
+It is useful for handling streams of data or
 large files without using too much memory.
 This interface uses three steps:
 .Bl -bullet
 .It
 Initialisation with
-.Fn crypto_blake2b_general_init
-or
 .Fn crypto_blake2b_init ,
 which sets up a context with the hashing parameters;
 .It
@@ -207,12 +197,13 @@ The
 is automatically wiped upon finalisation.
 .El
 .Pp
-The invariants of the parameters are the same as for
-.Fn crypto_blake2b_general .
-.Fn crypto_blake2b_init
-is a convenience initialisation function that
-specifies a 64-byte hash and no key.
-This is considered a good default.
+.Fn crypto_blake2b
+is a convenience function that calls
+.Fn crypto_blake2b_init ,
+.Fn crypto_blake2b_update ,
+and
+.Fn crypto_blake2b_final
+under the hood.
 .Sh RETURN VALUES
 These functions return nothing.
 .Sh EXAMPLES
@@ -229,7 +220,7 @@ Hashing a message all at once:
 .Bd -literal -offset indent
 uint8_t hash   [64]; /* Output hash (64 bytes)          */
 uint8_t message[12] = "Lorem ipsum"; /* Message to hash */
-crypto_blake2b(hash, message, 12);
+crypto_blake2b(hash, crypto_blake2b_defaults, message, 12);
 .Ed
 .Pp
 Computing a message authentication code all at once:
@@ -237,11 +228,16 @@ Computing a message authentication code all at once:
 uint8_t hash   [16];
 uint8_t key    [32];
 uint8_t message[11] = "Lorem ipsu"; /* Message to authenticate */
-arc4random_buf(key, 32);
-crypto_blake2b_general(hash, 16, key, 32, message, 11);
+arc4random_buf(key, sizeof(key));
+crypto_blake2b_config config = {
+	.key       = key,
+	.key_size  = sizeof(key),
+	.hash_size = sizeof(hash),
+};
+crypto_blake2b(hash, config, message, sizeof(message));
 /* Wipe secrets if they are no longer needed */
-crypto_wipe(message, 11);
-crypto_wipe(key, 32);
+crypto_wipe(message, sizeof(message));
+crypto_wipe(key,     sizeof(key));
 .Ed
 .Pp
 Hashing a message incrementally (without a key):
@@ -249,7 +245,7 @@ Hashing a message incrementally (without a key):
 uint8_t hash   [ 64]; /* Output hash (64 bytes) */
 uint8_t message[500] = {1}; /* Message to hash  */
 crypto_blake2b_ctx ctx;
-crypto_blake2b_init(&ctx);
+crypto_blake2b_init(&ctx, crypto_blake2b_defaults);
 for (size_t i = 0; i < 500; i += 100) {
     crypto_blake2b_update(&ctx, message + i, 100);
 }
@@ -260,12 +256,17 @@ Computing a message authentication code incrementally:
 .Bd -literal -offset indent
 uint8_t hash   [ 16];
 uint8_t key    [ 32];
-uint8_t message[500] = {1}; /* Message to authenticate         */
+uint8_t message[500] = {1}; /* Message to authenticate */
+arc4random_buf(key, sizeof(key));
 crypto_blake2b_ctx ctx;
-arc4random_buf(key, 32);
-crypto_blake2b_general_init(&ctx, 16, key, 32);
+crypto_blake2b_config config = {
+	.key       = key,
+	.key_size  = sizeof(key),
+	.hash_size = sizeof(hash),
+};
+crypto_blake2b_init(&ctx, config);
 /* Wipe the key */
-crypto_wipe(key, 32);
+crypto_wipe(key, sizeof(key));
 for (size_t i = 0; i < 500; i += 100) {
     crypto_blake2b_update(&ctx, message + i, 100);
     /* Wipe secrets if they are no longer needed */
@@ -289,6 +290,17 @@ The
 and
 .Fn crypto_blake2b_final
 functions first appeared in Monocypher 0.1.
+In Monocypher 4.0.0,
+.Fn crypto_blake2b_general
+and
+.Fn crypto_blake2b_general_init
+were removed,
+and the
+.Fa config
+argument was added to
+.Fn crypto_blake2b ,
+.Fn crypto_blake2b_init
+to compensate.
 .Sh CAVEATS
 Monocypher does not perform any input validation.
 Any deviation from the specified input and output length ranges results
