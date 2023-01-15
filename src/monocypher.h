@@ -99,9 +99,9 @@ int crypto_aead_unlock(uint8_t       *plain_text,
 // Authenticated stream
 // --------------------
 typedef struct {
-    uint64_t counter;
-    uint8_t  key[32];
-    uint8_t  nonce[8];
+	uint64_t counter;
+	uint8_t  key[32];
+	uint8_t  nonce[8];
 } crypto_aead_ctx;
 
 void crypto_aead_init_x(crypto_aead_ctx *ctx,

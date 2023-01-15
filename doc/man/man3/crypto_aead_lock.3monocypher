@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2017-2019 Loup Vaillant
+.\" Copyright (c) 2017-2019, 2023 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
 .\" Copyright (c) 2017, 2019-2022 Fabio Scotoni
 .\" All rights reserved.
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2022 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2023 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 13, 2022
+.Dd January 15, 2023
 .Dt CRYPTO_LOCK 3MONOCYPHER
 .Os
 .Sh NAME
@@ -63,26 +63,8 @@
 .In monocypher.h
 .Ft void
 .Fo crypto_lock
-.Fa "uint8_t mac[16]"
 .Fa "uint8_t *cipher_text"
-.Fa "const uint8_t key[32]"
-.Fa "const uint8_t nonce[24]"
-.Fa "const uint8_t *plain_text"
-.Fa "size_t text_size"
-.Fc
-.Ft int
-.Fo crypto_unlock
-.Fa "uint8_t *plain_text"
-.Fa "const uint8_t key[32]"
-.Fa "const uint8_t nonce[24]"
-.Fa "const uint8_t mac[16]"
-.Fa "const uint8_t *cipher_text"
-.Fa "size_t text_size"
-.Fc
-.Ft void
-.Fo crypto_lock_aead
 .Fa "uint8_t mac[16]"
-.Fa "uint8_t *cipher_text"
 .Fa "const uint8_t key[32]"
 .Fa "const uint8_t nonce[24]"
 .Fa "const uint8_t *ad"
@@ -91,10 +73,48 @@
 .Fa "size_t text_size"
 .Fc
 .Ft int
-.Fo crypto_unlock_aead
+.Fo crypto_unlock
 .Fa "uint8_t *plain_text"
+.Fa "const uint8_t mac[16]"
 .Fa "const uint8_t key[32]"
 .Fa "const uint8_t nonce[24]"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
+.Fa "const uint8_t *cipher_text"
+.Fa "size_t text_size"
+.Fc
+.Ft void
+.Fo crypto_aead_init_x
+.Fa "crypto_aead_ctx *ctx"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[24]"
+.Fc
+.Ft void
+.Fo crypto_aead_init_djb
+.Fa "crypto_aead_ctx *ctx"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[8]"
+.Fc
+.Ft void
+.Fo crypto_aead_init_ietf
+.Fa "crypto_aead_ctx *ctx"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[12]"
+.Fc
+.Ft void
+.Fo crypto_aead_write
+.Fa "crypto_aead_ctx *ctx"
+.Fa "uint8_t *cipher_text"
+.Fa "uint8_t mac[16]"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
+.Fa "const uint8_t *plain_text"
+.Fa "size_t text_size"
+.Fc
+.Ft int
+.Fo crypto_aead_read
+.Fa "crypto_aead_ctx *ctx"
+.Fa "uint8_t *plain_text"
 .Fa "const uint8_t mac[16]"
 .Fa "const uint8_t *ad"
 .Fa "size_t ad_size"
@@ -102,10 +122,10 @@
 .Fa "size_t text_size"
 .Fc
 .Sh DESCRIPTION
-.Fn crypto_lock
+.Fn crypto_aead_lock
 encrypts and authenticates a plaintext.
 It can be decrypted by
-.Fn crypto_unlock .
+.Fn crypto_aead_unlock .
 The arguments are:
 .Bl -tag -width Ds
 .It Fa key
@@ -118,7 +138,7 @@ password-based key derivation
 or even meeting physically.
 See
 .Xr crypto_x25519 3monocypher
-for a bulding block for a key exchange protocol and
+for a building block for a key exchange protocol and
 .Xr crypto_argon2i 3monocypher
 for password-based key derivation.
 .It Fa nonce
@@ -135,6 +155,17 @@ See
 .Xr intro 3monocypher
 about random number generation (use your operating system's random
 number generator).
+.Pp
+Note:
+.Fn crypto_aead_init_djb
+and
+.Fn crypto_aead_init_ietf
+use shorter nonces
+(8 and 12 bytes respectively),
+which
+.Em cannot
+be selected at random without risking a catastrophic reuse.
+For those shorter nonces, use a counter instead.
 .It Fa mac
 A 16-byte
 .Em message authentication code
@@ -143,6 +174,19 @@ This guarantee cannot be upheld if a nonce has been reused with the
 session key because doing so allows the attacker to learn the
 authentication key associated with that nonce.
 The MAC is intended to be sent along with the ciphertext.
+.It Fa ad
+Additional data to authenticate.
+It will
+.Em not
+be encrypted.
+This is used to authenticate relevant data that cannot be encrypted.
+May be
+.Dv NULL
+if
+.Fa ad_size
+is zero.
+.It Fa ad_size
+Length of the additional data, in bytes.
 .It Fa plain_text
 The secret message.
 Its contents will be kept hidden from attackers.
@@ -168,53 +212,76 @@ and
 arguments may point to the same buffer for in-place encryption.
 Otherwise, the buffers they point to must not overlap.
 .Pp
-.Fn crypto_unlock
+.Fn crypto_aead_unlock
 first checks the integrity of an encrypted message.
 If it has been corrupted,
-.Fn crypto_unlock
-returns -1 immediately.
-Otherwise, it decrypts the message then returns zero.
+.Fn crypto_aead_unlock
+does nothing and returns -1 immediately.
+Otherwise it decrypts the message then returns zero.
+.Em Always check the return value .
+.Ss Incremental interface
+For long messages that may not fit in memory,
+first initialise a context with
+.Fn crypto_aead_init_x ,
+then encrypt each chunk with
+.Fn crypto_aead_write.
+The receiving end will initialise its own context with
+.Fn crypto_aead_init_x ,
+then decrypt each chunk with
+.Fn crypto_aead_read.
+.Pp
+Just like
+.Fn crypto_aead_unlock ,
+.Fn crypto_aead_read
+first checks the integrity of the encrypted chunk,
+then returns -1 immediately if it has been corrupted.
+Otherwise it decrypts the chunk then returns zero.
 .Em Always check the return value .
 .Pp
-.Fn crypto_lock_aead
+The encryption key is changed between each chunk,
+providing a symmetric ratchet that enforces the order of the messages.
+Attackers cannot reorder chunks without
+.Fn crypto_aead_read
+noticing.
+.Sy Truncation however is not detected .
+You must detect the last chunk manually.
+Possible methods include using
+.Fa ad
+to mark the last chunk differently,
+prefixing all plaintext messages with a marking byte
+(and use a different marking byte for the last chunk),
+or sending the total message size up front and encode the remaining size
+in
+.Fa ad .
+Once the last chunk is sent or received, wipe the context with
+.Xr crypto_wipe 3monocypher .
+.Pp
+.Fn crypto_aead_init_djb
 and
-.Fn crypto_unlock_aead
+.Fn crypto_aead_init_ietf
 are variants of
-.Fn crypto_lock
-and
-.Fn crypto_unlock ,
-permitting additional data.
-Additional data is authenticated but
-.Em not
-encrypted.
-This is used to authenticate relevant data that cannot be encrypted.
-The arguments are:
-.Bl -tag -width Ds
-.It Fa ad
-Additional data to authenticate.
-It will not be encrypted.
-May be
-.Dv NULL
-if
-.Fa ad_size
-is zero.
-Setting
-.Fa ad_size
-to zero yields the same results as
-.Fn crypto_lock
-and
-.Fn crypto_unlock .
-.It Fa ad_size
-Length of the additional data, in bytes.
-.El
+.Fn crypto_aead_init_x
+with a shorter nonce.
+.Em Those nonces are too short to be selected at random .
+Use a counter instead.
+.Pp
+In addition to its short nonce,
+.Fn crypto_aead_init_ietf
+has a smaller internal counter that limits the size of chunks to
+256GiB.
+Exceeding this size leaks the contents of the chunk.
+It is provided strictly for compatibility with RFC 8439.
 .Sh RETURN VALUES
-.Fn crypto_lock
+.Fn crypto_aead_lock ,
+.Fn crypto_aead_init_x ,
+.Fn crypto_aead_init_djb ,
+.Fn crypto_aead_init_ietf ,
 and
-.Fn crypto_lock_aead
+.Fn crypto_aead_write
 return nothing.
-.Fn crypto_unlock
+.Fn crypto_aead_unlock
 and
-.Fn crypto_unlock_aead
+.Fn crypto_aead_read
 return 0 on success or -1 if the message was corrupted (i.e.
 .Fa mac
 mismatched the combination of
@@ -246,8 +313,10 @@ uint8_t mac        [16];    /* Message authentication code */
 uint8_t cipher_text[12];              /* Encrypted message */
 arc4random_buf(key,   32);
 arc4random_buf(nonce, 24);
-crypto_lock(mac, cipher_text, key, nonce, plain_text,
-        sizeof(plain_text));
+crypto_aead_lock(cipher_text, mac,
+                 key, nonce,
+                 NULL, 0,
+                 plain_text, sizeof(plain_text));
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(plain_text, 12);
 crypto_wipe(key, 32);
@@ -263,7 +332,10 @@ uint8_t       nonce      [24]; /* Same as the above        */
 const uint8_t cipher_text[12]; /* Encrypted message        */
 const uint8_t mac        [16]; /* Received along with text */
 uint8_t       plain_text [12]; /* Secret message           */
-if (crypto_unlock(plain_text, key, nonce, mac, cipher_text, 12)) {
+if (crypto_aead_unlock(plain_text, mac,
+                       key, nonce,
+                       NULL, 0,
+                       cipher_text, sizeof(plain_text))) {
     /* The message is corrupted.
      * Wipe key if it is no longer needed,
      * and abort the decryption.
@@ -285,7 +357,10 @@ uint8_t text [12] = "Lorem ipsum"; /* Secret message */
 uint8_t mac  [16];    /* Message authentication code */
 arc4random_buf(key,   32);
 arc4random_buf(nonce, 24);
-crypto_lock(mac, text, key, nonce, text, 12);
+crypto_aead_lock(text, mac,
+                 key, nonce,
+                 NULL, 0,
+                 text, sizeof(text));
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key, 32);
 /* Transmit cipher_text, nonce, and mac over the network,
@@ -299,17 +374,69 @@ uint8_t        key  [32]; /* Same as the above             */
 const uint8_t  nonce[24]; /* Same as the above             */
 const uint8_t  mac  [16]; /* Received from along with text */
 uint8_t        text [12]; /* Message to decrypt            */
-if (crypto_unlock(text, key, nonce, mac, text, 12)) {
-    /* The message is corrupted.
-     * Wipe key if it is no longer needed,
-     * and abort the decryption.
-     */
-    crypto_wipe(key, 32);
+if (crypto_aead_unlock(text, mac, key, nonce,
+                       NULL, 0
+                       text, sizeof(text))) {
+	/* The message is corrupted.
+	 * Wipe key if it is no longer needed,
+	 * and abort the decryption.
+	 */
+	crypto_wipe(key, 32);
 } else {
-    /* ...do something with the decrypted text here... */
-    /* Finally, wipe secrets if they are no longer needed */
-    crypto_wipe(text, 12);
-    crypto_wipe(key, 32);
+	/* ...do something with the decrypted text here... */
+	/* Finally, wipe secrets if they are no longer needed */
+	crypto_wipe(text, 12);
+	crypto_wipe(key, 32);
+}
+.Ed
+.Pp
+Encrypt one message with the incremental interface:
+.Bd -literal -offset indent
+uint8_t key        [32];    /* Random, secret session key  */
+uint8_t nonce      [24];    /* Use only once per key       */
+uint8_t plain_text [12] = "Lorem ipsum"; /* Secret message */
+uint8_t mac        [16];    /* Message authentication code */
+uint8_t cipher_text[12];              /* Encrypted message */
+arc4random_buf(key,   32);
+arc4random_buf(nonce, 24);
+crypto_aead_ctx ctx;
+crypto_aead_init_x(&ctx, key, nonce);
+crypto_aead_write(&ctx, cipher_text, mac,
+                  NULL, 0,
+                  plain_text, sizeof(plain_text))
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(plain_text, 12);
+crypto_wipe(key, 32);
+crypto_wipe(&ctx, sizeof(ctx));
+/* Transmit cipher_text, nonce, and mac over the network,
+ * store them in a file, etc.
+ */
+.Ed
+.Pp
+To decrypt the above:
+.Bd -literal -offset indent
+uint8_t       key        [32]; /* Same as the above        */
+uint8_t       nonce      [24]; /* Same as the above        */
+const uint8_t cipher_text[12]; /* Encrypted message        */
+const uint8_t mac        [16]; /* Received along with text */
+uint8_t       plain_text [12]; /* Secret message           */
+crypto_aead_ctx ctx;
+crypto_aead_init_x(&ctx, key, nonce);
+if (crypto_aead_read(&ctx, plain_text, mac,
+                     NULL, 0,
+                     cipher_text, sizeof(plain_text))) {
+	/* The message is corrupted.
+	 * Wipe key if it is no longer needed,
+	 * and abort the decryption.
+	 */
+	crypto_wipe(key, 32);
+	crypto_wipe(&ctx, sizeof(ctx));
+} else {
+	/* ...do something with the decrypted text here... */
+	/* Finally, wipe secrets if they are no longer needed */
+	crypto_wipe(plain_text, 12);
+	crypto_wipe(key, 32);
+	crypto_wipe(&ctx, sizeof(ctx));
 }
 .Ed
 .Sh SEE ALSO
@@ -317,10 +444,18 @@ if (crypto_unlock(text, key, nonce, mac, text, 12)) {
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement RFC 8439, with XChaCha20 instead of ChaCha20.
-XChaCha20 derives from ChaCha20 the same way XSalsa20 derives from
-Salsa20 and benefits from the same security reduction (proven secure
-as long as ChaCha20 itself is secure).
+These functions implement RFC 8439.
+.Fn crypto_aead_lock
+and
+.Fn crypto_aead_init_x ,
+use XChaCha20 instead of ChaCha20.
+.Fn crypto_aead_init_djb
+uses a 64-bit nonce and a 64-bit counter.
+.Fn crypto_aead_init_ietf
+is fully compatible with the RFC.
+Note that XChaCha20 derives from ChaCha20 the same way XSalsa20 derives
+from Salsa20 and benefits from the same security reduction
+(proven secure as long as ChaCha20 itself is secure).
 .Sh HISTORY
 The
 .Fn crypto_lock
@@ -340,3 +475,10 @@ The
 and
 .Fn crypto_lock_auth
 functions were removed in Monocypher 2.0.0.
+In Monocypher 4.0.0, the
+.Fn crypto_lock
+and
+.Fn crypto_unlock
+were removed,
+Functions were renamed and arguments reordered for consistency,
+and the incremental interface was added.
