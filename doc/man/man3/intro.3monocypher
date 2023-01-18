@@ -216,7 +216,7 @@ Different system calls are available on different systems:
 Recent versions of Linux (glibc >= 2.25, Linux >= 3.17), provide
 .Fn getrandom
 in
-.In linux/random.h .
+.In sys/random.h .
 Do not set any flag.
 .It
 BSD, Darwin/macOS, illumos, and Solaris provide
