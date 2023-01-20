@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2023 Loup Vaillant
 .\" Copyright (c) 2018 Michael Savage
-.\" Copyright (c) 2017, 2020-2022 Fabio Scotoni
+.\" Copyright (c) 2017, 2020-2023 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd January 13, 2023
+.Dd January 20, 2023
 .Dt CRYPTO_BLAKE2B 3MONOCYPHER
 .Os
 .Sh NAME
@@ -58,21 +58,9 @@
 .Nm crypto_blake2b_init ,
 .Nm crypto_blake2b_update ,
 .Nm crypto_blake2b_final
-.Nm crypto_blake2b_defaults
 .Nd cryptographic hashing
 .Sh SYNOPSIS
 .In monocypher.h
-.Bd -literal -offset
-typedef struct {
-	const uint8_t *key;
-	size_t key_size;
-	size_t hash_size;
-} crypto_blake2b_config;
-.Ed
-.Bd -literal -offset
-extern const crypto_blake2b_config crypto_blake2b_defaults;
-.Ed
-.Pp
 .Ft void
 .Fo crypto_blake2b
 .Fa "uint8_t hash[64]"
@@ -96,6 +84,7 @@ extern const crypto_blake2b_config crypto_blake2b_defaults;
 .Fa "crypto_blake2b_ctx *ctx"
 .Fa "uint8_t *hash"
 .Fc
+.Fa "extern const crypto_blake2b_config crypto_blake2b_defaults;"
 .Sh DESCRIPTION
 BLAKE2b is a fast cryptographically secure hash based on the ideas of
 ChaCha20.
@@ -110,46 +99,12 @@ family of functions for that purpose instead.
 BLAKE2b is immune to length extension attacks, and as such, does not
 require specific precautions such as using the HMAC algorithm.
 .Pp
-The arguments are:
+The arguments to
+.Fn crypto_blake2b
+are:
 .Bl -tag -width Ds
 .It Fa config
-The Configuration parameters, comprising:
-.Bl -tag -width Ds
-.It Fa config.hash_size
-Length of
-.Fa hash ,
-in bytes.
-Must be between 1 and 64.
-Anything below 32 is discouraged when using BLAKE2b as a general-purpose
-hash function;
-anything below 16 is discouraged when using BLAKE2b as a message
-authentication code.
-.It Fa config.key
-Some secret key.
-One cannot predict the final hash without it.
-May be
-.Dv NULL
-if
-.Fa config.key_size
-is 0, in which case no key is used.
-Keys can be used to create a message authentication code (MAC).
-Use
-.Xr crypto_verify16 3monocypher ,
-.Xr crypto_verify32 3monocypher ,
-or
-.Xr crypto_verify64 3monocypher
-to compare MACs created this way.
-Choose the size of the hash accordingly.
-Users may want to wipe the key with
-.Xr crypto_wipe 3monocypher
-once they are done with it.
-.It Fa config.key_size
-Length of
-.Fa key ,
-in bytes.
-Must be between 0 and 64.
-32 is a good default.
-.El
+The configuration parameter structure, see below.
 .It Fa hash
 The output hash.
 .It Fa message
@@ -167,8 +122,60 @@ Length of
 in bytes.
 .El
 .Pp
+The BLAKE2b hash function has configurable parameters to personalize
+instances.
+These parameters are given in a
+.Vt crypto_blake2b_config
+structure,
+which is defined as follows:
+.Bd -literal -offset Ds
+typedef struct {
+	const uint8_t *key;
+	size_t key_size;
+	size_t hash_size;
+} crypto_blake2b_config;
+.Ed
+.Pp
+Its members are:
+.Bl -tag -width Ds
+.It Fa hash_size
+Length of
+.Fa hash ,
+in bytes.
+Must be between 1 and 64.
+Anything below 32 is discouraged when using BLAKE2b as a general-purpose
+hash function;
+anything below 16 is discouraged when using BLAKE2b as a message
+authentication code.
+.It Fa key
+Some secret key.
+One cannot predict the final hash without it.
+May be
+.Dv NULL
+if
+.Fa key_size
+is 0, in which case no key is used.
+Keys can be used to create a message authentication code (MAC).
+Use
+.Xr crypto_verify16 3monocypher ,
+.Xr crypto_verify32 3monocypher ,
+or
+.Xr crypto_verify64 3monocypher
+to compare MACs created this way.
+Choose the size of the hash accordingly.
+Users may want to wipe the key with
+.Xr crypto_wipe 3monocypher
+once they are done with it.
+.It Fa key_size
+Length of
+.Fa key ,
+in bytes.
+Must be between 0 and 64.
+32 is a good default.
+.El
+.Pp
 The
-.Fa crypto_blake2b_defaults
+.Dv crypto_blake2b_defaults
 constant provides default
 .Fa config
 parameters:
@@ -283,8 +290,6 @@ These functions implement BLAKE2b, described in RFC 7693.
 .Sh HISTORY
 The
 .Fn crypto_blake2b ,
-.Fn crypto_blake2b_general ,
-.Fn crypto_blake2b_general_init ,
 .Fn crypto_blake2b_init ,
 .Fn crypto_blake2b_update ,
 and
