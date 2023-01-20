@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019 Loup Vaillant
 .\" Copyright (c) 2018 Michael Savage
-.\" Copyright (c) 2017, 2019-2021 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2021, 2023 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -40,7 +40,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2017-2021 by Loup Vaillant, Michael Savage and Fabio Scotoni
+.\" Written in 2017-2021, 2023 by Loup Vaillant, Michael Savage and Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -50,44 +50,25 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd September 9, 2021
-.Dt CRYPTO_ARGON2I 3MONOCYPHER
+.Dd January 20, 2023
+.Dt CRYPTO_ARGON2 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_argon2i
+.Nm crypto_argon2
 .Nd password-based key derivation
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
-.Fo crypto_argon2i
+.Fo crypto_argon2
 .Fa "uint8_t *hash"
 .Fa "uint32_t hash_size"
 .Fa "void *work_area"
-.Fa "uint32_t nb_blocks"
-.Fa "uint32_t nb_iterations"
-.Fa "const uint8_t *password"
-.Fa "uint32_t password_size"
-.Fa "const uint8_t *salt"
-.Fa "uint32_t salt_size"
-.Fc
-.Ft void
-.Fo crypto_argon2i_general
-.Fa "uint8_t *hash"
-.Fa "uint32_t hash_size"
-.Fa "void *work_area"
-.Fa "uint32_t nb_blocks"
-.Fa "uint32_t nb_iterations"
-.Fa "const uint8_t *password"
-.Fa "uint32_t password_size"
-.Fa "const uint8_t *salt"
-.Fa "uint32_t salt_size"
-.Fa "const uint8_t *key"
-.Fa "uint32_t key_size"
-.Fa "const uint8_t *ad"
-.Fa "uint32_t ad_size"
+.Fa "crypto_argon2_config config"
+.Fa "crypto_argon2_inputs inputs"
+.Fa "crypto_argon2_extras extras"
 .Fc
 .Sh DESCRIPTION
-Argon2i is a resource intensive password-based key derivation scheme
+Argon2 is a resource intensive password-based key derivation scheme
 optimised for the typical x86-like processor.
 It runs in constant time with respect to the contents of the password.
 .Pp
@@ -101,15 +82,13 @@ degree of parallelism is limited to 1.
 This is considered good enough for most purposes.
 .Pp
 The arguments to
-.Fn crypto_argon2i
+.Fn crypto_argon2
 are:
 .Bl -tag -width Ds
 .It Fa hash
 The output hash.
 If all parameters to
-.Fn crypto_argon2i
-or
-.Fn crypto_argon2i_general
+.Fn crypto_argon2
 are identical between two calls,
 then the output
 .Fa hash
@@ -132,7 +111,48 @@ If you are not sure how to allocate that buffer, just use
 .Fn malloc .
 .Pp
 The work area is automatically wiped by
-.Fn crypto_argon2i .
+.Fn crypto_argon2 .
+.It Fa config
+A struct of type
+.Vt crypto_argon2_config
+that determines the base parameters of this particular
+instance of Argon2.
+These are domain parameters and remain constant between
+multiple invocations of
+.Fn crypto_argon2 .
+.It Fa inputs
+A struct of type
+.Vt crypto_argon2_inputs
+that contains the actual input parameters.
+.It Fa extras
+A struct of type
+.Vt crypto_argon2_extras
+that contains optional extra input parameters,
+which are not commonly used.
+.El
+.Pp
+The
+.Vt crypto_argon2_config
+struct is defined as follows:
+.Bd -literal -offset indent
+typedef struct {
+    uint32_t algorithm;
+    uint32_t nb_blocks;
+    uint32_t nb_passes;
+    uint32_t nb_lanes;
+} crypto_argon2_config;
+.Ed
+.Pp
+Its members are:
+.Bl -tag -width Ds
+.It Fa algorithm
+This value determines which variant of Argon2 should be used.
+.Dv CRYPTO_ARGON2_D
+indicates Argon2d,
+.Dv CRYPTO_ARGON2_I
+indicates Argon2i,
+.Dv CRYPTO_ARGON2_ID
+indicates Argon2id.
 .It Fa nb_blocks
 The number of blocks for the work area.
 Must be at least 8.
@@ -140,22 +160,43 @@ A value of 100000 (one hundred megabytes) is a good starting point.
 If the computation takes too long, reduce this number.
 If it is too fast, increase this number.
 If it is still too fast with all available memory, increase
-.Fa nb_iterations .
-.It Fa nb_iterations
-The number of iterations.
+.Fa nb_passes .
+.It Fa nb_passes
+The number of passes.
 It must be at least 1.
 A value of 3 is
 .Em strongly
-recommended;
+recommended when using Argon2i;
 any value lower than 3 enables significantly more efficient attacks.
-.It Fa password
+.It Fa nb_lanes
+The level of parallelism.
+This parameter has no effect as Monocypher has no concept of threading.
+It is merely provided for completeness to match the Argon2
+specification.
+.El
+.Pp
+The
+.Vt crypto_argon2_inputs
+struct is defined as follows:
+.Bd -literal -offset indent
+typedef struct {
+    const uint8_t *pass;
+    const uint8_t *salt;
+    uint32_t pass_size;
+    uint32_t salt_size;
+} crypto_argon2_inputs;
+.Ed
+.Pp
+Its members are:
+.Bl -tag -width Ds
+.It Fa pass
 The password to hash.
 It should be wiped with
 .Xr crypto_wipe 3monocypher
 after being hashed.
-.It Fa password_size
+.It Fa pass_size
 Length of
-.Fa password ,
+.Fa pass ,
 in bytes.
 .It Fa salt
 A password salt.
@@ -173,41 +214,19 @@ Must be at least 8.
 16 is recommended.
 .El
 .Pp
-The arguments may overlap or point at the same buffer.
+The
+.Vt crypto_argon2_extras
+struct is defined as follows:
+.Bd -literal -offset indent
+typedef struct {
+    const uint8_t *key;
+    const uint8_t *ad;
+    uint32_t key_size;
+    uint32_t ad_size;
+} crypto_argon2_extras;
+.Ed
 .Pp
-Use
-.Xr crypto_verify16 3monocypher ,
-.Xr crypto_verify32 3monocypher ,
-or
-.Xr crypto_verify64 3monocypher
-to compare password hashes to prevent timing attacks.
-.Pp
-To select the
-.Fa nb_blocks
-and
-.Fa nb_iterations
-parameters, it should first be decided how long the computation should
-take.
-For user authentication, values somewhere between half a second
-(convenient) and several seconds (paranoid) are recommended.
-The computation should use as much memory as can be spared.
-.Pp
-Since parameter selection depends on your hardware, some trial and error
-will be required in order to determine the ideal settings.
-Three iterations and 100000 blocks
-(one hundred megabytes of memory)
-is a good starting point.
-Adjust
-.Fa nb_blocks
-first.
-If using all available memory is not slow enough, increase
-.Fa nb_iterations .
-.Pp
-.Fn crypto_argon2i_general
-is a variant of
-.Fn crypto_argon2i
-that supports keyed hashing and hashing of additional data.
-The additional arguments are:
+Its members are:
 .Bl -tag -width Ds
 .It Fa key
 A key to use in the hash.
@@ -245,6 +264,40 @@ Length of
 in bytes.
 Must be zero if there is no additional data.
 .El
+.Pp
+The arguments in the
+.Fa config
+and
+.Fa extras
+structs may overlap or point at the same buffer.
+.Pp
+Use
+.Xr crypto_verify16 3monocypher ,
+.Xr crypto_verify32 3monocypher ,
+or
+.Xr crypto_verify64 3monocypher
+to compare password hashes to prevent timing attacks.
+.Pp
+To select the
+.Fa nb_blocks
+and
+.Fa nb_passes
+parameters, it should first be decided how long the computation should
+take.
+For user authentication, values somewhere between half a second
+(convenient) and several seconds (paranoid) are recommended.
+The computation should use as much memory as can be spared.
+.Pp
+Since parameter selection depends on your hardware, some trial and error
+will be required in order to determine the ideal settings.
+Three iterations and 100000 blocks
+(one hundred megabytes of memory)
+is a good starting point.
+Adjust
+.Fa nb_blocks
+first.
+If using all available memory is not slow enough, increase
+.Fa nb_passes .
 .Sh RETURN VALUES
 These functions return nothing.
 .Sh EXAMPLES
@@ -260,23 +313,30 @@ for advice about how to generate cryptographically secure random bytes.
 This example shows how to hash a password with the recommended baseline
 parameters:
 .Bd -literal -offset indent
-uint8_t        hash[32];                    /* Output hash     */
-char          *password = "Okay Password!"; /* User's password */
-uint32_t       password_size = 14;          /* Password length */
-uint8_t        salt[16];                    /* Random salt     */
-const uint32_t nb_blocks = 100000;          /* 100 megabytes   */
-const uint32_t nb_iterations = 3;           /* 3 iterations    */
-void *work_area = malloc(nb_blocks * 1024); /* Work area       */
+uint8_t              hash[32];               /* Output hash     */
+uint8_t              salt[16];               /* Random salt     */
+crypto_argon2_config config = {
+    .algorithm = CRYPTO_ARGON2_I,            /* Argon2i         */
+    .nb_blocks = 100000,                     /* 100 megabytes   */
+    .nb_passes = 3,                          /* 3 iterations    */
+    .nb_lanes  = 1                           /* Single-threaded */
+};
+crypto_argon2_inputs inputs = {
+    .pass = (const uint8_t *)"Okay Password!", /* User password */
+    .pass_size = 14,                         /* Password length */
+    .salt = salt,                      /* Salt for the password */
+    .salt_size = 16
+};
+crypto_argon2_extras extras = {0};   /* Extra parameters unused */
+void *work_area = malloc(nb_blocks * 1024);  /* Work area       */
 if (work_area == NULL) {
     /* Handle malloc() failure */
     /* Wipe secrets if they are no longer needed */
     crypto_wipe(password, password_size);
 } else {
     arc4random_buf(salt, 16);
-    crypto_argon2i(hash, 32,
-                   work_area, nb_blocks, nb_iterations,
-                   (uint8_t *)password, password_size,
-                   salt, 16);
+    crypto_argon2i(hash, 32, work_area,
+                   config, inputs, extras);
     /* Wipe secrets if they are no longer needed */
     crypto_wipe(password, password_size);
     free(work_area);
@@ -288,18 +348,23 @@ if (work_area == NULL) {
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement Argon2i as described in RFC 9106.
+These functions implement Argon2 as described in RFC 9106,
+but do not support parallelism.
 .Sh HISTORY
-The
-.Fn crypto_argon2i_general
-function first appeared in Monocypher 0.1 but was called
-.Fn crypto_argon2i ;
-it was renamed to its current name in Monocypher 1.1.0.
-The current
+In Monocypher 0.1,
 .Fn crypto_argon2i
-first appeared in Monocypher 1.1.0.
+implemented Argon2i and had all extra parameters as input.
+It was then split into a
+.Fn crypto_argon2i_general
+and a simplified
+.Fn crypto_argon2i
+function in Monocypher 1.1.0.
+Both were replaced by
+.Fn crypto_argon2
+in Monocypher 4.0.0.
 .Sh CAVEATS
-Any deviation from the specified input and output length ranges results
+Any deviation from the algorithm constants,
+specified input and output length ranges results
 in
 .Sy undefined behaviour .
 Make sure your inputs are correct.
