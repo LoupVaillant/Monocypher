@@ -883,6 +883,9 @@ void crypto_argon2(u8 *hash, u32 hash_size, void *work_area,
 
 // field element
 typedef i32 fe[10];
+#ifdef X25519_NO_UNROLLING
+typedef i64 lfe[10];
+#endif
 
 // field constants
 //
@@ -1073,6 +1076,36 @@ static void fe_ccopy(fe f, const fe g, int b)
 	h[0]=(i32)t0;  h[1]=(i32)t1;  h[2]=(i32)t2;  h[3]=(i32)t3;  h[4]=(i32)t4; \
 	h[5]=(i32)t5;  h[6]=(i32)t6;  h[7]=(i32)t7;  h[8]=(i32)t8;  h[9]=(i32)t9
 
+#ifdef X25519_NO_UNROLLING
+void fe_carry(fe h, lfe t)
+{
+	i64 c;
+
+	FOR (i, 0, 5) {
+		const int s2 = (i & 0x1) ? 25 : 26;
+
+		c = (t[i] + ((i64)1 << (s2 - 1))) >> s2;
+		t[i] -= c * ((i64)1 << s2);
+		t[i + 1] += c;
+
+		c = (t[i + 4] + ((i64)1 << (s2 - 1))) >> s2;
+		t[i + 4] -= c * ((i64)1 << s2);
+		t[i + 5] += c;
+	}
+
+	c = (t[9] + ((i64)1<<24)) >> 25;
+	t[9] -= c * ((i64)1 << 25);
+	t[0] += c * 19;
+
+	c = (t[0] + ((i64)1<<25)) >> 26;
+	t[0] -= c * ((i64)1 << 26);
+	t[1] += c;
+
+	FOR (i, 0, 10) {
+        	h[i] = (i32)t[i];
+	}
+}
+#endif
 // Decodes a field element from a byte buffer.
 // mask specifies how many bits we ignore.
 // Traditionally we ignore 1. It's useful for EdDSA,
@@ -1082,6 +1115,21 @@ static void fe_ccopy(fe f, const fe g, int b)
 static void fe_frombytes_mask(fe h, const u8 s[32], unsigned nb_mask)
 {
 	u32 mask = 0xffffff >> nb_mask;
+#ifdef X25519_NO_UNROLLING
+	lfe t;
+	t[0] =  load32_le(s);                    // t0 < 2^32
+	t[1] =  load24_le(s +  4) << 6;          // t1 < 2^30
+	t[2] =  load24_le(s +  7) << 5;          // t2 < 2^29
+	t[3] =  load24_le(s + 10) << 3;          // t3 < 2^27
+	t[4] =  load24_le(s + 13) << 2;          // t4 < 2^26
+	t[5] =  load32_le(s + 16);               // t5 < 2^32
+	t[6] =  load24_le(s + 20) << 7;          // t6 < 2^31
+	t[7] =  load24_le(s + 23) << 5;          // t7 < 2^29
+	t[8] =  load24_le(s + 26) << 4;          // t8 < 2^28
+	t[9] = (load24_le(s + 29) & mask) << 2;  // t9 < 2^25
+	fe_carry(h, t);
+	WIPE_BUFFER(t);
+#else
 	i64 t0 =  load32_le(s);                    // t0 < 2^32
 	i64 t1 =  load24_le(s +  4) << 6;          // t1 < 2^30
 	i64 t2 =  load24_le(s +  7) << 5;          // t2 < 2^29
@@ -1093,6 +1141,7 @@ static void fe_frombytes_mask(fe h, const u8 s[32], unsigned nb_mask)
 	i64 t8 =  load24_le(s + 26) << 4;          // t8 < 2^28
 	i64 t9 = (load24_le(s + 29) & mask) << 2;  // t9 < 2^25
 	FE_CARRY;                                  // Carry precondition OK
+#endif
 }
 
 static void fe_frombytes(fe h, const u8 s[32])
@@ -1158,6 +1207,16 @@ static void fe_tobytes(u8 s[32], const fe h)
 //   |g1|, |g3|, |g5|, |g7|, |g9|  <  1.65 * 2^25
 static void fe_mul_small(fe h, const fe f, i32 g)
 {
+#ifdef X25519_NO_UNROLLING
+	lfe t;
+
+    	FOR (i, 0, 10) {
+        	t[i] = f[i] * (i64) g;
+    	}
+
+	fe_carry(h, t);
+	WIPE_BUFFER(t);
+#else
 	i64 t0 = f[0] * (i64) g;  i64 t1 = f[1] * (i64) g;
 	i64 t2 = f[2] * (i64) g;  i64 t3 = f[3] * (i64) g;
 	i64 t4 = f[4] * (i64) g;  i64 t5 = f[5] * (i64) g;
@@ -1167,6 +1226,7 @@ static void fe_mul_small(fe h, const fe f, i32 g)
 	// |t1|, |t3|, |t5|, |t7|, |t9|  <  1.65 * 2^25 * 2^31  < 2^57
 
 	FE_CARRY; // Carry precondition OK
+#endif
 }
 
 // Precondition
@@ -1178,6 +1238,24 @@ static void fe_mul_small(fe h, const fe f, i32 g)
 //   |g1|, |g3|, |g5|, |g7|, |g9|  <  1.65 * 2^25
 static void fe_mul(fe h, const fe f, const fe g)
 {
+#ifdef X25519_NO_UNROLLING
+	lfe t;
+
+	FOR (i, 0, 10) {
+		t[i] = 0;
+		FOR (j, 0, 10) {
+			const i32 m = f[j] << (~i & j & 0x1);
+			if (j > i) {
+				t[i] += m * (i64)(g[10 - (j - i)] * 19);
+			} else {
+				t[i] += m * (i64)(g[i - j]);
+			}
+		}
+	}
+
+	fe_carry(h, t);
+	WIPE_BUFFER(t);
+#else
 	// Everything is unrolled and put in temporary variables.
 	// We could roll the loop, but that would make curve25519 twice as slow.
 	i32 f0 = f[0]; i32 f1 = f[1]; i32 f2 = f[2]; i32 f3 = f[3]; i32 f4 = f[4];
@@ -1224,6 +1302,7 @@ static void fe_mul(fe h, const fe f, const fe g)
 	// t9 < 0.03 * 2^61
 
 	FE_CARRY; // Everything below 2^62, Carry precondition OK
+#endif
 }
 
 // Precondition
@@ -1234,6 +1313,9 @@ static void fe_mul(fe h, const fe f, const fe g)
 // Note: we could use fe_mul() for this, but this is significantly faster
 static void fe_sq(fe h, const fe f)
 {
+#ifdef X25519_NO_UNROLLING
+	fe_mul(h, f, f);
+#else
 	i32 f0 = f[0]; i32 f1 = f[1]; i32 f2 = f[2]; i32 f3 = f[3]; i32 f4 = f[4];
 	i32 f5 = f[5]; i32 f6 = f[6]; i32 f7 = f[7]; i32 f8 = f[8]; i32 f9 = f[9];
 	i32 f0_2  = f0*2;   i32 f1_2  = f1*2;   i32 f2_2  = f2*2;   i32 f3_2 = f3*2;
@@ -1276,6 +1358,7 @@ static void fe_sq(fe h, const fe f)
 	// t9 < 0.03 * 2^61
 
 	FE_CARRY;
+#endif
 }
 
 //  Parity check.  Returns 0 if even, 1 if odd
