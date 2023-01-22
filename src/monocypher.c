@@ -312,6 +312,27 @@ static void poly_block(crypto_poly1305_ctx *ctx, const u8 in[16], unsigned end)
 	u32 s[4];
 	load32_le_buf(s, in, 4);
 
+	//- PROOF Poly1305
+	//-
+	//- # Inputs & preconditions
+	//- ctx->h[0] = u32()
+	//- ctx->h[1] = u32()
+	//- ctx->h[2] = u32()
+	//- ctx->h[3] = u32()
+	//- ctx->h[4] = u32(limit = 4)
+	//-
+	//- ctx->r[0] = u32(limit = 0x0fffffff)
+	//- ctx->r[1] = u32(limit = 0x0ffffffc)
+	//- ctx->r[2] = u32(limit = 0x0ffffffc)
+	//- ctx->r[3] = u32(limit = 0x0ffffffc)
+	//-
+	//- s[0] = u32()
+	//- s[1] = u32()
+	//- s[2] = u32()
+	//- s[3] = u32()
+	//-
+	//- end = unsigned(limit = 1)
+
 	// s = h + c, without carry propagation
 	const u64 s0 = ctx->h[0] + (u64)s[0]; // s0 <= 1_fffffffe
 	const u64 s1 = ctx->h[1] + (u64)s[1]; // s1 <= 1_fffffffe
@@ -345,11 +366,15 @@ static void poly_block(crypto_poly1305_ctx *ctx, const u8 in[16], unsigned end)
 	const u64 u4 = (u3 >> 32)     + (u5 & 3);
 
 	// Update the hash
-	ctx->h[0] = (u32)u0; // u0 <= 1_9ffffff0
-	ctx->h[1] = (u32)u1; // u1 <= 1_97ffffe0
-	ctx->h[2] = (u32)u2; // u2 <= 1_8fffffe2
-	ctx->h[3] = (u32)u3; // u3 <= 1_87ffffe4
-	ctx->h[4] = (u32)u4; // u4 <=          4
+	ctx->h[0] = u0 & 0xffffffff; // u0 <= 1_9ffffff0
+	ctx->h[1] = u1 & 0xffffffff; // u1 <= 1_97ffffe0
+	ctx->h[2] = u2 & 0xffffffff; // u2 <= 1_8fffffe2
+	ctx->h[3] = u3 & 0xffffffff; // u3 <= 1_87ffffe4
+	ctx->h[4] = u4 & 0xffffffff; // u4 <=          4
+
+	//- # postconditions
+	//- ASSERT(ctx->h[4].limit() <= 4)
+	//- CQFD Poly1305
 }
 
 void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])

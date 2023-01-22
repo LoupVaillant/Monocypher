@@ -18,6 +18,7 @@
 *.includes
 *.su
 *.su.*
+*.gen.*
 tests/formal-analysis/*
 tests/formal-analysis
 *.tar.gz

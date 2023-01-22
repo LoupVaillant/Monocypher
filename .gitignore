@@ -18,10 +18,11 @@
 *.includes
 *.su
 *.su.*
+*.gen.*
 tests/formal-analysis/*
 tests/formal-analysis
-**/__pycache__/**
 *.tar.gz
 monocypher-*/
+**/__pycache__/**
 doc/html/
 tests/vectors.h
