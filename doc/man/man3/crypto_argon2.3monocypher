@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2017-2019 Loup Vaillant
+.\" Copyright (c) 2017-2019, 2023 Loup Vaillant
 .\" Copyright (c) 2018 Michael Savage
 .\" Copyright (c) 2017, 2019-2021, 2023 Fabio Scotoni
 .\" All rights reserved.
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd January 20, 2023
+.Dd January 22, 2023
 .Dt CRYPTO_ARGON2 3MONOCYPHER
 .Os
 .Sh NAME
@@ -67,6 +67,8 @@
 .Fa "crypto_argon2_inputs inputs"
 .Fa "crypto_argon2_extras extras"
 .Fc
+.Pp
+.Fa "extern const crypto_argon2_extras crypto_argon2_no_extras;"
 .Sh DESCRIPTION
 Argon2 is a resource intensive password-based key derivation scheme
 optimised for the typical x86-like processor.
@@ -105,7 +107,7 @@ constant time comparison functions.
 .It Fa work_area
 Temporary buffer for the algorithm, allocated by the caller.
 It must be
-.Fa nb_blocks
+.Fa config.nb_blocks
 × 1024 bytes big and suitably aligned for 64-bit integers.
 If you are not sure how to allocate that buffer, just use
 .Fn malloc .
@@ -155,24 +157,34 @@ indicates Argon2i,
 indicates Argon2id.
 .It Fa nb_blocks
 The number of blocks for the work area.
-Must be at least 8.
+Must be at least 8 ×
+.Fa nb_lanes .
 A value of 100000 (one hundred megabytes) is a good starting point.
 If the computation takes too long, reduce this number.
-If it is too fast, increase this number.
+If it is too fast, increase it.
 If it is still too fast with all available memory, increase
 .Fa nb_passes .
 .It Fa nb_passes
 The number of passes.
-It must be at least 1.
+Must be at least 1.
 A value of 3 is
 .Em strongly
 recommended when using Argon2i;
 any value lower than 3 enables significantly more efficient attacks.
 .It Fa nb_lanes
 The level of parallelism.
-This parameter has no effect as Monocypher has no concept of threading.
-It is merely provided for completeness to match the Argon2
-specification.
+Must be at least 1.
+Since Monocypher does not support threads,
+this does not actually increase the number of threads.
+It is only provided for completeness to match the Argon2 specification.
+Otherwise, leaving it to 1 is strongly recommended.
+.Pp
+Users who want to take actual advantage of parallelism should instead
+call several instances of Argon2 in parallel.
+The
+.Fa extras
+parameter may be used to differentiate the inputs and produce
+independent digests that can be hashed together.
 .El
 .Pp
 The
@@ -230,7 +242,7 @@ Its members are:
 .Bl -tag -width Ds
 .It Fa key
 A key to use in the hash.
-Can be
+May be
 .Dv NULL
 if
 .Fa key_size
@@ -240,7 +252,7 @@ In the context of password derivation, it would be stored separately
 from the password database and would remain secret even if an
 attacker were to steal the database.
 Note that changing the key requires rehashing the user's password,
-which can only be done when the user logs in
+which can only be done when the user logs in.
 .It Fa key_size
 Length of
 .Fa key ,
@@ -248,16 +260,20 @@ in bytes.
 Must be zero if there is no key.
 .It Fa ad
 Additional data.
-This is additional data that goes into the hash, similar to the
-authenticated encryption with authenticated data (AEAD) construction in
-.Xr crypto_lock_aead 3monocypher .
-This most likely has no practical application but is exposed for the
-sake of completeness.
-This parameter may be
+May be
 .Dv NULL
 if
 .Fa ad_size
 is zero.
+This is additional data that goes into the hash, similar to the
+authenticated encryption construction in
+.Xr crypto_aead_lock 3monocypher .
+Can be used to differentiate inputs when invoking several Argon2
+instances in parallel:
+each instance gets a different thread number as additional data,
+generating as many independent digests as we need.
+We can then hash those digests with
+.Xr crypto_blake2b .
 .It Fa ad_size
 Length of
 .Fa ad ,
@@ -290,16 +306,18 @@ The computation should use as much memory as can be spared.
 .Pp
 Since parameter selection depends on your hardware, some trial and error
 will be required in order to determine the ideal settings.
-Three iterations and 100000 blocks
+Argon2i with three iterations and 100000 blocks
 (one hundred megabytes of memory)
 is a good starting point.
+So is Argon2id with one iteration and 300000 blocks.
 Adjust
 .Fa nb_blocks
 first.
 If using all available memory is not slow enough, increase
 .Fa nb_passes .
 .Sh RETURN VALUES
-These functions return nothing.
+.Fn crypto_argon2
+returns nothing.
 .Sh EXAMPLES
 The following example assumes the existence of
 .Fn arc4random_buf ,
@@ -348,8 +366,9 @@ if (work_area == NULL) {
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement Argon2 as described in RFC 9106,
-but do not support parallelism.
+.Fn crypto_argon2
+implements Argon2 as described in RFC 9106,
+but does not support actual parallelism.
 .Sh HISTORY
 In Monocypher 0.1,
 .Fn crypto_argon2i

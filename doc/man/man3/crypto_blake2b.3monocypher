@@ -84,6 +84,7 @@
 .Fa "crypto_blake2b_ctx *ctx"
 .Fa "uint8_t *hash"
 .Fc
+.Pp
 .Fa "extern const crypto_blake2b_config crypto_blake2b_defaults;"
 .Sh DESCRIPTION
 BLAKE2b is a fast cryptographically secure hash based on the ideas of
