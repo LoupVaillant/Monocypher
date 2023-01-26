@@ -61,11 +61,6 @@ SONAME=libmonocypher.so.3
 
 VERSION=__git__
 
-ifdef USE_ED25519
-LINK_ED25519=lib/monocypher-ed25519.o
-INSTALL_ED25519=cp src/optional/monocypher-ed25519.h $(DESTDIR)/$(INCLUDEDIR)
-endif
-
 .PHONY: all library static-library dynamic-library                     \
         install install-doc pkg-config-libhydrogen                     \
         check test tis-ci ctgrind                                      \
@@ -80,18 +75,14 @@ install: library src/monocypher.h monocypher.pc install-doc
 	mkdir -p $(DESTDIR)/$(LIBDIR)
 	mkdir -p $(DESTDIR)/$(PKGCONFIGDIR)
 	cp -P lib/libmonocypher.a lib/libmonocypher.so* $(DESTDIR)/$(LIBDIR)
-	cp src/monocypher.h $(DESTDIR)/$(INCLUDEDIR)
-	$(INSTALL_ED25519)
+	cp src/monocypher.h                  $(DESTDIR)/$(INCLUDEDIR)
+	cp src/optional/monocypher-ed25519.h $(DESTDIR)/$(INCLUDEDIR)
 	sed "s|PREFIX|$(PREFIX)|"  monocypher.pc \
             > $(DESTDIR)/$(PKGCONFIGDIR)/monocypher.pc
 
 install-doc:
 	mkdir -p $(DESTDIR)/$(MANDIR)
-	cp -PR doc/man/man3/*.3monocypher          $(DESTDIR)/$(MANDIR)
-	cp -PR doc/man/man3/advanced/*.3monocypher $(DESTDIR)/$(MANDIR)
-ifdef USE_ED25519
-	cp -PR doc/man/man3/optional/*.3monocypher $(DESTDIR)/$(MANDIR)
-endif
+	cp -PR doc/man3/*.3monocypher $(DESTDIR)/$(MANDIR)
 
 pkg-config-libhydrogen:
 	mkdir -p $(DESTDIR)/$(PKGCONFIGDIR)
@@ -132,12 +123,12 @@ ctgrind: ctgrind.out
 	valgrind ./ctgrind.out
 
 # Monocypher libraries
-lib/libmonocypher.a: lib/monocypher.o $(LINK_ED25519)
+lib/libmonocypher.a: lib/monocypher.o lib/monocypher-ed25519.o
 	$(AR) cr $@ $^
 lib/libmonocypher.so: lib/$(SONAME)
 	@mkdir -p $(@D)
 	ln -sf `basename $<` $@
-lib/$(SONAME): lib/monocypher.o $(LINK_ED25519)
+lib/$(SONAME): lib/monocypher.o lib/monocypher-ed25519.o
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $^
 lib/monocypher-ed25519.o: src/optional/monocypher-ed25519.c \

@@ -25,4 +25,5 @@ tests/formal-analysis
 monocypher-*/
 **/__pycache__/**
 doc/html/
+doc/man3/
 tests/vectors.h

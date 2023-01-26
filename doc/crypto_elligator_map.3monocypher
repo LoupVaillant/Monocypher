@@ -48,29 +48,29 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 13, 2022
-.Dt CRYPTO_CURVE_TO_HIDDEN 3MONOCYPHER
+.Dd January 26, 2023
+.Dt CRYPTO_ELLIGATOR_MAP 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_curve_to_hidden ,
-.Nm crypto_hidden_to_curve ,
-.Nm crypto_hidden_key_pair
+.Nm crypto_elligator_map ,
+.Nm crypto_elligator_rev ,
+.Nm crypto_elligator_key_pair
 .Nd hiding of X25519 public keys
 .Sh SYNOPSIS
 .In monocypher.h
+.Ft void
+.Fo crypto_elligator_map
+.Fa "uint8_t curve[32]"
+.Fa "const uint8_t hidden[32]"
+.Fc
 .Ft int
-.Fo crypto_curve_to_hidden
+.Fo crypto_elligator_rev
 .Fa "uint8_t hidden[32]"
 .Fa "const uint8_t curve[32]"
 .Fa "uint8_t tweak"
 .Fc
 .Ft void
-.Fo crypto_hidden_to_curve
-.Fa "uint8_t curve[32]"
-.Fa "const uint8_t hidden[32]"
-.Fc
-.Ft void
-.Fo crypto_hidden_key_pair
+.Fo crypto_elligator_key_pair
 .Fa "uint8_t hidden[32]"
 .Fa "uint8_t secret_key[32]"
 .Fa "uint8_t seed[32]"
@@ -106,7 +106,7 @@ This also means that these functions are not compatible with
 .Xr crypto_sign 3monocypher
 and related functions.
 .Pp
-.Fn crypto_curve_to_hidden
+.Fn crypto_elligator_rev
 takes a public key
 .Fa curve
 and a
@@ -129,35 +129,35 @@ Even then, this operation
 fail because
 not all curve points are capable of being hidden.
 In this case,
-.Fn crypto_curve_to_hidden
+.Fn crypto_elligator_rev
 must be tried again with a new key pair,
 though
 .Fa tweak
 does not need to be changed.
 On average, two attempts are needed.
 Once a suitable public key has been found,
-.Fn crypto_curve_to_hidden
+.Fn crypto_elligator_rev
 always succeeds for it.
 Given the same values for
 .Fa tweak
 and
 .Fa curve ,
-.Fn crypto_curve_to_hidden
+.Fn crypto_elligator_rev
 yields the same output value
 .Fa hidden .
 .Pp
-.Fn crypto_hidden_to_curve
+.Fn crypto_elligator_map
 performs the inverse operation:
 It decodes a hidden point to a curve point on Curve25519.
 .Pp
-.Fn crypto_hidden_key_pair
+.Fn crypto_elligator_key_pair
 is a convenience function that generates a secret key and its
 corresponding public key, which is effectively indistinguishable from
 random noise, from a random seed.
 .Em The execution time of this function is unpredictable
 because it may take many failures until a key pair could be generated
 successfully.
-.Fn crypto_hidden_key_pair
+.Fn crypto_elligator_key_pair
 uses
 .Xr crypto_x25519_dirty_fast 3monocypher
 internally;
@@ -192,7 +192,7 @@ is wiped automatically.
 .It Fa tweak
 A 1-byte random number,
 which influences the final output of
-.Fn crypto_curve_to_hidden .
+.Fn crypto_elligator_rev .
 .El
 .Pp
 The
@@ -201,14 +201,14 @@ and
 .Fa curve
 arguments may overlap or point at the same buffer.
 .Sh RETURN VALUES
-.Fn crypto_curve_to_hidden
+.Fn crypto_elligator_rev
 returns 0 on success and -1 if the given
 .Fa curve
 argument is unsuitable for hiding.
 .Pp
-.Fn crypto_hidden_to_curve
+.Fn crypto_elligator_map
 and
-.Fn crypto_hidden_key_pair
+.Fn crypto_elligator_key_pair
 return nothing.
 They cannot fail.
 .Sh EXAMPLES
@@ -223,7 +223,7 @@ arc4random_buf(&tweak, 1);
 for (;;) {
     arc4random_buf(sk, 32);
     crypto_x25519_dirty_small(pk, sk);
-    if (crypto_curve_to_hidden(pk, pk, tweak) == 0)
+    if (crypto_elligator_rev(pk, pk, tweak) == 0)
         break;
 }
 /* Now save the secret key and send the hidden public key. */
@@ -236,7 +236,7 @@ uint8_t hidden_pk [32]; /* Their hidden public key   */
 uint8_t their_pk  [32]; /* Their unhidden public key */
 uint8_t your_sk   [32]; /* Your secret key           */
 uint8_t shared_key[32]; /* Shared session key        */
-crypto_hidden_to_curve(their_pk, hidden_pk);
+crypto_elligator_map(their_pk, hidden_pk);
 crypto_x25519(shared_key, your_sk, their_pk);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(your_sk, 32);
@@ -268,9 +268,16 @@ The
 and
 .Fn crypto_hidden_key_pair
 functions first appeared in Monocypher 3.1.0.
+In Monocypher 4.1.0,
+they were renamed
+.Fn crypto_elligator_rev ,
+.Fn crypto_elligator_map ,
+and
+.Fn crypto_elligator_key_pair
+respectively.
 .Sh SECURITY CONSIDERATIONS
 The secret keys for the public keys fed into
-.Fn crypto_curve_to_hidden
+.Fn crypto_elligator_rev
 .Sy must be chosen randomly
 rather than deterministically.
 Otherwise, the timing information given by the required number of

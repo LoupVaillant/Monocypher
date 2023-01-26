@@ -8,8 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2020, 2022 Fabio Scotoni
-.\" Copyright (c) 2023 Loup Vaillant
+.\" Copyright (c) 2019-2020, 2022 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -39,7 +38,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2020, 2022, and 2023 by Fabio Scotoni and Loup Vaillant
+.\" Written in 2019-2020 and 2022 by Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -49,76 +48,106 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd January 7, 2023
-.Dt CRYPTO_FROM_EDDSA_TO_X25519 3MONOCYPHER
+.Dd February 13, 2022
+.Dt CRYPTO_ED25519_SIGN 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_eddsa_to_x25519 ,
-.Nm crypto_x25519_to_eddsa
-.Nd conversion of public keys between EdDSA and X25519
+.Nm crypto_ed25519_sign ,
+.Nm crypto_ed25519_check ,
+.Nm crypto_ed25519_public_key
+.Nd public key signatures
 .Sh SYNOPSIS
-.In monocypher.h
+.In monocypher-ed25519.h
 .Ft void
-.Fo crypto_eddsa_to_x25519
-.Fa "uint8_t x25519[32]"
-.Fa "const uint8_t eddsa[32]"
+.Fo crypto_ed25519_sign
+.Fa "uint8_t signature[64]"
+.Fa "const uint8_t secret_key[64]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_ed25519_check
+.Fa "const uint8_t signature[64]"
+.Fa "const uint8_t public_key[32]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
 .Fc
 .Ft void
-.Fo crypto_x25519_to_eddsa
-.Fa "uint8_t eddsa[32]"
-.Fa "const uint8_t x25519[32]"
+.Fo crypto_ed25519_key_pair
+.Fa "uint8_t secret_key[64]"
+.Fa "uint8_t public_key[32]"
+.Fa "uint8_t seed[32]"
+.Fc
+.Ft void
+.Fo crypto_ed25519_ph_sign
+.Fa "uint8_t signature[64]"
+.Fa "const uint8_t secret_key[32]"
+.Fa "const uint8_t message_hash[64]"
+.Fc
+.Ft int
+.Fo crypto_ed25519_ph_check
+.Fa "const uint8_t signature[64]"
+.Fa "const uint8_t public_key[32]"
+.Fa "const uint8_t message_hash[64]"
 .Fc
 .Sh DESCRIPTION
-These functions convert between public keys for use with
-.Xr crypto_eddsa_sign 3monocypher
-and keys for use with
-.Xr crypto_x25519 3monocypher .
-This may be useful in some resource-constrained contexts or when no
-other key is available \(en for example when retrieving SSH public keys
-from GitHub and reusing the SSH public keys as X25519 public keys.
-.Pp
 The
-.Fn crypto_eddsa_to_x25519
-function converts an EdDSA public key to an X25519 public key.
-The
-.Fn crypto_x25519_to_eddsa
-function converts an X25519 public key to an EdDSA public key.
+.Fn crypto_ed25519_sign
+and
+.Fn crypto_ed25519_check
+functions provide Ed25519 public key signatures and verification
+with SHA-512 as the underlying hash function.
+They are interoperable with other Ed25519 implementations.
+If you have no interoperability requirements, prefer
+.Xr crypto_eddsa_sign 3monocypher .
 .Pp
-The arguments are:
-.Bl -tag -width Ds
-.It Fa eddsa
-The EdDSA signing public key.
-.It Fa x25519
-The X25519 key exchange public key.
-.El
+The arguments and security considerations are the same as those
+described in
+.Xr crypto_sign 3monocypher .
 .Pp
-The arguments may overlap or point at the same buffer.
+.Fn crypto_ed25519_ph_sign
+and
+.Fn crypto_ed25519_ph_check
+implement Ed25519ph.
+To sign or check a message,
+first hash the message with
+.Xr crypto_sha512 3monocypher ,
+then process the resulting
+.Fa message_hash .
 .Sh RETURN VALUES
-These functions return nothing.
-They cannot fail.
+.Fn crypto_ed25519_public_key ,
+.Fn crypto_ed25519_sign ,
+and
+.Fn crypto_ed25519_ph_sign
+return nothing.
+.Pp
+.Fn crypto_ed25519_check
+and
+.Fn crypto_ed25519_ph_check
+returns 0 for legitimate messages and -1 for forgeries.
 .Sh SEE ALSO
+.Xr crypto_eddsa_sign 3monocypher ,
 .Xr crypto_x25519 3monocypher ,
-.Xr crypto_eddsa_key_pair 3monocypher ,
+.Xr crypto_lock 3monocypher ,
+.Xr crypto_sha512 3monocypher ,
 .Xr intro 3monocypher
+.Sh STANDARDS
+These functions implement Ed25519 as described in RFC 8032.
 .Sh HISTORY
 The
-.Fn crypto_from_eddsa_private
+.Fn crypto_ed25519_sign ,
+.Fn crypto_ed25519_check ,
 and
-.Fn crypto_from_eddsa_public
-functions first appeared in Monocypher 3.1.0.
+.Fn crypto_ed25519_public_key
+functions appeared in Monocypher 3.0.0.
+They replace recompilation of Monocypher with the
+.Dv ED25519_SHA512
+preprocessor definition.
+.Pp
 In Monocypher 4.0.0,
-.Fn crypto_from_eddsa_private
-was removed,
-.Fn crypto_x25519_to_eddsa
-was added,
+the incremental and custom hash API removed.
+The main interface was also reworked to avoid misuse,
 and
-.Fn crypto_from_eddsa_public
-was renamed
-.Fn crypto_eddsa_to_x25519 .
-.Sh SECURITY CONSIDERATIONS
-It is generally considered poor form to reuse the same key for different
-purposes.
-While this conversion is technically safe,
-avoid these functions nonetheless unless you are particularly
-resource-constrained or have some other kind of hard requirement.
-It is otherwise an unnecessary risk factor.
+.Fn crypto_ed25519_key_pair
+replaced
+.Fn crypto_ed25519_public_key .

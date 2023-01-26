@@ -9,7 +9,7 @@
 .\" ----------------------------------------------------------------------------
 .\"
 .\" Copyright (c) 2017-2019, 2023 Loup Vaillant
-.\" Copyright (c) 2018 Michael Savage
+.\" Copyright (c) 2017-2018 Michael Savage
 .\" Copyright (c) 2017, 2019-2021 Fabio Scotoni
 .\" All rights reserved.
 .\"
@@ -50,18 +50,19 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd January 8, 2023
+.Dd January 26, 2023
 .Dt CRYPTO_CHACHA20 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_chacha20 ,
-.Nm crypto_xchacha20 ,
-.Nm crypto_ietf_chacha20
+.Nm crypto_chacha20_djb ,
+.Nm crypto_chacha20_ietf ,
+.Nm crypto_chacha20_x ,
+.Nm crypto_chacha20_h
 .Nd ChaCha20 and XChaCha20 encryption functions
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft uint64_t
-.Fo crypto_chacha20
+.Fo crypto_chacha20_djb
 .Fa "uint8_t *cipher_text"
 .Fa "const uint8_t *plain_text"
 .Fa "size_t text_size"
@@ -70,7 +71,7 @@
 .Fa "uint64_t ctr"
 .Fc
 .Ft uint32_t
-.Fo crypto_ietf_chacha20
+.Fo crypto_chacha20_ietf
 .Fa "uint8_t *cipher_text"
 .Fa "const uint8_t *plain_text"
 .Fa "size_t text_size"
@@ -79,13 +80,19 @@
 .Fa "uint32_t ctr"
 .Fc
 .Ft uint64_t
-.Fo crypto_xchacha20
+.Fo crypto_chacha20_x
 .Fa "uint8_t *cipher_text"
 .Fa "const uint8_t *plain_text"
 .Fa "size_t text_size"
 .Fa "const uint8_t key[32]"
 .Fa "const uint8_t nonce[24]"
 .Fa "uint64_t ctr"
+.Fc
+.Ft void
+.Fo crypto_chacha20_h
+.Fa "uint8_t out[32]"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t in[16]"
 .Fc
 .Sh DESCRIPTION
 These functions provide an interface for the ChaCha20 encryption
@@ -150,33 +157,33 @@ and
 must either be the same buffer (for in-place encryption) or
 non-overlapping.
 .Pp
-.Fn crypto_chacha20 ,
-.Fn crypto_ietf_chacha20 ,
+.Fn crypto_chacha20_djb ,
+.Fn crypto_chacha20_ietf ,
 and
-.Fn crypto_xchacha20
+.Fn crypto_chacha20_x
 perform a ChaCha20 operation.
 Their main difference is the size of their nonce and counter.
-.Fn crypto_ietf_chacha20
+.Fn crypto_chacha20_ietf
 in particular implements RFC 8439,
 and is provided strictly for compatibility with existing systems or
 standards compliance.
 .Pp
-.Fn crypto_xchacha20
+.Fn crypto_chacha20_x
 Is the only function that uses a nonce long enough to be random.
 This makes it easier to use securely,
 and the performance hit of the extended nonce is often negligible in
 practice.
 Use it instead of
-.Fn crypto_chacha20
+.Fn crypto_chacha20_djb
 and
-.Fn crypto_ietf_chacha20
+.Fn crypto_chacha20_ietf
 if possible.
 .Pp
 The
-.Fn crypto_chacha20 ,
-.Fn crypto_ietf_chacha20 ,
+.Fn crypto_chacha20_djb ,
+.Fn crypto_chacha20_ietf ,
 and
-.Fn crypto_xchacha20
+.Fn crypto_chacha20_x
 encrypt
 .Fa plain_text
 by XORing it with a pseudo-random stream of
@@ -215,10 +222,10 @@ be used to generate large amounts of random-looking data quickly
 \(en for example to generate padding.
 .Pp
 .Sh RETURN VALUES
-.Fn crypto_chacha20 ,
-.Fn crypto_ietf_chacha20 ,
+.Fn crypto_chacha20_djb ,
+.Fn crypto_chacha20_ietf ,
 and
-.Fn crypto_xchacha20
+.Fn crypto_chacha20_x
 return the next
 .Fa ctr
 to use with the same key and nonce values;
@@ -245,7 +252,7 @@ uint8_t plain_text [500] = {1}; /* Secret message           */
 uint8_t cipher_text[500]; /* Encrypted message              */
 arc4random_buf(key,   32);
 arc4random_buf(nonce, 24);
-crypto_xchacha20(cipher_text, plain_text, 500, key, nonce, 0);
+crypto_chacha20_x(cipher_text, plain_text, 500, key, nonce, 0);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 crypto_wipe(plain_text, 500);
@@ -257,7 +264,7 @@ uint8_t       key        [ 32]; /* Same key as above        */
 const uint8_t nonce      [ 24]; /* Same nonce as above      */
 uint8_t       plain_text [500]; /* Message to decrypt       */
 uint8_t       cipher_text[500]; /* Secret message           */
-crypto_xchacha20(cipher_text, plain_text, 500, key, nonce, 0);
+crypto_chacha20_x(cipher_text, plain_text, 500, key, nonce, 0);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 /* The plaintext likely needs to be processed before you wipe it */
@@ -275,14 +282,14 @@ unsigned int i;
 arc4random_buf(key,   32);
 arc4random_buf(nonce, 24);
 for(i = 0; i < 500; i += 64) {
-    ctr = crypto_xchacha20(cipher_text+i, plain_text+i, 64,
-                           key, nonce, ctr);
+    ctr = crypto_chacha20_x(cipher_text+i, plain_text+i, 64,
+                            key, nonce, ctr);
 }
 /* Process data that didn't fit into 64-byte pieces */
-crypto_xchacha20(cipher_text+500-(i-64),
-                 plain_text+500-(i-64),
-                 500-(i-64),
-                 key, nonce, ctr);
+crypto_chacha20_x(cipher_text+500-(i-64),
+                  plain_text+500-(i-64),
+                  500-(i-64),
+                  key, nonce, ctr);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 crypto_wipe(plain_text, 500);
@@ -298,23 +305,60 @@ uint8_t cipher_text[500]; /* Will be the encrypted message  */
 arc4random_buf(key,   32);
 arc4random_buf(nonce, 24);
 /* Encrypt the second part of the message first... */
-crypto_xchacha20(cipher_text + (3 * 64),
-                 plain_text  + (3 * 64),
-                 500         - (3 * 64),
-                 key, nonce, 3);
+crypto_chacha20_x(cipher_text + (3 * 64),
+                  plain_text  + (3 * 64),
+                  500         - (3 * 64),
+                  key, nonce, 3);
 /* ...then encrypt the first part */
-crypto_xchacha20(cipher_text, plain_text, 3 * 64, key, nonce, 0);
+crypto_chacha20_x(cipher_text, plain_text, 3 * 64, key, nonce, 0);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 crypto_wipe(plain_text, 500);
 .Ed
+.Sh HCHACHA20
+.Fn crypto_chacha20_h
+provides a not-so-cryptographic hash.
+.Sy This is not a general-purpose cryptographic hash function .
+It may be used for some specific purposes such as X25519 key
+derivation or XChaCha20 initialisation.
+If in doubt, do not use directly.
+Use
+.Xr crypto_blake2b 3monocypher
+instead.
+.Pp
+The arguments are:
+.Bl -tag -width Ds
+.It Fa key
+A sufficiently random key, such as the output of
+.Xr crypto_x25519 3monocypher .
+.It Fa in
+The space reserved for the ChaCha20 nonce and counter.
+It does not have to be random.
+.It Fa out
+A cryptographically secure random number
+.Em if
+there is enough entropy in
+.Fa key .
+X25519 shared secrets have enough entropy.
+.El
+.Pp
+For instance:
+.Bd -literal -offset indent
+uint8_t key[32]; /* Must have enough entropy           */
+uint8_t in [16]; /* Does not have to be random         */
+uint8_t out[32]; /* Will be random iff the above holds */
+arc4random_buf(key, 32);
+crypto_chacha20_h(out, key, in);
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(key, 32);
+crypto_wipe(in , 16);
+.Ed
 .Sh SEE ALSO
-.Xr crypto_ietf_chacha20 3monocypher ,
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement ChaCha20 and XChaCha20.
+These functions implement ChaCha20, XChaCha20, and HChaCha20.
 ChaCha20 is described in:
 .Rs
 .%A Daniel J. Bernstein
@@ -345,11 +389,20 @@ and
 that were deprecated in Monocypher 3.0.0.
 In Monocypher 4.0.0, only the ctr variants have been kept,
 and were renamed
-.Fn crypto_chacha20 ,
-.Fn crypto_ietf_chacha20 ,
+.Fn crypto_chacha20_djb ,
+.Fn crypto_chacha20_ietf ,
 and
-.Fn crypto_xchacha20
+.Fn crypto_chacha20_x
 respectively.
+.Pp
+.Fn crypto_chacha20_h
+function first appeared in Monocypher 0.1 as
+.Fn crypto_chacha20_H .
+It was renamed to
+.Fn crypto_hchacha20
+in Monocypher 3.0.0, then
+.Fn crypto_chacha20_h
+in Monocypher 4.0.0.
 .Sh SECURITY CONSIDERATIONS
 .Ss Encrypted does not mean secure .
 ChaCha20 only protects against eavesdropping, not forgeries.
@@ -367,7 +420,7 @@ plaintext messages, effectively destroying confidentiality.
 For the same reason,
 .Sy do not select small nonces at random .
 The
-.Fn crypto_chacha20
+.Fn crypto_chacha20_djb
 nonce spans only 64 bits, which is small enough to trigger accidental
 reuses.
 A message counter should be used instead.

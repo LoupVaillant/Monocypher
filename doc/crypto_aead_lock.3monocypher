@@ -54,15 +54,18 @@
 .Dt CRYPTO_LOCK 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_lock_aead ,
-.Nm crypto_unlock_aead ,
-.Nm crypto_lock ,
-.Nm crypto_unlock
+.Nm crypto_aead_lock ,
+.Nm crypto_aead_unlock ,
+.Nm crypto_aead_init_x ,
+.Nm crypto_aead_init_djb ,
+.Nm crypto_aead_init_ietf ,
+.Nm crypto_aead_write ,
+.Nm crypto_aead_read
 .Nd authenticated encryption with additional data
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
-.Fo crypto_lock
+.Fo crypto_aead_lock
 .Fa "uint8_t *cipher_text"
 .Fa "uint8_t mac[16]"
 .Fa "const uint8_t key[32]"
@@ -73,7 +76,7 @@
 .Fa "size_t text_size"
 .Fc
 .Ft int
-.Fo crypto_unlock
+.Fo crypto_aead_unlock
 .Fa "uint8_t *plain_text"
 .Fa "const uint8_t mac[16]"
 .Fa "const uint8_t key[32]"

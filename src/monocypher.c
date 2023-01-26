@@ -2279,7 +2279,7 @@ static void hash_reduce(u8 h[32],
 //   h              = HASH(R || public_key || message) % L
 //   S              = ((h * a) + r) % L
 //   signature      = R || S
-void crypto_eddsa_sign(u8 signature [64], const u8 secret_key[32],
+void crypto_eddsa_sign(u8 signature [64], const u8 secret_key[64],
                        const u8 *message, size_t message_size)
 {
 	u8 a[64];  // secret scalar and prefix
@@ -2698,7 +2698,7 @@ void crypto_elligator_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
 		crypto_chacha20_djb(buf, 0, 64, buf+32, zero, 0);
 		crypto_x25519_dirty_fast(pk, buf); // or the "small" version
 	} while(crypto_elligator_rev(buf+32, pk, buf[32]));
-	// Note that the return value of crypto_curve_to_hidden() is
+	// Note that the return value of crypto_elligator_rev() is
 	// independent from its tweak parameter.
 	// Therefore, buf[32] is not actually reused.  Either we loop one
 	// more time and buf[32] is used for the new seed, or we succeeded,

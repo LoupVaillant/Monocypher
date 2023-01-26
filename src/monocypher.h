@@ -63,10 +63,6 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 extern "C" {
 #endif
 
-////////////////////////////
-/// High level interface ///
-////////////////////////////
-
 // Constant time comparisons
 // -------------------------
 
@@ -189,6 +185,7 @@ void crypto_argon2(uint8_t *hash, uint32_t hash_size, void *work_area,
                    crypto_argon2_inputs inputs,
                    crypto_argon2_extras extras);
 
+
 // Key exchange (X-25519)
 // ----------------------
 
@@ -200,25 +197,52 @@ void crypto_x25519(uint8_t       raw_shared_secret[32],
                    const uint8_t your_secret_key  [32],
                    const uint8_t their_public_key [32]);
 
+// Conversion to EdDSA
+void crypto_x25519_to_eddsa(uint8_t eddsa[32], const uint8_t x25519[32]);
 
-// Signatures (EdDSA with curve25519 + BLAKE2b)
-// --------------------------------------------
+// scalar "division"
+// Used for OPRF.  Be aware that exponential blinding is less secure
+// than Diffie-Hellman key exchange.
+void crypto_x25519_inverse(uint8_t       blind_salt [32],
+                           const uint8_t private_key[32],
+                           const uint8_t curve_point[32]);
+
+// "Dirty" versions of x25519_public_key().
+// Use with crypto_elligator_rev().
+// Leaks 3 bits of the private key.
+void crypto_x25519_dirty_small(uint8_t pk[32], const uint8_t sk[32]);
+void crypto_x25519_dirty_fast (uint8_t pk[32], const uint8_t sk[32]);
+
+
+// Signatures
+// ----------
+
+// EdDSA with curve25519 + BLAKE2b
 void crypto_eddsa_key_pair(uint8_t secret_key[64],
                            uint8_t public_key[32],
                            uint8_t seed[32]);
 void crypto_eddsa_sign(uint8_t        signature [64],
-                       const uint8_t  secret_key[32],
+                       const uint8_t  secret_key[64],
                        const uint8_t *message, size_t message_size);
 int crypto_eddsa_check(const uint8_t  signature [64],
                        const uint8_t  public_key[32],
                        const uint8_t *message, size_t message_size);
 
+// Conversion to X25519
+void crypto_eddsa_to_x25519(uint8_t x25519[32], const uint8_t eddsa[32]);
 
-////////////////////////////
-/// Low level primitives ///
-////////////////////////////
+// EdDSA building blocks
+void crypto_eddsa_trim_scalar(uint8_t out[32], const uint8_t in[32]);
+void crypto_eddsa_reduce(uint8_t reduced[32], const uint8_t expanded[64]);
+void crypto_eddsa_mul_add(uint8_t r[32],
+                          const uint8_t a[32],
+                          const uint8_t b[32],
+                          const uint8_t c[32]);
+void crypto_eddsa_scalarbase(uint8_t point[32], const uint8_t scalar[32]);
+int crypto_eddsa_check_equation(const uint8_t signature[64],
+                                const uint8_t public_key[32],
+                                const uint8_t h_ram[32]);
 
-// For experts only.  You have been warned.
 
 // Chacha20
 // --------
@@ -278,42 +302,6 @@ void crypto_poly1305_init  (crypto_poly1305_ctx *ctx, const uint8_t key[32]);
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const uint8_t *message, size_t message_size);
 void crypto_poly1305_final (crypto_poly1305_ctx *ctx, uint8_t mac[16]);
-
-
-// X-25519 extras
-// --------------
-
-// "Dirty" versions of x25519_public_key()
-// Only use to generate ephemeral keys you want to hide.
-// Note that those functions leaks 3 bits of the private key.
-void crypto_x25519_dirty_small(uint8_t pk[32], const uint8_t sk[32]);
-void crypto_x25519_dirty_fast (uint8_t pk[32], const uint8_t sk[32]);
-
-// scalar "division"
-// Used for OPRF.  Be aware that exponential blinding is less secure
-// than Diffie-Hellman key exchange.
-void crypto_x25519_inverse(uint8_t       blind_salt [32],
-                           const uint8_t private_key[32],
-                           const uint8_t curve_point[32]);
-
-
-// EdDSA building blocks
-// ---------------------
-void crypto_eddsa_trim_scalar(uint8_t out[32], const uint8_t in[32]);
-void crypto_eddsa_reduce(uint8_t reduced[32], const uint8_t expanded[64]);
-void crypto_eddsa_mul_add(uint8_t r[32],
-                          const uint8_t a[32],
-						  const uint8_t b[32],
-						  const uint8_t c[32]);
-void crypto_eddsa_scalarbase(uint8_t point[32], const uint8_t scalar[32]);
-int crypto_eddsa_check_equation(const uint8_t signature[64],
-                                const uint8_t public_key[32],
-                                const uint8_t h_ram[32]);
-
-// EdDSA <--> X25519
-// -----------------
-void crypto_eddsa_to_x25519(uint8_t x25519[32], const uint8_t eddsa[32]);
-void crypto_x25519_to_eddsa(uint8_t eddsa[32], const uint8_t x25519[32]);
 
 
 // Elligator 2
