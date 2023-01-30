@@ -286,7 +286,7 @@ void crypto_sha512(u8 hash[64], const u8 *message, size_t message_size)
 ////////////////////
 /// HMAC SHA 512 ///
 ////////////////////
-void crypto_hmac_sha512_init(crypto_hmac_sha512_ctx *ctx,
+void crypto_sha512_hmac_init(crypto_sha512_hmac_ctx *ctx,
                              const u8 *key, size_t key_size)
 {
 	// hash key if it is too long
@@ -303,13 +303,13 @@ void crypto_hmac_sha512_init(crypto_hmac_sha512_ctx *ctx,
 	crypto_sha512_update(&ctx->ctx, ctx->key, 128);
 }
 
-void crypto_hmac_sha512_update(crypto_hmac_sha512_ctx *ctx,
+void crypto_sha512_hmac_update(crypto_sha512_hmac_ctx *ctx,
                                const u8 *message, size_t message_size)
 {
 	crypto_sha512_update(&ctx->ctx, message, message_size);
 }
 
-void crypto_hmac_sha512_final(crypto_hmac_sha512_ctx *ctx, u8 hmac[64])
+void crypto_sha512_hmac_final(crypto_sha512_hmac_ctx *ctx, u8 hmac[64])
 {
 	// Finish computing inner hash
 	crypto_sha512_final(&ctx->ctx, hmac);
@@ -325,13 +325,13 @@ void crypto_hmac_sha512_final(crypto_hmac_sha512_ctx *ctx, u8 hmac[64])
 	WIPE_CTX(ctx);
 }
 
-void crypto_hmac_sha512(u8 hmac[64], const u8 *key, size_t key_size,
+void crypto_sha512_hmac(u8 hmac[64], const u8 *key, size_t key_size,
                         const u8 *message, size_t message_size)
 {
-	crypto_hmac_sha512_ctx ctx;
-	crypto_hmac_sha512_init  (&ctx, key, key_size);
-	crypto_hmac_sha512_update(&ctx, message, message_size);
-	crypto_hmac_sha512_final (&ctx, hmac);
+	crypto_sha512_hmac_ctx ctx;
+	crypto_sha512_hmac_init  (&ctx, key, key_size);
+	crypto_sha512_hmac_update(&ctx, message, message_size);
+	crypto_sha512_hmac_final (&ctx, hmac);
 }
 
 

@@ -149,12 +149,12 @@ static void sha512(vector_reader *reader)
 	crypto_sha512(out.buf, in.buf, in.size);
 }
 
-static void hmac_sha512(vector_reader *reader)
+static void sha512_hmac(vector_reader *reader)
 {
 	vector key = next_input(reader);
 	vector msg = next_input(reader);
 	vector out = next_output(reader);
-	crypto_hmac_sha512(out.buf, key.buf, key.size, msg.buf, msg.size);
+	crypto_sha512_hmac(out.buf, key.buf, key.size, msg.buf, msg.size);
 }
 
 static void argon2(vector_reader *reader)
@@ -384,7 +384,7 @@ TEST(blake2b)
 //@ ensures \result == 0;
 TEST(sha512)
 //@ ensures \result == 0;
-TEST(hmac_sha512)
+TEST(sha512_hmac)
 //@ ensures \result == 0;
 TEST(argon2)
 //@ ensures \result == 0;
@@ -410,7 +410,7 @@ int main(void) {
 	ASSERT(v_aead_ietf     () == 0);
 	ASSERT(v_blake2b       () == 0);
 	ASSERT(v_sha512        () == 0);
-	ASSERT(v_hmac_sha512   () == 0);
+	ASSERT(v_sha512_hmac   () == 0);
 	ASSERT(v_argon2        () == 0);
 	ASSERT(v_x25519        () == 0);
 	ASSERT(v_edDSA         () == 0);

@@ -9,6 +9,7 @@
 .\" ----------------------------------------------------------------------------
 .\"
 .\" Copyright (c) 2019-2020 Fabio Scotoni
+.\" Copyright (c) 2023      Loup Vaillant
 .\" All rights reserved.
 .\"
 .\"
@@ -38,7 +39,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2019-2020 by Fabio Scotoni
+.\" Written in 2019-2020, 2023 by Fabio Scotoni and Loup Vaillant
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -56,7 +57,11 @@
 .Nm crypto_sha512_init ,
 .Nm crypto_sha512_update ,
 .Nm crypto_sha512_final
-.Nd cryptographic hashing with the SHA-512 algorithm
+.Nm crypto_sha512_hmac ,
+.Nm crypto_sha512_hmac_init ,
+.Nm crypto_sha512_hmac_update ,
+.Nm crypto_sha512_hmac_final
+.Nd hashing and message authenticaton with SHA-512
 .Sh SYNOPSIS
 .In monocypher-ed25519.h
 .Ft void
@@ -80,9 +85,41 @@
 .Fa "crypto_sha512_ctx *ctx"
 .Fa "uint8_t hash[64]"
 .Fc
+.Ft void
+.Fo crypto_sha512_hmac
+.Fa "uint8_t hmac[64]"
+.Fa "const uint8_t *key"
+.Fa "size_t key_size"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft void
+.Fo crypto_sha512_hmac_init
+.Fa "crypto_sha512_hmac_ctx *ctx"
+.Fa "const uint8_t *key"
+.Fa "size_t key_size"
+.Fc
+.Ft void
+.Fo crypto_sha512_hmac_update
+.Fa "crypto_sha512_hmac_ctx *ctx"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft void
+.Fo crypto_sha512_hmac_final
+.Fa "crypto_sha512_hmac_ctx *ctx"
+.Fa "uint8_t hmac[64]"
+.Fc
 .Sh DESCRIPTION
-SHA-512 is a cryptographically secure hash,
-provided to enable compatibility with other cryptographic systems.
+.Fn crypto_sha512 ,
+.Fn crypto_sha512_init ,
+.Fn crypto_sha512_update ,
+and
+.Fn crypto_sha512_final
+implement SHA-512,
+a cryptographically secure hash.
+They are provided to enable compatibility with other cryptographic
+systems.
 It is generally recommended to use
 .Xr crypto_blake2b 3monocypher
 instead,
@@ -96,25 +133,47 @@ use the
 family of functions for that purpose instead.
 .Pp
 SHA-512 is
-.Em vulnerable to length extension attacks ;
-using it as a message authentication code (MAC) algorithm or keyed hash
-requires precautions.
-The
-.Xr crypto_hmac_sha512 3monocypher
-family of functions provides HMAC with SHA-512.
-Use
-.Xr crypto_verify64 3monocypher
-to compare MACs created this way.
+.Em vulnerable to length extension attacks ,
+and thus cannot directly be used for message authentication codes (MAC),
+nor as a random oracle.
+For those, use the
+.Fn crypto_sha512_hmac
+family of functions instead.
+.Pp
+.Fn crypto_sha512_hmac ,
+.Fn crypto_sha512_hmac_init ,
+.Fn crypto_sha512_hmac_update ,
+and
+.Fn crypto_sha512_hmac_final
+implement HMAC with SHA-512,
+and can be used as for message authentication codes
+or as a random oracle.
+They are provided to enable compatibility with other cryptographic
+systems.
+It is generally recommended to use keyed
+.Xr crypto_blake2b 3monocypher
+instead,
+as it performs faster on x86_64 CPUs.
 .Pp
 The arguments are:
 .Bl -tag -width Ds
 .It Fa hash
-The output hash,
+The output SHA-512 hash,
 which is always 64-bytes long.
+.It Fa hmac
+The output MAC,
+which is always 64-bytes long.
+When used as a message authentication code,
+it can safely be truncated down to 16 bytes.
+To avoid timing attacks,
+use
+.Xr crypto_verify16 3monocypher ,
+.Xr crypto_verify32 3monocypher ,
+or
+.Xr crypto_verify64 3monocypher
+to compare (possibly truncated) MACs.
 .It Fa message
-The message to hash.
-May overlap with
-.Fa hash .
+The message to hash, or compute the HMAC for.
 May be
 .Dv NULL
 if
@@ -124,6 +183,19 @@ is 0.
 Length of
 .Fa message ,
 in bytes.
+.It Fa key
+Some secret key.
+One cannot predict the final HMAC without it.
+Users may want to wipe the key with
+.Xr crypto_wipe 3monocypher
+once they are done with it.
+.It Fa key_size
+Length of
+.Fa key ,
+in bytes.
+32 is a good default.
+Keys longer than 128 bytes will be reduced to 64 bytes by hashing
+the key with SHA-512.
 .El
 .Pp
 An incremental interface is provided.
@@ -133,19 +205,27 @@ This interface uses three steps:
 .Bl -bullet
 .It
 initialisation with
-.Fn crypto_sha512_init ,
+.Fn crypto_sha512_init
+or
+.Fn crypto_sha512_hmac_init ,
 which sets up a context with the hashing parameters;
 .It
 update with
-.Fn crypto_sha512_update ,
+.Fn crypto_sha512_update
+or
+.Fn crypto_sha512_hmac_update ,
 which hashes the message chunk by chunk and keeps the intermediary
 result in the context;
 .It
 and finalisation with
-.Fn crypto_sha512_final ,
+.Fn crypto_sha512_final
+or
+.Fn crypto_sha512_hmac_final ,
 which produces the final hash.
 The
 .Ft crypto_sha512_ctx
+or
+.Ft crypto_sha512_hmac_ctx
 is automatically wiped upon finalisation.
 .El
 .Pp
@@ -156,6 +236,14 @@ performs
 .Fn crypto_sha512_update ,
 and
 .Fn crypto_sha512_final .
+.Pp
+.Fn crypto_sha512_hmac
+is a convenience function that
+performs
+.Fn crypto_sha512_hmac_init ,
+.Fn crypto_sha512_hmac_update ,
+and
+.Fn crypto_sha512_hmac_final .
 .Sh RETURN VALUES
 These functions return nothing.
 .Sh EXAMPLES
@@ -177,14 +265,47 @@ for (size_t i = 0; i < 500; i += 100) {
 }
 crypto_sha512_final(&ctx, hash);
 .Ed
+.Pp
+Computing a message authentication code all at once:
+.Bd -literal -offset indent
+uint8_t hash   [64];                /* Output hash             */
+uint8_t key    [32];                /* Key                     */
+uint8_t message[10] = "Lorem ipsu"; /* Message to authenticate */
+arc4random_buf(key, 32);
+crypto_sha512_hmac(hash, key, 32, message, 10);
+/* Wipe secrets if they are no longer needed */
+crypto_wipe(message, 10);
+crypto_wipe(key, 32);
+.Ed
+.Pp
+Computing a message authentication code incrementally:
+.Bd -literal -offset indent
+uint8_t hash   [64];        /* Output hash             */
+uint8_t key    [32];        /* Key                     */
+uint8_t message[500] = {1}; /* Message to authenticate */
+crypto_sha512_hmac_ctx ctx;
+arc4random_buf(key, 32);
+crypto_sha512_hmac_init(&ctx, key, 32);
+/* Wipe the key */
+crypto_wipe(key, 32);
+for (size_t i = 0; i < 500; i += 100) {
+    crypto_sha512_hmac_update(&ctx, message + i, 100);
+    /* Wipe secrets if they are no longer needed */
+    crypto_wipe(message + i, 100);
+}
+crypto_sha512_hmac_final(&ctx, hash);
+.Ed
 .Sh SEE ALSO
 .Xr crypto_blake2b 3monocypher ,
-.Xr crypto_hmac_sha512 3monocypher ,
 .Xr crypto_lock 3monocypher ,
+.Xr crypto_poly1305 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement SHA-512, described in RFC 6234 and
-the Federal Information Processing Standard (FIPS) 180-4.
+These functions implement SHA-512 and HMAC with SHA-512.
+HMAC and SHA-512 are described in RFC 6234;
+SHA-512 is also described in the Federal Information Processing Standard
+(FIPS) 180-4;
+HMAC is also described in FIPS 198-1.
 .Sh HISTORY
 The
 .Fn crypto_sha512 ,
@@ -196,6 +317,21 @@ functions first appeared in Monocypher 0.3,
 but were not intended for use outside Monocypher itself and thus
 undocumented.
 They became part of the official API in Monocypher 3.0.0.
+.Pp
+The
+.Fn crypto_hmac_sha512 ,
+.Fn crypto_hmac_sha512_init ,
+.Fn crypto_hmac_sha512_update ,
+and
+.Fn crypto_hmac_sha512_final
+functions first appeared in Monocypher 3.0.0,
+then renamed
+.Fn crypto_sha512_hmac ,
+.Fn crypto_sha512_hmac_init ,
+.Fn crypto_sha512_hmac_update ,
+and
+.Fn crypto_sha512_hmac_final
+in Monocypher 4.0.0.
 .Sh SECURITY CONSIDERATIONS
 SHA-512 is a general-purpose cryptographic hash function;
 this means that it is not suited for hashing passwords and deriving

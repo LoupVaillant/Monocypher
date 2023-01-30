@@ -617,10 +617,27 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
 		blake2b_set_input(ctx, 0, i);
 	}
 	blake2b_compress(ctx, 1); // compress the last block
-	size_t nb_words = ctx->hash_size >> 3;
+	size_t hash_size = MIN(ctx->hash_size, 64);
+	size_t nb_words  = hash_size >> 3;
 	store64_le_buf(hash, ctx->hash, nb_words);
-	FOR (i, nb_words << 3, ctx->hash_size) {
+	FOR (i, nb_words << 3, hash_size) {
 		hash[i] = (ctx->hash[i >> 3] >> (8 * (i & 7))) & 0xff;
+	}
+
+	// Expand the hash if it exceeds 64 bytes
+	if (ctx->hash_size > 64) {
+		u8 block[128] = {0};
+		COPY(block + 16, hash, 64);
+		store64_le(block + 8, (u64)(ctx->hash_size));
+		u64 ctr = 0;
+		while (ctx->hash_size > 0) {
+			crypto_blake2b_config config = { 0, 0, MIN(ctx->hash_size, 64) };
+			store64_le(block, ctr);
+			crypto_blake2b(hash, config, block, 128);
+			hash           += config.hash_size;
+			ctx->hash_size -= config.hash_size;
+			ctr++;
+		}
 	}
 	WIPE_CTX(ctx);
 }
@@ -633,6 +650,107 @@ void crypto_blake2b(u8 *hash, crypto_blake2b_config config,
 	crypto_blake2b_update(&ctx, message, message_size);
 	crypto_blake2b_final (&ctx, hash);
 }
+
+void crypto_blake2_kdf(uint8_t       *okm, size_t okm_size,   // unlimited
+                       const uint8_t *ikm, size_t ikm_size,   // unlimited
+                       const uint8_t *salt, size_t salt_size, // <= 64 bytes
+                       const uint8_t *info, size_t info_size) // unlimited
+{
+	// Extract
+	uint8_t prk[64];
+	crypto_blake2b_config config = {
+		.key       = salt,
+		.key_size  = salt_size,
+		.hash_size = 64,
+	};
+	crypto_blake2b(prk, config, ikm, ikm_size);
+
+	// Expand
+	uint64_t ctr = 0;
+	while (okm_size > 0) {
+		size_t hash_size = MIN(okm_size, 64);
+		crypto_blake2b_config config = {
+			.key       = salt,
+			.key_size  = salt_size,
+			.hash_size = hash_size,
+		};
+		uint8_t ctr_buf[8];
+		store64_le(ctr_buf, ctr);
+		crypto_blake2b_ctx ctx;
+		crypto_blake2b_init  (&ctx, config);
+		crypto_blake2b_update(&ctx, info, info_size);
+		crypto_blake2b_update(&ctx, ctr_buf, sizeof(ctr_buf));
+		crypto_blake2b_final (&ctx, okm);
+		okm      += hash_size;
+		okm_size -= hash_size;
+		ctr++;
+	}
+}
+
+void crypto_blake2_kdf_expand_step(
+	uint8_t       *okm,  size_t okm_size,  // <= 64 bytes
+	const uint8_t *prk,  size_t prk_size,  // <= 64 bytes
+	const uint8_t *info, size_t info_size, // unlimited
+	uint64_t ctr)
+{
+	crypto_blake2b_config config = {
+		.key       = prk,
+		.key_size  = prk_size,
+		.hash_size = okm_size,
+	};
+	uint8_t ctr_buf[8];
+	store64_le(ctr_buf, ctr);
+	crypto_blake2b_ctx ctx;
+	crypto_blake2b_init  (&ctx, config);
+	crypto_blake2b_update(&ctx, info, info_size);
+	crypto_blake2b_update(&ctx, ctr_buf, sizeof(ctr_buf));
+	crypto_blake2b_final (&ctx, okm);
+}
+
+void crypto_blake2_kdf_expand_step2(
+	uint8_t       *okm,  size_t okm_size,  // <=  64 bytes
+	const uint8_t *prk,  size_t prk_size,  // <=  64 bytes
+	const uint8_t *info, size_t info_size, // <= 120 bytes
+	uint64_t ctr)
+{
+	crypto_blake2b_config config = {
+		.key       = prk,
+		.key_size  = prk_size,
+		.hash_size = okm_size,
+	};
+	uint8_t block[128] = { 0 };
+	store64_le(block, ctr);
+	COPY(block + 8, info, info_size);
+	crypto_blake2b(okm, config, block, sizeof(block));
+}
+
+void crypto_blake2_kdf2(uint8_t       *okm, size_t okm_size,   // unlimited
+                        const uint8_t *ikm, size_t ikm_size,   // unlimited
+                        const uint8_t *salt, size_t salt_size, // <= 64 bytes
+                        const uint8_t *info, size_t info_size) // unlimited?
+{
+	// Extract
+	uint8_t prk[64];
+	crypto_blake2b_config config = {
+		.key       = salt,
+		.key_size  = salt_size,
+		.hash_size = 64,
+	};
+	crypto_blake2b(prk, config, ikm, ikm_size);
+
+	// Expand
+	uint64_t ctr = 0;
+	while (okm_size > 0) {
+		size_t hash_size = MIN(okm_size, 64);
+		crypto_blake2_kdf_expand_step( // or step2
+			okm, hash_size, prk, sizeof(prk), info, info_size, ctr);
+		okm      += hash_size;
+		okm_size -= hash_size;
+		ctr++;
+	}
+}
+
+
 
 //////////////
 /// Argon2 ///

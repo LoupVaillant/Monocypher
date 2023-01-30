@@ -78,7 +78,7 @@ typedef struct {
 typedef struct {
 	uint8_t key[128];
 	crypto_sha512_ctx ctx;
-} crypto_hmac_sha512_ctx;
+} crypto_sha512_hmac_ctx;
 
 
 // SHA 512
@@ -91,14 +91,14 @@ void crypto_sha512(uint8_t hash[64],
                    const uint8_t *message, size_t message_size);
 
 
-// HMAC SHA 512
+// SHA 512 HMAC
 // ------------
-void crypto_hmac_sha512_init(crypto_hmac_sha512_ctx *ctx,
+void crypto_sha512_hmac_init(crypto_sha512_hmac_ctx *ctx,
                              const uint8_t *key, size_t key_size);
-void crypto_hmac_sha512_update(crypto_hmac_sha512_ctx *ctx,
+void crypto_sha512_hmac_update(crypto_sha512_hmac_ctx *ctx,
                                const uint8_t *message, size_t  message_size);
-void crypto_hmac_sha512_final(crypto_hmac_sha512_ctx *ctx, uint8_t hmac[64]);
-void crypto_hmac_sha512(uint8_t hmac[64],
+void crypto_sha512_hmac_final(crypto_sha512_hmac_ctx *ctx, uint8_t hmac[64]);
+void crypto_sha512_hmac(uint8_t hmac[64],
                         const uint8_t *key    , size_t key_size,
                         const uint8_t *message, size_t message_size);
 

@@ -56,7 +56,7 @@ CFLAGS = -pedantic -Wall -Wextra
 
 VEC     = chacha20  hchacha20  xchacha20     ietf_chacha20                \
           aead_ietf aead_8439                                             \
-          poly1305  blake2b    sha512        hmac_sha512   argon2         \
+          poly1305  blake2b    sha512        sha512_hmac   argon2         \
           edDSA     edDSA_pk   ed_25519      ed_25519_pk   ed_25519_check \
           ed_25519ph                                                      \
           x25519    x25519_pk  elligator_inv elligator_dir
@@ -118,7 +118,7 @@ aead_ietf.all.vec     : aead_ietf.vec
 aead_8439.all.vec     : aead_8439.vec
 blake2b.all.vec       : blake2b.vec       vectors/blake2b
 sha512.all.vec        : sha512.vec
-hmac_sha512.all.vec   : hmac_sha512.vec   vectors/hmac_sha512
+sha512_hmac.all.vec   : sha512_hmac.vec   vectors/sha512_hmac
 argon2.all.vec        : argon2.vec       vectors/argon2
 edDSA.all.vec         : edDSA.vec
 edDSA_pk.all.vec      : edDSA_pk.vec
