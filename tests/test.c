@@ -468,10 +468,23 @@ static void sha512_hmac(vector_reader *reader)
 	crypto_sha512_hmac(out.buf, key.buf, key.size, msg.buf, msg.size);
 }
 
+static void sha512_hkdf(vector_reader *reader)
+{
+	vector ikm  = next_input(reader);
+	vector salt = next_input(reader);
+	vector info = next_input(reader);
+	vector okm  = next_output(reader);
+	crypto_sha512_hkdf(okm .buf, okm .size,
+	                   ikm .buf, ikm .size,
+	                   salt.buf, salt.size,
+	                   info.buf, info.size);
+}
+
 static void test_sha512()
 {
 	VECTORS(sha512);
 	VECTORS(sha512_hmac);
+	VECTORS(sha512_hkdf);
 
 	printf("\tSHA-512 (incremental)\n");
 #undef INPUT_SIZE

@@ -60,8 +60,10 @@
 .Nm crypto_sha512_hmac ,
 .Nm crypto_sha512_hmac_init ,
 .Nm crypto_sha512_hmac_update ,
-.Nm crypto_sha512_hmac_final
-.Nd hashing and message authenticaton with SHA-512
+.Nm crypto_sha512_hmac_final ,
+.Nm crypto_sha512_hkdf ,
+.Nm crypto_sha512_hkdf_expand
+.Nd hashing, message authentication, and key derivation with SHA-512
 .Sh SYNOPSIS
 .In monocypher-ed25519.h
 .Ft void
@@ -110,7 +112,28 @@
 .Fa "crypto_sha512_hmac_ctx *ctx"
 .Fa "uint8_t hmac[64]"
 .Fc
+.Fo crypto_sha512_hkdf
+.Fa "uint8_t *okm"
+.Fa "size_t okm_size"
+.Fa "const uint8_t *ikm"
+.Fa "size_t ikm_size"
+.Fa "const uint8_t *salt"
+.Fa "size_t salt_size"
+.Fa "const uint8_t *info"
+.Fa "size_t info_size"
+.Fc
+.Ft void
+.Fo crypto_sha512_hkdf_expand
+.Fa "uint8_t *okm"
+.Fa "size_t okm_size"
+.Fa "const uint8_t *prk"
+.Fa "size_t prk_size"
+.Fa "const uint8_t *info"
+.Fa "size_t info_size"
+.Fc
+.Ft void
 .Sh DESCRIPTION
+.Ss Hashing
 .Fn crypto_sha512 ,
 .Fn crypto_sha512_init ,
 .Fn crypto_sha512_update ,
@@ -140,6 +163,24 @@ For those, use the
 .Fn crypto_sha512_hmac
 family of functions instead.
 .Pp
+The arguments are:
+.Bl -tag -width Ds
+.It Fa hash
+The output SHA-512 hash,
+which is always 64-bytes long.
+.It Fa message
+The message to hash.
+May be
+.Dv NULL
+if
+.Fa message_size
+is 0.
+.It Fa message_size
+Length of
+.Fa message ,
+in bytes.
+.El
+.Ss Message authentication codes
 .Fn crypto_sha512_hmac ,
 .Fn crypto_sha512_hmac_init ,
 .Fn crypto_sha512_hmac_update ,
@@ -157,9 +198,6 @@ as it performs faster on x86_64 CPUs.
 .Pp
 The arguments are:
 .Bl -tag -width Ds
-.It Fa hash
-The output SHA-512 hash,
-which is always 64-bytes long.
 .It Fa hmac
 The output MAC,
 which is always 64-bytes long.
@@ -172,23 +210,18 @@ use
 or
 .Xr crypto_verify64 3monocypher
 to compare (possibly truncated) MACs.
-.It Fa message
-The message to hash, or compute the HMAC for.
-May be
-.Dv NULL
-if
-.Fa message_size
-is 0.
-.It Fa message_size
-Length of
-.Fa message ,
-in bytes.
 .It Fa key
 Some secret key.
-One cannot predict the final HMAC without it.
+When uniformly random,
+one cannot predict the final HMAC without it.
 Users may want to wipe the key with
 .Xr crypto_wipe 3monocypher
 once they are done with it.
+Also stands for the
+.Fa salt
+argument when using
+.Fn crypto_sha512_hmac
+for HKDF extraction.
 .It Fa key_size
 Length of
 .Fa key ,
@@ -196,8 +229,131 @@ in bytes.
 32 is a good default.
 Keys longer than 128 bytes will be reduced to 64 bytes by hashing
 the key with SHA-512.
+.It Fa message
+The message to compute the HMAC for.
+May be
+.Dv NULL
+if
+.Fa message_size
+is 0.
+Also stands for the
+.Fa ikm
+argument when using
+.Fn crypto_sha512_hmac
+for HKDF extraction.
+.It Fa message_size
+Length of
+.Fa message ,
+in bytes.
 .El
+.Ss Key derivation
+.Fn crypto_sha512_hkdf
+and
+.Fn crypto_sha512_hkdf_expand
+implement HKDF key derivation on top of SHA-512.
+HKDF is divided in two phases:
+first we
+.Em extract
+entropy from some input key material to produce a
+.Em pseudo-random key
+(PRK) which is indistinguishable from uniform random bytes.
+Then we
+.Em expand
+that pseudo-random key into a longer stream of independent random bytes
+called
+.Em output key material
+(OKM).
 .Pp
+HKDF extraction is already implemented in
+.Fn crypto_sha512_hmac ,
+so there is no dedicated function.
+HKDF expansion is implemented by
+.Fn crypto_sha512_hkdf_expand .
+Note that expansion works with any uniformly random key,
+the PRK does not have to come from
+.Fn crypto_sha512_hmac
+specifically.
+Likewise,
+if compatibility or standard compliance is not an issue,
+expansion could in principle use any pseudo-random function,
+such as
+.Xr crypto_chacha20_djb 3monocypher .
+.Pp
+.Fn crypto_sha512_hkdf
+is a convenience function that performs
+.Fn crypto_sha512_hmac
+and
+.Fn crypto_sha512_hkdf_expand .
+.Pp
+Contrary to most functions in Monocypher,
+the inputs of
+.Fn crypto_sha512_hkdf
+and
+.Fn crypto_sha512_hkdf_expand
+.Em cannot overlap
+with their output.
+The unlimited size of both inputs and output prevents us from from
+caching one of them in a local variable.
+.Pp
+The arguments are:
+.Bl -tag -width Ds
+.It Fa okm
+The output key material of HKDF or HKDF expansion,
+usable as a symmetric encryption key,
+or set thereof.
+.It Fa okm_size
+Length of
+.Fa okm ,
+in bytes.
+.It Fa ikm
+Input key material containing enough secret entropy to derive uniformly
+random keys from,
+such as the shared secret of a key exchange performed with
+.Xr crypto_x25519 3monocypher .
+Passwords do
+.Sy not
+contain enough entropy to be used as input key material.
+Hash them with
+.Xr crypto_argon2 3monocypher
+instead.
+.It Fa ikm_size
+Length of
+.Fa ikm ,
+in bytes.
+.It Fa prk
+Pseudo-random key.
+Typically comes from an HKDF extraction with
+.Fn crypto_sha512_hmac ,
+but can come from any source as long as it is uniformly random.
+Should be at least 32 bytes long.
+.It Fa prk_size
+Length of
+.Fa prk ,
+in bytes.
+.It Fa salt
+An optional random salt,
+used to increase the security of the output key material
+.Fa okm
+in some settings.
+Can be NULL if
+.Fa salt_size
+is zero.
+Otherwise it should contain at least 16 bytes.
+.It Fa salt_size
+Length of
+.Fa salt,
+in bytes.
+.It Fa info
+Optional domain separation string for key derivation.
+Can be NULL if
+.Fa info_size
+is zero.
+.It Fa info_size
+Length of
+.Fa info ,
+in bytes.
+.El
+.Ss Incremental interface
 An incremental interface is provided.
 It is useful for handling streams of data or
 large files without using too much memory.
@@ -295,17 +451,68 @@ for (size_t i = 0; i < 500; i += 100) {
 }
 crypto_sha512_hmac_final(&ctx, hash);
 .Ed
+.Pp
+Deriving keys from input key material:
+.Bd -literal -offset indent
+uint8_t okm[128];                 /* Output random keys */
+uint8_t ikm [96];                 /* Input key material */
+uint8_t salt[16];                 /* Random salt        */
+uint8_t info[11] = "Lorem ipsum"; /* Domain separation  */
+arc4random_buf(salt, sizeof(salt));
+crypto_sha512_hkdf(okm, sizeof(okm),
+                   ikm, sizeof(ikm),
+                   salt, sizeof(salt),
+                   info, sizeof(info));
+uint8_t *key1 = okm +  0;
+uint8_t *key2 = okm + 32;
+uint8_t *key3 = okm + 64;
+uint8_t *key4 = okm + 96;
+/* Wipe okm when it is no longer needed */
+.Ed
+.Pp
+Deriving keys from several bits of input key material:
+.Bd -literal -offset indent
+uint8_t okm [96];            /* Output secret keys        */
+uint8_t pk_a[32];            /* Alice public X25519 key   */
+uint8_t pk_b[32];            /* Bob   public X25519 key   */
+uint8_t skab[32];            /* Alice & bob shared secret */
+uint8_t ikm [96];            /* Input key material        */
+uint8_t salt[16];            /* Random salt               */
+uint8_t info[ 6] = "X25519"; /* Domain separation         */
+arc4random_buf(salt, sizeof(salt));
+
+/* Extract */
+uint8_t prk[64];             /* pseudo-random key         */
+crypto_sha512_hmac_ctx ctx;
+crypto_sha512_hmac_init  (&ctx);
+crypto_sha512_hmac_update(&ctx, pk_a);
+crypto_sha512_hmac_update(&ctx, pk_b);
+crypto_sha512_hmac_update(&ctx, skab);
+crypto_sha512_hmac_final (&ctx, prk);
+
+/* Expand */
+crypto_sha512_hkdf_expand(okm, sizeof(okm),
+                          prk, sizeof(prk),
+                          info, sizeof(info));
+uint8_t *key1 = okm +  0;
+uint8_t *key2 = okm + 32;
+uint8_t *key3 = okm + 64;
+/* Wipe okm when it is no longer needed */
+.Ed
 .Sh SEE ALSO
 .Xr crypto_blake2b 3monocypher ,
 .Xr crypto_lock 3monocypher ,
 .Xr crypto_poly1305 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-These functions implement SHA-512 and HMAC with SHA-512.
+These functions implement SHA-512,
+HMAC with SHA-512,
+and HKDF with SHA-512.
 HMAC and SHA-512 are described in RFC 6234;
 SHA-512 is also described in the Federal Information Processing Standard
 (FIPS) 180-4;
 HMAC is also described in FIPS 198-1.
+HKDF is described in RFC 5869.
 .Sh HISTORY
 The
 .Fn crypto_sha512 ,
@@ -332,6 +539,11 @@ then renamed
 and
 .Fn crypto_sha512_hmac_final
 in Monocypher 4.0.0.
+.Pp
+.Fn crypto_sha512_hkdf
+and
+.Fn crypto_sha512_hkdf_expand
+were added in Monocypher 4.0.0.
 .Sh SECURITY CONSIDERATIONS
 SHA-512 is a general-purpose cryptographic hash function;
 this means that it is not suited for hashing passwords and deriving
@@ -347,3 +559,15 @@ computationally difficult hashing algorithms.
 Monocypher therefore provides
 .Xr crypto_argon2i 3monocypher
 for password hashing and deriving keys from passwords.
+.Pp
+While HKDF and HMAC are proper key derivation functions (KDF),
+the HKDF expand step alone is
+.Em not .
+It is a
+.Em pseudo-random function
+(PRF),
+that only works with a
+.Em uniformly
+random key.
+We cannot simply input regular (non uniform) input key material
+without making unusually strong assumptions about the security of HMAC.

@@ -102,6 +102,15 @@ void crypto_sha512_hmac(uint8_t hmac[64],
                         const uint8_t *key    , size_t key_size,
                         const uint8_t *message, size_t message_size);
 
+// SHA 512 HKDF
+// ------------
+void crypto_sha512_hkdf_expand(uint8_t       *okm,  size_t okm_size,
+                               const uint8_t *prk,  size_t prk_size,
+                               const uint8_t *info, size_t info_size);
+void crypto_sha512_hkdf(uint8_t       *okm , size_t okm_size,
+                        const uint8_t *ikm , size_t ikm_size,
+                        const uint8_t *salt, size_t salt_size,
+                        const uint8_t *info, size_t info_size);
 
 // Ed25519
 // -------

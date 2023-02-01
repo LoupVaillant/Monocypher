@@ -54,12 +54,12 @@ CFLAGS = -pedantic -Wall -Wextra
 
 .PHONY: all clean
 
-VEC     = chacha20  hchacha20  xchacha20     ietf_chacha20                \
-          aead_ietf aead_8439                                             \
-          poly1305  blake2b    sha512        sha512_hmac   argon2         \
-          edDSA     edDSA_pk   ed_25519      ed_25519_pk   ed_25519_check \
-          ed_25519ph                                                      \
-          x25519    x25519_pk  elligator_inv elligator_dir
+VEC     = chacha20 hchacha20 xchacha20 ietf_chacha20             \
+          aead_ietf aead_8439                                    \
+          poly1305 blake2b sha512 sha512_hmac sha512_hkdf argon2 \
+          edDSA edDSA_pk ed_25519 ed_25519_pk ed_25519_check     \
+          ed_25519ph                                             \
+          x25519 x25519_pk elligator_inv elligator_dir
 VEC2    = $(patsubst %, %.all.vec, $(VEC))
 HEADERS = $(patsubst %, %.h.vec  , $(VEC))
 VECTORS = ../vectors.h
@@ -74,7 +74,8 @@ elligator_inv.vec: elligator-inverse.py elligator.py elligator_scalarmult.py
 	./$< >$@
 elligator_dir.vec: elligator-direct.py elligator.py
 	./$< >$@
-
+sha512_hkdf.vec: sha512_hkdf.py
+	./$< >$@
 %.vec: %.out
 	./$< > $@
 
@@ -119,7 +120,8 @@ aead_8439.all.vec     : aead_8439.vec
 blake2b.all.vec       : blake2b.vec       vectors/blake2b
 sha512.all.vec        : sha512.vec
 sha512_hmac.all.vec   : sha512_hmac.vec   vectors/sha512_hmac
-argon2.all.vec        : argon2.vec       vectors/argon2
+sha512_hkdf.all.vec   : sha512_hkdf.vec
+argon2.all.vec        : argon2.vec        vectors/argon2
 edDSA.all.vec         : edDSA.vec
 edDSA_pk.all.vec      : edDSA_pk.vec
 ed_25519.all.vec      : ed_25519.vec

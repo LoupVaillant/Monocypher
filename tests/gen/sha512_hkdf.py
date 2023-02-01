@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /usr/bin/env python3
 
 # This file is dual-licensed.  Choose whichever licence you want from
 # the two licences listed below.
@@ -11,7 +11,7 @@
 #
 # ------------------------------------------------------------------------
 #
-# Copyright (c) 2020, Loup Vaillant
+# Copyright (c) 2023, Loup Vaillant
 # All rights reserved.
 #
 #
@@ -41,7 +41,7 @@
 #
 # ------------------------------------------------------------------------
 #
-# Written in 2020 by Loup Vaillant
+# Written in 2023 by Loup Vaillant
 #
 # To the extent possible under law, the author(s) have dedicated all copyright
 # and related neighboring rights to this software to the public domain
@@ -51,63 +51,59 @@
 # with this software.  If not, see
 # <https://creativecommons.org/publicdomain/zero/1.0/>
 
-DIR=$(dirname "$0")
-TIS_CONFIG=$DIR/../tis.config
+from binascii                                import hexlify
+from cryptography.hazmat.primitives.hashes   import SHA512
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from random                                  import randrange
+from random                                  import seed
 
-echo "// auto generated with $0" > $TIS_CONFIG
-echo "[" >> $TIS_CONFIG
+seed(12345) # deterministic test vectors
 
-for entry_point in      \
-    "v_chacha20"        \
-    "v_ietf_chacha20"   \
-    "v_hchacha20"       \
-    "v_xchacha20"       \
-    "v_poly1305"        \
-    "v_aead_ietf"       \
-    "v_blake2b"         \
-    "v_sha512"          \
-    "v_sha512_hmac"     \
-    "v_sha512_hkdf"     \
-    "v_argon2"          \
-    "v_edDSA"           \
-    "v_ed_25519"        \
-    "v_ed_25519_check"  \
-    "v_elligator_dir"   \
-    "v_elligator_inv"   \
-    "p_eddsa_x25519"    \
-    "p_dirty"           \
-    "p_x25519_inverse"  \
-    "p_verify16"        \
-    "p_verify32"        \
-    "p_verify64"
-do
-    for platform in   \
-        "sparc_32"    \
-        "x86_32"      \
-        "x86_16"      \
-        "x86_win64"   \
-        "armeb_eabi"  \
-        "arm_eabi"    \
-        "aarch64"     \
-        "rv64ifdq"    \
-        "mips_64"     \
-        "ppc_64"
-    do
-        echo '{ "name"          :' "\"$entry_point - $platform\"" >> $TIS_CONFIG
-        echo ', "files"         :'                                >> $TIS_CONFIG
-        echo '  [ "src/monocypher.c"'                             >> $TIS_CONFIG
-        echo '  , "src/optional/monocypher-ed25519.c"'            >> $TIS_CONFIG
-        echo '  , "tests/utils.c"'                                >> $TIS_CONFIG
-        echo '  , "tests/tis-ci.c"'                               >> $TIS_CONFIG
-        echo '  ]'                                                >> $TIS_CONFIG
-        echo ', "cpp-extra-args": "-Isrc -Isrc/optional -Itests"' >> $TIS_CONFIG
-        echo ', "machdep"       :' "\"$platform\""                >> $TIS_CONFIG
-        echo ', "no-results"    : true'                           >> $TIS_CONFIG
-        echo ', "main"          :' "\"$entry_point\""             >> $TIS_CONFIG
-        echo '},'                                                 >> $TIS_CONFIG
-    done
-done
-sed -i '$ d' $TIS_CONFIG
+def rand_buf(size):
+    buf = bytearray(size)
+    for i in range(size):
+        buf[i] = randrange(0, 256)
+    return bytes(buf)
 
-echo "}" >> $TIS_CONFIG
-echo "]" >> $TIS_CONFIG
+def vectors(ikm_size, salt_size, info_size, okm_size):
+    ikm  = rand_buf(ikm_size)
+    salt = rand_buf(salt_size)
+    info = rand_buf(info_size)
+    okm  = HKDF(
+        algorithm = SHA512(),
+        length    = okm_size,
+        salt      = salt,
+        info      = info,
+    ).derive(ikm)
+    print(hexlify(ikm ).decode() + ":")
+    print(hexlify(salt).decode() + ":")
+    print(hexlify(info).decode() + ":")
+    print(hexlify(okm ).decode() + ":")
+
+vectors(0, 0, 0, 0)
+vectors(0, 0, 0, 64)
+
+vectors(32, 16, 8, 63)
+vectors(32, 16, 8, 64)
+vectors(32, 16, 8, 65)
+vectors(32, 16, 8, 127)
+vectors(32, 16, 8, 128)
+vectors(32, 16, 8, 129)
+
+vectors(32, 16, 8, 128)
+
+vectors(127, 16, 8, 128)
+vectors(128, 16, 8, 128)
+vectors(129, 16, 8, 128)
+
+vectors(32, 127, 8, 128)
+vectors(32, 128, 8, 128)
+vectors(32, 129, 8, 128)
+
+vectors(32, 16, 127, 128)
+vectors(32, 16, 128, 128)
+vectors(32, 16, 129, 128)
+
+vectors(127, 127, 127, 127)
+vectors(128, 128, 128, 128)
+vectors(129, 129, 129, 129)

@@ -157,6 +157,18 @@ static void sha512_hmac(vector_reader *reader)
 	crypto_sha512_hmac(out.buf, key.buf, key.size, msg.buf, msg.size);
 }
 
+static void sha512_hkdf(vector_reader *reader)
+{
+	vector ikm  = next_input(reader);
+	vector salt = next_input(reader);
+	vector info = next_input(reader);
+	vector okm  = next_output(reader);
+	crypto_sha512_hkdf(okm .buf, okm .size,
+	                   ikm .buf, ikm .size,
+	                   salt.buf, salt.size,
+	                   info.buf, info.size);
+}
+
 static void argon2(vector_reader *reader)
 {
 	crypto_argon2_config config;
@@ -386,6 +398,8 @@ TEST(sha512)
 //@ ensures \result == 0;
 TEST(sha512_hmac)
 //@ ensures \result == 0;
+TEST(sha512_hkdf)
+//@ ensures \result == 0;
 TEST(argon2)
 //@ ensures \result == 0;
 TEST(x25519)
@@ -411,6 +425,7 @@ int main(void) {
 	ASSERT(v_blake2b       () == 0);
 	ASSERT(v_sha512        () == 0);
 	ASSERT(v_sha512_hmac   () == 0);
+	ASSERT(v_sha512_hkdf   () == 0);
 	ASSERT(v_argon2        () == 0);
 	ASSERT(v_x25519        () == 0);
 	ASSERT(v_edDSA         () == 0);

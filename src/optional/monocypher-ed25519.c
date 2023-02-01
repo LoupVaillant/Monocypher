@@ -334,6 +334,53 @@ void crypto_sha512_hmac(u8 hmac[64], const u8 *key, size_t key_size,
 	crypto_sha512_hmac_final (&ctx, hmac);
 }
 
+////////////////////
+/// HKDF SHA 512 ///
+////////////////////
+void crypto_sha512_hkdf_expand(u8       *okm,  size_t okm_size,
+                               const u8 *prk,  size_t prk_size,
+                               const u8 *info, size_t info_size)
+{
+	int not_first = 0;
+	u8 ctr = 1;
+	u8 blk[64];
+
+	while (okm_size > 0) {
+		size_t out_size = MIN(okm_size, sizeof(blk));
+
+		crypto_sha512_hmac_ctx ctx;
+		crypto_sha512_hmac_init(&ctx, prk , prk_size);
+		if (not_first) {
+			// For some reason HKDF uses some kind of CBC mode.
+			// For some reason CTR mode alone wasn't enough.
+			// Like what, they didn't trust HMAC in 2010?  Really??
+			crypto_sha512_hmac_update(&ctx, blk , sizeof(blk));
+		}
+		crypto_sha512_hmac_update(&ctx, info, info_size);
+		crypto_sha512_hmac_update(&ctx, &ctr, 1);
+		crypto_sha512_hmac_final(&ctx, blk);
+
+		COPY(okm, blk, out_size);
+
+		not_first = 1;
+		okm      += 64;
+		okm_size -= out_size;
+		ctr++;
+	}
+}
+
+void crypto_sha512_hkdf(u8       *okm , size_t okm_size,
+                        const u8 *ikm , size_t ikm_size,
+                        const u8 *salt, size_t salt_size,
+                        const u8 *info, size_t info_size)
+{
+	// Extract
+	u8 prk[64];
+	crypto_sha512_hmac(prk, salt, salt_size, ikm, ikm_size);
+
+	// Expand
+	crypto_sha512_hkdf_expand(okm, okm_size, prk, sizeof(prk), info, info_size);
+}
 
 ///////////////
 /// Ed25519 ///
