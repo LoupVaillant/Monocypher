@@ -538,55 +538,65 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 	ctx->hash[6] ^= v6 ^ v14;  ctx->hash[7] ^= v7 ^ v15;
 }
 
-static void blake2b_set_input(crypto_blake2b_ctx *ctx, u8 input, size_t index)
-{
-	if (index == 0) {
-		ZERO(ctx->input, 16);
-	}
-	size_t word = index >> 3;
-	size_t byte = index & 7;
-	ctx->input[word] |= (u64)input << (byte << 3);
-}
-
-// Defaults are no key, 64 byte hash
-const crypto_blake2b_config crypto_blake2b_defaults = { 0, 0, 64 };
-
-void crypto_blake2b_init(crypto_blake2b_ctx *ctx, crypto_blake2b_config config)
+void crypto_blake2b_keyed_init(crypto_blake2b_ctx *ctx, size_t hash_size,
+                               const u8 *key, size_t key_size)
 {
 	// initial hash
 	COPY(ctx->hash, iv, 8);
-	ctx->hash[0] ^= 0x01010000 ^ (config.key_size << 8) ^ config.hash_size;
+	ctx->hash[0] ^= 0x01010000 ^ (key_size << 8) ^ hash_size;
 
 	ctx->input_offset[0] = 0;  // beginning of the input, no offset
 	ctx->input_offset[1] = 0;  // beginning of the input, no offset
-	ctx->hash_size       = config.hash_size;
+	ctx->hash_size       = hash_size;
 	ctx->input_idx       = 0;
+	ZERO(ctx->input, 16);
 
 	// if there is a key, the first block is that key (padded with zeroes)
-	if (config.key_size > 0) {
+	if (key_size > 0) {
 		u8 key_block[128] = {0};
-		COPY(key_block, config.key, config.key_size);
+		COPY(key_block, key, key_size);
 		// same as calling crypto_blake2b_update(ctx, key_block , 128)
 		load64_le_buf(ctx->input, key_block, 16);
 		ctx->input_idx = 128;
 	}
 }
 
+void crypto_blake2b_init(crypto_blake2b_ctx *ctx, size_t hash_size)
+{
+	crypto_blake2b_keyed_init(ctx, hash_size, 0, 0);
+}
+
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const u8 *message, size_t message_size)
 {
-	// Align ourselves with block boundaries
-	// The block that may result is not compressed yet
-	size_t aligned = MIN(align(ctx->input_idx, 128), message_size);
-	FOR (i, 0, aligned) {
-		blake2b_set_input(ctx, *message, ctx->input_idx);
-		ctx->input_idx++;
-		message++;
-		message_size--;
+	// Avoid UB pointer increments with empty messages
+	if (message_size == 0) {
+		return;
 	}
 
-	// Process the message block by block
-	// The last block is not compressed yet.
+	// Align with word boundaries
+	if ((ctx->input_idx & 7) != 0) {
+		size_t nb_bytes = MIN(align(ctx->input_idx, 8), message_size);
+		size_t word     = ctx->input_idx >> 3;
+		size_t byte     = ctx->input_idx & 7;
+		FOR (i, 0, nb_bytes) {
+			ctx->input[word] |= (u64)message[i] << ((byte + i) << 3);
+		}
+		ctx->input_idx += nb_bytes;
+		message        += nb_bytes;
+		message_size   -= nb_bytes;
+	}
+
+	// Align with block boundaries (faster than byte by byte)
+	if ((ctx->input_idx & 127) != 0) {
+		size_t nb_words = MIN(align(ctx->input_idx, 128), message_size) >> 3;
+		load64_le_buf(ctx->input + (ctx->input_idx >> 3), message, nb_words);
+		ctx->input_idx += nb_words << 3;
+		message        += nb_words << 3;
+		message_size   -= nb_words << 3;
+	}
+
+	// Process block by block
 	size_t nb_blocks = message_size >> 7;
 	FOR (i, 0, nb_blocks) {
 		if (ctx->input_idx == 128) {
@@ -598,24 +608,34 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
 	}
 	message_size &= 127;
 
-	// Fill remaining bytes (not the whole buffer)
-	// The last block is never fully filled
-	FOR (i, 0, message_size) {
+	if (message_size != 0) {
+		// Compress block & flush input buffer as needed
 		if (ctx->input_idx == 128) {
 			blake2b_compress(ctx, 0);
 			ctx->input_idx = 0;
 		}
-		blake2b_set_input(ctx, message[i], ctx->input_idx);
-		ctx->input_idx++;
+		if (ctx->input_idx == 0) {
+			ZERO(ctx->input, 16);
+		}
+		// Fill remaining words (faster than byte by byte)
+		size_t nb_words = message_size >> 3;
+		load64_le_buf(ctx->input + (ctx->input_idx >> 3), message, nb_words);
+		ctx->input_idx += nb_words << 3;
+		message        += nb_words << 3;
+		message_size   -= nb_words << 3;
+
+		// Fill remaining bytes
+		FOR (i, 0, message_size) {
+			size_t word = ctx->input_idx >> 3;
+			size_t byte = ctx->input_idx & 7;
+			ctx->input[word] |= (u64)message[i] << (byte << 3);
+			ctx->input_idx++;
+		}
 	}
 }
 
 void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
 {
-	// Pad the end of the block with zeroes
-	FOR (i, ctx->input_idx, 128) {
-		blake2b_set_input(ctx, 0, i);
-	}
 	blake2b_compress(ctx, 1); // compress the last block
 	size_t hash_size = MIN(ctx->hash_size, 64);
 	size_t nb_words  = hash_size >> 3;
@@ -623,134 +643,23 @@ void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
 	FOR (i, nb_words << 3, hash_size) {
 		hash[i] = (ctx->hash[i >> 3] >> (8 * (i & 7))) & 0xff;
 	}
-
-	// Expand the hash if it exceeds 64 bytes
-	if (ctx->hash_size > 64) {
-		u8 block[128] = {0};
-		COPY(block + 16, hash, 64);
-		store64_le(block + 8, (u64)(ctx->hash_size));
-		u64 ctr = 0;
-		while (ctx->hash_size > 0) {
-			crypto_blake2b_config config = { 0, 0, MIN(ctx->hash_size, 64) };
-			store64_le(block, ctr);
-			crypto_blake2b(hash, config, block, 128);
-			hash           += config.hash_size;
-			ctx->hash_size -= config.hash_size;
-			ctr++;
-		}
-	}
 	WIPE_CTX(ctx);
 }
 
-void crypto_blake2b(u8 *hash, crypto_blake2b_config config,
-                    const u8 *message, size_t message_size)
+void crypto_blake2b_keyed(u8 *hash,          size_t hash_size,
+                          const u8 *key,     size_t key_size,
+                          const u8 *message, size_t message_size)
 {
 	crypto_blake2b_ctx ctx;
-	crypto_blake2b_init  (&ctx, config);
-	crypto_blake2b_update(&ctx, message, message_size);
-	crypto_blake2b_final (&ctx, hash);
+	crypto_blake2b_keyed_init(&ctx, hash_size, key, key_size);
+	crypto_blake2b_update    (&ctx, message, message_size);
+	crypto_blake2b_final     (&ctx, hash);
 }
 
-void crypto_blake2_kdf(uint8_t       *okm, size_t okm_size,   // unlimited
-                       const uint8_t *ikm, size_t ikm_size,   // unlimited
-                       const uint8_t *salt, size_t salt_size, // <= 64 bytes
-                       const uint8_t *info, size_t info_size) // unlimited
+void crypto_blake2b(u8 *hash, size_t hash_size, const u8 *msg, size_t msg_size)
 {
-	// Extract
-	uint8_t prk[64];
-	crypto_blake2b_config config = {
-		.key       = salt,
-		.key_size  = salt_size,
-		.hash_size = 64,
-	};
-	crypto_blake2b(prk, config, ikm, ikm_size);
-
-	// Expand
-	uint64_t ctr = 0;
-	while (okm_size > 0) {
-		size_t hash_size = MIN(okm_size, 64);
-		crypto_blake2b_config config = {
-			.key       = salt,
-			.key_size  = salt_size,
-			.hash_size = hash_size,
-		};
-		uint8_t ctr_buf[8];
-		store64_le(ctr_buf, ctr);
-		crypto_blake2b_ctx ctx;
-		crypto_blake2b_init  (&ctx, config);
-		crypto_blake2b_update(&ctx, info, info_size);
-		crypto_blake2b_update(&ctx, ctr_buf, sizeof(ctr_buf));
-		crypto_blake2b_final (&ctx, okm);
-		okm      += hash_size;
-		okm_size -= hash_size;
-		ctr++;
-	}
+	crypto_blake2b_keyed(hash, hash_size, 0, 0, msg, msg_size);
 }
-
-void crypto_blake2_kdf_expand_step(
-	uint8_t       *okm,  size_t okm_size,  // <= 64 bytes
-	const uint8_t *prk,  size_t prk_size,  // <= 64 bytes
-	const uint8_t *info, size_t info_size, // unlimited
-	uint64_t ctr)
-{
-	crypto_blake2b_config config = {
-		.key       = prk,
-		.key_size  = prk_size,
-		.hash_size = okm_size,
-	};
-	uint8_t ctr_buf[8];
-	store64_le(ctr_buf, ctr);
-	crypto_blake2b_ctx ctx;
-	crypto_blake2b_init  (&ctx, config);
-	crypto_blake2b_update(&ctx, info, info_size);
-	crypto_blake2b_update(&ctx, ctr_buf, sizeof(ctr_buf));
-	crypto_blake2b_final (&ctx, okm);
-}
-
-void crypto_blake2_kdf_expand_step2(
-	uint8_t       *okm,  size_t okm_size,  // <=  64 bytes
-	const uint8_t *prk,  size_t prk_size,  // <=  64 bytes
-	const uint8_t *info, size_t info_size, // <= 120 bytes
-	uint64_t ctr)
-{
-	crypto_blake2b_config config = {
-		.key       = prk,
-		.key_size  = prk_size,
-		.hash_size = okm_size,
-	};
-	uint8_t block[128] = { 0 };
-	store64_le(block, ctr);
-	COPY(block + 8, info, info_size);
-	crypto_blake2b(okm, config, block, sizeof(block));
-}
-
-void crypto_blake2_kdf2(uint8_t       *okm, size_t okm_size,   // unlimited
-                        const uint8_t *ikm, size_t ikm_size,   // unlimited
-                        const uint8_t *salt, size_t salt_size, // <= 64 bytes
-                        const uint8_t *info, size_t info_size) // unlimited?
-{
-	// Extract
-	uint8_t prk[64];
-	crypto_blake2b_config config = {
-		.key       = salt,
-		.key_size  = salt_size,
-		.hash_size = 64,
-	};
-	crypto_blake2b(prk, config, ikm, ikm_size);
-
-	// Expand
-	uint64_t ctr = 0;
-	while (okm_size > 0) {
-		size_t hash_size = MIN(okm_size, 64);
-		crypto_blake2_kdf_expand_step( // or step2
-			okm, hash_size, prk, sizeof(prk), info, info_size, ctr);
-		okm      += hash_size;
-		okm_size -= hash_size;
-		ctr++;
-	}
-}
-
-
 
 //////////////
 /// Argon2 ///
@@ -788,9 +697,8 @@ static void  xor_block(blk *o,const blk*in){FOR(i, 0, 128) o->a[i] ^= in->a[i];}
 static void extended_hash(u8       *digest, u32 digest_size,
                           const u8 *input , u32 input_size)
 {
-	crypto_blake2b_config config = { 0, 0, MIN(digest_size, 64) };
 	crypto_blake2b_ctx ctx;
-	crypto_blake2b_init  (&ctx, config);
+	crypto_blake2b_init  (&ctx, MIN(digest_size, 64));
 	blake_update_32      (&ctx, digest_size);
 	crypto_blake2b_update(&ctx, input, input_size);
 	crypto_blake2b_final (&ctx, digest);
@@ -804,14 +712,12 @@ static void extended_hash(u8       *digest, u32 digest_size,
 		u32 out = 32;
 		while (i < r) {
 			// Input and output overlap. This is intentional
-			crypto_blake2b(digest + out, crypto_blake2b_defaults,
-			               digest + in, 64);
+			crypto_blake2b(digest + out, 64, digest + in, 64);
 			i   +=  1;
 			in  += 32;
 			out += 32;
 		}
-		config.hash_size = digest_size - (32 * r);
-		crypto_blake2b(digest + out, config, digest + in , 64);
+		crypto_blake2b(digest + out, digest_size - (32 * r), digest + in , 64);
 	}
 }
 
@@ -863,7 +769,7 @@ void crypto_argon2(u8 *hash, u32 hash_size, void *work_area,
 	{
 		u8 initial_hash[72]; // 64 bytes plus 2 words for future hashes
 		crypto_blake2b_ctx ctx;
-		crypto_blake2b_init (&ctx, crypto_blake2b_defaults);
+		crypto_blake2b_init (&ctx, 64);
 		blake_update_32     (&ctx, config.nb_lanes ); // p: number of "threads"
 		blake_update_32     (&ctx, hash_size);
 		blake_update_32     (&ctx, config.nb_blocks);
@@ -2320,7 +2226,7 @@ void crypto_eddsa_key_pair(u8 secret_key[64], u8 public_key[32], u8 seed[32])
 	COPY(a, seed, 32);
 	crypto_wipe(seed, 32);
 	COPY(secret_key, a, 32);
-	crypto_blake2b(a, crypto_blake2b_defaults, a, 32);
+	crypto_blake2b(a, 64, a, 32);
 	crypto_eddsa_trim_scalar(a, a);
 	crypto_eddsa_scalarbase(secret_key + 32, a);
 	COPY(public_key, secret_key + 32, 32);
@@ -2334,7 +2240,7 @@ static void hash_reduce(u8 h[32],
 {
 	u8 hash[64];
 	crypto_blake2b_ctx ctx;
-	crypto_blake2b_init  (&ctx, crypto_blake2b_defaults);
+	crypto_blake2b_init  (&ctx, 64);
 	crypto_blake2b_update(&ctx, a, a_size);
 	crypto_blake2b_update(&ctx, b, b_size);
 	crypto_blake2b_update(&ctx, c, c_size);
@@ -2405,7 +2311,7 @@ void crypto_eddsa_sign(u8 signature [64], const u8 secret_key[64],
 	u8 h[32];  // publically verifiable hash of the message (not wiped)
 	u8 R[32];  // first half of the signature (allows overlapping inputs)
 
-	crypto_blake2b(a, crypto_blake2b_defaults, secret_key, 32);
+	crypto_blake2b(a, 64, secret_key, 32);
 	crypto_eddsa_trim_scalar(a, a);
 	hash_reduce(r, a + 32, 32, message, message_size, 0, 0);
 	crypto_eddsa_scalarbase(R, r);
@@ -2451,7 +2357,7 @@ void crypto_eddsa_to_x25519(u8 x25519[32], const u8 eddsa[32])
 	WIPE_BUFFER(t2);
 }
 
-void crypto_x25519_to_eddsa(uint8_t eddsa[32], const uint8_t x25519[32])
+void crypto_x25519_to_eddsa(u8 eddsa[32], const u8 x25519[32])
 {
 	// (x, y) = (sqrt(-486664)*u/v, (u-1)/(u+1))
 	// Only converting u to y, x is assumed positive.

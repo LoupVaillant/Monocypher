@@ -50,28 +50,45 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd January 20, 2023
+.Dd February 02, 2023
 .Dt CRYPTO_BLAKE2B 3MONOCYPHER
 .Os
 .Sh NAME
 .Nm crypto_blake2b ,
+.Nm crypto_blake2b_keyed ,
 .Nm crypto_blake2b_init ,
+.Nm crypto_blake2b_keyed_init ,
 .Nm crypto_blake2b_update ,
 .Nm crypto_blake2b_final
-.Nd cryptographic hashing
+.Nd hashing, message authentication, and key derivation with BLAKE2b
 .Sh SYNOPSIS
 .In monocypher.h
 .Ft void
 .Fo crypto_blake2b
 .Fa "uint8_t hash[64]"
-.Fa "crypto_blake2b_config config"
+.Fa "size_t hash_size"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Fo crypto_blake2b_keyed
+.Fa "uint8_t hash[64]"
+.Fa "size_t hash_size"
+.Fa "uint8_t key[64]"
+.Fa "size_t key_size"
 .Fa "const uint8_t *message"
 .Fa "size_t message_size"
 .Fc
 .Ft void
 .Fo crypto_blake2b_init
 .Fa "crypto_blake2b_ctx *ctx"
-.Fa "crypto_blake2b_config config"
+.Fa "size_t hash_size"
+.Fc
+.Ft void
+.Fo crypto_blake2b_keyed_init
+.Fa "crypto_blake2b_ctx *ctx"
+.Fa "size_t hash_size"
+.Fa "uint8_t key[64]"
+.Fa "size_t key_size"
 .Fc
 .Ft void
 .Fo crypto_blake2b_update
@@ -84,11 +101,15 @@
 .Fa "crypto_blake2b_ctx *ctx"
 .Fa "uint8_t *hash"
 .Fc
-.Pp
-.Fa "extern const crypto_blake2b_config crypto_blake2b_defaults;"
 .Sh DESCRIPTION
-BLAKE2b is a fast cryptographically secure hash based on the ideas of
-ChaCha20.
+.Ss Hashing
+.Fn crypto_blake2b ,
+.Fn crypto_blake2b_init ,
+.Fn crypto_blake2b_update ,
+and
+.Fn crypto_blake2b_final
+implement BLAKE2b,
+a cryptographically secure hash based on the ideas of ChaCha20.
 It is faster than MD5, yet just as secure as SHA-3.
 .Pp
 Note that BLAKE2b itself is not suitable for hashing passwords and
@@ -97,17 +118,27 @@ use the
 .Xr crypto_argon2i 3monocypher
 family of functions for that purpose instead.
 .Pp
-BLAKE2b is immune to length extension attacks, and as such, does not
-require specific precautions such as using the HMAC algorithm.
+While BLAKE2b is immune to length extension attacks,
+and as such requires fewer precautions than older hashes,
+we do recommend avoiding prefix-MAC and using keyed mode with
+.Fn crypto_blake2b_keyed
+instead.
+Doing so enables better security arguments when using BLAKE2b as a
+random oracle.
 .Pp
-The arguments to
-.Fn crypto_blake2b
-are:
+The arguments are:
 .Bl -tag -width Ds
 .It Fa config
 The configuration parameter structure, see below.
 .It Fa hash
 The output hash.
+.It Fa hash_size
+Length of
+.Fa hash ,
+in bytes.
+Must be between 1 and 64.
+Anything below 32 is discouraged when using BLAKE2b as a general-purpose
+hash function.
 .It Fa message
 The message to hash.
 May overlap with
@@ -122,66 +153,156 @@ Length of
 .Fa message ,
 in bytes.
 .El
-.Pp
-The BLAKE2b hash function has configurable parameters to personalize
-instances.
-These parameters are given in a
-.Vt crypto_blake2b_config
-structure,
-which is defined as follows:
-.Bd -literal -offset Ds
-typedef struct {
-	const uint8_t *key;
-	size_t key_size;
-	size_t hash_size;
-} crypto_blake2b_config;
-.Ed
-.Pp
-Its members are:
+.Ss Message authentication codes
+.Fn crypto_blake2b_keyed ,
+.Fn crypto_blake2b_keyed_init ,
+.Fn crypto_blake2b_update ,
+and
+.Fn crypto_blake2b_final
+implement keyed BLAKE2b,
+and can be used for message authentication codes or as a random oracle,
+just like HMAC.
+The arguments are:
 .Bl -tag -width Ds
+.It Fa hash
+The output message authentication code (MAC).
+To avoid timing attacks,
+use
+.Xr crypto_verify16 3monocypher ,
+.Xr crypto_verify32 3monocypher ,
+or
+.Xr crypto_verify64 3monocypher
+to compare (possibly truncated) MACs.
 .It Fa hash_size
 Length of
 .Fa hash ,
 in bytes.
 Must be between 1 and 64.
-Anything below 32 is discouraged when using BLAKE2b as a general-purpose
-hash function;
-anything below 16 is discouraged when using BLAKE2b as a message
+Anything below 16 is discouraged when using BLAKE2b as a message
 authentication code.
+Anything below 32 is discouraged when using BLAKE2b as a key derivation
+function (KDF).
 .It Fa key
 Some secret key.
-One cannot predict the final hash without it.
+When uniformly random,
+one cannot predict the final hash without it.
+Users may want to wipe the key with
+.Xr crypto_wipe 3monocypher
+once they are done with it.
+May overlap with
+.Fa hash or
+.Fa message .
 May be
 .Dv NULL
 if
 .Fa key_size
 is 0, in which case no key is used.
-Keys can be used to create a message authentication code (MAC).
-Use
-.Xr crypto_verify16 3monocypher ,
-.Xr crypto_verify32 3monocypher ,
-or
-.Xr crypto_verify64 3monocypher
-to compare MACs created this way.
-Choose the size of the hash accordingly.
-Users may want to wipe the key with
-.Xr crypto_wipe 3monocypher
-once they are done with it.
+Can also be used as a random salt in the context of KDF extraction,
+or as pre-shared-key in the context of KDF expansion.
 .It Fa key_size
 Length of
 .Fa key ,
 in bytes.
 Must be between 0 and 64.
 32 is a good default.
+.It Fa message
+The message to compute the MAC for.
+May overlap with
+.Fa hash or
+.Fa key .
+May be
+.Dv NULL
+if
+.Fa message_size
+is 0.
+Can also be used as input key material in the context of KDF extraction,
+or to host a counter and domain separation string in the context of KDF
+expansion.
+.It Fa message_size
+Length of
+.Fa message ,
+in bytes.
+.El
+.Ss Key derivation
+BLAKE2b can be used to implement
+.Dq key derivation functions
+(KDF) very similar to HKDF.
+The typical parameters of a KDF are:
+.Bl -tag -width Ds
+.It Em IKM
+Input key material containing enough secret entropy to derive uniformly
+random keys from,
+such as the shared secret of a key exchange performed with
+.Xr crypto_x25519 3monocypher .
+Passwords do
+.Sy not
+contain enough entropy to be used as input key material.
+Hash them with
+.Xr crypto_argon2 3monocypher
+instead.
+.It Em salt
+An optional random salt,
+used to increase the security of the output key material (OKM) in some
+settings.
+It should be either absent,
+constant,
+or contain at least 16 random bytes.
+.It Em info
+Optional domain separation string for key derivation.
 .El
 .Pp
-The
-.Dv crypto_blake2b_defaults
-constant provides default
-.Fa config
-parameters:
-no key and a hash size of 64 bytes.
+From these parameters,
+the KDF derives an arbitrary amount of independent random bytes,
+also called
+.Dq output key material
+(OKM),
+that can be used as regular encryption or secret keys.
 .Pp
+In practice, KDFs are often separated in two steps:
+.Dq extraction
+and
+.Dq expansion .
+The extraction step reads the IKM (and optional salt) to derive a
+.Dq pseudo-random key
+(PRK),
+which can be used either directly as a regular key,
+.Em or
+as an input for the extraction step.
+The expansion step then reads the PRK (and optional info) to make the
+OKM.
+.Pp
+To implement KDF extraction,
+just call
+.Fn crypto_blake2b_keyed
+with the
+.Fa message
+as the IKM and
+.Fa key
+as the salt,
+or
+.Fn crypto_blake2b
+if there is no salt.
+This is unintuitive,
+but having the IKM in the
+.Fa message
+argument lets us input arbitrary amounts of data.
+It is also the HMAC and HKDF way.
+.Pp
+For KDF expansion any pseudo-random-function (PRF) can be used.
+You can call
+.Fn crypto_blake2b_keyed
+in counter mode with
+.Fa key
+as the PRK
+(though doing it manually is a bit tedious),
+or
+.Xr crypto_chacha20_djb 3monocypher
+with its
+.Fa key
+as the PRK and its
+.Fa nonce
+for domain separation.
+.Ss Incremental interface
 An incremental interface is provided.
 It is useful for handling streams of data or
 large files without using too much memory.
@@ -189,8 +310,10 @@ This interface uses three steps:
 .Bl -bullet
 .It
 Initialisation with
-.Fn crypto_blake2b_init ,
-which sets up a context with the hashing parameters;
+.Fn crypto_blake2b_init
+or
+.Fn crypto_blake2b_keyed_init ,
+which set up a context with the hashing parameters;
 .It
 Update with
 .Fn crypto_blake2b_update ,
@@ -205,13 +328,26 @@ The
 is automatically wiped upon finalisation.
 .El
 .Pp
+Calling
 .Fn crypto_blake2b
-is a convenience function that calls
+is the same as calling
 .Fn crypto_blake2b_init ,
 .Fn crypto_blake2b_update ,
 and
-.Fn crypto_blake2b_final
-under the hood.
+.Fn crypto_blake2b_final .
+Calling
+.Fn crypto_blake2b_keyed
+is the same as calling
+.Fn crypto_blake2b_keyed_init ,
+.Fn crypto_blake2b_update ,
+and
+.Fn crypto_blake2b_final .
+.Pp
+Calling
+.Fn crypto_blake2b
+is the same as calling
+.Fn crypto_blake2b_keyed
+with an empty key.
 .Sh RETURN VALUES
 These functions return nothing.
 .Sh EXAMPLES
@@ -228,7 +364,7 @@ Hashing a message all at once:
 .Bd -literal -offset indent
 uint8_t hash   [64]; /* Output hash (64 bytes)          */
 uint8_t message[12] = "Lorem ipsum"; /* Message to hash */
-crypto_blake2b(hash, crypto_blake2b_defaults, message, 12);
+crypto_blake2b(hash, sizeof(hash), message, sizeof(message));
 .Ed
 .Pp
 Computing a message authentication code all at once:
@@ -237,12 +373,9 @@ uint8_t hash   [16];
 uint8_t key    [32];
 uint8_t message[11] = "Lorem ipsu"; /* Message to authenticate */
 arc4random_buf(key, sizeof(key));
-crypto_blake2b_config config = {
-	.key       = key,
-	.key_size  = sizeof(key),
-	.hash_size = sizeof(hash),
-};
-crypto_blake2b(hash, config, message, sizeof(message));
+crypto_blake2b_keyed(hash   , sizeof(hash),
+                     key    , sizeof(key),
+                     message, sizeof(message));
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(message, sizeof(message));
 crypto_wipe(key,     sizeof(key));
@@ -253,9 +386,9 @@ Hashing a message incrementally (without a key):
 uint8_t hash   [ 64]; /* Output hash (64 bytes) */
 uint8_t message[500] = {1}; /* Message to hash  */
 crypto_blake2b_ctx ctx;
-crypto_blake2b_init(&ctx, crypto_blake2b_defaults);
+crypto_blake2b_init(&ctx, sizeof(hash));
 for (size_t i = 0; i < 500; i += 100) {
-    crypto_blake2b_update(&ctx, message + i, 100);
+	crypto_blake2b_update(&ctx, message + i, 100);
 }
 crypto_blake2b_final(&ctx, hash);
 .Ed
@@ -267,20 +400,87 @@ uint8_t key    [ 32];
 uint8_t message[500] = {1}; /* Message to authenticate */
 arc4random_buf(key, sizeof(key));
 crypto_blake2b_ctx ctx;
-crypto_blake2b_config config = {
-	.key       = key,
-	.key_size  = sizeof(key),
-	.hash_size = sizeof(hash),
-};
-crypto_blake2b_init(&ctx, config);
+crypto_blake2b_keyed_init(&ctx, sizeof(hash), key,
+                          sizeof(key));
 /* Wipe the key */
 crypto_wipe(key, sizeof(key));
 for (size_t i = 0; i < 500; i += 100) {
-    crypto_blake2b_update(&ctx, message + i, 100);
-    /* Wipe secrets if they are no longer needed */
-    crypto_wipe(message + i, 100);
+	crypto_blake2b_update(&ctx, message + i, 100);
+	/* Wipe secrets if they are no longer needed */
+	crypto_wipe(message + i, 100);
 }
 crypto_blake2b_final(&ctx, hash);
+.Ed
+.Pp
+Computing key derivation with BLAKE2b and ChaCha20:
+.Bd -literal -offset indent
+void kdf(uint8_t *okm,  size_t okm_size,  /* unlimited   */
+         uint8_t *ikm,  size_t ikm_size,  /* unlimited   */
+         uint8_t *salt, size_t salt_size, /* <= 64 bytes */
+         uint8_t info[8])                 /* ==  8 bytes */
+{
+	/* Extract */
+	uint8_t prk[32];
+	crypto_blake2b_keyed(prk , sizeof(prk),
+	                     salt, salt_size,
+	                     ikm , ikm_size);
+	/* Expand */
+	crypto_chacha20_djb(okm, NULL, okm_size, prk, info, 0);
+}
+.Ed
+.Pp
+Computing key derivation with BLAKE2b and XChaCha20:
+.Bd -literal -offset indent
+void xkdf(uint8_t *okm,  size_t okm_size,  /* unlimited   */
+          uint8_t *ikm,  size_t ikm_size,  /* unlimited   */
+          uint8_t *salt, size_t salt_size, /* <= 64 bytes */
+          uint8_t *info, size_t info_size) /* unlimited   */
+{
+	/* Extract */
+	uint8_t prk[32];
+	crypto_blake2b_keyed(prk , sizeof(prk),
+	                     salt, salt_size,
+	                     ikm , ikm_size);
+	/* Expand */
+	uint8_t nonce[24];
+	crypto_blake2b(nonce, sizeof(nonce), info, info_size);
+	crypto_chacha20_x(okm, NULL, okm_size, prk, nonce, 0);
+}
+.Ed
+.Pp
+Computing key derivation with BLAKE2b alone
+(a little tedious indeed):
+.Bd -literal -offset indent
+void b2kdf(uint8_t *okm,  size_t okm_size,  /* unlimited   */
+           uint8_t *ikm,  size_t ikm_size,  /* unlimited   */
+           uint8_t *salt, size_t salt_size, /* <= 64 bytes */
+           uint8_t *info, size_t info_size) /* unlimited   */
+{
+	/* Extract */
+	uint8_t prk[64];
+	crypto_blake2b_keyed(prk , sizeof(prk),
+	                     salt, salt_size,
+	                     ikm , ikm_size);
+	/* Expand */
+	uint8_t ctr[8] = {0};
+	while(okm_size > 0) {
+		size_t size = MIN(okm_size, 64);
+		crypto_blake2b_ctx ctx;
+		crypto_blake2b_keyed_init(&ctx, size, prk, 64);
+		crypto_blake2b_update(&ctx, ctr, sizeof(ctr));
+		crypto_blake2b_update(&ctx, info, info_size);
+		crypto_blake2b_final(&ctx, okm);
+		okm      += size;
+		okm_size -= size;
+		/* increment ctr */
+		unsigned acc = 1;
+		for (size_t i = 0; i < sizeof(ctr); i++) {
+			acc    = ctr[i] + acc;
+			ctr[i] = acc & 0xff;
+			acc  >>= 8;
+		}
+	}
+}
 .Ed
 .Sh SEE ALSO
 .Xr crypto_x25519 3monocypher ,
@@ -301,12 +501,16 @@ In Monocypher 4.0.0,
 and
 .Fn crypto_blake2b_general_init
 were removed,
+.Fn crypto_blake2b_keyed
+and
+.Fn crypto_blake2b_keyed_init
+were added,
 and the
-.Fa config
-argument was added to
-.Fn crypto_blake2b ,
-.Fn crypto_blake2b_init
-to compensate.
+.Fa hash_size
+argument were added to
+.Fn crypto_blake2b
+and
+.Fn crypto_blake2b_init .
 .Sh CAVEATS
 Monocypher does not perform any input validation.
 Any deviation from the specified input and output length ranges results

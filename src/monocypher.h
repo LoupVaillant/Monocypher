@@ -122,17 +122,13 @@ int crypto_aead_read(crypto_aead_ctx *ctx,
 // General purpose hash (BLAKE2b)
 // ------------------------------
 
-typedef struct {
-	const uint8_t *key;
-	size_t key_size;
-	size_t hash_size;
-} crypto_blake2b_config;
-
-extern const crypto_blake2b_config crypto_blake2b_defaults;
-
 // Direct interface
-void crypto_blake2b(uint8_t *hash, crypto_blake2b_config config,
+void crypto_blake2b(uint8_t *hash,          size_t hash_size,
                     const uint8_t *message, size_t message_size);
+
+void crypto_blake2b_keyed(uint8_t *hash,          size_t hash_size,
+                          const uint8_t *key,     size_t key_size,
+                          const uint8_t *message, size_t message_size);
 
 // Incremental interface
 typedef struct {
@@ -145,7 +141,9 @@ typedef struct {
 	size_t   hash_size;
 } crypto_blake2b_ctx;
 
-void crypto_blake2b_init(crypto_blake2b_ctx *ctx, crypto_blake2b_config config);
+void crypto_blake2b_init(crypto_blake2b_ctx *ctx, size_t hash_size);
+void crypto_blake2b_keyed_init(crypto_blake2b_ctx *ctx, size_t hash_size,
+                               const uint8_t *key, size_t key_size);
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const uint8_t *message, size_t message_size);
 void crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *hash);

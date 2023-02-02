@@ -400,39 +400,65 @@ static void blake2b(vector_reader *reader)
 	vector msg = next_input(reader);
 	vector key = next_input(reader);
 	vector out = next_output(reader);
-	crypto_blake2b_config config = { key.buf, key.size, out.size, };
-	crypto_blake2b(out.buf, config, msg.buf, msg.size);
+	crypto_blake2b_keyed(out.buf, out.size,
+	                     key.buf, key.size,
+	                     msg.buf, msg.size);
 }
 
 static void test_blake2b()
 {
 	VECTORS(blake2b);
 
+	printf("\tBLAKE2b (zero_input)\n");
+	{
+		RANDOM_INPUT(key, 32);
+		u8 hash_chunk[64];
+		u8 hash_whole[64];
+		crypto_blake2b_ctx ctx;
+
+		// With key
+		memset(&ctx, 0x5c, sizeof(ctx));
+		crypto_blake2b_keyed_init(&ctx, 64, key, 32);
+		crypto_blake2b_final     (&ctx, hash_chunk);
+		crypto_blake2b_keyed(hash_whole, 64, key, 32, 0, 0);
+		ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+
+		// Without key
+		memset(&ctx, 0x5c, sizeof(ctx));
+		crypto_blake2b_init (&ctx, 64);
+		crypto_blake2b_final(&ctx, hash_chunk);
+		crypto_blake2b(hash_whole, 64, 0, 0);
+		ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+	}
+
 	printf("\tBLAKE2b (incremental)\n");
 	// Note: I figured we didn't need to test keyed mode, or different
 	// hash sizes, a second time.  This test sticks to the simplified
 	// interface.
 #undef INPUT_SIZE
-#define INPUT_SIZE (BLAKE2B_BLOCK_SIZE * 4 - 32) // total input size
-	FOR (i, 0, INPUT_SIZE) {
-		// outputs
-		u8 hash_chunk[64];
-		u8 hash_whole[64];
-		// inputs
-		RANDOM_INPUT(input, INPUT_SIZE);
+#define INPUT_SIZE (BLAKE2B_BLOCK_SIZE * 3) // total input size
 
-		// Authenticate bit by bit
-		crypto_blake2b_ctx ctx;
-		crypto_blake2b_init(&ctx, crypto_blake2b_defaults);
-		crypto_blake2b_update(&ctx, input    , i);
-		crypto_blake2b_update(&ctx, input + i, INPUT_SIZE - i);
-		crypto_blake2b_final(&ctx, hash_chunk);
+	RANDOM_INPUT(input, INPUT_SIZE);
 
-		// Authenticate all at once
-		crypto_blake2b(hash_whole, crypto_blake2b_defaults, input, INPUT_SIZE);
+	// hash at once
+	u8 hash_whole[64];
+	crypto_blake2b(hash_whole, 64, input, INPUT_SIZE);
 
-		// Compare the results (must be the same)
-		ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+	FOR (j, 0, INPUT_SIZE) {
+		FOR (i, 0, j+1) {
+			// Hash bit by bit
+			u8 *mid_input = j - i == 0 ? NULL : input + i; // test NULL update
+			u8 hash_chunk[64];
+			crypto_blake2b_ctx ctx;
+			crypto_blake2b_init  (&ctx, 64);
+			crypto_blake2b_update(&ctx, input    , i);
+			crypto_blake2b_update(&ctx, mid_input, j - i);
+			crypto_blake2b_update(&ctx, input + j, INPUT_SIZE - j);
+			crypto_blake2b_final (&ctx, hash_chunk);
+
+			// Compare the results (must be the same)
+			ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+		}
 	}
 
 	printf("\tBLAKE2b (overlapping i/o)\n");
@@ -441,9 +467,8 @@ static void test_blake2b()
 	FOR (i, 0, BLAKE2B_BLOCK_SIZE + 64) {
 		u8 hash [64];
 		RANDOM_INPUT(input, INPUT_SIZE);
-		crypto_blake2b_config config = crypto_blake2b_defaults;
-		crypto_blake2b(hash   , config, input + 64, BLAKE2B_BLOCK_SIZE);
-		crypto_blake2b(input+i, config, input + 64, BLAKE2B_BLOCK_SIZE);
+		crypto_blake2b(hash   , 64, input + 64, BLAKE2B_BLOCK_SIZE);
+		crypto_blake2b(input+i, 64, input + 64, BLAKE2B_BLOCK_SIZE);
 		ASSERT_EQUAL(hash, input + i, 64);
 	}
 }
@@ -1107,11 +1132,10 @@ static void test_conversions()
 {
 	printf("\tX25519 <-> EdDSA\n");
 	FOR (i, 0, 32) {
-		crypto_blake2b_config config = crypto_blake2b_defaults;
 		RANDOM_INPUT(e_seed, 32);
 		u8 secret   [64];
 		u8 e_public1[32]; crypto_eddsa_key_pair(secret, e_public1, e_seed);
-		u8 x_private[64]; crypto_blake2b(x_private, config, secret, 32);
+		u8 x_private[64]; crypto_blake2b(x_private, 64, secret, 32);
 		u8 x_public1[32]; crypto_eddsa_to_x25519  (x_public1, e_public1);
 		u8 x_public2[32]; crypto_x25519_public_key(x_public2, x_private);
 		ASSERT_EQUAL(x_public1, x_public2, 32);

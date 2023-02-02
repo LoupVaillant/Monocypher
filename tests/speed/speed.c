@@ -100,8 +100,24 @@ static u64 blake2b(void)
 	RANDOM_INPUT(key,   32);
 
 	TIMING_START {
-		crypto_blake2b_config config = {key, 32, 64};
-		crypto_blake2b(hash, config, in, SIZE);
+		crypto_blake2b_keyed(hash, 64, key, 32, in, SIZE);
+	}
+	TIMING_END;
+}
+
+static u64 blake2b_small(void)
+{
+	u8 hash[64];
+	RANDOM_INPUT(input, 128*2);
+
+	TIMING_START {
+		FOR (i, 0, 128*2) {
+			crypto_blake2b_ctx ctx;
+			crypto_blake2b_init  (&ctx, 64);
+			crypto_blake2b_update(&ctx, input    , i);
+			crypto_blake2b_update(&ctx, input + i, 128*2 - i);
+			crypto_blake2b_final (&ctx, hash);
+		}
 	}
 	TIMING_END;
 }
@@ -222,6 +238,7 @@ int main()
 	print("Poly1305            ",poly1305()     *MUL ,"megabytes  per second");
 	print("Auth'd encryption   ",authenticated()*MUL ,"megabytes  per second");
 	print("BLAKE2b             ",blake2b()      *MUL ,"megabytes  per second");
+	print("BLAKE2b (small)     ",blake2b_small()     ,"cycles     per second");
 	print("SHA-512             ",sha512()       *MUL ,"megabytes  per second");
 	print("Argon2i, 3 passes   ",argon2i()      *MUL ,"megabytes  per second");
 	print("x25519              ",x25519()            ,"exchanges  per second");
@@ -229,7 +246,7 @@ int main()
 	print("EdDSA(check)        ",edDSA_check()       ,"checks     per second");
 	print("x25519 inverse      ",x25519_inverse()    ,"scalar inv per second");
 	print("x25519 dirty fast   ",x25519_sp_fast()    ,"scalar inv per second");
-	print("x25519 dirty small  ",x25519_sp_small()    ,"scalar inv per second");
+	print("x25519 dirty small  ",x25519_sp_small()   ,"scalar inv per second");
 	printf("\n");
 	return 0;
 }
