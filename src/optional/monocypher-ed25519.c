@@ -363,7 +363,7 @@ void crypto_sha512_hkdf_expand(u8       *okm,  size_t okm_size,
 		COPY(okm, blk, out_size);
 
 		not_first = 1;
-		okm      += 64;
+		okm      += out_size;
 		okm_size -= out_size;
 		ctr++;
 	}
