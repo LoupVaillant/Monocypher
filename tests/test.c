@@ -514,25 +514,28 @@ static void test_sha512()
 	printf("\tSHA-512 (incremental)\n");
 #undef INPUT_SIZE
 #define INPUT_SIZE (SHA_512_BLOCK_SIZE * 4 - 32) // total input size
-	FOR (i, 0, INPUT_SIZE) {
-		// outputs
-		u8 hash_chunk[64];
-		u8 hash_whole[64];
-		// inputs
-		RANDOM_INPUT(input, INPUT_SIZE);
 
-		// Authenticate bit by bit
-		crypto_sha512_ctx ctx;
-		crypto_sha512_init(&ctx);
-		crypto_sha512_update(&ctx, input    , i);
-		crypto_sha512_update(&ctx, input + i, INPUT_SIZE - i);
-		crypto_sha512_final(&ctx, hash_chunk);
+	RANDOM_INPUT(input, INPUT_SIZE);
 
-		// Authenticate all at once
-		crypto_sha512(hash_whole, input, INPUT_SIZE);
+	// hash at once
+	u8 hash_whole[64];
+	crypto_sha512(hash_whole, input, INPUT_SIZE);
 
-		// Compare the results (must be the same)
-		ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+	FOR (j, 0, INPUT_SIZE) {
+		FOR (i, 0, j+1) {
+			// Hash bit by bit
+			u8 *mid_input = j - i == 0 ? NULL : input + i; // test NULL update
+			u8 hash_chunk[64];
+			crypto_sha512_ctx ctx;
+			crypto_sha512_init  (&ctx);
+			crypto_sha512_update(&ctx, input    , i);
+			crypto_sha512_update(&ctx, mid_input, j - i);
+			crypto_sha512_update(&ctx, input + j, INPUT_SIZE - j);
+			crypto_sha512_final (&ctx, hash_chunk);
+
+			// Compare the results (must be the same)
+			ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+		}
 	}
 
 	printf("\tSHA-512 (overlapping i/o)\n");
