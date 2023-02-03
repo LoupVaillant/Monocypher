@@ -133,6 +133,23 @@ static u64 sha512(void)
 	TIMING_END;
 }
 
+static u64 sha512_small(void)
+{
+	u8 hash[64];
+	RANDOM_INPUT(input, 128*2);
+
+	TIMING_START {
+		FOR (i, 0, 128*2) {
+			crypto_sha512_ctx ctx;
+			crypto_sha512_init  (&ctx);
+			crypto_sha512_update(&ctx, input    , i);
+			crypto_sha512_update(&ctx, input + i, 128*2 - i);
+			crypto_sha512_final (&ctx, hash);
+		}
+	}
+	TIMING_END;
+}
+
 static u64 argon2i(void)
 {
 	u64 work_area[SIZE / 8];
@@ -240,6 +257,7 @@ int main()
 	print("BLAKE2b             ",blake2b()      *MUL ,"megabytes  per second");
 	print("BLAKE2b (small)     ",blake2b_small()     ,"cycles     per second");
 	print("SHA-512             ",sha512()       *MUL ,"megabytes  per second");
+	print("SHA-512 (small)     ",sha512_small()      ,"cycles     per second");
 	print("Argon2i, 3 passes   ",argon2i()      *MUL ,"megabytes  per second");
 	print("x25519              ",x25519()            ,"exchanges  per second");
 	print("EdDSA(sign)         ",edDSA_sign()        ,"signatures per second");
