@@ -69,7 +69,7 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 typedef uint8_t u8;
 typedef uint64_t u64;
 
-// returns the smallest positive integer y such that
+// Returns the smallest positive integer y such that
 // (x + y) % pow_2  == 0
 // Basically, it's how many bytes we need to add to "align" x.
 // Only works when pow_2 is a power of 2.
@@ -101,6 +101,10 @@ static void store64_be(u8 out[8], u64 in)
 	out[5] = (in >> 16) & 0xff;
 	out[6] = (in >>  8) & 0xff;
 	out[7] =  in        & 0xff;
+}
+
+static void load64_be_buf (u64 *dst, const u8 *src, size_t size) {
+	FOR(i, 0, size) { dst[i] = load64_be(src + i*8); }
 }
 
 ///////////////
@@ -172,41 +176,20 @@ static void sha512_compress(crypto_sha512_ctx *ctx)
 	ctx->hash[6] += g;    ctx->hash[7] += h;
 }
 
+// Write 1 input byte
 static void sha512_set_input(crypto_sha512_ctx *ctx, u8 input)
 {
-	if (ctx->input_idx == 0) {
-		ZERO(ctx->input, 16);
-	}
 	size_t word = ctx->input_idx >> 3;
 	size_t byte = ctx->input_idx &  7;
 	ctx->input[word] |= (u64)input << (8 * (7 - byte));
 }
 
-// increment a 128-bit "word".
+// Increment a 128-bit "word".
 static void sha512_incr(u64 x[2], u64 y)
 {
 	x[1] += y;
 	if (x[1] < y) {
 		x[0]++;
-	}
-}
-
-static void sha512_end_block(crypto_sha512_ctx *ctx)
-{
-	if (ctx->input_idx == 128) {
-		sha512_incr(ctx->input_size, 1024); // size is in bits
-		sha512_compress(ctx);
-		ctx->input_idx = 0;
-	}
-}
-
-static void sha512_update(crypto_sha512_ctx *ctx,
-                          const u8 *message, size_t message_size)
-{
-	FOR (i, 0, message_size) {
-		sha512_set_input(ctx, message[i]);
-		ctx->input_idx++;
-		sha512_end_block(ctx);
 	}
 }
 
@@ -223,51 +206,94 @@ void crypto_sha512_init(crypto_sha512_ctx *ctx)
 	ctx->input_size[0] = 0;
 	ctx->input_size[1] = 0;
 	ctx->input_idx = 0;
+	ZERO(ctx->input, 16);
 }
 
 void crypto_sha512_update(crypto_sha512_ctx *ctx,
                           const u8 *message, size_t message_size)
 {
+	// Avoid undefined NULL pointer increments with empty messages
 	if (message_size == 0) {
 		return;
 	}
+
+	// Align ourselves with word boundaries
+	if ((ctx->input_idx & 7) != 0) {
+		size_t nb_bytes = MIN(align(ctx->input_idx, 8), message_size);
+		FOR (i, 0, nb_bytes) {
+			sha512_set_input(ctx, message[i]);
+			ctx->input_idx++;
+		}
+		message      += nb_bytes;
+		message_size -= nb_bytes;
+	}
+
 	// Align ourselves with block boundaries
-	size_t aligned = MIN(align(ctx->input_idx, 128), message_size);
-	sha512_update(ctx, message, aligned);
-	message      += aligned;
-	message_size -= aligned;
+	if ((ctx->input_idx & 127) != 0) {
+		size_t nb_words = MIN(align(ctx->input_idx, 128), message_size) >> 3;
+		load64_be_buf(ctx->input + (ctx->input_idx >> 3), message, nb_words);
+		ctx->input_idx += nb_words << 3;
+		message        += nb_words << 3;
+		message_size   -= nb_words << 3;
+	}
+
+	// Compress block if needed
+	if (ctx->input_idx == 128) {
+		sha512_incr(ctx->input_size, 1024); // size is in bits
+		sha512_compress(ctx);
+		ctx->input_idx = 0;
+		ZERO(ctx->input, 16);
+	}
 
 	// Process the message block by block
-	FOR (i, 0, message_size / 128) { // number of blocks
-		FOR (j, 0, 16) {
-			ctx->input[j] = load64_be(message + j*8);
-		}
-		message        += 128;
-		ctx->input_idx += 128;
-		sha512_end_block(ctx);
+	FOR (i, 0, message_size >> 7) { // number of blocks
+		load64_be_buf(ctx->input, message, 16);
+		sha512_incr(ctx->input_size, 1024); // size is in bits
+		sha512_compress(ctx);
+		ctx->input_idx = 0;
+		ZERO(ctx->input, 16);
+		message += 128;
 	}
 	message_size &= 127;
 
-	// remaining bytes
-	sha512_update(ctx, message, message_size);
+	if (message_size != 0) {
+		// Remaining words
+		size_t nb_words = message_size >> 3;
+		load64_be_buf(ctx->input, message, nb_words);
+		ctx->input_idx += nb_words << 3;
+		message        += nb_words << 3;
+		message_size   -= nb_words << 3;
+
+		// Remaining bytes
+		FOR (i, 0, message_size) {
+			sha512_set_input(ctx, message[i]);
+			ctx->input_idx++;
+		}
+	}
 }
 
 void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 hash[64])
 {
-	sha512_incr(ctx->input_size, ctx->input_idx * 8); // size is in bits
-	sha512_set_input(ctx, 128);                       // padding
+	// Add padding bit
+	if (ctx->input_idx == 0) {
+		ZERO(ctx->input, 16);
+	}
+	sha512_set_input(ctx, 128);
 
-	// compress penultimate block (if any)
+	// Update size
+	sha512_incr(ctx->input_size, ctx->input_idx * 8);
+
+	// Compress penultimate block (if any)
 	if (ctx->input_idx > 111) {
 		sha512_compress(ctx);
 		ZERO(ctx->input, 14);
 	}
-	// compress last block
+	// Compress last block
 	ctx->input[14] = ctx->input_size[0];
 	ctx->input[15] = ctx->input_size[1];
 	sha512_compress(ctx);
 
-	// copy hash to output (big endian)
+	// Copy hash to output (big endian)
 	FOR (i, 0, 8) {
 		store64_be(hash + i*8, ctx->hash[i]);
 	}
