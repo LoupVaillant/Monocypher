@@ -569,7 +569,7 @@ void crypto_blake2b_init(crypto_blake2b_ctx *ctx, size_t hash_size)
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const u8 *message, size_t message_size)
 {
-	// Avoid UB pointer increments with empty messages
+	// Avoid undefined NULL pointer increments with empty messages
 	if (message_size == 0) {
 		return;
 	}
@@ -619,7 +619,7 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
 		}
 		// Fill remaining words (faster than byte by byte)
 		size_t nb_words = message_size >> 3;
-		load64_le_buf(ctx->input + (ctx->input_idx >> 3), message, nb_words);
+		load64_le_buf(ctx->input, message, nb_words);
 		ctx->input_idx += nb_words << 3;
 		message        += nb_words << 3;
 		message_size   -= nb_words << 3;
