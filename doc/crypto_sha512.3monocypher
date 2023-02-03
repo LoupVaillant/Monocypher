@@ -187,7 +187,7 @@ in bytes.
 and
 .Fn crypto_sha512_hmac_final
 implement HMAC with SHA-512,
-and can be used for message authentication codesor as a random oracle.
+and can be used for message authentication codes or as a random oracle.
 They are provided to enable compatibility with other cryptographic
 systems.
 It is generally recommended to use keyed
