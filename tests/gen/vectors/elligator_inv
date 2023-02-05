@@ -1,3 +1,11 @@
+#
+# Elligator inverse map
+#
+# - Point
+# - Tweak
+# - status (00 = success, ff = failure)
+#
+
 e6f66fdf6e230c603c5e6e59a254ea1476a13eb9511b9549846781e12e52230a:
 00:
 ff:

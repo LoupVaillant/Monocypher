@@ -9,7 +9,7 @@
 //
 // ------------------------------------------------------------------------
 //
-// Copyright (c) 2017-2020, Loup Vaillant
+// Copyright (c) 2017-2020, 2023 Loup Vaillant
 // All rights reserved.
 //
 //
@@ -39,7 +39,7 @@
 //
 // ------------------------------------------------------------------------
 //
-// Written in 2017-2020 by Loup Vaillant
+// Written in 2017-2020, 2023 by Loup Vaillant
 //
 // To the extent possible under law, the author(s) have dedicated all copyright
 // and related neighboring rights to this software to the public domain
@@ -58,6 +58,13 @@
 #include <assert.h>
 
 #define FOR(i, start, end) for (size_t i = (start); i < (end); i++)
+#define CHECK(cond, msg) do { if (!(cond)) { panic(msg); } } while (0)
+
+static void panic(const char *msg)
+{
+	fprintf(stderr, "%s\n", msg);
+	exit(1);
+}
 
 static int is_digit(int c)
 {
@@ -67,37 +74,45 @@ static int is_digit(int c)
 		(c >= 'A' && c <= 'F');
 }
 
+static int whitespace(int c)
+{
+	// Skip whitespace
+	while (c == '\n') {
+		c = getchar();
+	}
+	// Skip comment
+	if (c == '#') {
+		while (c != EOF && c != '\n') {
+			c = getchar();
+		}
+		return whitespace(getchar());
+	}
+	CHECK(is_digit(c) || c == ':' || c == EOF, "Illegal character");
+	return c; // first digit
+}
+
 int main(int argc, char** argv)
 {
-	if (argc != 2) {
-		fprintf(stderr, "Wrong use of vector transformer. Give one argument\n");
-		return 1;
-	}
+	CHECK(argc == 2, "Wrong use of vector transformer. Give one argument");
 
 	char  *prefix = argv[1];
-	int    c      = getchar();
 	size_t nb_vec = 0;
 
 	printf("static const char *%s_vectors[]={\n", prefix);
 
-	// seek first line
-	while (!is_digit(c) && c != ':' && c != EOF) {
-		c = getchar();
-	}
-
+	int c = whitespace(getchar());
 	while (c != EOF) {
 		printf("  \"");
+		unsigned parity = 0;
 		while (c != ':' && c != EOF) {
+			parity = ~parity;
+			CHECK(is_digit(c), "Not a digit");
 			printf("%c", (char)c);
 			c = getchar();
 		}
+		CHECK(parity == 0, "Odd number of digits");
 		printf("\",\n");
-		c = getchar();
-
-		// seek next line
-		while (!is_digit(c) && c != ':' && c != EOF) {
-			c = getchar();
-		}
+		c = whitespace(getchar());
 		nb_vec++;
 	}
 	printf("};\n");

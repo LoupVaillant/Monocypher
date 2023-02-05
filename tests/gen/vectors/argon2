@@ -1,3 +1,17 @@
+# Parameters are in the following order:
+#
+# - Algorithm   (0 = Argon2d, 1 = Argon2i, 2 -> Argon2id)
+# - Memory      (number of KiB)
+# - Time        (number of iterations)
+# - Parallelism (number of lanes)
+# - Password
+# - Salt
+# - Key
+# - Additional data
+# - Digest
+
+# This one is modified from the RFC to only take one lane,
+# from back when Monocypher only supported one lane.
 0100000000000000:
 0800000000000000:
 0300000000000000:
@@ -8,6 +22,9 @@
 040404040404040404040404:
 afe519be3ab0e92375df221dfb17347080c7000b1be85f9ee39978bf11e7cc3a:
 
+#
+# From RFC 9106 (Argon2d)
+#
 0000000000000000:
 2000000000000000:
 0300000000000000:
@@ -18,6 +35,9 @@ afe519be3ab0e92375df221dfb17347080c7000b1be85f9ee39978bf11e7cc3a:
 040404040404040404040404:
 512b391b6f1162975371d30919734294f868e3be3984f3c1a13a4db9fabe4acb:
 
+#
+# From RFC 9106 (Argon2i)
+#
 0100000000000000:
 2000000000000000:
 0300000000000000:
@@ -28,6 +48,9 @@ afe519be3ab0e92375df221dfb17347080c7000b1be85f9ee39978bf11e7cc3a:
 040404040404040404040404:
 c814d9d1dc7f37aa13f0d77f2494bda1c8de6b016dd388d29952a4c4672b6ce8:
 
+#
+# From RFC 9106 (Argon2id)
+#
 0200000000000000:
 2000000000000000:
 0300000000000000:
