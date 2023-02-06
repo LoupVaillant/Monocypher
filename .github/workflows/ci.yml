@@ -102,12 +102,10 @@ jobs:
         run: make clean && make tis-ci -j4
 
       - name: Run speed tests
-        run: |
-          make clean && make speed -j4
+        run: make clean && make speed -j4
 
       - name: Run code coverage tests
-        run: |
-          ./tests/coverage.sh
+        run: ./tests/coverage.sh
 
       - name: Run tests with clang sanitizers
         run: |
@@ -162,3 +160,6 @@ jobs:
           echo
           echo "All valgrind tests passed!"
           echo
+
+      - name: Check bignum arithmetic
+        run: tests/proofs/test_carry.sh

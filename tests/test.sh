@@ -64,3 +64,5 @@ make clean;  make test.out;  valgrind ./test.out
 echo
 echo "All sanitisers passed!"
 echo
+
+tests/proofs/test_carry.sh
