@@ -211,7 +211,6 @@ lib/speed-ed25519.o: tests/externals/ed25519-donna/ed25519.c \
            $(wildcard tests/externals/ed25519-donna/*.h)
 	$(CC) $(CFLAGS) -c $< -o$@            \
             -I src                            \
-            -DUSE_MONOCYPHER                  \
             -DED25519_CUSTOMHASH              \
             -DED25519_TEST                    \
             -DED25519_NO_INLINE_ASM           \
@@ -231,6 +230,10 @@ speed-sodium.out: lib/speed-sodium.o lib/utils.o
 	$(CC) $(CFLAGS) -o $@ $^            \
             `pkg-config --cflags libsodium` \
             `pkg-config --libs   libsodium`
+speed-donna.out: lib/speed-donna.o lib/speed-ed25519.o lib/utils.o
+	$(CC) $(CFLAGS) -o $@ $^ \
+            `pkg-config --cflags libsodium` \
+            `pkg-config --libs   libsodium`
 speed-hydrogen.out: lib/speed-hydrogen.o lib/utils.o
 	$(CC) $(CFLAGS) -o $@ $^              \
             `pkg-config --cflags libhydrogen` \
@@ -239,11 +242,9 @@ lib/tweetnacl.o: tests/externals/tweetnacl/tweetnacl.c \
                  tests/externals/tweetnacl/tweetnacl.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 speed-tweetnacl.out: lib/speed-tweetnacl.o lib/tweetnacl.o lib/utils.o
-speed-c25519.out   : lib/speed-c25519.o $(C25519_OBJECTS) lib/utils.o
-speed-donna.out    : lib/speed-donna.o lib/speed-ed25519.o lib/utils.o lib/monocypher.o
-speed-tweetnacl.out speed-c25519.out speed-donna.out:
 	$(CC) $(CFLAGS) -o $@ $^
-
+speed-c25519.out   : lib/speed-c25519.o $(C25519_OBJECTS) lib/utils.o
+	$(CC) $(CFLAGS) -o $@ $^
 tests/vectors.h:
 	@echo ""
 	@echo "======================================================"
