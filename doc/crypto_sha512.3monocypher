@@ -152,7 +152,7 @@ lacks many of the pitfalls of SHA-512.
 Note that SHA-512 itself is not suitable for hashing passwords and
 deriving keys from them;
 use the
-.Xr crypto_argon2i 3monocypher
+.Xr crypto_argon2 3monocypher
 family of functions for that purpose instead.
 .Pp
 SHA-512 is
@@ -500,7 +500,7 @@ uint8_t *key3 = okm + 64;
 .Ed
 .Sh SEE ALSO
 .Xr crypto_blake2b 3monocypher ,
-.Xr crypto_lock 3monocypher ,
+.Xr crypto_aead_lock 3monocypher ,
 .Xr crypto_poly1305 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
@@ -556,7 +556,7 @@ Because passwords tend to be simple,
 it is important to artificially slow down attackers by using especially
 computationally difficult hashing algorithms.
 Monocypher therefore provides
-.Xr crypto_argon2i 3monocypher
+.Xr crypto_argon2 3monocypher
 for password hashing and deriving keys from passwords.
 .Pp
 While HKDF and HMAC are proper key derivation functions (KDF),

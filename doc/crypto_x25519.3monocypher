@@ -268,7 +268,7 @@ characteristics:
 .Fn crypto_x25519_dirty_fast
 uses multiple large temporary variables and functions that are
 normally used internally for
-.Xr crypto_sign 3monocypher .
+.Xr crypto_eddsa_sign 3monocypher .
 Accordingly, it uses both more stack memory and more code
 (unless the signing code is already compiled in elsewhere).
 .Fn crypto_x25519_dirty_small

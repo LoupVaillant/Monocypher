@@ -54,9 +54,15 @@
 .Dt CRYPTO_SIGN 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_sign ,
-.Nm crypto_check ,
-.Nm crypto_sign_public_key
+.Nm crypto_eddsa_sign
+.Nm crypto_eddsa_check
+.Nm crypto_eddsa_key_pair
+.Nm crypto_eddsa_to_x25519
+.Nm crypto_eddsa_trim_scalar
+.Nm crypto_eddsa_reduce
+.Nm crypto_eddsa_mul_add
+.Nm crypto_eddsa_scalarbase
+.Nm crypto_eddsa_check_equation
 .Nd public key signatures
 .Sh SYNOPSIS
 .In monocypher.h
@@ -118,14 +124,14 @@
 and
 .Fn crypto_eddsa_check
 provide EdDSA public key signatures and verification.
-.Fn crypto_sign_key_pair
+.Fn crypto_eddsa_key_pair
 computes the private and public keys from a random seed.
 The arguments are:
 .Bl -tag -width Ds
 .It Fa seed
 Random seed, freshly generated and used only once.
 It is automatically wiped by
-.Fn crypto_sign_key_pair .
+.Fn crypto_eddsa_key_pair .
 See
 .Xr intro 3monocypher
 about random number generation (use your operating system's random

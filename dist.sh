@@ -58,8 +58,8 @@ VERSION=`git describe --tags`
 FOLDER=monocypher-$VERSION
 TARBALL=$FOLDER.tar
 
-# Generate documentation for users who don't have mandoc
-doc/man2html.sh
+# Generate documentation
+doc/doc_gen.sh
 
 # Delete the destination folder just to make sure everything is clean.
 # May be needed if we unpack the tarball in place for testing purposes,

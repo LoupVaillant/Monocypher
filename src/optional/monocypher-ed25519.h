@@ -90,7 +90,6 @@ void crypto_sha512_final (crypto_sha512_ctx *ctx, uint8_t hash[64]);
 void crypto_sha512(uint8_t hash[64],
                    const uint8_t *message, size_t message_size);
 
-
 // SHA 512 HMAC
 // ------------
 void crypto_sha512_hmac_init(crypto_sha512_hmac_ctx *ctx,

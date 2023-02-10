@@ -61,9 +61,9 @@ Monocypher is a cryptographic library.
 It provides functions for authenticated encryption, hashing, password
 hashing and key derivation, key exchange, and public key signatures.
 .Ss Authenticated encryption
-.Xr crypto_lock 3monocypher
+.Xr crypto_aead_lock 3monocypher
 and
-.Xr crypto_unlock 3monocypher
+.Xr crypto_aead_unlock 3monocypher
 use the ChaCha20 cipher and the Poly1305 one-time authenticator.
 .Pp
 ChaCha20 is a stream cipher based on a cryptographic hash function.
@@ -75,12 +75,12 @@ universal hashing.
 It is very fast and very simple.
 .Pp
 For specialised needs,
-.Xr crypto_chacha20 3monocypher
+.Xr crypto_chacha20_djb 3monocypher
 and
 .Xr crypto_poly1305 3monocypher
 are available to implement constructions involving them.
 Whenever possible,
-.Xr crypto_lock 3monocypher
+.Xr crypto_aead_lock 3monocypher
 should be preferred, however.
 .Ss Hashing
 .Xr crypto_blake2b 3monocypher
@@ -89,7 +89,7 @@ BLAKE2b combines the security of SHA-3 and the speed of MD5.
 It is immune to length extension attacks and provides a keyed mode
 that makes it a safe, easy to use authenticator.
 .Ss Password hashing and key derivation
-.Xr crypto_argon2i 3monocypher
+.Xr crypto_argon2 3monocypher
 implements the Argon2i resource intensive hash algorithm,
 which can be used to hash passwords for storage and to derive keys
 from passwords.
@@ -104,13 +104,13 @@ It is fast, simple, and relatively easy to implement securely.
 .Pp
 For specialised protocols that require indistinguishability from random
 noise,
-.Xr crypto_curve_to_hidden 3monocypher
+.Xr crypto_elligator_rev 3monocypher
 gives the option to disguise ephemeral (one-time use) X25519 public keys
 as random noise.
 .Ss Public key signatures
-.Xr crypto_sign 3monocypher
+.Xr crypto_eddsa_sign 3monocypher
 and
-.Xr crypto_check 3monocypher
+.Xr crypto_eddsa_check 3monocypher
 implement EdDSA, with Curve25519 and BLAKE2b.
 This is the same as the more famous Ed25519, with SHA-512 replaced by
 the faster and more secure BLAKE2b.
@@ -127,45 +127,47 @@ wipes a buffer.
 It is meant to erase secrets when they are no longer needed, to reduce
 the chances of leaks.
 .Ss Optional code
-If Monocypher was compiled and installed with
-.Dv USE_ED25519 ,
+If Monocypher was compiled and installed with the provided makefile,
 SHA-512 functions become available as well.
 See
 .Xr crypto_ed25519_sign 3monocypher ,
-.Xr crypto_ed25519_sign_init_first_pass 3monocypher ,
-.Xr crypto_sha512 3monocypher ,
 and
-.Xr crypto_hmac_sha512 3monocypher .
+.Xr crypto_sha512 3monocypher .
 .Sh SEE ALSO
-.Xr crypto_argon2i 3monocypher ,
-.Xr crypto_argon2i_general 3monocypher ,
+.Xr crypto_aead_init_djb 3monocypher ,
+.Xr crypto_aead_init_ietf 3monocypher ,
+.Xr crypto_aead_init_x 3monocypher ,
+.Xr crypto_aead_lock 3monocypher ,
+.Xr crypto_aead_read 3monocypher ,
+.Xr crypto_aead_unlock 3monocypher ,
+.Xr crypto_aead_write 3monocypher ,
+.Xr crypto_argon2 3monocypher ,
 .Xr crypto_blake2b 3monocypher ,
 .Xr crypto_blake2b_final 3monocypher ,
-.Xr crypto_blake2b_general 3monocypher ,
-.Xr crypto_blake2b_general_init 3monocypher ,
 .Xr crypto_blake2b_init 3monocypher ,
+.Xr crypto_blake2b_keyed 3monocypher ,
+.Xr crypto_blake2b_keyed_init 3monocypher ,
 .Xr crypto_blake2b_update 3monocypher ,
-.Xr crypto_chacha20 3monocypher ,
-.Xr crypto_chacha20_ctr 3monocypher ,
-.Xr crypto_check 3monocypher ,
-.Xr crypto_curve_to_hidden 3monocypher ,
-.Xr crypto_from_eddsa_private 3monocypher ,
-.Xr crypto_from_eddsa_public 3monocypher ,
-.Xr crypto_hchacha20 3monocypher ,
-.Xr crypto_hidden_key_pair 3monocypher ,
-.Xr crypto_hidden_to_curve 3monocypher ,
-.Xr crypto_ietf_chacha20 3monocypher ,
-.Xr crypto_ietf_chacha20_ctr 3monocypher ,
-.Xr crypto_lock 3monocypher ,
-.Xr crypto_lock_aead 3monocypher ,
+.Xr crypto_chacha20_djb 3monocypher ,
+.Xr crypto_chacha20_h 3monocypher ,
+.Xr crypto_chacha20_ietf 3monocypher ,
+.Xr crypto_chacha20_x 3monocypher ,
+.Xr crypto_eddsa_check 3monocypher ,
+.Xr crypto_eddsa_check_equation 3monocypher ,
+.Xr crypto_eddsa_key_pair 3monocypher ,
+.Xr crypto_eddsa_mul_add 3monocypher ,
+.Xr crypto_eddsa_reduce 3monocypher ,
+.Xr crypto_eddsa_scalarbase 3monocypher ,
+.Xr crypto_eddsa_sign 3monocypher ,
+.Xr crypto_eddsa_to_x25519 3monocypher ,
+.Xr crypto_eddsa_trim_scalar 3monocypher ,
+.Xr crypto_elligator_key_pair 3monocypher ,
+.Xr crypto_elligator_map 3monocypher ,
+.Xr crypto_elligator_rev 3monocypher ,
 .Xr crypto_poly1305 3monocypher ,
 .Xr crypto_poly1305_final 3monocypher ,
 .Xr crypto_poly1305_init 3monocypher ,
 .Xr crypto_poly1305_update 3monocypher ,
-.Xr crypto_sign 3monocypher ,
-.Xr crypto_sign_public_key 3monocypher ,
-.Xr crypto_unlock 3monocypher ,
-.Xr crypto_unlock_aead 3monocypher ,
 .Xr crypto_verify16 3monocypher ,
 .Xr crypto_verify32 3monocypher ,
 .Xr crypto_verify64 3monocypher ,
@@ -175,22 +177,23 @@ and
 .Xr crypto_x25519_dirty_small 3monocypher ,
 .Xr crypto_x25519_inverse 3monocypher ,
 .Xr crypto_x25519_public_key 3monocypher ,
-.Xr crypto_xchacha20 3monocypher ,
-.Xr crypto_xchacha20_ctr 3monocypher
+.Xr crypto_x25519_to_eddsa 3monocypher
 .Ss Optional code
-.Xr crypto_from_ed25519_private 3monocypher ,
-.Xr crypto_from_ed25519_public 3monocypher ,
 .Xr crypto_ed25519_check 3monocypher ,
-.Xr crypto_ed25519_public_key 3monocypher ,
+.Xr crypto_ed25519_key_pair 3monocypher ,
+.Xr crypto_ed25519_ph_check 3monocypher ,
+.Xr crypto_ed25519_ph_sign 3monocypher ,
 .Xr crypto_ed25519_sign 3monocypher ,
-.Xr crypto_hmac_sha512 3monocypher ,
-.Xr crypto_hmac_sha512_init 3monocypher ,
-.Xr crypto_hmac_sha512_update 3monocypher ,
-.Xr crypto_hmac_sha512_final 3monocypher
 .Xr crypto_sha512 3monocypher ,
+.Xr crypto_sha512_final 3monocypher ,
+.Xr crypto_sha512_hkdf 3monocypher ,
+.Xr crypto_sha512_hkdf_expand 3monocypher ,
+.Xr crypto_sha512_hmac 3monocypher ,
+.Xr crypto_sha512_hmac_final 3monocypher ,
+.Xr crypto_sha512_hmac_init 3monocypher ,
+.Xr crypto_sha512_hmac_update 3monocypher ,
 .Xr crypto_sha512_init 3monocypher ,
-.Xr crypto_sha512_update 3monocypher ,
-.Xr crypto_sha512_final 3monocypher
+.Xr crypto_sha512_update 3monocypher
 .Sh SECURITY CONSIDERATIONS
 Using cryptography securely is difficult.
 Flaws that never manifest under normal use might be exploited by a

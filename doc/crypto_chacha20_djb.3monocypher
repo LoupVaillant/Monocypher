@@ -100,7 +100,7 @@ primitive.
 .Pp
 ChaCha20 is a low-level primitive.
 Consider using authenticated encryption, implemented by
-.Xr crypto_lock 3monocypher .
+.Xr crypto_aead_lock 3monocypher .
 .Pp
 The arguments are:
 .Bl -tag -width Ds
@@ -354,7 +354,7 @@ crypto_wipe(key, 32);
 crypto_wipe(in , 16);
 .Ed
 .Sh SEE ALSO
-.Xr crypto_lock 3monocypher ,
+.Xr crypto_aead_lock 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
@@ -412,7 +412,7 @@ To ensure the integrity of a message, use BLAKE2b in keyed mode or
 authenticated encryption; see
 .Xr crypto_blake2b 3monocypher
 and
-.Xr crypto_lock 3monocypher .
+.Xr crypto_aead_lock 3monocypher .
 .Ss Nonce reuse
 Repeating a nonce with the same key exposes the XOR of two or more
 plaintext messages, effectively destroying confidentiality.

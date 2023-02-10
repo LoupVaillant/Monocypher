@@ -79,7 +79,7 @@
 Cryptographic operations often require comparison of secrets or values
 derived from secrets.
 Standard comparison functions like
-.Fn memcmp
+.Xr memcmp 3
 tend to exit when they find the first difference, leaking information
 through timing differences.
 .Pp
@@ -107,7 +107,7 @@ and
 .Fa b .
 .Pp
 When in doubt, prefer these functions over
-.Fn memcmp .
+.Xr memcmp 3 .
 .Sh RETURN VALUES
 These functions return 0 if the two memory chunks are the same and -1
 otherwise.

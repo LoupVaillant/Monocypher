@@ -115,7 +115,7 @@ It is faster than MD5, yet just as secure as SHA-3.
 Note that BLAKE2b itself is not suitable for hashing passwords and
 deriving keys from them;
 use the
-.Xr crypto_argon2i 3monocypher
+.Xr crypto_argon2 3monocypher
 family of functions for that purpose instead.
 .Pp
 While BLAKE2b is immune to length extension attacks,
@@ -484,7 +484,7 @@ void b2kdf(uint8_t *okm,  size_t okm_size,  /* unlimited   */
 .Ed
 .Sh SEE ALSO
 .Xr crypto_x25519 3monocypher ,
-.Xr crypto_lock 3monocypher ,
+.Xr crypto_aead_lock 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
 These functions implement BLAKE2b, described in RFC 7693.
@@ -530,7 +530,7 @@ Because passwords tend to be simple,
 it is important to artificially slow down attackers by using
 computationally difficult hashing algorithms.
 Monocypher therefore provides
-.Xr crypto_argon2i 3monocypher
+.Xr crypto_argon2 3monocypher
 for password hashing and deriving keys from passwords.
 .Sh IMPLEMENTATION DETAILS
 The core loop is unrolled by default.

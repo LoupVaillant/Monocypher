@@ -142,7 +142,7 @@ or even meeting physically.
 See
 .Xr crypto_x25519 3monocypher
 for a building block for a key exchange protocol and
-.Xr crypto_argon2i 3monocypher
+.Xr crypto_argon2 3monocypher
 for password-based key derivation.
 .It Fa nonce
 A 24-byte number, used only once with any given session key.
@@ -227,11 +227,11 @@ For long messages that may not fit in memory,
 first initialise a context with
 .Fn crypto_aead_init_x ,
 then encrypt each chunk with
-.Fn crypto_aead_write.
+.Fn crypto_aead_write .
 The receiving end will initialise its own context with
 .Fn crypto_aead_init_x ,
 then decrypt each chunk with
-.Fn crypto_aead_read.
+.Fn crypto_aead_read .
 .Pp
 Just like
 .Fn crypto_aead_unlock ,

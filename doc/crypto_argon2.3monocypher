@@ -102,7 +102,9 @@ Length of
 .Fa hash ,
 in bytes.
 This argument should be set to 32 or 64 for compatibility with the
-.Fn crypto_verify*
+.Xr crypto_verify32 3monocypher
+or
+.Xr crypto_verify64 3monocypher
 constant time comparison functions.
 .It Fa work_area
 Temporary buffer for the algorithm, allocated by the caller.
@@ -110,7 +112,7 @@ It must be
 .Fa config.nb_blocks
 × 1024 bytes big and suitably aligned for 64-bit integers.
 If you are not sure how to allocate that buffer, just use
-.Fn malloc .
+.Xr malloc 3.
 .Pp
 The work area is automatically wiped by
 .Fn crypto_argon2 .
@@ -361,7 +363,7 @@ if (work_area == NULL) {
 }
 .Ed
 .Sh SEE ALSO
-.Xr crypto_lock 3monocypher ,
+.Xr crypto_aead_lock 3monocypher ,
 .Xr crypto_verify16 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher

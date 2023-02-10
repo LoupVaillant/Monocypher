@@ -85,7 +85,7 @@ This is normally the size of the entire buffer.
 Monocypher will wipe its context structs when finalizing an operation
 such as signing or decrypting.
 When using direct interfaces like
-.Xr crypto_lock 3monocypher ,
+.Xr crypto_aead_lock 3monocypher ,
 these context structs are invisible to you.
 However, they are exposed in incremental interfaces like
 .Xr crypto_blake2b_init 3monocypher .

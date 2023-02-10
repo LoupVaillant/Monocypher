@@ -54,7 +54,9 @@
 .Sh NAME
 .Nm crypto_ed25519_sign ,
 .Nm crypto_ed25519_check ,
-.Nm crypto_ed25519_public_key
+.Nm crypto_ed25519_key_pair
+.Nm crypto_ed25519_ph_sign
+.Nm crypto_ed25519_ph_check
 .Nd public key signatures
 .Sh SYNOPSIS
 .In monocypher-ed25519.h
@@ -103,7 +105,7 @@ If you have no interoperability requirements, prefer
 .Pp
 The arguments and security considerations are the same as those
 described in
-.Xr crypto_sign 3monocypher .
+.Xr crypto_eddsa_sign 3monocypher .
 .Pp
 .Fn crypto_ed25519_ph_sign
 and
@@ -115,7 +117,7 @@ first hash the message with
 then process the resulting
 .Fa message_hash .
 .Sh RETURN VALUES
-.Fn crypto_ed25519_public_key ,
+.Fn crypto_ed25519_key_pair ,
 .Fn crypto_ed25519_sign ,
 and
 .Fn crypto_ed25519_ph_sign
@@ -128,7 +130,7 @@ returns 0 for legitimate messages and -1 for forgeries.
 .Sh SEE ALSO
 .Xr crypto_eddsa_sign 3monocypher ,
 .Xr crypto_x25519 3monocypher ,
-.Xr crypto_lock 3monocypher ,
+.Xr crypto_aead_lock 3monocypher ,
 .Xr crypto_sha512 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS

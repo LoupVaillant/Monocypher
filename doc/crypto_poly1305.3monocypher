@@ -94,7 +94,7 @@ correctly.
 .Pp
 Poly1305 is a low-level primitive.
 Consider using authenticated encryption, implemented by
-.Xr crypto_lock 3monocypher .
+.Xr crypto_aead_lock 3monocypher .
 .Pp
 The arguments are:
 .Bl -tag -width Ds
@@ -194,7 +194,7 @@ crypto_poly1305_final(&ctx, mac);
 .Ed
 .Sh SEE ALSO
 .Xr crypto_blake2b 3monocypher ,
-.Xr crypto_lock 3monocypher ,
+.Xr crypto_aead_lock 3monocypher ,
 .Xr crypto_verify16 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
@@ -212,7 +212,7 @@ first appeared in Monocypher 1.1.0.
 Poly1305 is difficult to use correctly.
 Do not use it unless you are absolutely sure what you are doing.
 Use authenticated encryption instead; see
-.Xr crypto_lock 3monocypher .
+.Xr crypto_aead_lock 3monocypher .
 If you are certain you do not want encryption, refer to
 .Xr crypto_blake2b 3monocypher
 on how to use BLAKE2b to generate message authentication codes.
@@ -256,7 +256,7 @@ use the
 .Em rest
 of the stream to encrypt your message.
 This is the approach used by
-.Xr crypto_lock_aead 3monocypher .
+.Xr crypto_aead_lock 3monocypher .
 .Ss Protection against side channels
 Use
 .Xr crypto_verify16 3monocypher

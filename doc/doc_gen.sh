@@ -65,6 +65,12 @@ mkdir -p man3
 mkdir -p html
 cp style.css html/
 
+cat ../src/monocypher.h ../src/optional/monocypher-ed25519.h |\
+    egrep -v "^(//|\}| |	|extern)"                        |\
+    grep crypto_                                             |\
+    sed 's|[a-z0-9_]*  *\([a-z0-9_]*\).*|\1|'                |\
+    ./doc_check.py *.3monocypher
+
 for source in $(find . -name "*.3monocypher" | sed 's|^\./||' | sort)
 do
     name=$(echo "$source" | sed 's/.3monocypher//')

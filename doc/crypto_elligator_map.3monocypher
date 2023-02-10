@@ -103,7 +103,7 @@ a
 in this context refers to a
 .Em point on Curve25519 .
 This also means that these functions are not compatible with
-.Xr crypto_sign 3monocypher
+.Xr crypto_eddsa_sign 3monocypher
 and related functions.
 .Pp
 .Fn crypto_elligator_rev
