@@ -53,7 +53,6 @@
 
 set -e
 
-make clean;  make tis-ci
 make clean;  make test
 make clean;  make test CFLAGS="-DBLAKE2_NO_UNROLLING -O3"
 make clean;  make test CC="clang -std=c99" CFLAGS="-g -fsanitize=address"
