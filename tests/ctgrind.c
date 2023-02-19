@@ -9,7 +9,7 @@
 //
 // ------------------------------------------------------------------------
 //
-// Copyright (c) 2020, Loup Vaillant
+// Copyright (c) 2020, 2023 Loup Vaillant
 // All rights reserved.
 //
 //
@@ -39,7 +39,7 @@
 //
 // ------------------------------------------------------------------------
 //
-// Written in 2020 by Loup Vaillant
+// Written in 2020 and 2023 by Loup Vaillant
 //
 // To the extent possible under law, the author(s) have dedicated all copyright
 // and related neighboring rights to this software to the public domain
@@ -94,7 +94,7 @@ static void lock_aead()
 		u8 nonce      [ 24];
 		u8 ad         [128];
 		u8 plain_text [128];
-		crypto_lock_aead(mac, cipher_text, key, nonce, ad, i, plain_text, i);
+		crypto_aead_lock(cipher_text, mac, key, nonce, ad, i, plain_text, i);
 	}
 }
 
@@ -107,139 +107,160 @@ static void unlock_aead()
 		u8 mac        [ 16];
 		u8 ad         [128];
 		u8 cipher_text[128];
-		crypto_unlock_aead(plain_text, key, nonce, mac, ad, i, cipher_text, i);
+		crypto_aead_unlock(plain_text, mac, key, nonce, ad, i, cipher_text, i);
 	}
 }
 
-static void blake2b_general()
+static void blake2b()
 {
 	FOR (i, 0, 256) {
 		u8 hash   [ 64];
 		u8 key    [ 64];
 		u8 message[256];
-		crypto_blake2b_general(hash, 64, key, 0, message, i);
+		crypto_blake2b_keyed(hash, 64, key, 0, message, i);
 	}
 	FOR (i, 0, 64) {
 		u8 hash   [ 64];
 		u8 key    [ 64];
 		u8 message[256];
-		crypto_blake2b_general(hash, 64, key, i, message, 128);
+		crypto_blake2b_keyed(hash, 64, key, i, message, 128);
 	}
 	FOR (i, 0, 64) {
 		u8 hash   [ 64];
 		u8 key    [ 64];
 		u8 message[256];
-		crypto_blake2b_general(hash, i, key, 0, message, 0);
+		crypto_blake2b_keyed(hash, i, key, 0, message, 0);
 	}
 }
 
-static void argon2i_general()
+static void argon2()
 {
-	void *work_area = alloc(1024 * 600);
-	u8    hash    [ 32];
-	u8    password[ 16];
-	u8    salt    [ 16];
-	u8    key     [ 32];
-	u8    ad      [128];
-	crypto_argon2i_general(hash, 32, work_area, 600, 3,
-	                       password, 16, salt, 16, key, 32, ad, 128);
+	void *work_area = alloc(1024 * 600 * 4);
+	u8    hash[ 32];
+	u8    pass[ 16];
+	u8    salt[ 16];
+	u8    key [ 32];
+	u8    ad  [128];
+
+	crypto_argon2_config config;
+	config.algorithm = CRYPTO_ARGON2_ID;
+	config.nb_blocks = 600 * 4;
+	config.nb_passes = 3;
+	config.nb_lanes  = 4;
+
+	crypto_argon2_inputs inputs;
+	inputs.pass      = pass;
+	inputs.salt      = salt;
+	inputs.pass_size = sizeof(pass);
+	inputs.salt_size = sizeof(salt);
+
+	crypto_argon2_extras extras;
+	extras.key       = key;
+	extras.ad        = ad;
+	extras.key_size  = sizeof(key);
+	extras.ad_size   = sizeof(ad);
+
+	crypto_argon2(hash, 32, work_area, config, inputs, extras);
 	free(work_area);
 }
 
-static void key_exchange()
+static void x25519()
 {
 	u8 shared_key      [32];
 	u8 your_secret_key [32];
 	u8 their_public_key[32];
-	crypto_key_exchange(shared_key, your_secret_key, their_public_key);
+	crypto_x25519(shared_key, your_secret_key, their_public_key);
 }
 
-static void sign_public_key()
+static void x25519_to_eddsa()
 {
-	u8  public_key[32];
-	u8  secret_key[32];
-	crypto_sign_public_key(public_key, secret_key);
+	u8 x25519[32];
+	u8 eddsa[32];
+	crypto_x25519_to_eddsa(eddsa, x25519);
 }
 
-static void sign()
+static void eddsa_key_pair()
 {
-	u8  signature [64];
-	u8  secret_key[32];
-	u8  public_key[32];
-	u8  message   [64];
-	crypto_sign(signature, secret_key, public_key, message, 64);
+	u8 seed[32];
+	u8 secret_key[64];
+	u8 public_key[32];
+	crypto_eddsa_key_pair(secret_key, public_key, seed);
 }
 
-static void from_eddsa_private()
+static void eddsa_sign()
+{
+	u8 signature [64];
+	u8 secret_key[64];
+	u8 message   [64];
+	crypto_eddsa_sign(signature, secret_key, message, 64);
+}
+
+static void eddsa_to_x25519()
 {
 	u8 x25519[32];
 	u8 eddsa [32];
-	crypto_from_eddsa_private(x25519, eddsa);
-}
-static void from_eddsa_public()
-{
-	u8 x25519[32];
-	u8 eddsa [32];
-	crypto_from_eddsa_public(x25519, eddsa);
+	crypto_eddsa_to_x25519(x25519, eddsa);
 }
 
-static void hidden_to_curve()
+static void elligator_map()
 {
 	u8 curve [32];
 	u8 hidden[32];
-	crypto_hidden_to_curve(curve, hidden);
+	crypto_elligator_map(curve, hidden);
 }
 
-static void curve_to_hidden()
+static void elligator_rev()
 {
 	u8 hidden[32];
 	u8 curve [32];
 	u8 tweak; // The compiler notices this one is used uninitialised
-	crypto_curve_to_hidden(hidden, curve, tweak);
+	crypto_elligator_rev(hidden, curve, tweak);
 }
 
-static void hidden_key_pair()
+static void elligator_key_pair()
 {
 	u8 hidden    [32];
 	u8 secret_key[32];
 	u8 seed      [32];
-	crypto_hidden_key_pair(hidden, secret_key,seed);
+	crypto_elligator_key_pair(hidden, secret_key,seed);
 }
 
-static void h_chacha20()
+static void chacha20_h()
 {
 	u8 out[32], key[32], in[16];
-	crypto_hchacha20(out, key, in);
+	crypto_chacha20_h(out, key, in);
 }
 
-static void chacha20()
-{
-	FOR (i, 0, 128) {
-		u8 cipher_text[128];
-		u8 plain_text [128];
-		u8 key        [ 32];
-		u8 nonce      [  8];
-		crypto_chacha20(cipher_text, plain_text, i,  key, nonce);
-	}
-}
-static void xchacha20()
+static void chacha20_x()
 {
 	FOR (i, 0, 128) {
 		u8 cipher_text[128];
 		u8 plain_text [128];
 		u8 key        [ 32];
 		u8 nonce      [ 24];
-		crypto_xchacha20(cipher_text, plain_text, i,  key, nonce);
+		crypto_chacha20_x(cipher_text, plain_text, i,  key, nonce, 0);
 	}
 }
-static void ietf_chacha20()
+
+static void chacha20_djb()
+{
+	FOR (i, 0, 128) {
+		u8 cipher_text[128];
+		u8 plain_text [128];
+		u8 key        [ 32];
+		u8 nonce      [  8];
+		crypto_chacha20_djb(cipher_text, plain_text, i,  key, nonce, 0);
+	}
+}
+
+static void chacha20_ietf()
 {
 	FOR (i, 0, 128) {
 		u8 cipher_text[128];
 		u8 plain_text [128];
 		u8 key        [ 32];
 		u8 nonce      [ 12];
-		crypto_ietf_chacha20(cipher_text, plain_text, i,  key, nonce);
+		crypto_chacha20_ietf(cipher_text, plain_text, i,  key, nonce, 0);
 	}
 }
 
@@ -285,21 +306,21 @@ int main()
 	RUN(wipe              , "constant time");
 	RUN(lock_aead         , "constant time");
 	RUN(unlock_aead       , "1 conditional");
-	RUN(blake2b_general   , "constant time");
-	RUN(argon2i_general   , "constant time");
-	RUN(key_exchange      , "constant time");
-	RUN(sign_public_key   , "constant time");
-	RUN(sign              , "constant time");
+	RUN(blake2b           , "constant time");
+	RUN(argon2            , "constant time"); // "use" of uninitialised value
+	RUN(x25519            , "constant time");
+	RUN(x25519_to_eddsa   , "constant time");
+	RUN(eddsa_key_pair    , "constant time");
+	RUN(eddsa_sign        , "constant time");
 	printf(                 "skipped      : crypto_check.\n");
-	RUN(from_eddsa_private, "constant time");
-	RUN(from_eddsa_public , "constant time");
-	RUN(hidden_to_curve   , "constant time");
-	RUN(curve_to_hidden   , "1 conditional");
-	RUN(hidden_key_pair   , "1 conditional"); // shouldn't that be 2?
-	RUN(h_chacha20        , "constant time");
-	RUN(chacha20          , "constant time");
-	RUN(xchacha20         , "constant time");
-	RUN(ietf_chacha20     , "constant time");
+	RUN(eddsa_to_x25519   , "constant time");
+	RUN(elligator_map     , "constant time");
+	RUN(elligator_rev     , "1 conditional");
+	RUN(elligator_key_pair, "2 conditionals");
+	RUN(chacha20_h        , "constant time");
+	RUN(chacha20_x        , "constant time");
+	RUN(chacha20_djb      , "constant time");
+	RUN(chacha20_ietf     , "constant time");
 	RUN(poly1305          , "constant time");
 	RUN(x25519_dirty_small, "constant time");
 	RUN(x25519_dirty_fast , "constant time");
