@@ -49,6 +49,9 @@
 # You should have received a copy of the CC0 Public Domain Dedication along
 # with this software.  If not, see
 # <https://creativecommons.org/publicdomain/zero/1.0/>
+.POSIX:
+.SUFFIXES:
+
 CC=gcc -std=c99
 CFLAGS= -pedantic -Wall -Wextra -O3 -march=native
 DESTDIR=
@@ -67,20 +70,21 @@ SONAME=libmonocypher.so.3
 ##################
 ## Main targets ##
 ##################
-all    : library
-check  : test
+all  : library
+check: test
 
-test   : test.out
-tis-ci : tis-ci.out
+test: test.out
+	./test.out
+
+tis-ci: tis-ci.out
+	./tis-ci.out
+
 ctgrind: ctgrind.out
-test tis-ci:
-	./$<
-ctgrind:
-	valgrind ./$<
+	valgrind ./ctgrind.out
 
 clean:
 	rm -rf lib/
-	rm -f  *.out
+	rm -f *.out
 
 #############
 ## Install ##
@@ -114,52 +118,62 @@ library: static-library dynamic-library
 static-library : lib/libmonocypher.a
 dynamic-library: lib/libmonocypher.so lib/$(SONAME)
 
-lib/libmonocypher.a: lib/monocypher.o lib/monocypher-ed25519.o
-	$(AR) cr $@ $^
+MAIN_O=lib/monocypher.o lib/monocypher-ed25519.o
+
+lib/libmonocypher.a: $(MAIN_O)
+	$(AR) cr $@ $(MAIN_O)
 lib/libmonocypher.so: lib/$(SONAME)
 	@mkdir -p $(@D)
-	ln -sf `basename $<` $@
-lib/$(SONAME): lib/monocypher.o lib/monocypher-ed25519.o
+	ln -sf `basename lib/$(SONAME)` $@
+lib/$(SONAME): $(MAIN_O)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $^
+	$(CC) $(CFLAGS) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $(MAIN_O)
+
+lib/monocypher.o: src/monocypher.c src/monocypher.h
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ src/monocypher.c
+
 lib/monocypher-ed25519.o: src/optional/monocypher-ed25519.c \
                           src/optional/monocypher-ed25519.h
-lib/monocypher.o: src/monocypher.c src/monocypher.h
-lib/monocypher.o lib/monocypher-ed25519.o:
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ $<
-
+	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ \
+		src/optional/monocypher-ed25519.c
 
 ####################
 ## Test libraries ##
 ####################
 TEST_COMMON = tests/utils.h src/monocypher.h src/optional/monocypher-ed25519.h
-lib/utils.o  : tests/utils.c
-lib/tis-ci.o : tests/tis-ci.c  $(TEST_COMMON) tests/tis-ci-vectors.h
-lib/test.o   : tests/test.c    $(TEST_COMMON) tests/vectors.h
+
+lib/utils.o: tests/utils.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -I src -I src/optional -I tests -fPIC -c -o $@ \
+		tests/utils.c
+
+lib/tis-ci.o: tests/tis-ci.c $(TEST_COMMON) tests/tis-ci-vectors.h
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -I src -I src/optional -I tests -fPIC -c -o $@ \
+		tests/tis-ci.c
+
+lib/test.o: tests/test.c $(TEST_COMMON) tests/vectors.h
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -I src -I src/optional -I tests -fPIC -c -o $@ \
+		tests/test.c
+
 lib/ctgrind.o: tests/ctgrind.c $(TEST_COMMON)
-lib/utils.o lib/test.o lib/tis-ci.o:
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS)                     \
-	    -I src -I src/optional -I tests \
-	    -fPIC -c -o $@ $<
-lib/ctgrind.o: # suppress optimisations to maximise findings
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -O0                 \
-	    -I src -I src/optional -I tests \
-	    -fPIC -c -o $@ $<
+	$(CC) $(CFLAGS) -I src -I src/optional -I tests -fPIC -c -o $@ \
+		tests/ctgrind.c
 
 ######################
 ## Test executables ##
 ######################
 TEST_OBJ=  lib/utils.o lib/monocypher.o lib/monocypher-ed25519.o
 test.out   : lib/test.o    $(TEST_OBJ)
+	$(CC) $(CFLAGS) -I src -I src/optional -o $@ lib/test.o    $(TEST_OBJ)
 tis-ci.out : lib/tis-ci.o  $(TEST_OBJ)
+	$(CC) $(CFLAGS) -I src -I src/optional -o $@ lib/tis-ci.o  $(TEST_OBJ)
 ctgrind.out: lib/ctgrind.o $(TEST_OBJ)
-test.out tis-ci.out:
-	$(CC) $(CFLAGS) -I src -I src/optional -o $@ $^
-ctgrind.out:
-	$(CC) $(CFLAGS) -O0 -I src -I src/optional -o $@ $^
+	$(CC) $(CFLAGS) -I src -I src/optional -o $@ lib/ctgrind.o $(TEST_OBJ)
 tests/vectors.h:
 	@echo ""
 	@echo "======================================================"
