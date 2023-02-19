@@ -173,10 +173,10 @@ static void sha512_hkdf(vector_reader *reader)
 static void argon2(vector_reader *reader)
 {
 	crypto_argon2_config config;
-	config.algorithm      = load32_le(next_input(reader).buf);
-	config.nb_blocks      = load32_le(next_input(reader).buf);
-	config.nb_passes      = load32_le(next_input(reader).buf);
-	config.nb_lanes       = load32_le(next_input(reader).buf);
+	config.algorithm = load32_le(next_input(reader).buf);
+	config.nb_blocks = load32_le(next_input(reader).buf);
+	config.nb_passes = load32_le(next_input(reader).buf);
+	config.nb_lanes  = load32_le(next_input(reader).buf);
 
 	vector pass      = next_input(reader);
 	vector salt      = next_input(reader);
