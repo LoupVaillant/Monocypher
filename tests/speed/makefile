@@ -132,7 +132,7 @@ donna.o: ../externals/ed25519-donna/ed25519.c $(DONNA_HEADERS)
 ## Speed benchmarks ##
 ######################
 speed.o           : speed.c           speed.h ../utils.h
-	$(CC) -c $(CFLAGS) $< -o $@ -I ..
+	$(CC) -c $(CFLAGS) $< -o $@ -I .. -I ../../src/ -I ../../src/optional
 speed-sodium.o    : speed-sodium.c    speed.h ../utils.h
 	$(CC) -c $(CFLAGS) $< -o $@ -I ..
 speed-hydrogen.o  : speed-hydrogen.c  speed.h ../utils.h

@@ -102,7 +102,9 @@ jobs:
         run: make clean && make tis-ci -j4
 
       - name: Run speed tests
-        run: make clean && make speed -j4
+        run: |
+          cd tests/speed
+          make -j4
 
       - name: Run code coverage tests
         run: ./tests/coverage.sh
