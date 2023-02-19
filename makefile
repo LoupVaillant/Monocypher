@@ -174,6 +174,8 @@ tis-ci.out : lib/tis-ci.o  $(TEST_OBJ)
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ lib/tis-ci.o  $(TEST_OBJ)
 ctgrind.out: lib/ctgrind.o $(TEST_OBJ)
 	$(CC) $(CFLAGS) -I src -I src/optional -o $@ lib/ctgrind.o $(TEST_OBJ)
+# Remove lines below for the tarball
+
 tests/vectors.h:
 	@echo ""
 	@echo "======================================================"
