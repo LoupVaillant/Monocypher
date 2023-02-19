@@ -119,61 +119,63 @@ static-library : lib/libmonocypher.a
 dynamic-library: lib/libmonocypher.so lib/$(SONAME)
 
 MAIN_O=lib/monocypher.o lib/monocypher-ed25519.o
+MAIN_I=-I src -I src/optional
 
 lib/libmonocypher.a: $(MAIN_O)
 	$(AR) cr $@ $(MAIN_O)
+
 lib/libmonocypher.so: lib/$(SONAME)
 	@mkdir -p $(@D)
 	ln -sf `basename lib/$(SONAME)` $@
+
 lib/$(SONAME): $(MAIN_O)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $(MAIN_O)
 
 lib/monocypher.o: src/monocypher.c src/monocypher.h
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ src/monocypher.c
+	$(CC) $(CFLAGS) $(MAIN_I) -fPIC -c -o $@ src/monocypher.c
 
 lib/monocypher-ed25519.o: src/optional/monocypher-ed25519.c \
                           src/optional/monocypher-ed25519.h
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I src -I src/optional -fPIC -c -o $@ \
-		src/optional/monocypher-ed25519.c
+	$(CC) $(CFLAGS) $(MAIN_I) -fPIC -c -o $@ src/optional/monocypher-ed25519.c
 
 ####################
 ## Test libraries ##
 ####################
-TEST_COMMON = tests/utils.h src/monocypher.h src/optional/monocypher-ed25519.h
+TEST_COMMON=tests/utils.h src/monocypher.h src/optional/monocypher-ed25519.h
+TEST_I=$(MAIN_I) -I tests
 
 lib/utils.o: tests/utils.c
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I src -I src/optional -I tests -fPIC -c -o $@ \
-		tests/utils.c
-
-lib/tis-ci.o: tests/tis-ci.c $(TEST_COMMON) tests/tis-ci-vectors.h
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I src -I src/optional -I tests -fPIC -c -o $@ \
-		tests/tis-ci.c
+	$(CC) $(CFLAGS) $(TEST_I) -fPIC -c -o $@ tests/utils.c
 
 lib/test.o: tests/test.c $(TEST_COMMON) tests/vectors.h
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I src -I src/optional -I tests -fPIC -c -o $@ \
-		tests/test.c
+	$(CC) $(CFLAGS) $(TEST_I) -fPIC -c -o $@ tests/test.c
+
+lib/tis-ci.o: tests/tis-ci.c $(TEST_COMMON) tests/tis-ci-vectors.h
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) $(TEST_I) -fPIC -c -o $@ tests/tis-ci.c
 
 lib/ctgrind.o: tests/ctgrind.c $(TEST_COMMON)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I src -I src/optional -I tests -fPIC -c -o $@ \
-		tests/ctgrind.c
+	$(CC) $(CFLAGS) $(TEST_I) -fPIC -c -o $@ tests/ctgrind.c
 
 ######################
 ## Test executables ##
 ######################
-TEST_OBJ=  lib/utils.o lib/monocypher.o lib/monocypher-ed25519.o
-test.out   : lib/test.o    $(TEST_OBJ)
-	$(CC) $(CFLAGS) -I src -I src/optional -o $@ lib/test.o    $(TEST_OBJ)
-tis-ci.out : lib/tis-ci.o  $(TEST_OBJ)
-	$(CC) $(CFLAGS) -I src -I src/optional -o $@ lib/tis-ci.o  $(TEST_OBJ)
+TEST_OBJ=lib/utils.o lib/monocypher.o lib/monocypher-ed25519.o
+
+test.out: lib/test.o $(TEST_OBJ)
+	$(CC) $(CFLAGS) -o $@ lib/test.o $(TEST_OBJ)
+
+tis-ci.out: lib/tis-ci.o $(TEST_OBJ)
+	$(CC) $(CFLAGS) -o $@ lib/tis-ci.o $(TEST_OBJ)
+
 ctgrind.out: lib/ctgrind.o $(TEST_OBJ)
-	$(CC) $(CFLAGS) -I src -I src/optional -o $@ lib/ctgrind.o $(TEST_OBJ)
+	$(CC) $(CFLAGS) -o $@ lib/ctgrind.o $(TEST_OBJ)
 # Remove lines below for the tarball
 
 tests/vectors.h:
