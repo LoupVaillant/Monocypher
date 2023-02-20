@@ -1,3 +1,17 @@
+4.0.0
+-----
+2023/02/20
+
+- Fixed unsafe signature API.
+- Simpler, more flexible low-level signature API.
+- Fully specified, consensus-friendly signatures.
+- Added Argon2d and Argon2id, support multiple lanes.
+- Added safe and fast streaming AEAD.
+- Added HKDF-SHA-512 and documented BLAKE2b KDF.
+- More consistent and memorable function names.
+- POSIX makefile.
+
+
 3.1.3
 -----
 2022/04/25
