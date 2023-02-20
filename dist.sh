@@ -75,6 +75,7 @@ find $FOLDER -type f -exec sed -i "s/__git__/$VERSION/g" \{\} \;
 # Remove the dist target from the makefile (no recursive releases!),
 # and the tests/vector.h target, which ships with the tarball.
 sed -i '/# Remove lines below for the tarball/,$d' $FOLDER/makefile
+sed -i 's/clean uninstall dist/clean uninstall/'   $FOLDER/makefile
 
 # Remove contributor notes from the README
 sed -e '/Contributor notes/,$d' \
