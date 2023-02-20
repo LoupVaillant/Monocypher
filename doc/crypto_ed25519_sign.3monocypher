@@ -153,3 +153,36 @@ and
 .Fn crypto_ed25519_key_pair
 replaced
 .Fn crypto_ed25519_public_key .
+.Sh CAVEATS
+Monocypher does not perform any input validation.
+Any deviation from the specified input and output length ranges results
+in
+.Sy undefined behaviour .
+Make sure your inputs are correct.
+.Sh SECURITY CONSIDERATIONS
+.Ss Signature malleability
+Signature malleability is the ability of an attacker to produce a valid
+signature with knowledge of only an existing signature and the public
+key.
+Monocypher prevents that by checking the encoding of the signature,
+and guarantees that generating new signatures requires the private key.
+.Pp
+On the other hand, EdDSA signatures are not unique like cryptographic
+hashes.
+The signing procedure is deterministic by specification and
+.Fn crypto_ed25519_sign
+follows this specification.
+However, someone with the private key can generate arbitrarily many
+valid, canonical, and different signatures of the same message.
+Because of this, never assume that signatures are unique.
+.Ss Fault injection and power analysis
+Fault injection (also known as glitching) and power analysis may be used
+to manipulate the resulting signature and recover the secret key in
+some cases.
+This requires hardware access.
+We can try to mitigate this attack by prefixing all hashes a random data
+block,
+in a construction similar to Ed25519ctx.
+Note that there may still be other power-related side channels (such as
+if the CPU leaks information when an operation overflows a register)
+that must be considered.

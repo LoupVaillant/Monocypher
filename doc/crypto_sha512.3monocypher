@@ -543,6 +543,12 @@ in Monocypher 4.0.0.
 and
 .Fn crypto_sha512_hkdf_expand
 were added in Monocypher 4.0.0.
+.Sh CAVEATS
+Monocypher does not perform any input validation.
+Any deviation from the specified input and output length ranges results
+in
+.Sy undefined behaviour .
+Make sure your inputs are correct.
 .Sh SECURITY CONSIDERATIONS
 SHA-512 is a general-purpose cryptographic hash function;
 this means that it is not suited for hashing passwords and deriving

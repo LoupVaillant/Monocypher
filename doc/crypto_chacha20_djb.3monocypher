@@ -403,6 +403,12 @@ It was renamed to
 in Monocypher 3.0.0, then
 .Fn crypto_chacha20_h
 in Monocypher 4.0.0.
+.Sh CAVEATS
+Monocypher does not perform any input validation.
+Any deviation from the specified input and output length ranges results
+in
+.Sy undefined behaviour .
+Make sure your inputs are correct.
 .Sh SECURITY CONSIDERATIONS
 .Ss Encrypted does not mean secure .
 ChaCha20 only protects against eavesdropping, not forgeries.

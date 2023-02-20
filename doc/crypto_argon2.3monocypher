@@ -384,6 +384,7 @@ Both were replaced by
 .Fn crypto_argon2
 in Monocypher 4.0.0.
 .Sh CAVEATS
+Monocypher does not perform any input validation.
 Any deviation from the algorithm constants,
 specified input and output length ranges results
 in
