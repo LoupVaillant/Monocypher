@@ -110,9 +110,4 @@ tar -xzf $TARBALL.gz
 cd $FOLDER   # Extracting from the tarball, just to make sure
 tests/test.sh
 make clean
-make speed
-make speed-sodium
-make speed-tweetnacl
-make speed-hydrogen
-make speed-c25519
 make

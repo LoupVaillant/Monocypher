@@ -23,6 +23,11 @@ tests/formal-analysis/*
 tests/formal-analysis
 *.tar.gz
 monocypher-*/
+**/__pycache__/**
+doc/*.*
+tests/proofs*
+tests/speed*
+tests/externals*
 lib*
 .git*
 dist.sh
