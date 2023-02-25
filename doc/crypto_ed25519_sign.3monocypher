@@ -9,6 +9,7 @@
 .\" ----------------------------------------------------------------------------
 .\"
 .\" Copyright (c) 2019-2020, 2022-2023 Fabio Scotoni
+.\" Copyright (c) 2023 Loup Vaillant
 .\" All rights reserved.
 .\"
 .\"
@@ -38,7 +39,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2019-2020 and 2022-2023 by Fabio Scotoni
+.\" Written in 2019-2020 and 2022-2023 by Fabio Scotoni and Loup Vaillant
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
