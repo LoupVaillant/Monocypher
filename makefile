@@ -100,6 +100,7 @@ install: library src/monocypher.h monocypher.pc install-doc
             > $(DESTDIR)/$(PKGCONFIGDIR)/monocypher.pc
 
 install-doc:
+	doc/doc_gen.sh
 	mkdir -p $(DESTDIR)/$(MANDIR)
 	cp -PR doc/man3/*.3monocypher $(DESTDIR)/$(MANDIR)
 
