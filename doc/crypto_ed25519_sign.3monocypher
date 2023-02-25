@@ -8,7 +8,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2019-2020, 2022 Fabio Scotoni
+.\" Copyright (c) 2019-2020, 2022-2023 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -38,7 +38,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2019-2020 and 2022 by Fabio Scotoni
+.\" Written in 2019-2020 and 2022-2023 by Fabio Scotoni
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -48,14 +48,14 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 13, 2022
+.Dd February 25, 2022
 .Dt CRYPTO_ED25519_SIGN 3MONOCYPHER
 .Os
 .Sh NAME
 .Nm crypto_ed25519_sign ,
 .Nm crypto_ed25519_check ,
-.Nm crypto_ed25519_key_pair
-.Nm crypto_ed25519_ph_sign
+.Nm crypto_ed25519_key_pair ,
+.Nm crypto_ed25519_ph_sign ,
 .Nm crypto_ed25519_ph_check
 .Nd public key signatures
 .Sh SYNOPSIS

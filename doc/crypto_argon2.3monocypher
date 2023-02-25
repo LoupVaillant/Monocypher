@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd January 22, 2023
+.Dd February 25, 2023
 .Dt CRYPTO_ARGON2 3MONOCYPHER
 .Os
 .Sh NAME
@@ -112,7 +112,7 @@ It must be
 .Fa config.nb_blocks
 × 1024 bytes big and suitably aligned for 64-bit integers.
 If you are not sure how to allocate that buffer, just use
-.Xr malloc 3.
+.Xr malloc 3 .
 .Pp
 The work area is automatically wiped by
 .Fn crypto_argon2 .
@@ -275,7 +275,7 @@ instances in parallel:
 each instance gets a different thread number as additional data,
 generating as many independent digests as we need.
 We can then hash those digests with
-.Xr crypto_blake2b .
+.Xr crypto_blake2b 3monocypher .
 .It Fa ad_size
 Length of
 .Fa ad ,

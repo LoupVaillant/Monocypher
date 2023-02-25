@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019, 2022-2023 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2017, 2019-2022 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2023 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -50,18 +50,18 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 19, 2023
+.Dd February 25, 2023
 .Dt CRYPTO_SIGN 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_eddsa_sign
-.Nm crypto_eddsa_check
-.Nm crypto_eddsa_key_pair
-.Nm crypto_eddsa_to_x25519
-.Nm crypto_eddsa_trim_scalar
-.Nm crypto_eddsa_reduce
-.Nm crypto_eddsa_mul_add
-.Nm crypto_eddsa_scalarbase
+.Nm crypto_eddsa_sign ,
+.Nm crypto_eddsa_check ,
+.Nm crypto_eddsa_key_pair ,
+.Nm crypto_eddsa_to_x25519 ,
+.Nm crypto_eddsa_trim_scalar ,
+.Nm crypto_eddsa_reduce ,
+.Nm crypto_eddsa_mul_add ,
+.Nm crypto_eddsa_scalarbase ,
 .Nm crypto_eddsa_check_equation
 .Nd public key signatures
 .Sh SYNOPSIS
@@ -180,7 +180,6 @@ a key exchange protocol involving
 and then
 .Xr crypto_aead_lock 3monocypher
 instead.
-.Pp
 .Ss Conversion to X25519
 .Fn crypto_eddsa_to_x25519
 Converts and EdDSA public key to an X25519 public key.
@@ -244,11 +243,11 @@ coordinate in Little Endian.
 .Pp
 .Fn crypto_eddsa_check_equation
 reads a signature
-.Fa Rs ,
+.Fa \&Rs ,
 a public_key
 .Fa A ,
 and hash
-.Fa h,
+.Fa h ,
 then checks the following:
 .Bl -dash
 .It
