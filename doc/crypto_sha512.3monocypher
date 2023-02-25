@@ -8,8 +8,8 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Copyright (c) 2019-2020 Fabio Scotoni
-.\" Copyright (c) 2023      Loup Vaillant
+.\" Copyright (c) 2019-2020, 2023 Fabio Scotoni
+.\" Copyright (c) 2023            Loup Vaillant
 .\" All rights reserved.
 .\"
 .\"
@@ -49,7 +49,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 5, 2020
+.Dd February 25, 2023
 .Dt CRYPTO_SHA512 3MONOCYPHER
 .Os
 .Sh NAME
@@ -340,7 +340,7 @@ is zero.
 Otherwise it should contain at least 16 bytes.
 .It Fa salt_size
 Length of
-.Fa salt,
+.Fa salt ,
 in bytes.
 .It Fa info
 Optional domain separation string for key derivation.

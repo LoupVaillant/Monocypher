@@ -10,7 +10,7 @@
 .\"
 .\" Copyright (c) 2017-2019, 2023 Loup Vaillant
 .\" Copyright (c) 2017-2018 Michael Savage
-.\" Copyright (c) 2017, 2019-2021 Fabio Scotoni
+.\" Copyright (c) 2017, 2019-2021, 2023 Fabio Scotoni
 .\" All rights reserved.
 .\"
 .\"
@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd January 26, 2023
+.Dd February 25, 2023
 .Dt CRYPTO_CHACHA20 3MONOCYPHER
 .Os
 .Sh NAME
@@ -220,7 +220,6 @@ Additionally, it
 .Em can
 be used to generate large amounts of random-looking data quickly
 \(en for example to generate padding.
-.Pp
 .Sh RETURN VALUES
 .Fn crypto_chacha20_djb ,
 .Fn crypto_chacha20_ietf ,
@@ -410,7 +409,7 @@ in
 .Sy undefined behaviour .
 Make sure your inputs are correct.
 .Sh SECURITY CONSIDERATIONS
-.Ss Encrypted does not mean secure .
+.Ss Encrypted does not mean secure
 ChaCha20 only protects against eavesdropping, not forgeries.
 Most applications need protection against forgeries to be properly
 secure.
