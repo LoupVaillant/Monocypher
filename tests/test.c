@@ -804,6 +804,50 @@ static void test_x25519()
 	}
 }
 
+///////////////////
+/// EdDSA utils ///
+///////////////////
+
+// Adds X time L to the input
+static void add_xl(u8 out[32], u8 in[32], unsigned factor)
+{
+	static const u8 L[32] = {
+		0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
+		0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
+	};
+	ASSERT(factor <= 8);
+	unsigned acc = 0;
+	FOR(i, 0, 32) {
+		acc   += in[i] + L[i] * factor;
+		out[i] = acc & 0xff;
+		acc  >>= 8;
+		}
+	ASSERT(acc == 0); // No carry is remaining
+}
+
+static void test_edDSA_utils()
+{
+	printf("\tEdDSA (scalarbase)\n");
+	FOR (i, 0, 50) {
+		RANDOM_INPUT(scalar, 32);
+		u8 scalar_plus[32];
+		u8 point      [32];
+		u8 point_plus [32];
+
+		// Equivalent (yet different) scalars
+		scalar[31] &= 0xf;  // trim the scalar below 252 bits
+		add_xl(scalar_plus, scalar, 8); // 8*L == curve order
+		ASSERT_DIFFERENT(scalar, scalar_plus, 32);
+
+		// Bit-for-bit identical points
+		crypto_eddsa_scalarbase(point     , scalar);
+		crypto_eddsa_scalarbase(point_plus, scalar_plus);
+		ASSERT_EQUAL(point, point_plus, 32);
+	}
+}
+
 /////////////
 /// EdDSA ///
 /////////////
@@ -1175,6 +1219,7 @@ int main(int argc, char *argv[])
 	test_x25519();
 
 	printf("EdDSA:\n");
+	test_edDSA_utils();
 	test_edDSA();
 	test_ed25519();
 
