@@ -33,6 +33,5 @@ lib*
 dist.sh
 dist_ignore
 tests/gen*
-doc/*.sh
 tis.config
 tests/tis-ci-gen-config.sh

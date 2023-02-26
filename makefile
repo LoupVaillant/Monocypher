@@ -70,7 +70,7 @@ SONAME=libmonocypher.so.3
 ##################
 ## Main targets ##
 ##################
-all  : library
+all  : library doc/man3/intro.3monocypher
 check: test
 
 test: test.out
@@ -83,7 +83,7 @@ ctgrind: ctgrind.out
 	valgrind ./ctgrind.out
 
 clean:
-	rm -rf lib/
+	rm -rf lib/ doc/html/ doc/man3/
 	rm -f *.out
 
 #############
@@ -99,8 +99,7 @@ install: library src/monocypher.h monocypher.pc install-doc
 	sed "s|PREFIX|$(PREFIX)|"  monocypher.pc \
             > $(DESTDIR)/$(PKGCONFIGDIR)/monocypher.pc
 
-install-doc:
-	doc/doc_gen.sh
+install-doc: doc/man3/intro.3monocypher
 	mkdir -p $(DESTDIR)/$(MANDIR)
 	cp -PR doc/man3/*.3monocypher $(DESTDIR)/$(MANDIR)
 
@@ -193,6 +192,16 @@ tests/vectors.h:
 	@echo "======================================================"
 	@echo ""
 	exit 1
+
+doc/man3/intro.3monocypher: \
+	doc/crypto_aead_lock.3monocypher     doc/crypto_argon2.3monocypher       \
+	doc/crypto_blake2b.3monocypher       doc/crypto_chacha20_djb.3monocypher \
+	doc/crypto_ed25519_sign.3monocypher  doc/crypto_eddsa_sign.3monocypher   \
+	doc/crypto_elligator_map.3monocypher doc/crypto_poly1305.3monocypher     \
+	doc/crypto_sha512.3monocypher        doc/crypto_verify16.3monocypher     \
+	doc/crypto_wipe.3monocypher          doc/crypto_x25519.3monocypher       \
+	doc/intro.3monocypher
+	doc/doc_gen.sh
 
 dist: tests/vectors.h
 	./dist.sh
