@@ -289,11 +289,11 @@ void crypto_poly1305(uint8_t        mac[16],
 typedef struct {
 	// Do not rely on the size or contents of this type,
 	// for they may change without notice.
-	uint32_t r[4];   // constant multiplier (from the secret key)
-	uint32_t h[5];   // accumulated hash
 	uint8_t  c[16];  // chunk of the message
-	uint32_t pad[4]; // random number added at the end (from the secret key)
 	size_t   c_idx;  // How many bytes are there in the chunk.
+	uint32_t r  [4]; // constant multiplier (from the secret key)
+	uint32_t pad[4]; // random number added at the end (from the secret key)
+	uint32_t h  [5]; // accumulated hash
 } crypto_poly1305_ctx;
 
 void crypto_poly1305_init  (crypto_poly1305_ctx *ctx, const uint8_t key[32]);

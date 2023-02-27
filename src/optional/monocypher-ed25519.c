@@ -61,8 +61,8 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 /// Utilities ///
 /////////////////
 #define FOR(i, min, max)     for (size_t i = min; i < max; i++)
-#define COPY(dst, src, size) FOR(i, 0, size) (dst)[i] = (src)[i]
-#define ZERO(buf, size)      FOR(i, 0, size) (buf)[i] = 0
+#define COPY(dst, src, size) FOR(_i_, 0, size) (dst)[_i_] = (src)[_i_]
+#define ZERO(buf, size)      FOR(_i_, 0, size) (buf)[_i_] = 0
 #define WIPE_CTX(ctx)        crypto_wipe(ctx   , sizeof(*(ctx)))
 #define WIPE_BUFFER(buffer)  crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)            ((a) <= (b) ? (a) : (b))
@@ -477,7 +477,7 @@ int crypto_ed25519_check(const u8 signature[64], const u8 public_key[32],
 	return crypto_eddsa_check_equation(signature, public_key, h_ram);
 }
 
-static const u8 domain[34] = "SigEd25519 no Ed25519 collisions\1\0";
+static const u8 domain[34] = "SigEd25519 no Ed25519 collisions\1";
 
 void crypto_ed25519_ph_sign(uint8_t signature[64], const uint8_t secret_key[32],
                             const uint8_t message_hash[64])

@@ -57,10 +57,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define ARRAY(name, size)	\
-	u8 name[size]; \
-	for(size_t i = 0; i < size; i++) name[i] = i;
-
 static void chacha20(vector_reader *reader)
 {
 	vector key       = next_input(reader);
@@ -85,7 +81,7 @@ static void ietf_chacha20(vector_reader *reader)
 	vector out       = next_output(reader);
 	u32    nb_blocks = (u32)(plain.size / 64 + (plain.size % 64 != 0));
 	u32    new_ctr   = crypto_chacha20_ietf(out.buf, plain.buf, plain.size,
-	                                        key.buf, nonce.buf, ctr);
+	                                        key.buf, nonce.buf, (u32)ctr);
 	if (new_ctr - ctr != nb_blocks) {
 		printf("FAILURE: IETF Chacha20 returned counter not correct: ");
 	}
@@ -188,16 +184,16 @@ static void argon2(vector_reader *reader)
 	crypto_argon2_inputs inputs;
 	inputs.pass      = pass.buf;
 	inputs.salt      = salt.buf;
-	inputs.pass_size = pass.size;
-	inputs.salt_size = salt.size;
+	inputs.pass_size = (u32)pass.size;
+	inputs.salt_size = (u32)salt.size;
 
 	crypto_argon2_extras extras;
 	extras.key       = key.buf;
 	extras.ad        = ad.buf;
-	extras.key_size  = key.size;
-	extras.ad_size   = ad.size;
+	extras.key_size  = (u32)key.size;
+	extras.ad_size   = (u32)ad.size;
 
-	crypto_argon2(out.buf, out.size, work_area, config, inputs, extras);
+	crypto_argon2(out.buf, (u32)out.size, work_area, config, inputs, extras);
 	free(work_area);
 }
 

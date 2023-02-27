@@ -53,7 +53,7 @@
 .SUFFIXES:
 
 CC=gcc -std=c99
-CFLAGS= -pedantic -Wall -Wextra -O3 -march=native
+CFLAGS=-pedantic -Wall -Wextra -O3 -march=native
 DESTDIR=
 PREFIX=usr/local
 LIBDIR=$(PREFIX)/lib

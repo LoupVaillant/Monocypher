@@ -62,9 +62,9 @@
 ////////////////////////////////
 /// Constant time comparison ///
 ////////////////////////////////
-static void p_verify(size_t size, int (*compare)(const u8*, const u8*))
+static void p_verify(unsigned size, int (*compare)(const u8*, const u8*))
 {
-	printf("\tcrypto_verify%zu\n", size);
+	printf("\tcrypto_verify%u\n", size);
 	u8 a[64]; // size <= 64
 	u8 b[64]; // size <= 64
 	FOR (i, 0, 2) {
@@ -437,27 +437,28 @@ static void test_blake2b()
 	// interface.
 #undef INPUT_SIZE
 #define INPUT_SIZE (BLAKE2B_BLOCK_SIZE * 3) // total input size
+	{
+		RANDOM_INPUT(input, INPUT_SIZE);
 
-	RANDOM_INPUT(input, INPUT_SIZE);
+		// hash at once
+		u8 hash_whole[64];
+		crypto_blake2b(hash_whole, 64, input, INPUT_SIZE);
 
-	// hash at once
-	u8 hash_whole[64];
-	crypto_blake2b(hash_whole, 64, input, INPUT_SIZE);
+		FOR (j, 0, INPUT_SIZE) {
+			FOR (i, 0, j+1) {
+				// Hash bit by bit
+				u8 *mid_input = j - i == 0 ? NULL : input + i; // NULL update
+				u8 hash_chunk[64];
+				crypto_blake2b_ctx ctx;
+				crypto_blake2b_init  (&ctx, 64);
+				crypto_blake2b_update(&ctx, input    , i);
+				crypto_blake2b_update(&ctx, mid_input, j - i);
+				crypto_blake2b_update(&ctx, input + j, INPUT_SIZE - j);
+				crypto_blake2b_final (&ctx, hash_chunk);
 
-	FOR (j, 0, INPUT_SIZE) {
-		FOR (i, 0, j+1) {
-			// Hash bit by bit
-			u8 *mid_input = j - i == 0 ? NULL : input + i; // test NULL update
-			u8 hash_chunk[64];
-			crypto_blake2b_ctx ctx;
-			crypto_blake2b_init  (&ctx, 64);
-			crypto_blake2b_update(&ctx, input    , i);
-			crypto_blake2b_update(&ctx, mid_input, j - i);
-			crypto_blake2b_update(&ctx, input + j, INPUT_SIZE - j);
-			crypto_blake2b_final (&ctx, hash_chunk);
-
-			// Compare the results (must be the same)
-			ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+				// Compare the results (must be the same)
+				ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+			}
 		}
 	}
 
@@ -514,27 +515,28 @@ static void test_sha512()
 	printf("\tSHA-512 (incremental)\n");
 #undef INPUT_SIZE
 #define INPUT_SIZE (SHA_512_BLOCK_SIZE * 4 - 32) // total input size
+	{
+		RANDOM_INPUT(input, INPUT_SIZE);
 
-	RANDOM_INPUT(input, INPUT_SIZE);
+		// hash at once
+		u8 hash_whole[64];
+		crypto_sha512(hash_whole, input, INPUT_SIZE);
 
-	// hash at once
-	u8 hash_whole[64];
-	crypto_sha512(hash_whole, input, INPUT_SIZE);
+		FOR (j, 0, INPUT_SIZE) {
+			FOR (i, 0, j+1) {
+				// Hash bit by bit
+				u8 *mid_input = j - i == 0 ? NULL : input + i; // NULL update
+				u8 hash_chunk[64];
+				crypto_sha512_ctx ctx;
+				crypto_sha512_init  (&ctx);
+				crypto_sha512_update(&ctx, input    , i);
+				crypto_sha512_update(&ctx, mid_input, j - i);
+				crypto_sha512_update(&ctx, input + j, INPUT_SIZE - j);
+				crypto_sha512_final (&ctx, hash_chunk);
 
-	FOR (j, 0, INPUT_SIZE) {
-		FOR (i, 0, j+1) {
-			// Hash bit by bit
-			u8 *mid_input = j - i == 0 ? NULL : input + i; // test NULL update
-			u8 hash_chunk[64];
-			crypto_sha512_ctx ctx;
-			crypto_sha512_init  (&ctx);
-			crypto_sha512_update(&ctx, input    , i);
-			crypto_sha512_update(&ctx, mid_input, j - i);
-			crypto_sha512_update(&ctx, input + j, INPUT_SIZE - j);
-			crypto_sha512_final (&ctx, hash_chunk);
-
-			// Compare the results (must be the same)
-			ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+				// Compare the results (must be the same)
+				ASSERT_EQUAL(hash_chunk, hash_whole, 64);
+			}
 		}
 	}
 
@@ -609,16 +611,16 @@ static void argon2(vector_reader *reader)
 	crypto_argon2_inputs inputs;
 	inputs.pass      = pass.buf;
 	inputs.salt      = salt.buf;
-	inputs.pass_size = pass.size;
-	inputs.salt_size = salt.size;
+	inputs.pass_size = (u32)pass.size;
+	inputs.salt_size = (u32)salt.size;
 
 	crypto_argon2_extras extras;
 	extras.key       = key.buf;
 	extras.ad        = ad.buf;
-	extras.key_size  = key.size;
-	extras.ad_size   = ad.size;
+	extras.key_size  = (u32)key.size;
+	extras.ad_size   = (u32)ad.size;
 
-	crypto_argon2(out.buf, out.size, work_area, config, inputs, extras);
+	crypto_argon2(out.buf, (u32)out.size, work_area, config, inputs, extras);
 	free(work_area);
 }
 
@@ -1102,8 +1104,7 @@ static void test_elligator()
 	}
 
 	printf("\telligator x25519\n");
-	int i = 0;
-	while (i < 64) {
+	FOR (i, 0, 64) {
 		RANDOM_INPUT(sk1, 32);
 		RANDOM_INPUT(sk2, 32);
 		u8 skc [32];  memcpy(skc, sk1, 32);  skc[0] &= 248;
@@ -1130,7 +1131,8 @@ static void test_elligator()
 		u8 tweak = (u8)((i & 1) + (i << 5));
 		u8 r[32];
 		if (crypto_elligator_rev(r, pkf, tweak)) {
-			continue; // retry untill success (doesn't increment the tweak)
+			i--;      // Cancel tweak increment
+			continue; // retry untill success
 		}
 		// Verify that the tweak's msb are copied to the representative
 		ASSERT((tweak >> 6) == (r[31] >> 6));
@@ -1143,7 +1145,6 @@ static void test_elligator()
 		u8 e1 [32];  crypto_x25519(e1, sk2, pk1);
 		u8 e2 [32];  crypto_x25519(e2, sk2, pkr);
 		ASSERT_EQUAL(e1, e2, 32);
-		i++;
 	}
 
 	printf("\telligator key pair\n");
