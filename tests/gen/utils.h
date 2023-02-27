@@ -55,11 +55,8 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-typedef int8_t   i8;
 typedef uint8_t  u8;
 typedef uint32_t u32;
-typedef int32_t  i32;
-typedef int64_t  i64;
 typedef uint64_t u64;
 
 #define FOR(i, start, end) for (size_t i = (start); i < (end); i++)
@@ -72,36 +69,10 @@ typedef uint64_t u64;
 			exit(1); \
 		} \
 	} while (0)
-#define ASSERT_EQUAL(a, b, size)     ASSERT(memcmp(a, b, size) == 0)
-#define ASSERT_DIFFERENT(a, b, size) ASSERT(memcmp(a, b, size) != 0)
-#define ASSERT_OK(exp)               ASSERT((exp) == 0)
-#define ASSERT_KO(exp)               ASSERT((exp) != 0)
 
-extern u64 random_state; // state of the RNG
-
-typedef struct {
-	u8     *buf;
-	size_t  size;
-} vector;
-
-typedef struct {
-	const char **next;
-	size_t       size;
-	vector       inputs[10];
-	size_t       nb_inputs;
-	vector       expected;
-	vector       out;
-} vector_reader;
-
-u64  load64_le(const u8 s[8]);
-u32  load32_le(const u8 s[4]);
 u64  rand64(void); // Pseudo-random 64 bit number, based on xorshift*
 void p_random(u8 *stream, size_t size);
-void* alloc(size_t size);
-
-vector next_input (vector_reader *vectors);
-vector next_output(vector_reader *vectors);
-int  vector_test(void (*f)(vector_reader*),
-                 const char *name, size_t nb_vectors, const char *vectors[]);
+void print_vector(const u8 *buf, size_t size);
+void print_number(u64 n);
 
 #endif // UTILS_H

@@ -79,7 +79,7 @@ sha512_hkdf.vec: sha512_hkdf.py
 %.vec: %.out
 	./$< > $@
 
-utils.o: ../utils.c ../utils.h
+utils.o: utils.c utils.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 %.o: %.c ../utils.h ../externals/ed25519-donna/ed25519.h
