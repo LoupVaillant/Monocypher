@@ -119,7 +119,7 @@ void crypto_ed25519_key_pair(uint8_t secret_key[64],
                              uint8_t public_key[32],
                              uint8_t seed[32]);
 void crypto_ed25519_sign(uint8_t        signature [64],
-                         const uint8_t  secret_key[32],
+                         const uint8_t  secret_key[64],
                          const uint8_t *message, size_t message_size);
 int crypto_ed25519_check(const uint8_t  signature [64],
                          const uint8_t  public_key[32],
@@ -127,7 +127,7 @@ int crypto_ed25519_check(const uint8_t  signature [64],
 
 // Pre-hash variants
 void crypto_ed25519_ph_sign(uint8_t       signature   [64],
-                            const uint8_t secret_key  [32],
+                            const uint8_t secret_key  [64],
                             const uint8_t message_hash[64]);
 int crypto_ed25519_ph_check(const uint8_t signature   [64],
                             const uint8_t public_key  [32],

@@ -49,7 +49,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 25, 2022
+.Dd March 01, 2022
 .Dt CRYPTO_ED25519_SIGN 3MONOCYPHER
 .Os
 .Sh NAME
@@ -84,7 +84,7 @@
 .Ft void
 .Fo crypto_ed25519_ph_sign
 .Fa "uint8_t signature[64]"
-.Fa "const uint8_t secret_key[32]"
+.Fa "const uint8_t secret_key[64]"
 .Fa "const uint8_t message_hash[64]"
 .Fc
 .Ft int

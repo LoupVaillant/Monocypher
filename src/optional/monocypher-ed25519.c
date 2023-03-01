@@ -463,7 +463,7 @@ static void ed25519_dom_sign(u8 signature [64], const u8 secret_key[32],
 	WIPE_BUFFER(r);
 }
 
-void crypto_ed25519_sign(u8 signature [64], const u8 secret_key[32],
+void crypto_ed25519_sign(u8 signature [64], const u8 secret_key[64],
                          const u8 *message, size_t message_size)
 {
 	ed25519_dom_sign(signature, secret_key, 0, 0, message, message_size);
@@ -479,7 +479,7 @@ int crypto_ed25519_check(const u8 signature[64], const u8 public_key[32],
 
 static const u8 domain[34] = "SigEd25519 no Ed25519 collisions\1";
 
-void crypto_ed25519_ph_sign(uint8_t signature[64], const uint8_t secret_key[32],
+void crypto_ed25519_ph_sign(uint8_t signature[64], const uint8_t secret_key[64],
                             const uint8_t message_hash[64])
 {
 	ed25519_dom_sign(signature, secret_key, domain, sizeof(domain),
