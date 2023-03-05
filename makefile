@@ -60,7 +60,7 @@ LIBDIR=$(PREFIX)/lib
 INCLUDEDIR=$(PREFIX)/include
 PKGCONFIGDIR=$(LIBDIR)/pkgconfig
 MANDIR=$(PREFIX)/share/man/man3
-SONAME=libmonocypher.so.3
+SONAME=libmonocypher.so.4
 
 .PHONY: all library static-library dynamic-library  \
         install install-doc                         \
