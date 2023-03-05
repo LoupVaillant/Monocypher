@@ -94,6 +94,10 @@ program.  For instance:
     $ gcc program.c $(pkg-config monocypher --cflags) -c
     $ gcc program.o $(pkg-config monocypher --libs)   -o program
 
+If for any reason you wish to avoid installing the man pages or the
+`pkg-config` file, you can use the following installation sub targets
+instead: `install-lib`, `install-doc`, and `install-pc`.
+
 
 Test suite
 ----------
