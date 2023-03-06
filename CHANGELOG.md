@@ -1,3 +1,13 @@
+4.0.1
+-----
+2023/03/06
+
+- Fixed Ed25519 secret key size in function prototype.
+- Fixed soname (should have been changed in 4.0.0)
+- Added convenience sub-targets to makefile.
+- Briefly specified wire format of Elligator and incremental AEAD.
+
+
 4.0.0
 -----
 2023/02/20
