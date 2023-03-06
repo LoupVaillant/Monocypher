@@ -9,6 +9,7 @@
 .\" ----------------------------------------------------------------------------
 .\"
 .\" Copyright (c) 2020, 2022 Fabio Scotoni
+.\" Copyright (c) 2023 Loup Vaillant
 .\" All rights reserved.
 .\"
 .\"
@@ -38,7 +39,7 @@
 .\"
 .\" ----------------------------------------------------------------------------
 .\"
-.\" Written in 2020 and 2022 by Fabio Scotoni
+.\" Written in 2020, 2022, and 2023 by Fabio Scotoni and Loup Vaillant
 .\"
 .\" To the extent possible under law, the author(s) have dedicated all copyright
 .\" and related neighboring rights to this software to the public domain
@@ -48,7 +49,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd January 26, 2023
+.Dd March 6, 2023
 .Dt CRYPTO_ELLIGATOR_MAP 3MONOCYPHER
 .Os
 .Sh NAME
@@ -261,6 +262,21 @@ Elligator 2 was described in:
 .%D 2013
 .%P pp. 967\(en980
 .Re
+.Pp
+Monocypher's Elligator 2 representatives are encoded as little Endian
+254-bit numbers.
+The two most significant bits (254 and 255) are not used.
+.Fn crypto_elligator_map
+ignores them,
+and
+.Fn crypto_elligator_rev
+sets them at random.
+The mapping uses 2 as the non-square
+.Va Z ,
+and [0..2^254-10] as the set of non-negative field elements.
+See
+.%U https://elligator.org/map
+for more details.
 .Sh HISTORY
 The
 .Fn crypto_curve_to_hidden ,
