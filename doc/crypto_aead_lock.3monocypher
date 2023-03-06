@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd January 15, 2023
+.Dd March 6, 2023
 .Dt CRYPTO_LOCK 3MONOCYPHER
 .Os
 .Sh NAME
@@ -459,6 +459,20 @@ is fully compatible with the RFC.
 Note that XChaCha20 derives from ChaCha20 the same way XSalsa20 derives
 from Salsa20 and benefits from the same security reduction
 (proven secure as long as ChaCha20 itself is secure).
+.Pp
+.Fn crypto_aead_read
+and
+.Fn crypto_aead_write
+preserve the nonce and counter defined in
+.Fn crypto_aead_init_x ,
+.Fn crypto_aead_init_djb ,
+or
+.Fn crypto_aead_init_ietf ,
+and instead change the session key.
+The new session key is made from bytes [32..63] of the ChaCha20 stream
+used to generate the authentication key and encrypt the message.
+(Recall that bytes [0..31] are the authentication key, and bytes [64..]
+are used to encrypt the message.)
 .Sh HISTORY
 The
 .Fn crypto_lock
