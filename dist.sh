@@ -88,6 +88,10 @@ Monocypher\
 ----------' \
     -i $FOLDER/README.md
 
+# Remove special notes from the LICENCE
+sed -e '/Special notes/,$d' -i $FOLDER/LICENCE.md
+sed -e '$d'                 -i $FOLDER/LICENCE.md
+
 # Make the actual tarball.  The options here were taken from:
 # https://reproducible-builds.org/docs/archives/#full-example
 # This requires GNU tar.
