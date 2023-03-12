@@ -80,13 +80,12 @@ sed -i 's| doc/man3/intro.3monocypher||'                $FOLDER/makefile
 sed -i 's|rm -rf lib/ doc/html/ doc/man3/|rm -rf lib/|' $FOLDER/makefile
 
 # Remove contributor notes from the README
-sed -e '/Contributor notes/,$d' \
-    -e '1,/^---$/d' \
-    -i $FOLDER/README.md
+sed -e '/Contributor notes/,$d'  -e '1,/^---$/d' -i $FOLDER/README.md
+sed -e '$d'                                      -i $FOLDER/README.md
+sed -e '$d'                                      -i $FOLDER/README.md
 sed -e '1i\
 Monocypher\
-----------' \
-    -i $FOLDER/README.md
+----------'                                      -i $FOLDER/README.md
 
 # Remove special notes from the LICENCE
 sed -e '/Special notes/,$d' -i $FOLDER/LICENCE.md
