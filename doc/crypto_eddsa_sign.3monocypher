@@ -207,19 +207,19 @@ The following descriptions are kept concise and technical on purpose.
 If you do not understand them, do not not use those functions.
 .Pp
 .Fn crypto_eddsa_trim_scalar
-reads a 256-bit number represented in Little Endian,
+reads a 256-bit number represented in little-endian,
 and outputs the same number modified as follows:
 the 3 least significant bits are cleared;
 the most significant bit is cleared;
 and the second most significant bit is set.
 .Pp
 .Fn crypto_eddsa_reduce
-reads a 512-bit number represented in Little Endian,
+reads a 512-bit number represented in little-endian,
 and outputs the same number reduced modulo the prime order of
 Curve25519.
 .Pp
 .Fn crypto_eddsa_mul_add
-reads three 256-bit numbers represented in Little Endian,
+reads three 256-bit numbers represented in little-endian,
 and outputs
 .Fa a
 ×
@@ -229,7 +229,7 @@ and outputs
 reduced modulo the prime order of Curve25519.
 .Pp
 .Fn crypto_eddsa_scalarbase
-reads a 256-bit number represented in Little Endian,
+reads a 256-bit number represented in little-endian,
 and outputs the result of the scalar multiplication between that number
 and the twisted Edwards base point of Curve25519.
 The output uses the same compressed representation as regular EdDSA
@@ -239,7 +239,7 @@ the most significant bit represents the sign of the
 coordinate (1 if it is odd, 0 if it is even),
 and the 255 other bits represent the
 .Em y
-coordinate in Little Endian.
+coordinate in little-endian.
 .Pp
 .Fn crypto_eddsa_check_equation
 reads a signature

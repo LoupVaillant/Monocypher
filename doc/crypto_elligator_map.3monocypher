@@ -263,7 +263,7 @@ Elligator 2 was described in:
 .%P pp. 967\(en980
 .Re
 .Pp
-Monocypher's Elligator 2 representatives are encoded as little Endian
+Monocypher's Elligator 2 representatives are encoded as little-endian
 254-bit numbers.
 The two most significant bits (254 and 255) are not used.
 .Fn crypto_elligator_map
