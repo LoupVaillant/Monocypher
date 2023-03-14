@@ -275,7 +275,7 @@ The mapping uses 2 as the non-square
 .Va Z ,
 and [0..2^254-10] as the set of non-negative field elements.
 See
-.%U https://elligator.org/map
+.Lk https://elligator.org/map
 for more details.
 .Sh HISTORY
 The
