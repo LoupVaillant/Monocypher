@@ -63,12 +63,18 @@ CFLAGS= -pedantic -Wall -Wextra -O3 -march=native
 all: speed
 
 speed          : speed.out
+	./$<
 speed-sodium   : speed-sodium.out
+	./$<
 speed-hydrogen : speed-hydrogen.out
+	./$<
 speed-tweetnacl: speed-tweetnacl.out
+	./$<
 speed-c25519   : speed-c25519.out
+	./$<
 speed-donna    : speed-donna.out
-speed speed-sodium speed-hydrogen speed-tweetnacl speed-c25519 speed-donna:
+	./$<
+speed-tinyssh  : speed-tinyssh.out
 	./$<
 
 clean:
@@ -127,6 +133,40 @@ donna.o: ../externals/ed25519-donna/ed25519.c $(DONNA_HEADERS)
 	    -DED25519_NO_INLINE_ASM \
 	    -DED25519_FORCE_32BIT
 
+# Tinyssh
+TSSH=../externals/tinyssh
+TSSH_O= \
+	cleanup.o crypto_hash_sha512.o crypto_onetimeauth_poly1305.o         \
+	crypto_scalarmult_curve25519.o crypto_sign_ed25519.o                 \
+	crypto_stream_chacha20.o crypto_verify_32.o fe25519.o fe.o ge25519.o \
+	randombytes.o sc25519.o uint32_pack.o uint32_unpack.o verify.o
+TSSH_H= \
+	$(TSSH)/cleanup.h $(TSSH)/crypto_hash_sha512.h $(TSSH)/crypto_int64.h  \
+	$(TSSH)/crypto_onetimeauth_poly1305.h                                  \
+	$(TSSH)/crypto_scalarmult_curve25519.h $(TSSH)/crypto_sign_ed25519.h   \
+	$(TSSH)/crypto_stream_chacha20.h $(TSSH)/crypto_uint32.h               \
+	$(TSSH)/crypto_uint64.h $(TSSH)/crypto_verify_32.h $(TSSH)/fe25519.h   \
+	$(TSSH)/fe.h $(TSSH)/ge25519.h $(TSSH)/sc25519.h $(TSSH)/uint32_pack.h \
+	$(TSSH)/uint32_unpack.h $(TSSH)/verify.h
+
+cleanup.o                     : $(TSSH)/cleanup.c                      $(TSSH_H)
+crypto_hash_sha512.o          : $(TSSH)/crypto_hash_sha512.c           $(TSSH_H)
+crypto_onetimeauth_poly1305.o : $(TSSH)/crypto_onetimeauth_poly1305.c  $(TSSH_H)
+crypto_scalarmult_curve25519.o: $(TSSH)/crypto_scalarmult_curve25519.c $(TSSH_H)
+crypto_sign_ed25519.o         : $(TSSH)/crypto_sign_ed25519.c          $(TSSH_H)
+crypto_stream_chacha20.o      : $(TSSH)/crypto_stream_chacha20.c       $(TSSH_H)
+crypto_verify_32.o            : $(TSSH)/crypto_verify_32.c             $(TSSH_H)
+fe25519.o                     : $(TSSH)/fe25519.c                      $(TSSH_H)
+fe.o                          : $(TSSH)/fe.c                           $(TSSH_H)
+ge25519.o                     : $(TSSH)/ge25519.c                      $(TSSH_H)
+randombytes.o                 : $(TSSH)/randombytes.c                  $(TSSH_H)
+sc25519.o                     : $(TSSH)/sc25519.c                      $(TSSH_H)
+uint32_pack.o                 : $(TSSH)/uint32_pack.c                  $(TSSH_H)
+uint32_unpack.o               : $(TSSH)/uint32_unpack.c                $(TSSH_H)
+verify.o                      : $(TSSH)/verify.c                       $(TSSH_H)
+$(TSSH_O):
+	$(CC) -c $(CFLAGS) -I ../externals/tinyssh/ -o $@ $<
+
 
 ######################
 ## Speed benchmarks ##
@@ -143,6 +183,8 @@ speed-c25519.o    : speed-c25519.c    speed.h ../utils.h $(C25519_HEADERS)
 	$(CC) -c $(CFLAGS) $< -o $@ -I .. -I ../externals/c25519
 speed-donna.o     : speed-donna.c     speed.h ../utils.h $(DONNA_HEADERS)
 	$(CC) -c $(CFLAGS) $< -o $@ -I .. -I ../externals/ed25519-donna
+speed-tinyssh.o   : speed-tinyssh.c   speed.h ../utils.h $(TSSH_H)
+	$(CC) -c $(CFLAGS) $< -o $@ -I .. -I $(TSSH)
 
 speed.out: speed.o utils.o monocypher.o monocypher-ed25519.o
 	$(CC) $(CFLAGS) -o $@ $^
@@ -161,4 +203,6 @@ speed-hydrogen.out: speed-hydrogen.o utils.o
 speed-tweetnacl.out: speed-tweetnacl.o tweetnacl.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^
 speed-c25519.out   : speed-c25519.o $(C25519_OBJECTS) utils.o
+	$(CC) $(CFLAGS) -o $@ $^
+speed-tinyssh.out : speed-tinyssh.o $(TSSH_O) utils.o
 	$(CC) $(CFLAGS) -o $@ $^
