@@ -25,7 +25,6 @@ tests/formal-analysis
 monocypher-*/
 **/__pycache__/**
 doc/*.*
-tests/proofs*
 tests/speed*
 tests/externals*
 lib*
