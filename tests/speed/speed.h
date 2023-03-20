@@ -95,7 +95,7 @@ static void print(const char *name, u64 duration, const char *unit)
 
 #define TIMING_START	\
 	u64 duration = (u64)-1; \
-	FOR (i, 0, 500) { \
+	FOR (i, 0, 2000) { \
 	TIMESTAMP(start);
 
 #define TIMING_END	\
