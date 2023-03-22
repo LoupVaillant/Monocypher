@@ -81,10 +81,10 @@ static const u8 zero[128] = {0};
 
 // returns the smallest positive integer y such that
 // (x + y) % pow_2  == 0
-// Basically, it's how many bytes we need to add to "align" x.
+// Basically, y is the "gap" missing to align x.
 // Only works when pow_2 is a power of 2.
 // Note: we use ~x+1 instead of -x to avoid compiler warnings
-static size_t align(size_t x, size_t pow_2)
+static size_t gap(size_t x, size_t pow_2)
 {
 	return (~x + 1) & (pow_2 - 1);
 }
@@ -378,7 +378,7 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const u8 *message, size_t message_size)
 {
 	// Align ourselves with block boundaries
-	size_t aligned = MIN(align(ctx->c_idx, 16), message_size);
+	size_t aligned = MIN(gap(ctx->c_idx, 16), message_size);
 	FOR (i, 0, aligned) {
 		ctx->c[ctx->c_idx] = *message;
 		ctx->c_idx++;
@@ -560,7 +560,7 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
 
 	// Align with word boundaries
 	if ((ctx->input_idx & 7) != 0) {
-		size_t nb_bytes = MIN(align(ctx->input_idx, 8), message_size);
+		size_t nb_bytes = MIN(gap(ctx->input_idx, 8), message_size);
 		size_t word     = ctx->input_idx >> 3;
 		size_t byte     = ctx->input_idx & 7;
 		FOR (i, 0, nb_bytes) {
@@ -573,7 +573,7 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
 
 	// Align with block boundaries (faster than byte by byte)
 	if ((ctx->input_idx & 127) != 0) {
-		size_t nb_words = MIN(align(ctx->input_idx, 128), message_size) >> 3;
+		size_t nb_words = MIN(gap(ctx->input_idx, 128), message_size) >> 3;
 		load64_le_buf(ctx->input + (ctx->input_idx >> 3), message, nb_words);
 		ctx->input_idx += nb_words << 3;
 		message        += nb_words << 3;
@@ -2854,9 +2854,9 @@ static void lock_auth(u8 mac[16], const u8  auth_key[32],
 	crypto_poly1305_ctx poly_ctx;           // auto wiped...
 	crypto_poly1305_init  (&poly_ctx, auth_key);
 	crypto_poly1305_update(&poly_ctx, ad         , ad_size);
-	crypto_poly1305_update(&poly_ctx, zero       , align(ad_size, 16));
+	crypto_poly1305_update(&poly_ctx, zero       , gap(ad_size, 16));
 	crypto_poly1305_update(&poly_ctx, cipher_text, text_size);
-	crypto_poly1305_update(&poly_ctx, zero       , align(text_size, 16));
+	crypto_poly1305_update(&poly_ctx, zero       , gap(text_size, 16));
 	crypto_poly1305_update(&poly_ctx, sizes      , 16);
 	crypto_poly1305_final (&poly_ctx, mac); // ...here
 }
