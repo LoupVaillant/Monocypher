@@ -489,7 +489,7 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 	u64 v7 = ctx->hash[7];  u64 v15 = iv[7];
 
 	// mangle work vector
-	u64 *input = ctx->input;
+	u64 *input = (u64*)ctx->input;
 #define BLAKE2_G(a, b, c, d, x, y)	\
 	a += b + x;  d = rotr64(d ^ a, 32); \
 	c += d;      b = rotr64(b ^ c, 24); \
@@ -533,14 +533,11 @@ void crypto_blake2b_keyed_init(crypto_blake2b_ctx *ctx, size_t hash_size,
 	ctx->input_offset[1] = 0;  // beginning of the input, no offset
 	ctx->hash_size       = hash_size;
 	ctx->input_idx       = 0;
-	ZERO(ctx->input, 16);
+	ZERO((u64*)ctx->input, 16);
 
 	// if there is a key, the first block is that key (padded with zeroes)
 	if (key_size > 0) {
-		u8 key_block[128] = {0};
-		COPY(key_block, key, key_size);
-		// same as calling crypto_blake2b_update(ctx, key_block , 128)
-		load64_le_buf(ctx->input, key_block, 16);
+		COPY(ctx->input, key, key_size);
 		ctx->input_idx = 128;
 	}
 }
@@ -558,26 +555,13 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
 		return;
 	}
 
-	// Align with word boundaries
-	if ((ctx->input_idx & 7) != 0) {
-		size_t nb_bytes = MIN(gap(ctx->input_idx, 8), message_size);
-		size_t word     = ctx->input_idx >> 3;
-		size_t byte     = ctx->input_idx & 7;
-		FOR (i, 0, nb_bytes) {
-			ctx->input[word] |= (u64)message[i] << ((byte + i) << 3);
-		}
+	// Align with block boundaries (magic compiler makes it fast)
+	if ((ctx->input_idx & 127) != 0) {
+		size_t nb_bytes = MIN(gap(ctx->input_idx, 128), message_size);
+		COPY(ctx->input + ctx->input_idx, message, nb_bytes);
 		ctx->input_idx += nb_bytes;
 		message        += nb_bytes;
 		message_size   -= nb_bytes;
-	}
-
-	// Align with block boundaries (faster than byte by byte)
-	if ((ctx->input_idx & 127) != 0) {
-		size_t nb_words = MIN(gap(ctx->input_idx, 128), message_size) >> 3;
-		load64_le_buf(ctx->input + (ctx->input_idx >> 3), message, nb_words);
-		ctx->input_idx += nb_words << 3;
-		message        += nb_words << 3;
-		message_size   -= nb_words << 3;
 	}
 
 	// Process block by block
@@ -586,7 +570,7 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
 		if (ctx->input_idx == 128) {
 			blake2b_compress(ctx, 0);
 		}
-		load64_le_buf(ctx->input, message, 16);
+		COPY(ctx->input, message, 128);
 		message += 128;
 		ctx->input_idx = 128;
 	}
@@ -599,22 +583,18 @@ void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
 			ctx->input_idx = 0;
 		}
 		if (ctx->input_idx == 0) {
-			ZERO(ctx->input, 16);
+			ZERO(ctx->input, 128);
 		}
 		// Fill remaining words (faster than byte by byte)
 		size_t nb_words = message_size >> 3;
-		load64_le_buf(ctx->input, message, nb_words);
+		COPY(ctx->input, message, nb_words << 3);
 		ctx->input_idx += nb_words << 3;
 		message        += nb_words << 3;
 		message_size   -= nb_words << 3;
 
 		// Fill remaining bytes
-		FOR (i, 0, message_size) {
-			size_t word = ctx->input_idx >> 3;
-			size_t byte = ctx->input_idx & 7;
-			ctx->input[word] |= (u64)message[i] << (byte << 3);
-			ctx->input_idx++;
-		}
+		COPY(ctx->input + ctx->input_idx, message, message_size);
+		ctx->input_idx += message_size;
 	}
 }
 
