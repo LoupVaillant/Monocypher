@@ -91,7 +91,7 @@ clean:
 #############
 install: install-lib install-pc install-doc
 
-install-lib: library src/monocypher.h
+install-lib: library
 	mkdir -p $(DESTDIR)/$(INCLUDEDIR)
 	mkdir -p $(DESTDIR)/$(LIBDIR)
 	cp -P lib/libmonocypher.a lib/libmonocypher.so* $(DESTDIR)/$(LIBDIR)
@@ -102,7 +102,6 @@ install-pc: monocypher.pc
 	mkdir -p $(DESTDIR)/$(PKGCONFIGDIR)
 	sed "s|PREFIX|$(PREFIX)|"  monocypher.pc \
 	    > $(DESTDIR)/$(PKGCONFIGDIR)/monocypher.pc
-
 
 install-doc: doc/man3/intro.3monocypher
 	mkdir -p $(DESTDIR)/$(MANDIR)
