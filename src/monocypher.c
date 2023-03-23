@@ -377,6 +377,11 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const u8 *message, size_t message_size)
 {
+	// Avoid undefined NULL pointer increments with empty messages
+	if (message_size == 0) {
+		return;
+	}
+
 	// Align ourselves with block boundaries
 	size_t aligned = MIN(gap(ctx->c_idx, 16), message_size);
 	FOR (i, 0, aligned) {
