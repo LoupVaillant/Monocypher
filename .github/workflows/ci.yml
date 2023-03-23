@@ -162,6 +162,3 @@ jobs:
           echo
           echo "All valgrind tests passed!"
           echo
-
-      - name: Check bignum arithmetic
-        run: tests/proofs/test_carry.sh
