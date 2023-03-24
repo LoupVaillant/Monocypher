@@ -136,7 +136,7 @@ typedef struct {
 	// for they may change without notice.
 	uint64_t hash[8];
 	uint64_t input_offset[2];
-	uint8_t  input[128];
+	uint64_t input[16];
 	size_t   input_idx;
 	size_t   hash_size;
 } crypto_blake2b_ctx;
