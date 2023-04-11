@@ -877,9 +877,9 @@ static void edDSA_pk(vector_reader *reader)
 	memcpy(out.buf, public_key, 32);
 
 	u8 zeroes[32] = {0};
-	ASSERT(memcmp(seed           , zeroes    , 32) == 0);
-	ASSERT(memcmp(secret_key     , in.buf    , 32) == 0);
-	ASSERT(memcmp(secret_key + 32, public_key, 32) == 0);
+	ASSERT_EQUAL(seed           , zeroes    , 32);
+	ASSERT_EQUAL(secret_key     , in.buf    , 32);
+	ASSERT_EQUAL(secret_key + 32, public_key, 32);
 }
 
 static void test_edDSA()
@@ -978,9 +978,9 @@ static void ed_25519_pk(vector_reader *reader)
 	memcpy(out.buf, public_key, 32);
 
 	u8 zeroes[32] = {0};
-	ASSERT(memcmp(seed           , zeroes    , 32) == 0);
-	ASSERT(memcmp(secret_key     , in.buf    , 32) == 0);
-	ASSERT(memcmp(secret_key + 32, public_key, 32) == 0);
+	ASSERT_EQUAL(seed           , zeroes    , 32);
+	ASSERT_EQUAL(secret_key     , in.buf    , 32);
+	ASSERT_EQUAL(secret_key + 32, public_key, 32);
 }
 
 static void ed_25519_check(vector_reader *reader)
