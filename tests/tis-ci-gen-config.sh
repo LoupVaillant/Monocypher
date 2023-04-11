@@ -70,6 +70,7 @@ for entry_point in      \
     "v_sha512_hkdf"     \
     "v_argon2"          \
     "v_edDSA"           \
+    "v_edDSA_pk"        \
     "v_ed_25519"        \
     "v_ed_25519_check"  \
     "v_elligator_dir"   \

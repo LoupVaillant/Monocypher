@@ -387,6 +387,11 @@ static const char *edDSA_vectors[]={
   "0bfa8d629fe89bd9591f20575144f0445958fd3574179ec4a9b6ee85787c23d69b4f009d3ed3bd2bb62226638602b95bc4719a1d2c60afb07ed95c959628ff0c",
 };
 static size_t nb_edDSA_vectors=4;
+static const char *edDSA_pk_vectors[]={
+  "e4e4c4054fe35a75d9c0f679ad8770d8227e68e4c1e68ce67ee88e6be251a207",
+  "61435d557c6bedda3b9d652b98982c227ffedb203fc2357cabe8075508f4e6f0",
+};
+static size_t nb_edDSA_pk_vectors=2;
 static const char *ed_25519_vectors[]={
   "50831c8cb43cd6822bf3f6fae0801cb6c843d8066b07346635365fb7d6ee54e5",
   "38bfc0b57ba86490aa2f41a3209e360ea4df055f22c07c7f54326d36780f42f6",

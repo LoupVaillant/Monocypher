@@ -217,6 +217,23 @@ static void edDSA(vector_reader *reader)
 	crypto_eddsa_sign(out.buf, fat_secret_key, msg.buf, msg.size);
 }
 
+static void edDSA_pk(vector_reader *reader)
+{
+	vector in  = next_input(reader);
+	vector out = next_output(reader);
+	u8 seed      [32];
+	u8 secret_key[64];
+	u8 public_key[32];
+	memcpy(seed, in.buf, 32);
+	crypto_eddsa_key_pair(secret_key, public_key, seed);
+	memcpy(out.buf, public_key, 32);
+
+	u8 zeroes[32] = {0};
+	ASSERT_EQUAL(seed           , zeroes    , 32);
+	ASSERT_EQUAL(secret_key     , in.buf    , 32);
+	ASSERT_EQUAL(secret_key + 32, public_key, 32);
+}
+
 static void ed_25519(vector_reader *reader)
 {
 	vector secret_k = next_input(reader);
@@ -402,6 +419,8 @@ TEST(x25519)
 //@ ensures \result == 0;
 TEST(edDSA)
 //@ ensures \result == 0;
+TEST(edDSA_pk)
+//@ ensures \result == 0;
 TEST(ed_25519)
 //@ ensures \result == 0;
 TEST(ed_25519_check)
@@ -425,6 +444,7 @@ int main(void) {
 	ASSERT(v_argon2        () == 0);
 	ASSERT(v_x25519        () == 0);
 	ASSERT(v_edDSA         () == 0);
+	ASSERT(v_edDSA_pk      () == 0);
 	ASSERT(v_ed_25519      () == 0);
 	ASSERT(v_ed_25519_check() == 0);
 	ASSERT(v_elligator_dir () == 0);
