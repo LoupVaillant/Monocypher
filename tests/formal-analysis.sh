@@ -61,3 +61,6 @@ cp src/monocypher.c                  \
    tests/test.c                      \
    tests/vectors.h                   \
    tests/formal-analysis
+
+# Get rid of the `volatile` keyword that confuses the TIS interpreter
+sed -i 's/volatile //g' tests/formal-analysis/monocypher.c
