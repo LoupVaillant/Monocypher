@@ -59,6 +59,20 @@
 
 #define VECTORS(n) ASSERT_OK(vector_test(n, #n, nb_##n##_vectors, n##_vectors))
 
+////////////
+/// Wipe ///
+////////////
+static void test_wipe()
+{
+	printf("\tcrypto_wipe\n");
+	u8 zeroes[50] = {0};
+	FOR (i, 0, 50) {
+		RANDOM_INPUT(buf, 50);
+		crypto_wipe(buf, i);
+		ASSERT_EQUAL(zeroes, buf, i);
+	}
+}
+
 ////////////////////////////////
 /// Constant time comparison ///
 ////////////////////////////////
@@ -1202,6 +1216,9 @@ int main(int argc, char *argv[])
 		sscanf(argv[1], "%" PRIu64 "", &random_state);
 	}
 	printf("\nRandom seed = %" PRIu64 "\n\n", random_state);
+
+	printf("Wipe: \n");
+	test_wipe();
 
 	printf("Comparisons:\n");
 	test_verify();

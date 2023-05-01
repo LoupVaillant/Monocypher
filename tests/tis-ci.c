@@ -277,6 +277,19 @@ static void elligator_inv(vector_reader *reader)
 }
 
 //@ ensures \result == 0;
+static int p_wipe()
+{
+	printf("\tcrypto_wipe\n");
+	u8 zeroes[50] = {0};
+	FOR (i, 0, 50) {
+		RANDOM_INPUT(buf, 50);
+		crypto_wipe(buf, i);
+		ASSERT_EQUAL(zeroes, buf, i);
+	}
+	return 0;
+}
+
+//@ ensures \result == 0;
 static int p_eddsa_x25519()
 {
 	RANDOM_INPUT(e_seed, 32);
@@ -450,6 +463,7 @@ int main(void) {
 	ASSERT(v_elligator_dir () == 0);
 	ASSERT(v_elligator_inv () == 0);
 
+	ASSERT(p_wipe          () == 0);
 	ASSERT(p_eddsa_x25519  () == 0);
 	ASSERT(p_dirty         () == 0);
 	ASSERT(p_x25519_inverse() == 0);

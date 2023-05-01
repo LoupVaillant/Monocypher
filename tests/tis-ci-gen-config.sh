@@ -58,6 +58,7 @@ echo "// auto generated with $0" > $TIS_CONFIG
 echo "[" >> $TIS_CONFIG
 
 for entry_point in      \
+    "p_wipe"            \
     "v_chacha20"        \
     "v_ietf_chacha20"   \
     "v_hchacha20"       \
