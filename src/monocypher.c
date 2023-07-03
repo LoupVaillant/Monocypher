@@ -710,12 +710,12 @@ static void extended_hash(u8       *digest, u32 digest_size,
 	}
 }
 
-#define LSB(x) ((x) & 0xffffffff)
+#define LSB(x) ((u64)(u32)x)
 #define G(a, b, c, d)	\
-	a += b + 2 * LSB(a) * LSB(b);  d ^= a;  d = rotr64(d, 32); \
-	c += d + 2 * LSB(c) * LSB(d);  b ^= c;  b = rotr64(b, 24); \
-	a += b + 2 * LSB(a) * LSB(b);  d ^= a;  d = rotr64(d, 16); \
-	c += d + 2 * LSB(c) * LSB(d);  b ^= c;  b = rotr64(b, 63)
+	a += b + ((LSB(a) * LSB(b)) << 1);  d ^= a;  d = rotr64(d, 32); \
+	c += d + ((LSB(c) * LSB(d)) << 1);  b ^= c;  b = rotr64(b, 24); \
+	a += b + ((LSB(a) * LSB(b)) << 1);  d ^= a;  d = rotr64(d, 16); \
+	c += d + ((LSB(c) * LSB(d)) << 1);  b ^= c;  b = rotr64(b, 63)
 #define ROUND(v0,  v1,  v2,  v3,  v4,  v5,  v6,  v7,	\
               v8,  v9, v10, v11, v12, v13, v14, v15)	\
 	G(v0, v4,  v8, v12);  G(v1, v5,  v9, v13); \
