@@ -620,7 +620,7 @@ static void argon2(vector_reader *reader)
 	vector key       = next_input(reader);
 	vector ad        = next_input(reader);
 	vector out       = next_output(reader);
-	void  *work_area = alloc(config.nb_blocks * 1024);
+	void  *work_area = alloc((size_t)config.nb_blocks * 1024);
 
 	crypto_argon2_inputs inputs;
 	inputs.pass      = pass.buf;

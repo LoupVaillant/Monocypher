@@ -348,7 +348,12 @@ crypto_argon2_inputs inputs = {
     .salt_size = 16
 };
 crypto_argon2_extras extras = {0};   /* Extra parameters unused */
-void *work_area = malloc(nb_blocks * 1024);  /* Work area       */
+
+/* Allocate work area.
+ * Note the conversion to size_t.
+ * Without it we cannot allocate more than 4GiB.
+ */
+void *work_area = malloc((size_t)nb_blocks * 1024);
 if (work_area == NULL) {
     /* Handle malloc() failure */
     /* Wipe secrets if they are no longer needed */
