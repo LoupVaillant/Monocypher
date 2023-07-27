@@ -53,26 +53,21 @@
 # <https://creativecommons.org/publicdomain/zero/1.0/>
 
 cat << END
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "../src/monocypher.h"
 #include "../src/optional/monocypher-ed25519.h"
 
-typedef struct SHA2_CTX { void *x; } SHA2_CTX;
-void SHA512Init(SHA2_CTX*);
-void SHA512Update(SHA2_CTX*, const void*, size_t);
-void SHA512Final(uint8_t*, SHA2_CTX*);
 void arc4random_buf(void*, size_t);
-
 
 int main() {
 END
 
-for f in man/man3/*.3monocypher man/man3/optional/*.3monocypher
+for f in *.3monocypher
 do
-    # crypto_sign_init_first_pass_custom_hash examples are more complicated
-    # and can't be tested like this
-    if [ ! -h "$f" ] && [ "$f" != "man/man3/crypto_sign_init_first_pass_custom_hash.3monocypher" ]
+    if [ ! -h "$f" ]
     then
         echo "// $f"
         cat "$f" | sed -n "/^\.Bd/,/^\.Ed/p" | sed "s/\.Bd.*/{/" | sed "s/\.Ed/}/"

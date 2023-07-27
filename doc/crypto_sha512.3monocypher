@@ -483,10 +483,10 @@ arc4random_buf(salt, sizeof(salt));
 /* Extract */
 uint8_t prk[64];             /* pseudo-random key         */
 crypto_sha512_hmac_ctx ctx;
-crypto_sha512_hmac_init  (&ctx);
-crypto_sha512_hmac_update(&ctx, pk_a);
-crypto_sha512_hmac_update(&ctx, pk_b);
-crypto_sha512_hmac_update(&ctx, skab);
+crypto_sha512_hmac_init  (&ctx, salt, sizeof(salt));
+crypto_sha512_hmac_update(&ctx, pk_a, sizeof(pk_a));
+crypto_sha512_hmac_update(&ctx, pk_b, sizeof(pk_b));
+crypto_sha512_hmac_update(&ctx, skab, sizeof(skab));
 crypto_sha512_hmac_final (&ctx, prk);
 
 /* Expand */

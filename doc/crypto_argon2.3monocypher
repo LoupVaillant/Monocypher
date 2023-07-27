@@ -341,10 +341,11 @@ crypto_argon2_config config = {
     .nb_passes = 3,                          /* 3 iterations    */
     .nb_lanes  = 1                           /* Single-threaded */
 };
+uint8_t password[14] = "Okay Password!";
 crypto_argon2_inputs inputs = {
-    .pass = (const uint8_t *)"Okay Password!", /* User password */
-    .pass_size = 14,                         /* Password length */
-    .salt = salt,                      /* Salt for the password */
+    .pass      = password,                     /* User password */
+    .pass_size = sizeof(password),           /* Password length */
+    .salt      = salt,                 /* Salt for the password */
     .salt_size = 16
 };
 crypto_argon2_extras extras = {0};   /* Extra parameters unused */
@@ -353,17 +354,17 @@ crypto_argon2_extras extras = {0};   /* Extra parameters unused */
  * Note the conversion to size_t.
  * Without it we cannot allocate more than 4GiB.
  */
-void *work_area = malloc((size_t)nb_blocks * 1024);
+void *work_area = malloc((size_t)config.nb_blocks * 1024);
 if (work_area == NULL) {
     /* Handle malloc() failure */
     /* Wipe secrets if they are no longer needed */
-    crypto_wipe(password, password_size);
+    crypto_wipe(password, sizeof(password));
 } else {
     arc4random_buf(salt, 16);
-    crypto_argon2i(hash, 32, work_area,
-                   config, inputs, extras);
+    crypto_argon2(hash, 32, work_area,
+                  config, inputs, extras);
     /* Wipe secrets if they are no longer needed */
-    crypto_wipe(password, password_size);
+    crypto_wipe(password, sizeof(password));
     free(work_area);
 }
 .Ed

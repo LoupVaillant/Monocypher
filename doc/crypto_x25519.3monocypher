@@ -189,14 +189,14 @@ uint8_t       your_sk      [32]; /* Your secret key           */
 uint8_t       your_pk      [32]; /* Your public key           */
 uint8_t       shared_secret[32]; /* Shared secret (NOT a key) */
 arc4random_buf(your_sk, 32);
-crypto_x25512(your_pk, your_sk);
+crypto_x25519_public_key(your_pk, your_sk);
 crypto_x25519(shared_secret, your_sk, their_pk);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(your_sk, 32);
 
 uint8_t shared_keys[64]; /* Two shared session keys */
 crypto_blake2b_ctx ctx;
-crypto_blake2b_init  (&ctx);
+crypto_blake2b_init  (&ctx, 64);
 crypto_blake2b_update(&ctx, shared_secret, 32);
 crypto_blake2b_update(&ctx, your_pk      , 32);
 crypto_blake2b_update(&ctx, their_pk     , 32);

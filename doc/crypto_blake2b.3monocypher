@@ -451,6 +451,8 @@ void xkdf(uint8_t *okm,  size_t okm_size,  /* unlimited   */
 Computing key derivation with BLAKE2b alone
 (a little tedious indeed):
 .Bd -literal -offset indent
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 void b2kdf(uint8_t *okm,  size_t okm_size,  /* unlimited   */
            uint8_t *ikm,  size_t ikm_size,  /* unlimited   */
            uint8_t *salt, size_t salt_size, /* <= 64 bytes */

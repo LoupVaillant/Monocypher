@@ -378,7 +378,7 @@ const uint8_t  nonce[24]; /* Same as the above             */
 const uint8_t  mac  [16]; /* Received from along with text */
 uint8_t        text [12]; /* Message to decrypt            */
 if (crypto_aead_unlock(text, mac, key, nonce,
-                       NULL, 0
+                       NULL, 0,
                        text, sizeof(text))) {
 	/* The message is corrupted.
 	 * Wipe key if it is no longer needed,
@@ -406,7 +406,7 @@ crypto_aead_ctx ctx;
 crypto_aead_init_x(&ctx, key, nonce);
 crypto_aead_write(&ctx, cipher_text, mac,
                   NULL, 0,
-                  plain_text, sizeof(plain_text))
+                  plain_text, sizeof(plain_text));
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(plain_text, 12);
 crypto_wipe(key, 32);
