@@ -863,16 +863,22 @@ void crypto_argon2(u8 *hash, u32 hash_size, void *work_area,
 					u32 next_slice   = ((slice + 1) % 4) * segment_size;
 					u32 window_start = pass == 0 ? 0     : next_slice;
 					u32 nb_segments  = pass == 0 ? slice : 3;
-					u32 window_size  = nb_segments * segment_size + block - 1;
+					u64 lane         =
+						pass == 0 && slice == 0
+						? segment
+						: (index_seed >> 32) % config.nb_lanes;
+					u32 window_size  =
+						nb_segments * segment_size +
+						(lane  == segment ? block-1 :
+						 block == 0       ? (u32)-1 : 0);
 
 					// Find reference block
 					u64  j1        = index_seed & 0xffffffff; // block selector
-					u64  j2        = index_seed >> 32;        // lane selector
 					u64  x         = (j1 * j1)         >> 32;
 					u64  y         = (window_size * x) >> 32;
 					u64  z         = (window_size - 1) - y;
 					u64  ref       = (window_start + z) % lane_size;
-					u32  index     = (j2%config.nb_lanes)*lane_size + (u32)ref;
+					u32  index     = lane * lane_size + (u32)ref;
 					blk *reference = blocks + index;
 
 					// Shuffle the previous & reference block
