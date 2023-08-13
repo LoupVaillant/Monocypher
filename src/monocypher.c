@@ -1412,17 +1412,17 @@ static int invsqrt(fe isr, const fe x)
 	// Can be achieved with a simple double & add ladder,
 	// but it would be slower.
 	fe_sq(t0, x);
-	fe_sq(t1,t0);                   fe_sq(t1, t1);  fe_mul(t1, x, t1);
+	fe_sq(t1,t0);                     fe_sq(t1, t1);    fe_mul(t1, x, t1);
 	fe_mul(t0, t0, t1);
-	fe_sq(t0, t0);                                  fe_mul(t0, t1, t0);
-	fe_sq(t1, t0);  FOR (i, 1,   5) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
-	fe_sq(t1, t0);  FOR (i, 1,  10) fe_sq(t1, t1);  fe_mul(t1, t1, t0);
-	fe_sq(t2, t1);  FOR (i, 1,  20) fe_sq(t2, t2);  fe_mul(t1, t2, t1);
-	fe_sq(t1, t1);  FOR (i, 1,  10) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
-	fe_sq(t1, t0);  FOR (i, 1,  50) fe_sq(t1, t1);  fe_mul(t1, t1, t0);
-	fe_sq(t2, t1);  FOR (i, 1, 100) fe_sq(t2, t2);  fe_mul(t1, t2, t1);
-	fe_sq(t1, t1);  FOR (i, 1,  50) fe_sq(t1, t1);  fe_mul(t0, t1, t0);
-	fe_sq(t0, t0);  FOR (i, 1,   2) fe_sq(t0, t0);  fe_mul(t0, t0, x);
+	fe_sq(t0, t0);                                      fe_mul(t0, t1, t0);
+	fe_sq(t1, t0);  FOR (i, 1,   5) { fe_sq(t1, t1); }  fe_mul(t0, t1, t0);
+	fe_sq(t1, t0);  FOR (i, 1,  10) { fe_sq(t1, t1); }  fe_mul(t1, t1, t0);
+	fe_sq(t2, t1);  FOR (i, 1,  20) { fe_sq(t2, t2); }  fe_mul(t1, t2, t1);
+	fe_sq(t1, t1);  FOR (i, 1,  10) { fe_sq(t1, t1); }  fe_mul(t0, t1, t0);
+	fe_sq(t1, t0);  FOR (i, 1,  50) { fe_sq(t1, t1); }  fe_mul(t1, t1, t0);
+	fe_sq(t2, t1);  FOR (i, 1, 100) { fe_sq(t2, t2); }  fe_mul(t1, t2, t1);
+	fe_sq(t1, t1);  FOR (i, 1,  50) { fe_sq(t1, t1); }  fe_mul(t0, t1, t0);
+	fe_sq(t0, t0);  FOR (i, 1,   2) { fe_sq(t0, t0); }  fe_mul(t0, t0, x);
 
 	// quartic = x^((p-1)/4)
 	i32 *quartic = t1;
