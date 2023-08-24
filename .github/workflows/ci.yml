@@ -80,85 +80,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Ubuntu apt-get update
-        run: sudo apt-get update
-
-      - name: Install libsodium
-        run: sudo apt-get install -y libsodium-dev
-
-      - name: Install clang and llvm
-        run: sudo apt-get install -y clang llvm
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsodium-dev
+          sudo apt-get install -y clang llvm
+          sudo apt-get install -y valgrind
 
       - name: Make test vectors
-        run: |
-          pushd tests/gen
-          make clean && make -j4
-          popd
+        run: cd tests/gen;  make clean && make -j4
 
       - name: Run tests
-        run: make clean && make test -j4
-
-      - name: Run tis-ci tests
-        run: make clean && make tis-ci -j4
+        run: ./tests/test.sh
 
       - name: Run speed tests
-        run: |
-          cd tests/speed
-          make -j4
+        run: cd tests/speed;  make -j4
 
       - name: Run code coverage tests
         run: ./tests/coverage.sh
-
-      - name: Run tests with clang sanitizers
-        run: |
-
-          make clean;  make test -j4
-          echo "Make with O3 optimization and no blake2 loop unrolling"
-          make clean;  make test CFLAGS="-DBLAKE2_NO_UNROLLING -O3" -j4
-
-          echo "Make with address sanitizaton"
-          make clean;  make test CC="clang -std=c99" CFLAGS="-g -fsanitize=address" -j4
-
-          echo "Make with memory sanitizaton"
-          make clean;  make test CC="clang -std=c99" CFLAGS="-g -fsanitize=memory" -j4
-
-          echo "Make with undefined checks"
-          make clean;  make test CC="clang -std=c99" CFLAGS="-g -fsanitize=undefined" -j4
-
-          echo
-          echo "All sanitisers passed!"
-          echo
-
-      - name: Install valgrind
-        run: sudo apt-get install -y valgrind
-
-      - name: Fixme - Build, then run with valgrind (crashy with march=native)
-        run: |
-          echo "Ignore errors in this test suite"
-          set +e # Ignore errors
-
-          echo "Crashy Valgrind on GCC build with O3 and -march=native. TODO: Fix."
-          make clean; make test.out CFLAGS="-g -O3 -march=native" -j4
-          valgrind ./test.out
-
-          echo "Crashy Valgrind on CLANG build with O3 and -march=native. TODO: Fix."
-          make clean; make test.out CC="clang -std=c99" CFLAGS="-g -O3 -march=native" -j4
-          valgrind ./test.out
-
-          echo "Re-enable errors"
-          set -e # Re-enable errors
-
-      - name: Build, then run with valgrind (OK without march=native)
-        run: |
-
-          echo "Valgrind on GCC build with O3"
-          make clean; make test.out CFLAGS="-O3" -j4
-          valgrind ./test.out
-
-          echo "Valgrind on CLANG build with O3"
-          make clean; make test.out CC="clang -std=c99" CFLAGS="-O3" -j4
-          valgrind ./test.out
-
-          echo
-          echo "All valgrind tests passed!"
-          echo
