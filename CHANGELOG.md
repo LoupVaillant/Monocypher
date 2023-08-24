@@ -1,3 +1,13 @@
+4.0.2
+-----
+2023/08/24
+
+- Fixed multiple-lanes Argon2.
+- Improved Poly1305 performance.
+- Improved Argon2 performance.
+- Makefiles no longer overrides standard environment variables.
+
+
 4.0.1
 -----
 2023/03/06
