@@ -52,14 +52,14 @@
 .POSIX:
 .SUFFIXES:
 
-CC?=gcc -std=c99
-CFLAGS?=-pedantic -Wall -Wextra -O3 -march=native
-DESTDIR?=
-PREFIX?=usr/local
-LIBDIR?=$(PREFIX)/lib
-INCLUDEDIR?=$(PREFIX)/include
-PKGCONFIGDIR?=$(LIBDIR)/pkgconfig
-MANDIR?=$(PREFIX)/share/man/man3
+CC=gcc -std=c99
+CFLAGS=-pedantic -Wall -Wextra -O3 -march=native
+DESTDIR=
+PREFIX=usr/local
+LIBDIR=$(PREFIX)/lib
+INCLUDEDIR=$(PREFIX)/include
+PKGCONFIGDIR=$(LIBDIR)/pkgconfig
+MANDIR=$(PREFIX)/share/man/man3
 SONAME=libmonocypher.so.4
 
 .PHONY: all library static-library dynamic-library  \

@@ -49,8 +49,8 @@
 # You should have received a copy of the CC0 Public Domain Dedication along
 # with this software.  If not, see
 # <https://creativecommons.org/publicdomain/zero/1.0/>
-CC     ?= gcc -std=c99
-CFLAGS ?= -pedantic -Wall -Wextra
+CC     = gcc -std=c99
+CFLAGS = -pedantic -Wall -Wextra
 
 .PHONY: all clean
 
