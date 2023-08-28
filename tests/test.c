@@ -62,7 +62,7 @@
 ////////////
 /// Wipe ///
 ////////////
-static void test_wipe()
+static void test_wipe(void)
 {
 	printf("\tcrypto_wipe\n");
 	u8 zeroes[50] = {0};
@@ -107,7 +107,7 @@ static void p_verify(unsigned size, int (*compare)(const u8*, const u8*))
 	}
 }
 
-static void test_verify()
+static void test_verify(void)
 {
 	p_verify(16, crypto_verify16);
 	p_verify(32, crypto_verify32);
@@ -166,7 +166,7 @@ static void hchacha20(vector_reader *reader)
 	crypto_chacha20_h(out.buf, key.buf, nonce.buf);
 }
 
-static void test_chacha20()
+static void test_chacha20(void)
 {
 	VECTORS(chacha20);
 	printf("\tChacha20 (ctr)\n");
@@ -273,7 +273,7 @@ static void poly1305(vector_reader *reader)
 	crypto_poly1305(out.buf, msg.buf, msg.size, key.buf);
 }
 
-static void test_poly1305()
+static void test_poly1305(void)
 {
 	VECTORS(poly1305);
 
@@ -342,7 +342,7 @@ static void aead_8439(vector_reader *reader)
                       text.buf, text.size);
 }
 
-static void test_aead()
+static void test_aead(void)
 {
 	VECTORS(aead_ietf);
 	VECTORS(aead_8439);
@@ -419,7 +419,7 @@ static void blake2b(vector_reader *reader)
 	                     msg.buf, msg.size);
 }
 
-static void test_blake2b()
+static void test_blake2b(void)
 {
 	VECTORS(blake2b);
 
@@ -520,7 +520,7 @@ static void sha512_hkdf(vector_reader *reader)
 	                   info.buf, info.size);
 }
 
-static void test_sha512()
+static void test_sha512(void)
 {
 	VECTORS(sha512);
 	VECTORS(sha512_hmac);
@@ -638,7 +638,7 @@ static void argon2(vector_reader *reader)
 	free(work_area);
 }
 
-static void test_argon2()
+static void test_argon2(void)
 {
 	VECTORS(argon2);
 
@@ -718,7 +718,7 @@ static void iterate_x25519(u8 k[32], u8 u[32])
 	memcpy(k, tmp, 32);
 }
 
-static void test_x25519()
+static void test_x25519(void)
 {
 	VECTORS(x25519);
 	VECTORS(x25519_pk);
@@ -843,7 +843,7 @@ static void add_xl(u8 out[32], u8 in[32], unsigned factor)
 	ASSERT(acc == 0); // No carry is remaining
 }
 
-static void test_edDSA_utils()
+static void test_edDSA_utils(void)
 {
 	printf("\tEdDSA (scalarbase)\n");
 	FOR (i, 0, 50) {
@@ -896,7 +896,7 @@ static void edDSA_pk(vector_reader *reader)
 	ASSERT_EQUAL(secret_key + 32, public_key, 32);
 }
 
-static void test_edDSA()
+static void test_edDSA(void)
 {
 	VECTORS(edDSA);
 	VECTORS(edDSA_pk);
@@ -1038,7 +1038,7 @@ static void ed_25519ph(vector_reader *reader)
     }
 }
 
-static void test_ed25519()
+static void test_ed25519(void)
 {
 	VECTORS(ed_25519);
 	VECTORS(ed_25519_pk);
@@ -1066,7 +1066,7 @@ static void elligator_inv(vector_reader *reader)
 	ASSERT((u8)check == failure);
 }
 
-static void test_elligator()
+static void test_elligator(void)
 {
 	VECTORS(elligator_dir);
 
@@ -1190,7 +1190,7 @@ static void test_elligator()
 ////////////////////////
 /// X25519 <-> EdDSA ///
 ////////////////////////
-static void test_conversions()
+static void test_conversions(void)
 {
 	printf("\tX25519 <-> EdDSA\n");
 	FOR (i, 0, 32) {

@@ -277,7 +277,7 @@ static void elligator_inv(vector_reader *reader)
 }
 
 //@ ensures \result == 0;
-static int p_wipe()
+static int p_wipe(void)
 {
 	printf("\tcrypto_wipe\n");
 	u8 zeroes[50] = {0};
@@ -290,7 +290,7 @@ static int p_wipe()
 }
 
 //@ ensures \result == 0;
-static int p_eddsa_x25519()
+static int p_eddsa_x25519(void)
 {
 	RANDOM_INPUT(e_seed, 32);
 	u8 secret    [64];
@@ -309,7 +309,7 @@ static int p_eddsa_x25519()
 }
 
 //@ ensures \result == 0;
-static int p_dirty()
+static int p_dirty(void)
 {
 	int status = 0;
 
@@ -333,7 +333,7 @@ static int p_dirty()
 }
 
 //@ ensures \result == 0;
-static int p_x25519_inverse()
+static int p_x25519_inverse(void)
 {
 	int status = 0;
 	RANDOM_INPUT(b, 32);
@@ -394,14 +394,14 @@ static int p_verify(size_t size, int (*compare)(const u8*, const u8*))
 	return status;
 }
 //@ ensures \result == 0;
-static int p_verify16(){ return p_verify(16, crypto_verify16); }
+static int p_verify16(void){ return p_verify(16, crypto_verify16); }
 //@ ensures \result == 0;
-static int p_verify32(){ return p_verify(32, crypto_verify32); }
+static int p_verify32(void){ return p_verify(32, crypto_verify32); }
 //@ ensures \result == 0;
-static int p_verify64(){ return p_verify(64, crypto_verify64); }
+static int p_verify64(void){ return p_verify(64, crypto_verify64); }
 
 #define TEST(name)                                                      \
-	int v_##name() { \
+	int v_##name(void) { \
 		return vector_test(name, #name, nb_##name##_vectors, name##_vectors); \
 	}
 
