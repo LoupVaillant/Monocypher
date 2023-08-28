@@ -5,7 +5,7 @@
 - Fixed multiple-lanes Argon2.
 - Improved Poly1305 performance.
 - Improved Argon2 performance.
-- Makefiles no longer overrides standard environment variables.
+- Makefiles no longer override standard environment variables.
 
 
 4.0.1
