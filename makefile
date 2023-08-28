@@ -52,15 +52,15 @@
 .POSIX:
 .SUFFIXES:
 
-CC?=gcc -std=c99
-CFLAGS?=-pedantic -Wall -Wextra -O3 -march=native
-DESTDIR?=
-PREFIX?=usr/local
-LIBDIR?=$(PREFIX)/lib
-INCLUDEDIR?=$(PREFIX)/include
-PKGCONFIGDIR?=$(LIBDIR)/pkgconfig
-MANDIR?=$(PREFIX)/share/man/man3
-SONAME=libmonocypher.so.4
+CC           ?= gcc -std=c99
+CFLAGS       ?= -pedantic -Wall -Wextra -O3 -march=native
+DESTDIR      ?=
+PREFIX       ?= usr/local
+LIBDIR       ?= $(PREFIX)/lib
+INCLUDEDIR   ?= $(PREFIX)/include
+PKGCONFIGDIR ?= $(LIBDIR)/pkgconfig
+MANDIR       ?= $(PREFIX)/share/man/man3
+SONAME        = libmonocypher.so.4
 
 .PHONY: all library static-library dynamic-library  \
         install install-lib install-pc install-doc  \
@@ -168,7 +168,7 @@ lib/ctgrind.o: tests/ctgrind.c $(TEST_COMMON)
 ######################
 ## Test executables ##
 ######################
-TEST_OBJ=lib/utils.o lib/monocypher.o lib/monocypher-ed25519.o
+TEST_OBJ = lib/utils.o lib/monocypher.o lib/monocypher-ed25519.o
 
 test.out: lib/test.o $(TEST_OBJ)
 	$(CC) $(CFLAGS) -o $@ lib/test.o $(TEST_OBJ)

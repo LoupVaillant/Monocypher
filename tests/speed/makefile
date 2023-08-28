@@ -49,8 +49,8 @@
 # with this software.  If not, see
 # <https://creativecommons.org/publicdomain/zero/1.0/>
 
-CC?=gcc -std=gnu99
-CFLAGS?= -pedantic -Wall -Wextra -O3 -march=native
+CC     ?= gcc -std=gnu99
+CFLAGS ?= -pedantic -Wall -Wextra -O3 -march=native
 
 .PHONY: speed speed-sodium speed-hydrogen speed-tweetnacl speed-c25519 \
         speed-donna \
@@ -102,9 +102,9 @@ tweetnacl.o: ../externals/tweetnacl/tweetnacl.c \
 	$(CC) -c $(CFLAGS) -I .. $< -o $@
 
 # C25519
-C25519=c25519 edsign ed25519 morph25519 fprime f25519 sha512
-C25519_HEADERS=$(patsubst %, ../externals/c25519/%.h, $(C25519))
-C25519_OBJECTS=$(patsubst %, %.o,                     $(C25519))
+C25519         = c25519 edsign ed25519 morph25519 fprime f25519 sha512
+C25519_HEADERS = $(patsubst %, ../externals/c25519/%.h, $(C25519))
+C25519_OBJECTS = $(patsubst %, %.o,                     $(C25519))
 c25519.o    : ../externals/c25519/c25519.c     $(C25519_HEADERS)
 ed25519.o   : ../externals/c25519/ed25519.c    $(C25519_HEADERS)
 edsign.o    : ../externals/c25519/edsign.c     $(C25519_HEADERS)
@@ -116,9 +116,9 @@ $(C25519_OBJECTS):
 	$(CC) -c $(CFLAGS) -I ../externals/c25519/ -o $@ $<
 
 # libhydrogen (only installs pkg-config)
-DESTDIR=
-PREFIX=usr/local
-PKGCONFIGDIR=$(LIBDIR)/pkgconfig
+DESTDIR      =
+PREFIX       = usr/local
+PKGCONFIGDIR = $(LIBDIR)/pkgconfig
 pkg-config-libhydrogen:
 	mkdir -p $(DESTDIR)/$(PKGCONFIGDIR)
 	sed "s|PREFIX|$(PREFIX)|" libhydrogen.pc \
@@ -134,13 +134,13 @@ donna.o: ../externals/ed25519-donna/ed25519.c $(DONNA_HEADERS)
 	    -DED25519_FORCE_32BIT
 
 # Tinyssh
-TSSH=../externals/tinyssh
-TSSH_O= \
+TSSH   =../externals/tinyssh
+TSSH_O = \
 	cleanup.o crypto_hash_sha512.o crypto_onetimeauth_poly1305.o         \
 	crypto_scalarmult_curve25519.o crypto_sign_ed25519.o                 \
 	crypto_stream_chacha20.o crypto_verify_32.o fe25519.o fe.o ge25519.o \
 	randombytes.o sc25519.o uint32_pack.o uint32_unpack.o verify.o
-TSSH_H= \
+TSSH_H = \
 	$(TSSH)/cleanup.h $(TSSH)/crypto_hash_sha512.h $(TSSH)/crypto_int64.h  \
 	$(TSSH)/crypto_onetimeauth_poly1305.h                                  \
 	$(TSSH)/crypto_scalarmult_curve25519.h $(TSSH)/crypto_sign_ed25519.h   \
