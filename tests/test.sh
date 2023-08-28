@@ -58,10 +58,10 @@ CFLAGS="-pedantic -Wall -Wextra -g -O2"
 
 make clean;  make tis-ci
 make clean;  make test
-make clean;  make test CFLAGS="$CFLAGS -DBLAKE2_NO_UNROLLING"
-make clean;  make test CFLAGS="$CFLAGS -fsanitize=address"
-make clean;  make test CFLAGS="$CFLAGS -fsanitize=memory"
-make clean;  make test CFLAGS="$CFLAGS -fsanitize=undefined"
+make clean;  make test CC="$CC" CFLAGS="$CFLAGS -DBLAKE2_NO_UNROLLING"
+make clean;  make test CC="$CC" CFLAGS="$CFLAGS -fsanitize=address"
+make clean;  make test CC="$CC" CFLAGS="$CFLAGS -fsanitize=memory"
+make clean;  make test CC="$CC" CFLAGS="$CFLAGS -fsanitize=undefined"
 make clean;  make test.out CC="gcc -std=c99";  valgrind ./test.out
 
 echo
