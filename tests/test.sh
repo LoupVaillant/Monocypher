@@ -53,13 +53,16 @@
 
 set -e
 
+CC="clang -std=c99"
+CFLAGS="-pedantic -Wall -Wextra -g -O2"
+
 make clean;  make tis-ci
 make clean;  make test
-make clean;  make test CFLAGS="-DBLAKE2_NO_UNROLLING -O3"
-make clean;  make test CC="clang -std=c99" CFLAGS="-g -fsanitize=address"
-make clean;  make test CC="clang -std=c99" CFLAGS="-g -fsanitize=memory"
-make clean;  make test CC="clang -std=c99" CFLAGS="-g -fsanitize=undefined"
-make clean;  make test.out CFLAGS="-g";  valgrind ./test.out
+make clean;  make test CFLAGS="$CFLAGS -DBLAKE2_NO_UNROLLING"
+make clean;  make test CFLAGS="$CFLAGS -fsanitize=address"
+make clean;  make test CFLAGS="$CFLAGS -fsanitize=memory"
+make clean;  make test CFLAGS="$CFLAGS -fsanitize=undefined"
+make clean;  make test.out CC="gcc -std=c99";  valgrind ./test.out
 
 echo
 echo "All sanitisers passed!"
