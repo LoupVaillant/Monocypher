@@ -1,4 +1,4 @@
-#! /usr/bin/env sh
+#! /bin/sh
 
 # This file is dual-licensed.  Choose whichever licence you want from
 # the two licences listed below.
