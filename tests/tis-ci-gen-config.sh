@@ -70,6 +70,7 @@ for entry_point in      \
     "v_sha512_hmac"     \
     "v_sha512_hkdf"     \
     "v_argon2"          \
+    "v_x25519"          \
     "v_edDSA"           \
     "v_edDSA_pk"        \
     "v_ed_25519"        \
@@ -84,16 +85,11 @@ for entry_point in      \
     "p_verify64"
 do
     for platform in   \
+        "x86_16"      \
         "sparc_32"    \
         "x86_32"      \
-        "x86_16"      \
-        "x86_win64"   \
-        "armeb_eabi"  \
-        "arm_eabi"    \
-        "aarch64"     \
         "rv64ifdq"    \
-        "mips_64"     \
-        "ppc_64"
+        "mips_64"
     do
         echo '{ "name"          :' "\"$entry_point - $platform\"" >> $TIS_CONFIG
         echo ', "files"         :'                                >> $TIS_CONFIG
