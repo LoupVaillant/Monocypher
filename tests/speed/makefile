@@ -117,12 +117,12 @@ $(C25519_OBJECTS):
 
 # libhydrogen (only installs pkg-config)
 DESTDIR      =
-PREFIX       = usr/local
+PREFIX       = /usr/local
 PKGCONFIGDIR = $(LIBDIR)/pkgconfig
 pkg-config-libhydrogen:
-	mkdir -p $(DESTDIR)/$(PKGCONFIGDIR)
+	mkdir -p $(DESTDIR)$(PKGCONFIGDIR)
 	sed "s|PREFIX|$(PREFIX)|" libhydrogen.pc \
-	    > $(DESTDIR)/$(PKGCONFIGDIR)/libhydrogen.pc
+	    > $(DESTDIR)$(PKGCONFIGDIR)/libhydrogen.pc
 
 # Donna
 DONNA_HEADERS=$(wildcard ../externals/ed25519-donna/*.h)

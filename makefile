@@ -55,7 +55,7 @@
 CC           ?= gcc -std=c99
 CFLAGS       ?= -pedantic -Wall -Wextra -O3 -march=native
 DESTDIR      ?=
-PREFIX       ?= usr/local
+PREFIX       ?= /usr/local
 LIBDIR       ?= $(PREFIX)/lib
 INCLUDEDIR   ?= $(PREFIX)/include
 PKGCONFIGDIR ?= $(LIBDIR)/pkgconfig
@@ -92,28 +92,28 @@ clean:
 install: install-lib install-pc install-doc
 
 install-lib: library
-	mkdir -p $(DESTDIR)/$(INCLUDEDIR)
-	mkdir -p $(DESTDIR)/$(LIBDIR)
-	cp -P lib/libmonocypher.a lib/libmonocypher.so* $(DESTDIR)/$(LIBDIR)
-	cp -P src/monocypher.h                          $(DESTDIR)/$(INCLUDEDIR)
-	cp -P src/optional/monocypher-ed25519.h         $(DESTDIR)/$(INCLUDEDIR)
+	mkdir -p $(DESTDIR)$(INCLUDEDIR)
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	cp -P lib/libmonocypher.a lib/libmonocypher.so* $(DESTDIR)$(LIBDIR)
+	cp -P src/monocypher.h                          $(DESTDIR)$(INCLUDEDIR)
+	cp -P src/optional/monocypher-ed25519.h         $(DESTDIR)$(INCLUDEDIR)
 
 install-pc: monocypher.pc
-	mkdir -p $(DESTDIR)/$(PKGCONFIGDIR)
+	mkdir -p $(DESTDIR)$(PKGCONFIGDIR)
 	sed "s|PREFIX|$(PREFIX)|"  monocypher.pc \
-	    > $(DESTDIR)/$(PKGCONFIGDIR)/monocypher.pc
+	    > $(DESTDIR)$(PKGCONFIGDIR)/monocypher.pc
 
 install-doc: doc/man3/intro.3monocypher
-	mkdir -p $(DESTDIR)/$(MANDIR)
-	cp -PR doc/man3/*.3monocypher $(DESTDIR)/$(MANDIR)
+	mkdir -p $(DESTDIR)$(MANDIR)
+	cp -PR doc/man3/*.3monocypher $(DESTDIR)$(MANDIR)
 
 uninstall:
-	rm -f $(DESTDIR)/$(LIBDIR)/libmonocypher.a
-	rm -f $(DESTDIR)/$(LIBDIR)/libmonocypher.so*
-	rm -f $(DESTDIR)/$(INCLUDEDIR)/monocypher.h
-	rm -f $(DESTDIR)/$(INCLUDEDIR)/monocypher-ed25519.h
-	rm -f $(DESTDIR)/$(PKGCONFIGDIR)/monocypher.pc
-	rm -f $(DESTDIR)/$(MANDIR)/*.3monocypher
+	rm -f $(DESTDIR)$(LIBDIR)/libmonocypher.a
+	rm -f $(DESTDIR)$(LIBDIR)/libmonocypher.so*
+	rm -f $(DESTDIR)$(INCLUDEDIR)/monocypher.h
+	rm -f $(DESTDIR)$(INCLUDEDIR)/monocypher-ed25519.h
+	rm -f $(DESTDIR)$(PKGCONFIGDIR)/monocypher.pc
+	rm -f $(DESTDIR)$(MANDIR)/*.3monocypher
 
 ##################
 ## Main library ##
