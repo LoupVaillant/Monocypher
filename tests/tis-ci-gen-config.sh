@@ -98,7 +98,9 @@ do
         echo '  , "tests/utils.c"'                                >> $TIS_CONFIG
         echo '  , "tests/tis-ci.c"'                               >> $TIS_CONFIG
         echo '  ]'                                                >> $TIS_CONFIG
-        echo ', "cpp-extra-args": "-Isrc -Isrc/optional -Itests -Dvolatile="' \
+        echo ', "cpp-extra-args":
+        "-Isrc -Isrc/optional -Itests -Dvolatile=
+         -DCLOCK_PROCESS_CPUTIME_ID=3 -DCLOCK_THREAD_CPUTIME_ID=4"' \
                                                                   >> $TIS_CONFIG
         echo ', "machdep"       :' "\"$platform\""                >> $TIS_CONFIG
         echo ', "no-results"    : true'                           >> $TIS_CONFIG
