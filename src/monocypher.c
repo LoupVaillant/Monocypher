@@ -232,7 +232,7 @@ u64 crypto_chacha20_djb(u8 *cipher_text, const u8 *plain_text,
 	size_t nb_blocks = text_size >> 6;
 	FOR (i, 0, nb_blocks) {
 		chacha20_rounds(pool, input);
-		if (plain_text != 0) {
+		if (plain_text != NULL) {
 			FOR (j, 0, 16) {
 				u32 p = pool[j] + input[j];
 				store32_le(cipher_text, p ^ load32_le(plain_text));
@@ -255,7 +255,7 @@ u64 crypto_chacha20_djb(u8 *cipher_text, const u8 *plain_text,
 
 	// Last (incomplete) block
 	if (text_size > 0) {
-		if (plain_text == 0) {
+		if (plain_text == NULL) {
 			plain_text = zero;
 		}
 		chacha20_rounds(pool, input);
