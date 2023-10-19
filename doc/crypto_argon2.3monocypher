@@ -341,11 +341,11 @@ crypto_argon2_config config = {
     .nb_passes = 3,                          /* 3 iterations    */
     .nb_lanes  = 1                           /* Single-threaded */
 };
-uint8_t password[14] = "Okay Password!";
+uint8_t password[] = "Okay Password!";
 crypto_argon2_inputs inputs = {
-    .pass      = password,                     /* User password */
-    .pass_size = sizeof(password),           /* Password length */
+    .pass      = password,                   /* User password */
     .salt      = salt,                 /* Salt for the password */
+    .pass_size = sizeof(password) - 1,       /* Password length */
     .salt_size = 16
 };
 crypto_argon2_extras extras = {0};   /* Extra parameters unused */
@@ -367,6 +367,8 @@ if (work_area == NULL) {
     crypto_wipe(password, sizeof(password));
     free(work_area);
 }
+
+
 .Ed
 .Sh SEE ALSO
 .Xr crypto_aead_lock 3monocypher ,
