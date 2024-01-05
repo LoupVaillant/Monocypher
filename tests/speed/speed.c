@@ -88,7 +88,7 @@ static u64 authenticated(void)
 	RANDOM_INPUT(nonce,   24);
 
 	TIMING_START {
-		crypto_aead_lock(mac, out, key, nonce, 0, 0, in, SIZE);
+		crypto_aead_lock(out, mac, key, nonce, 0, 0, in, SIZE);
 	}
 	TIMING_END;
 }
