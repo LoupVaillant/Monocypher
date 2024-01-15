@@ -90,8 +90,6 @@ vectors(32, 16, 8, 127)
 vectors(32, 16, 8, 128)
 vectors(32, 16, 8, 129)
 
-vectors(32, 16, 8, 128)
-
 vectors(127, 16, 8, 128)
 vectors(128, 16, 8, 128)
 vectors(129, 16, 8, 128)
