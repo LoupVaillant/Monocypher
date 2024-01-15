@@ -174,9 +174,9 @@ $(TSSH_O):
 speed.o           : speed.c           speed.h ../utils.h
 	$(CC) -c $(CFLAGS) $< -o $@ -I .. -I ../../src/ -I ../../src/optional
 speed-sodium.o    : speed-sodium.c    speed.h ../utils.h
-	$(CC) -c $(CFLAGS) $< -o $@ -I ..
+	$(CC) -c $(CFLAGS) $< -o $@ -I .. `pkg-config --cflags libsodium`
 speed-hydrogen.o  : speed-hydrogen.c  speed.h ../utils.h
-	$(CC) -c $(CFLAGS) $< -o $@ -I ..
+	$(CC) -c $(CFLAGS) $< -o $@ -I .. `pkg-config --cflags libhydrogen`
 speed-tweetnacl.o : speed-tweetnacl.c speed.h ../utils.h $(TWEET_HEADERS)
 	$(CC) -c $(CFLAGS) $< -o $@ -I .. -I ../externals/tweetnacl
 speed-c25519.o    : speed-c25519.c    speed.h ../utils.h $(C25519_HEADERS)
