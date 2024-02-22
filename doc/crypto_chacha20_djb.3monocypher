@@ -261,9 +261,9 @@ To decrypt the above:
 .Bd -literal -offset indent
 uint8_t       key        [ 32]; /* Same key as above        */
 const uint8_t nonce      [ 24]; /* Same nonce as above      */
-uint8_t       plain_text [500]; /* Message to decrypt       */
-uint8_t       cipher_text[500]; /* Secret message           */
-crypto_chacha20_x(cipher_text, plain_text, 500, key, nonce, 0);
+uint8_t       cipher_text[500]; /* Message to decrypt       */
+uint8_t       plain_text [500]; /* Secret message           */
+crypto_chacha20_x(plain_text, cipher_text, 500, key, nonce, 0);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 /* The plaintext likely needs to be processed before you wipe it */
