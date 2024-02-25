@@ -112,6 +112,7 @@
 .Fa "crypto_sha512_hmac_ctx *ctx"
 .Fa "uint8_t hmac[64]"
 .Fc
+.Ft void
 .Fo crypto_sha512_hkdf
 .Fa "uint8_t *okm"
 .Fa "size_t okm_size"
