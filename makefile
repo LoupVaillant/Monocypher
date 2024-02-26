@@ -52,15 +52,48 @@
 .POSIX:
 .SUFFIXES:
 
+ifeq ($(OS),Windows_NT)
+WIN32        = 1
+else
+UNAME       := $(shell uname -s || :)
+ifeq ($(UNAME),Darwin)
+DARWIN       = 1
+endif
+endif
+
 CC           ?= gcc -std=c99
 CFLAGS       ?= -pedantic -Wall -Wextra -O3 -march=native
 DESTDIR      ?=
 PREFIX       ?= /usr/local
+BINDIR       ?= $(PREFIX)/bin
 LIBDIR       ?= $(PREFIX)/lib
 INCLUDEDIR   ?= $(PREFIX)/include
 PKGCONFIGDIR ?= $(LIBDIR)/pkgconfig
 MANDIR       ?= $(PREFIX)/share/man/man3
-SONAME        = libmonocypher.so.4
+SOVERSION     = 4
+# MinGW/CygWin convention + implib generation
+ifdef WIN32
+SONAME        = libmonocypher-$(SOVERSION).dll
+EXESUFFIX     = .exe
+SOSUFFIX      = .dll
+SOFLAGS       = -Wl,-soname,$(SONAME),--out-implib,lib/libmonocypher.dll.a
+# Darwin convention
+else ifdef DARWIN
+SONAME        = libmonocypher.$(SOVERSION).dylib
+EXESUFFIX     =
+SOSUFFIX      = .dylib
+SOFLAGS       = -install_name $(SONAME) -current_version $(SOVERSION)        \
+                -compatibility_version $(SOVERSION)
+else
+SONAME        = libmonocypher.so.$(SOVERSION)
+EXESUFFIX     =
+SOSUFFIX      = .so
+SOFLAGS       = -Wl,-soname,$(SONAME)
+endif
+
+ifdef DARWIN
+else
+endif
 
 .PHONY: all library static-library dynamic-library  \
         install install-lib install-pc install-doc  \
@@ -73,14 +106,14 @@ SONAME        = libmonocypher.so.4
 all  : library doc/man3/intro.3monocypher
 check: test
 
-test: test.out
-	./test.out
+test: test.out$(EXESUFFIX)
+	./test.out$(EXESUFFIX)
 
-tis-ci: tis-ci.out
-	./tis-ci.out
+tis-ci: tis-ci.out$(EXESUFFIX)
+	./tis-ci.out$(EXESUFFIX)
 
-ctgrind: ctgrind.out
-	valgrind ./ctgrind.out
+ctgrind: ctgrind.out$(EXESUFFIX)
+	valgrind ./ctgrind.out$(EXESUFFIX)
 
 clean:
 	rm -rf lib/ doc/html/ doc/man3/
@@ -94,9 +127,21 @@ install: install-lib install-pc install-doc
 install-lib: library
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
 	mkdir -p $(DESTDIR)$(LIBDIR)
-	cp -P lib/libmonocypher.a lib/libmonocypher.so* $(DESTDIR)$(LIBDIR)
-	cp -P src/monocypher.h                          $(DESTDIR)$(INCLUDEDIR)
-	cp -P src/optional/monocypher-ed25519.h         $(DESTDIR)$(INCLUDEDIR)
+# Dynamic library should be installed into `bin` on Windows
+ifdef WIN32
+	mkdir -p $(DESTDIR)$(BINDIR)
+	cp -P lib/libmonocypher.a lib/libmonocypher.dll.a   $(DESTDIR)$(LIBDIR)
+	cp -P lib/libmonocypher*.dll                        $(DESTDIR)$(BINDIR)
+else ifdef DARWIN
+	cp -P lib/libmonocypher.a lib/libmonocypher*.dylib  $(DESTDIR)$(LIBDIR)
+# Adjust install name
+	install_name_tool -change $(SONAME) $(DESTDIR)$(LIBDIR)/$(SONAME)        \
+	$(DESTDIR)$(LIBDIR)/$(SONAME)
+else
+	cp -P lib/libmonocypher.a lib/libmonocypher.so*     $(DESTDIR)$(LIBDIR)
+endif
+	cp -P src/monocypher.h                              $(DESTDIR)$(INCLUDEDIR)
+	cp -P src/optional/monocypher-ed25519.h             $(DESTDIR)$(INCLUDEDIR)
 
 install-pc: monocypher.pc
 	mkdir -p $(DESTDIR)$(PKGCONFIGDIR)
@@ -109,7 +154,14 @@ install-doc: doc/man3/intro.3monocypher
 
 uninstall:
 	rm -f $(DESTDIR)$(LIBDIR)/libmonocypher.a
+ifdef WIN32
+	rm -f $(DESTDIR)$(LIBDIR)/libmonocypher.dll.a
+	rm -f $(DESTDIR)$(BINDIR)/libmonocypher*.dll
+else ifdef DARWIN
+	rm -f $(DESTDIR)$(LIBDIR)/libmonocypher*.dylib
+else
 	rm -f $(DESTDIR)$(LIBDIR)/libmonocypher.so*
+endif
 	rm -f $(DESTDIR)$(INCLUDEDIR)/monocypher.h
 	rm -f $(DESTDIR)$(INCLUDEDIR)/monocypher-ed25519.h
 	rm -f $(DESTDIR)$(PKGCONFIGDIR)/monocypher.pc
@@ -120,7 +172,15 @@ uninstall:
 ##################
 library: static-library dynamic-library
 static-library : lib/libmonocypher.a
-dynamic-library: lib/libmonocypher.so lib/$(SONAME)
+# On Windows implib used instead of symlink
+ifdef WIN32
+# Created by library target
+lib/libmonocypher.dll.a: lib/$(SONAME)
+
+dynamic-library: lib/$(SONAME) lib/libmonocypher.dll.a
+else
+dynamic-library: lib/libmonocypher$(SOSUFFIX) lib/$(SONAME)
+endif
 
 MAIN_O=lib/monocypher.o lib/monocypher-ed25519.o
 MAIN_I=-I src -I src/optional
@@ -128,11 +188,11 @@ MAIN_I=-I src -I src/optional
 lib/libmonocypher.a: $(MAIN_O)
 	$(AR) cr $@ $(MAIN_O)
 
-lib/libmonocypher.so: lib/$(SONAME)
+lib/libmonocypher$(SOSUFFIX): lib/$(SONAME)
 	ln -sf `basename lib/$(SONAME)` $@
 
 lib/$(SONAME): $(MAIN_O)
-	$(CC) $(CFLAGS) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $(MAIN_O)
+	$(CC) $(CFLAGS) $(LDFLAGS) -shared $(SOFLAGS) -o $@ $(MAIN_O)
 
 lib/monocypher.o: src/monocypher.c src/monocypher.h
 	@mkdir -p $(@D)
@@ -170,13 +230,13 @@ lib/ctgrind.o: tests/ctgrind.c $(TEST_COMMON)
 ######################
 TEST_OBJ = lib/utils.o lib/monocypher.o lib/monocypher-ed25519.o
 
-test.out: lib/test.o $(TEST_OBJ)
+test.out$(EXESUFFIX): lib/test.o $(TEST_OBJ)
 	$(CC) $(CFLAGS) -o $@ lib/test.o $(TEST_OBJ)
 
-tis-ci.out: lib/tis-ci.o $(TEST_OBJ)
+tis-ci.out$(EXESUFFIX): lib/tis-ci.o $(TEST_OBJ)
 	$(CC) $(CFLAGS) -o $@ lib/tis-ci.o $(TEST_OBJ)
 
-ctgrind.out: lib/ctgrind.o $(TEST_OBJ)
+ctgrind.out$(EXESUFFIX): lib/ctgrind.o $(TEST_OBJ)
 	$(CC) $(CFLAGS) -o $@ lib/ctgrind.o $(TEST_OBJ)
 # Remove lines below for the tarball
 

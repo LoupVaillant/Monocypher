@@ -49,8 +49,14 @@
 # You should have received a copy of the CC0 Public Domain Dedication along
 # with this software.  If not, see
 # <https://creativecommons.org/publicdomain/zero/1.0/>
-CC     ?= gcc -std=c99
-CFLAGS ?= -pedantic -Wall -Wextra
+
+CC       ?= gcc -std=c99
+CFLAGS   ?= -pedantic -Wall -Wextra
+ifeq ($(OS),Windows_NT)
+EXESUFFIX = .exe
+else
+EXESUFFIX =
+endif
 
 .PHONY: all clean
 
@@ -67,7 +73,7 @@ VECTORS = ../vectors.h
 all: $(VECTORS)
 
 clean:
-	rm -f *.out *.vec *.o
+	rm -f *.out$(EXESUFFIX) *.vec *.o
 	rm -f $(VECTORS)
 
 elligator_inv.vec: elligator-inverse.py elligator.py elligator_scalarmult.py
@@ -76,7 +82,7 @@ elligator_dir.vec: elligator-direct.py elligator.py
 	./$< >$@
 sha512_hkdf.vec: sha512_hkdf.py
 	./$< >$@
-%.vec: %.out
+%.vec: %.out$(EXESUFFIX)
 	./$< > $@
 
 utils.o: utils.c utils.h
@@ -90,7 +96,7 @@ utils.o: utils.c utils.h
             -I ../../src/optional          \
             $$(pkg-config --cflags libsodium)
 
-%.out: %.o ed25519.o utils.o
+%.out$(EXESUFFIX): %.o ed25519.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^ \
             $$(pkg-config --libs libsodium)
 
@@ -105,7 +111,7 @@ ed25519.o: ../externals/ed25519-donna/ed25519.c \
             -DED25519_NO_INLINE_ASM           \
             -DED25519_FORCE_32BIT
 
-vector_to_header.out: vector_to_header.c
+vector_to_header.out$(EXESUFFIX): vector_to_header.c
 	$(CC) $(CFLAGS) $< -o $@
 
 chacha20.all.vec      : chacha20.vec      vectors/chacha20
@@ -134,8 +140,8 @@ $(VEC2):
 	mkdir -p $(@D)
 	cat $^ > $@
 
-%.h.vec: %.all.vec vector_to_header.out
-	./vector_to_header.out  $(patsubst %.all.vec,%,$<) < $< > $@
+%.h.vec: %.all.vec vector_to_header.out$(EXESUFFIX)
+	./vector_to_header.out$(EXESUFFIX)  $(patsubst %.all.vec,%,$<) < $< > $@
 
 prelude.h.vec:
 	@echo "creating prelude.h.vec"
