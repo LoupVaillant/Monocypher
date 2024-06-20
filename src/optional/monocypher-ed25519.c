@@ -441,7 +441,7 @@ static void hash_reduce(u8 h[32],
 	crypto_eddsa_reduce(h, hash);
 }
 
-static void ed25519_dom_sign(u8 signature [64], const u8 secret_key[32],
+static void ed25519_dom_sign(u8 signature[64], const u8 secret_key[64],
                              const u8 *dom,     size_t dom_size,
                              const u8 *message, size_t message_size)
 {
