@@ -132,7 +132,7 @@ lib/libmonocypher.so: lib/$(SONAME)
 	ln -sf `basename lib/$(SONAME)` $@
 
 lib/$(SONAME): $(MAIN_O)
-	$(CC) $(CFLAGS) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $(MAIN_O)
+	$(CC) $(CFLAGS) $(LDFLAGS) -shared -Wl,-install_name,$(SONAME) -o $@ $(MAIN_O)
 
 lib/monocypher.o: src/monocypher.c src/monocypher.h
 	@mkdir -p $(@D)
