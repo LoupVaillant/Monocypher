@@ -40,8 +40,8 @@ Features
 - [Steganography and PAKE][STEG] with [Elligator 2][ELLI].
 
 [AEAD]:    https://monocypher.org/manual/aead
-[HASH]:    https://monocypher.org/manual/blake2
-[SHA-512]: https://monocypher.org/manual/sha-512
+[HASH]:    https://monocypher.org/manual/blake2b
+[SHA-512]: https://monocypher.org/manual/sha512
 [PWH]:     https://monocypher.org/manual/argon2
 [PKC]:     https://monocypher.org/manual/x25519
 [EDDSA]:   https://monocypher.org/manual/eddsa
