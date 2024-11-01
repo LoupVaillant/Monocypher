@@ -206,6 +206,11 @@ Length of both
 .Fa plain_text and
 .Fa cipher_text ,
 in bytes.
+Virtually unlimited,
+except when
+.Fn crypto_aead_init_ietf
+is used,
+in which case it must never exceed 2^38 - 64.
 .El
 .Pp
 The
