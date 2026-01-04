@@ -850,26 +850,23 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 		auto *work_area = new secret_array<uint64_t, (Memory * 1024 / 8) + 1>;
 		::std::array<uint8_t, HashSize> hash = {};
 
-		detail::crypto_argon2_config config = {
-			.algorithm = Type,
-			.nb_blocks = Memory,
-			.nb_passes = Passes,
-			.nb_lanes = Parallelism,
-		};
+		detail::crypto_argon2_config config = {};
+		config.algorithm = Type;
+		config.nb_blocks = Memory;
+		config.nb_passes = Passes;
+		config.nb_lanes = Parallelism;
 
-		detail::crypto_argon2_inputs inputs = {
-			.pass = password.data(),
-			.salt = salt.data(),
-			.pass_size = static_cast<uint32_t>(password.size()),
-			.salt_size = static_cast<uint32_t>(salt.size()),
-		};
+		detail::crypto_argon2_inputs inputs = {};
+		inputs.pass = password.data();
+		inputs.salt = salt.data();
+		inputs.pass_size = static_cast<uint32_t>(password.size());
+		inputs.salt_size = static_cast<uint32_t>(salt.size());
 
-		detail::crypto_argon2_extras extras = {
-			.key = secret_key.data(),
-			.ad = ad.data(),
-			.key_size = static_cast<uint32_t>(secret_key.size()),
-			.ad_size = static_cast<uint32_t>(ad.size()),
-		};
+		detail::crypto_argon2_extras extras = {};
+		extras.key = secret_key.data();
+		extras.ad = ad.data();
+		extras.key_size = static_cast<uint32_t>(secret_key.size());
+		extras.ad_size = static_cast<uint32_t>(ad.size());
 
 		detail::crypto_argon2( hash.data(), hash.size(), work_area, config, inputs, extras );
 
