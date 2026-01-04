@@ -166,7 +166,7 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 	};
 
 	///	@brief A variant of std::vector that wipes itself when it leaves scope.
-	/// ///
+	///
 	///	This is internally used on owning copies of secrets within the Monocypher bindings
 	///	to prevent keys from being left around memory during destruction.
 	template<typename Type, size_t MaxSize = ::std::numeric_limits<size_t>::max()>
@@ -314,7 +314,6 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 	};
 
 	///	@brief The poly1305 Carter-Wegman one-time MAC
-	///	@warning REVEALING A POLY1305 MAC WILL ALLOW AN ATTACKER TO RECOVER THE KEY.
 	///	@warning REUSING KEYS WILL ALLOW AN ATTACKER TO RECOVER THE KEY.
 	///	@warning POLY1305 MACS CAN BE TRIVIALLY COLLIDED WITH CHOSEN CIPHERTEXT.
 	///
@@ -336,7 +335,6 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 		}
 
 		///	@brief Get the current MAC
-		///	@warning Revealing the MAC will allow an attacker to trivially recover the key.
 		[[nodiscard]] ::std::array<uint8_t, 16> finalize() const noexcept {
 			poly1305 self = poly1305(*this);
 			::std::array<uint8_t, 16> mac = {};
@@ -347,7 +345,6 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 
 	public:
 		///	@brief One-off MAC of a provided message
-		///	@warning Revealing the MAC will allow an attacker to trivially recover the key.
 		///	@param message the ciphertext to authenticate
 		///	@param nonce_key Wiped on return. The secret one-time key.
 		static ::std::array<uint8_t, 16> mac( const ::std::vector<uint8_t>& message, ::std::array<uint8_t, 32>&& nonce_key ) noexcept {
