@@ -711,6 +711,22 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 
 			return public_key;
 		}
+
+		///	@brief Given a montgomery public key, attempt to hide it.
+		///	Note that this fails on about half of all public keys. You'll probably need to try multiple. This is already
+		///	handled deterministically in the constructor of elligator_x25519(). The inverse of elligator_x25519::map.
+		///
+		///	@param point the x25519 public key, generated from x25519::uniform_public_key
+		///	@param tweak a random 8-bit number.
+		///	@returns nullopt on failure, a masked public key on success.
+		[[nodiscard]] inline static ::std::optional<::std::array<uint8_t, 32>> inverse_map( const ::std::array<uint8_t, 32>& point, uint8_t tweak ) noexcept {
+			::std::array<uint8_t, 32> hidden = {};
+			if (detail::crypto_elligator_rev(hidden.data(), point.data(), tweak) != 0) {
+				//	returns non-zero on failure.
+				return std::nullopt;
+			}
+			return hidden;
+		}
 	};
 
 	///	@brief Fast schnorr signatures over Edwards25519
@@ -874,6 +890,49 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 		return hash;
 	}
 
+
+	namespace hazmat {
+
+		inline std::array<uint8_t, 32> x25519_to_ed25519( const std::array<uint8_t, 32>& their_montgomery_public_key ) {
+			std::array<uint8_t, 32> edwards = {};
+			detail::crypto_x25519_to_eddsa( edwards.data(), their_montgomery_public_key.data() );
+
+			return edwards;
+		}
+
+		inline std::array<uint8_t, 32> ed25519_trim_scalar( const std::array<uint8_t, 32>& uniform_scalar ) {
+			std::array<uint8_t, 32> edwards_scalar = {};
+			detail::crypto_eddsa_trim_scalar( edwards_scalar.data(), uniform_scalar.data() );
+
+			return edwards_scalar;
+		}
+
+		inline std::array<uint8_t, 32> ed25519_mul_add( const std::array<uint8_t, 32>& a, const std::array<uint8_t, 32>& b, const std::array<uint8_t, 32>& c ) {
+			std::array<uint8_t, 32> r = {};
+			detail::crypto_eddsa_mul_add( r.data(), a.data(), b.data(), c.data() );
+
+			return r;
+		}
+
+		inline std::array<uint8_t, 32> ed25519_reduce( const std::array<uint8_t, 64>& expanded ) {
+			std::array<uint8_t, 32> reduced = {};
+			detail::crypto_eddsa_reduce( reduced.data(), expanded.data() );
+
+			return reduced;
+		}
+
+		inline std::array<uint8_t, 32> ed25519_scalarbase( const std::array<uint8_t, 32>& scalar ) {
+			std::array<uint8_t, 32> point = {};
+			detail::crypto_eddsa_scalarbase( point.data(), scalar.data() );
+
+			return point;
+		}
+
+		inline bool ed25519_check_equation( const std::array<uint8_t, 64>& signature, const std::array<uint8_t, 32>& pk, const std::array<uint8_t, 64>& h ) {
+			return detail::crypto_eddsa_check_equation( signature.data(), pk.data(), h.data() ) == 0;
+		}
+
+	}
 
 #ifdef MONOCYPHER_CPP_NAMESPACE_PLEASE_CLOSE_KTHX
 }
