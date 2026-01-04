@@ -715,12 +715,14 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 
 	///	@brief Fast schnorr signatures over Edwards25519
 	class ed25519 {
+		secret_array<uint8_t, 32> _secret_key_scalar = {};
 		secret_array<uint8_t, 64> _secret_key = {};
 		::std::array<uint8_t, 32> _public_key = {};
 	public:
 		///	@brief Instantiates an ed25519 instance with this private key. Wipes the private key on return.
 		///	@param secret_key Wiped on return. The secret key.
 		explicit ed25519( ::std::array<uint8_t, 32>&& secret_key ) noexcept {
+			std::copy_n( sha512::hash( secret_key ).begin(), 32, _secret_key_scalar.begin() );
 			//	The keygen procedure wipes the private key for us. Thanks, I think?
 			detail::crypto_ed25519_key_pair(_secret_key.data(), _public_key.data(), secret_key.data());
 		}
@@ -730,11 +732,7 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 		///	@warning This is not true in reverse; one Curve25519 point maps to two edwards25519 points.
 		///	@warning This is handled by monocypher by forcing the sign bit to be positive.
 		[[nodiscard]] inline x25519 to_x25519() const noexcept {
-			//	First 32 bytes are our scalar secret
-			secret_array<uint8_t, 32> secret = {};
-			std::copy_n( _secret_key.begin(), 32, secret.begin() );
-
-			return x25519( std::move(secret) );
+			return x25519( secret_array(_secret_key_scalar) );
 		}
 
 		///	@brief Get the public key associated with this ed25519 instance
@@ -793,6 +791,18 @@ namespace MONOCYPHER_CPP_NAMESPACE {
 				return true;
 			}
 			return false;
+		}
+
+		///	@brief Converts an Ed25519 public key to an x25519 public key
+		///	@warning Two Ed25519 public keys will both map to the same x25519 public key.
+		///
+		///	@param their_edwards_public_key An edwards public key
+		///	@returns The montgomery (x25519) public key associated with the edwards public key.
+		[[nodiscard]] static ::std::array<uint8_t, 32> to_x25519( const ::std::array<uint8_t, 32>& their_edwards_public_key ) {
+			::std::array<uint8_t, 32> their_montgomery_public_key = {};
+			detail::crypto_eddsa_to_x25519( their_montgomery_public_key.data(), their_edwards_public_key.data() );
+
+			return their_montgomery_public_key;
 		}
 	};
 
