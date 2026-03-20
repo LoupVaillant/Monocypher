@@ -113,16 +113,16 @@ static u64 load64_le(const u8 s[8])
 
 static void store32_le(u8 out[4], u32 in)
 {
-	out[0] =  in        & 0xff;
+	out[0] = (u8)(in    & 0xff);
 	out[1] = (in >>  8) & 0xff;
 	out[2] = (in >> 16) & 0xff;
-	out[3] = (in >> 24) & 0xff;
+	out[3] = (u8)((in >> 24) & 0xff);
 }
 
 static void store64_le(u8 out[8], u64 in)
 {
 	store32_le(out    , (u32)in );
-	store32_le(out + 4, in >> 32);
+	store32_le(out + 4, (u32)(in >> 32));
 }
 
 static void load32_le_buf (u32 *dst, const u8 *src, size_t size) {
@@ -146,7 +146,7 @@ static int neq0(u64 diff)
 	// constant time comparison to zero
 	// return diff != 0 ? -1 : 0
 	u64 half = (diff >> 32) | ((u32)diff);
-	return (1 & ((half - 1) >> 32)) - 1;
+	return (int)((1 & ((half - 1) >> 32)) - 1);
 }
 
 static u64 x16(const u8 a[16], const u8 b[16])
@@ -342,12 +342,12 @@ static void poly_blocks(crypto_poly1305_ctx *ctx, const u8 *in,
 		const u32 x4 =                                s4*rr4;
 
 		// partial reduction modulo 2^130 - 5
-		const u32 u5 = x4 + (x3 >> 32); // u5 <= 7ffffff5
+		const u32 u5 = (u32)(x4 + (x3 >> 32)); // u5 <= 7ffffff5
 		const u64 u0 = (u5 >>  2) * 5 + (x0 & 0xffffffff);
 		const u64 u1 = (u0 >> 32)     + (x1 & 0xffffffff) + (x0 >> 32);
 		const u64 u2 = (u1 >> 32)     + (x2 & 0xffffffff) + (x1 >> 32);
 		const u64 u3 = (u2 >> 32)     + (x3 & 0xffffffff) + (x2 >> 32);
-		const u32 u4 = (u3 >> 32)     + (u5 & 3); // u4 <= 4
+		const u32 u4 = (u32)((u3 >> 32)     + (u5 & 3)); // u4 <= 4
 
 		// Update the hash
 		h0 = u0 & 0xffffffff;
@@ -866,7 +866,7 @@ void crypto_argon2(u8 *hash, u32 hash_size, void *work_area,
 					u32 lane         =
 						pass == 0 && slice == 0
 						? segment
-						: (index_seed >> 32) % config.nb_lanes;
+						: (u32)((index_seed >> 32) % config.nb_lanes);
 					u32 window_size  =
 						nb_segments * segment_size +
 						(lane  == segment ? block-1 :
@@ -877,7 +877,7 @@ void crypto_argon2(u8 *hash, u32 hash_size, void *work_area,
 					u64  x         = (j1 * j1)         >> 32;
 					u64  y         = (window_size * x) >> 32;
 					u64  z         = (window_size - 1) - y;
-					u32  ref       = (window_start + z) % lane_size;
+					u32  ref       = (u32)((window_start + z) % lane_size);
 					u32  index     = lane * lane_size + ref;
 					blk *reference = blocks + index;
 
@@ -1705,7 +1705,7 @@ static void ge_tobytes(u8 s[32], const ge *h)
 	fe_mul(x, h->X, recip);
 	fe_mul(y, h->Y, recip);
 	fe_tobytes(s, y);
-	s[31] ^= fe_isodd(x) << 7;
+	s[31] ^= (u8)(fe_isodd(x) << 7);
 
 	WIPE_BUFFER(recip);
 	WIPE_BUFFER(x);
