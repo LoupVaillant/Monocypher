@@ -305,6 +305,7 @@ or set thereof.
 Length of
 .Fa okm ,
 in bytes.
+Must not exceed 16320.
 .It Fa ikm
 Input key material containing enough secret entropy to derive uniformly
 random keys from,
