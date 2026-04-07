@@ -93,14 +93,14 @@ static u64 load64_be(const u8 s[8])
 
 static void store64_be(u8 out[8], u64 in)
 {
-	out[0] = (u8)((in >> 56) & 0xff);
-	out[1] = (u8)((in >> 48) & 0xff);
-	out[2] = (u8)((in >> 40) & 0xff);
-	out[3] = (u8)((in >> 32) & 0xff);
-	out[4] = (u8)((in >> 24) & 0xff);
-	out[5] = (u8)((in >> 16) & 0xff);
-	out[6] = (u8)((in >>  8) & 0xff);
-	out[7] = (u8)( in        & 0xff);
+	out[0] = (u8)(in >> 56);
+	out[1] = (u8)(in >> 48);
+	out[2] = (u8)(in >> 40);
+	out[3] = (u8)(in >> 32);
+	out[4] = (u8)(in >> 24);
+	out[5] = (u8)(in >> 16);
+	out[6] = (u8)(in >>  8);
+	out[7] = (u8) in       ;
 }
 
 static void load64_be_buf (u64 *dst, const u8 *src, size_t size) {
