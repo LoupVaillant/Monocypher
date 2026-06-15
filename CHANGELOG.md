@@ -1,3 +1,13 @@
+4.0.3
+-----
+2026/06/15
+
+- Fixed timing leak vulnerability in EdDSA/Ed25519 signatures.
+- Various minor documentation fixes.
+- Various minor build system fixes.
+- Various minor compiler warning fixes.
+
+
 4.0.2
 -----
 2023/08/24
