@@ -988,7 +988,7 @@ static void fe_cswap(fe f, fe g, int b)
 
 static void fe_ccopy(fe f, const fe g, int b)
 {
-	i32 mask = -b; // -1 = 0xffffffff
+	volatile i32 mask = -b; // -1 = 0xffffffff
 	FOR (i, 0, 10) {
 		i32 x = (f[i] ^ g[i]) & mask;
 		f[i] = f[i] ^ x;
