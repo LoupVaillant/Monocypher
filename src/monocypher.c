@@ -976,9 +976,29 @@ static void fe_neg (fe h,const fe f           ){FOR(i,0,10) h[i] = -f[i];      }
 static void fe_add (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] + g[i];}
 static void fe_sub (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] - g[i];}
 
+
+// Some compilers, when inlining fe_cswap() or fe_ccopy(), may introduce
+// a timing leak.  It happens when it notices `b` has only 2 possible
+// values, and either replace the arithmetic by a secret dependent
+// branch, or (as has been observed), swap pointers instead of values,
+// which intruduces a secret dependent index.
+//
+// To mitigate this, we add `volatile` in the mask declaration.  The
+// proper fix would be a compiler fix, but this is not possible in pure
+// C99.  There's also a non-portable alternative:
+//
+//   __asm__ volatile("" : "+r"(mask));
+//
+// Alternatively, Libsodium unrolls the entire loop and puts everything
+// in local variables, similar to what I do on ChaCha20.  It might be
+// more robust than the current volatile.
+//
+// Note (Loup): as of June 2026, the problem has yet to surface in
+// fe_cswap(), but since this is almost the same code as fe_ccopy() I
+// believe it is more prudent to apply the precaution there too.
 static void fe_cswap(fe f, fe g, int b)
 {
-	i32 mask = -b; // -1 = 0xffffffff
+	volatile i32 mask = -b; // -1 = 0xffffffff
 	FOR (i, 0, 10) {
 		i32 x = (f[i] ^ g[i]) & mask;
 		f[i] = f[i] ^ x;
