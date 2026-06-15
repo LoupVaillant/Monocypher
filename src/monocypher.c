@@ -976,22 +976,21 @@ static void fe_neg (fe h,const fe f           ){FOR(i,0,10) h[i] = -f[i];      }
 static void fe_add (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] + g[i];}
 static void fe_sub (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] - g[i];}
 
-
 // Some compilers, when inlining fe_cswap() or fe_ccopy(), may introduce
 // a timing leak.  It happens when it notices `b` has only 2 possible
 // values, and either replace the arithmetic by a secret dependent
 // branch, or (as has been observed), swap pointers instead of values,
 // which intruduces a secret dependent index.
 //
-// To mitigate this, we add `volatile` in the mask declaration.  The
-// proper fix would be a compiler fix, but this is not possible in pure
-// C99.  There's also a non-portable alternative:
+// We apply two mitigations here:
+// - Add `volatile` in the mask declaration.
+// - Unroll the copy loop (costs couple hundred bytes of binary code).
 //
-//   __asm__ volatile("" : "+r"(mask));
-//
-// Alternatively, Libsodium unrolls the entire loop and puts everything
-// in local variables, similar to what I do on ChaCha20.  It might be
-// more robust than the current volatile.
+// As of June 2026, those mitigation work when applied separately or
+// together.  Applying them both is currently overkill, but may help
+// delay the day compilers grow clever enough to defeat it.  (The true
+// fix is in the semantics of the language itself: C currently has no
+// way to specify constant time code).
 //
 // Note (Loup): as of June 2026, the problem has yet to surface in
 // fe_cswap(), but since this is almost the same code as fe_ccopy() I
@@ -999,20 +998,31 @@ static void fe_sub (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] - g[i];}
 static void fe_cswap(fe f, fe g, int b)
 {
 	volatile i32 mask = -b; // -1 = 0xffffffff
-	FOR (i, 0, 10) {
-		i32 x = (f[i] ^ g[i]) & mask;
-		f[i] = f[i] ^ x;
-		g[i] = g[i] ^ x;
-	}
+	i32 x0 = (f[0] ^ g[0]) & mask;    f[0] = f[0] ^ x0;    g[0] = g[0] ^ x0;
+	i32 x1 = (f[1] ^ g[1]) & mask;    f[1] = f[1] ^ x1;    g[1] = g[1] ^ x1;
+	i32 x2 = (f[2] ^ g[2]) & mask;    f[2] = f[2] ^ x2;    g[2] = g[2] ^ x2;
+	i32 x3 = (f[3] ^ g[3]) & mask;    f[3] = f[3] ^ x3;    g[3] = g[3] ^ x3;
+	i32 x4 = (f[4] ^ g[4]) & mask;    f[4] = f[4] ^ x4;    g[4] = g[4] ^ x4;
+	i32 x5 = (f[5] ^ g[5]) & mask;    f[5] = f[5] ^ x5;    g[5] = g[5] ^ x5;
+	i32 x6 = (f[6] ^ g[6]) & mask;    f[6] = f[6] ^ x6;    g[6] = g[6] ^ x6;
+	i32 x7 = (f[7] ^ g[7]) & mask;    f[7] = f[7] ^ x7;    g[7] = g[7] ^ x7;
+	i32 x8 = (f[8] ^ g[8]) & mask;    f[8] = f[8] ^ x8;    g[8] = g[8] ^ x8;
+	i32 x9 = (f[9] ^ g[9]) & mask;    f[9] = f[9] ^ x9;    g[9] = g[9] ^ x9;
 }
 
 static void fe_ccopy(fe f, const fe g, int b)
 {
 	volatile i32 mask = -b; // -1 = 0xffffffff
-	FOR (i, 0, 10) {
-		i32 x = (f[i] ^ g[i]) & mask;
-		f[i] = f[i] ^ x;
-	}
+	i32 x0 = (f[0] ^ g[0]) & mask;    f[0] = f[0] ^ x0;
+	i32 x1 = (f[1] ^ g[1]) & mask;    f[1] = f[1] ^ x1;
+	i32 x2 = (f[2] ^ g[2]) & mask;    f[2] = f[2] ^ x2;
+	i32 x3 = (f[3] ^ g[3]) & mask;    f[3] = f[3] ^ x3;
+	i32 x4 = (f[4] ^ g[4]) & mask;    f[4] = f[4] ^ x4;
+	i32 x5 = (f[5] ^ g[5]) & mask;    f[5] = f[5] ^ x5;
+	i32 x6 = (f[6] ^ g[6]) & mask;    f[6] = f[6] ^ x6;
+	i32 x7 = (f[7] ^ g[7]) & mask;    f[7] = f[7] ^ x7;
+	i32 x8 = (f[8] ^ g[8]) & mask;    f[8] = f[8] ^ x8;
+	i32 x9 = (f[9] ^ g[9]) & mask;    f[9] = f[9] ^ x9;
 }
 
 
