@@ -133,7 +133,9 @@ int crypto_ed25519_ph_check(const uint8_t signature   [64],
                             const uint8_t public_key  [32],
                             const uint8_t message_hash[64]);
 
-#ifdef __cplusplus
+#ifdef MONOCYPHER_CPP_NAMESPACE
+}
+#elif defined(__cplusplus)
 }
 #endif
 
