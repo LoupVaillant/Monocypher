@@ -314,7 +314,9 @@ int  crypto_elligator_rev(uint8_t hidden[32], const uint8_t curve [32],
 void crypto_elligator_key_pair(uint8_t hidden[32], uint8_t secret_key[32],
                                uint8_t seed[32]);
 
-#ifdef __cplusplus
+#ifdef MONOCYPHER_CPP_NAMESPACE
+}
+#elif defined(__cplusplus)
 }
 #endif
 
