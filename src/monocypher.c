@@ -145,9 +145,9 @@ static int neq0(u64 diff)
 {
 	// constant time comparison to zero
 	// return diff != 0 ? -1 : 0
-	u64 half = (diff >> 32) | ((u32)diff);  // half < 2^32
-	u64 eq0  = 1 & ((half - 1) >> 32);      // half == 0 ? 1 : 0
-	return (int)eq0 - 1;                    // half == 0 ? 0 : -1
+	u32 fold = (u32)(diff >> 32) | (u32)diff;
+	fold |= 0u - fold;
+	return -(int)(fold >> 31);
 }
 
 static u64 x16(const u8 a[16], const u8 b[16])
