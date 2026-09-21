@@ -79,7 +79,7 @@ typedef uint64_t u64;
 
 static const u8 zero[128] = {0};
 
-// returns the smallest positive integer y such that
+// Return the smallest positive integer y such that
 // (x + y) % pow_2  == 0
 // Basically, y is the "gap" missing to align x.
 // Only works when pow_2 is a power of 2.
@@ -143,7 +143,7 @@ static u32 rotl32(u32 x, u32 n) { return (x << n) ^ (x >> (32 - n)); }
 
 static int neq0(u64 diff)
 {
-	// constant time comparison to zero
+	// Constant time comparison to zero
 	// return diff != 0 ? -1 : 0
 	u32 fold = (u32)(diff >> 32) | (u32)diff;
 	fold |= 0u - fold;
@@ -211,7 +211,7 @@ void crypto_chacha20_h(u8 out[32], const u8 key[32], const u8 in [16])
 
 	chacha20_rounds(block, block);
 
-	// prevent reversal of the rounds by revealing only half of the buffer.
+	// Prevent reversal of the rounds by revealing only half of the buffer.
 	store32_le_buf(out   , block   , 4); // constant
 	store32_le_buf(out+16, block+12, 4); // counter and nonce
 	WIPE_BUFFER(block);
@@ -302,7 +302,7 @@ u64 crypto_chacha20_x(u8 *cipher_text, const u8 *plain_text,
 /////////////////
 
 // h = (h + c) * r
-// preconditions:
+// Preconditions:
 //   ctx->h <= 4_ffffffff_ffffffff_ffffffff_ffffffff
 //   ctx->r <=   0ffffffc_0ffffffc_0ffffffc_0fffffff
 //   end    <= 1
@@ -368,7 +368,7 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 {
 	ZERO(ctx->h, 5); // Initial hash is zero
 	ctx->c_idx = 0;
-	// load r and pad (r has some of its bits cleared)
+	// Load r and pad (r has some of its bits cleared)
 	load32_le_buf(ctx->r  , key   , 4);
 	load32_le_buf(ctx->pad, key+16, 4);
 	FOR (i, 0, 1) { ctx->r[i] &= 0x0fffffff; }
@@ -404,7 +404,7 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
 	message      += nb_blocks << 4;
 	message_size &= 15;
 
-	// remaining bytes (we never complete a block here)
+	// Remaining bytes (we never complete a block here)
 	FOR (i, 0, message_size) {
 		ctx->c[ctx->c_idx] = message[i];
 		ctx->c_idx++;
@@ -422,7 +422,7 @@ void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
 		poly_blocks(ctx, ctx->c, 1, 0);
 	}
 
-	// check if we should subtract 2^130-5 by performing the
+	// Check if we should subtract 2^130-5 by performing the
 	// corresponding carry propagation.
 	u64 c = 5;
 	FOR (i, 0, 4) {
@@ -430,7 +430,7 @@ void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
 		c >>= 32;
 	}
 	c += ctx->h[4];
-	c  = (c >> 2) * 5; // shift the carry back to the beginning
+	c  = (c >> 2) * 5; // Shift the carry back to the beginning
 	// c now indicates how many times we should subtract 2^130-5 (0 or 1)
 	FOR (i, 0, 4) {
 		c += (u64)ctx->h[i] + ctx->pad[i];
@@ -476,7 +476,7 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 		{ 14, 10,  4,  8,  9, 15, 13,  6,  1, 12,  0,  2, 11,  7,  5,  3 },
 	};
 
-	// increment input offset
+	// Increment input offset
 	u64   *x = ctx->input_offset;
 	size_t y = ctx->input_idx;
 	x[0] += y;
@@ -484,7 +484,7 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 		x[1]++;
 	}
 
-	// init work vector
+	// Init work vector
 	u64 v0 = ctx->hash[0];  u64 v8  = iv[0];
 	u64 v1 = ctx->hash[1];  u64 v9  = iv[1];
 	u64 v2 = ctx->hash[2];  u64 v10 = iv[2];
@@ -494,7 +494,7 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 	u64 v6 = ctx->hash[6];  u64 v14 = iv[6] ^ (u64)~(is_last_block - 1);
 	u64 v7 = ctx->hash[7];  u64 v15 = iv[7];
 
-	// mangle work vector
+	// Mangle work vector
 	u64 *input = ctx->input;
 #define BLAKE2_G(a, b, c, d, x, y)	\
 	a += b + x;  d = rotr64(d ^ a, 32); \
@@ -521,7 +521,7 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 	BLAKE2_ROUND(8);  BLAKE2_ROUND(9);  BLAKE2_ROUND(10); BLAKE2_ROUND(11);
 #endif
 
-	// update hash
+	// Update hash
 	ctx->hash[0] ^= v0 ^ v8;   ctx->hash[1] ^= v1 ^ v9;
 	ctx->hash[2] ^= v2 ^ v10;  ctx->hash[3] ^= v3 ^ v11;
 	ctx->hash[4] ^= v4 ^ v12;  ctx->hash[5] ^= v5 ^ v13;
@@ -531,7 +531,7 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
 void crypto_blake2b_keyed_init(crypto_blake2b_ctx *ctx, size_t hash_size,
                                const u8 *key, size_t key_size)
 {
-	// initial hash
+	// Initial hash
 	COPY(ctx->hash, iv, 8);
 	ctx->hash[0] ^= 0x01010000 ^ (key_size << 8) ^ hash_size;
 
@@ -541,11 +541,11 @@ void crypto_blake2b_keyed_init(crypto_blake2b_ctx *ctx, size_t hash_size,
 	ctx->input_idx       = 0;
 	ZERO(ctx->input, 16);
 
-	// if there is a key, the first block is that key (padded with zeroes)
+	// If there is a key, the first block is that key (padded with zeroes)
 	if (key_size > 0) {
 		u8 key_block[128] = {0};
 		COPY(key_block, key, key_size);
-		// same as calling crypto_blake2b_update(ctx, key_block , 128)
+		// Same as calling crypto_blake2b_update(ctx, key_block , 128)
 		load64_le_buf(ctx->input, key_block, 16);
 		ctx->input_idx = 128;
 		WIPE_BUFFER(key_block);
@@ -660,7 +660,7 @@ void crypto_blake2b(u8 *hash, size_t hash_size, const u8 *msg, size_t msg_size)
 // Argon2 operates on 1024 byte blocks.
 typedef struct { u64 a[128]; } blk;
 
-// updates a BLAKE2 hash with a 32 bit word, little endian.
+// Update a BLAKE2 hash with a 32 bit word, little endian.
 static void blake_update_32(crypto_blake2b_ctx *ctx, u32 input)
 {
 	u8 buf[4];
@@ -695,7 +695,7 @@ static void extended_hash(u8       *digest, u32 digest_size,
 	crypto_blake2b_final (&ctx, digest);
 
 	if (digest_size > 64) {
-		// the conversion to u64 avoids integer overflow on
+		// The conversion to u64 avoids integer overflow on
 		// ludicrously big hash sizes.
 		u32 r   = (u32)(((u64)digest_size + 31) >> 5) - 2;
 		u32 i   =  1;
@@ -728,14 +728,14 @@ static void extended_hash(u8       *digest, u32 digest_size,
 // Core of the compression function G.  Computes Z from R in place.
 static void g_rounds(blk *b)
 {
-	// column rounds (work_block = Q)
+	// Row rounds
 	for (int i = 0; i < 128; i += 16) {
 		ROUND(b->a[i   ], b->a[i+ 1], b->a[i+ 2], b->a[i+ 3],
 		      b->a[i+ 4], b->a[i+ 5], b->a[i+ 6], b->a[i+ 7],
 		      b->a[i+ 8], b->a[i+ 9], b->a[i+10], b->a[i+11],
 		      b->a[i+12], b->a[i+13], b->a[i+14], b->a[i+15]);
 	}
-	// row rounds (b = Z)
+	// Column rounds
 	for (int i = 0; i < 16; i += 2) {
 		ROUND(b->a[i   ], b->a[i+ 1], b->a[i+ 16], b->a[i+ 17],
 		      b->a[i+32], b->a[i+33], b->a[i+ 48], b->a[i+ 49],
@@ -754,7 +754,7 @@ void crypto_argon2_init(crypto_argon2_ctx *ctx, u32 hash_size, void *work_area,
 	const u32 segment_size = config.nb_blocks / config.nb_lanes / 4;
 	const u32 lane_size    = segment_size * 4;
 
-	// work area seen as blocks (must be suitably aligned)
+	// Work area seen as blocks (must be suitably aligned)
 	blk *blocks = (blk*)work_area;
 	{
 		u8 initial_hash[72]; // 64 bytes plus 2 words for future hashes
@@ -770,9 +770,10 @@ void crypto_argon2_init(crypto_argon2_ctx *ctx, u32 hash_size, void *work_area,
 		blake_update_32_buf (&ctx, inputs.salt, inputs.salt_size);
 		blake_update_32_buf (&ctx, extras.key,  extras.key_size);
 		blake_update_32_buf (&ctx, extras.ad,   extras.ad_size);
-		crypto_blake2b_final(&ctx, initial_hash); // fill 64 first bytes only
+		crypto_blake2b_final(&ctx, initial_hash); // Fill 64 first bytes only
 
-		// fill first 2 blocks of each lane
+		// Fill the first 2 blocks of each lane.
+		// Could be done in parallel, but it would complicate the API.
 		u8 hash_area[1024];
 		FOR_T(u32, l, 0, config.nb_lanes) {
 			FOR_T(u32, i, 0, 2) {
@@ -1018,7 +1019,7 @@ static void fe_sub (fe h,const fe f,const fe g){FOR(i,0,10) h[i] = f[i] - g[i];}
 // a timing leak.  It happens when it notices `b` has only 2 possible
 // values, and either replace the arithmetic by a secret dependent
 // branch, or (as has been observed), swap pointers instead of values,
-// which intruduces a secret dependent index.
+// which introduces a secret dependent index.
 //
 // We apply two mitigations here:
 // - Add `volatile` in the mask declaration.
@@ -1189,8 +1190,8 @@ static void fe_ccopy(fe f, const fe g, int b)
 	h[0]=(i32)t0;  h[1]=(i32)t1;  h[2]=(i32)t2;  h[3]=(i32)t3;  h[4]=(i32)t4; \
 	h[5]=(i32)t5;  h[6]=(i32)t6;  h[7]=(i32)t7;  h[8]=(i32)t8;  h[9]=(i32)t9
 
-// Decodes a field element from a byte buffer.
-// mask specifies how many bits we ignore.
+// Decode a field element from a byte buffer.
+// `nb_mask` specifies how many bits we ignore.
 // Traditionally we ignore 1. It's useful for EdDSA,
 // which uses that bit to denote the sign of x.
 // Elligator however uses positive representatives,
@@ -1394,7 +1395,7 @@ static void fe_sq(fe h, const fe f)
 	FE_CARRY;
 }
 
-//  Parity check.  Returns 0 if even, 1 if odd
+//  Parity check.  Return 0 if even, 1 if odd
 static int fe_isodd(const fe f)
 {
 	u8 s[32];
@@ -1404,7 +1405,7 @@ static int fe_isodd(const fe f)
 	return isodd;
 }
 
-// Returns 1 if equal, 0 if not equal
+// Return 1 if equal, 0 if not equal
 static int fe_isequal(const fe f, const fe g)
 {
 	u8 fs[32];
@@ -1418,7 +1419,7 @@ static int fe_isequal(const fe f, const fe g)
 }
 
 // Inverse square root.
-// Returns true if x is a square, false otherwise.
+// Return true if x is a square, false otherwise.
 // After the call:
 //   isr = sqrt(1/x)        if x is a non-zero square.
 //   isr = sqrt(sqrt(-1)/x) if x is not a square.
@@ -1535,7 +1536,7 @@ static void fe_invert(fe out, const fe x)
 	WIPE_BUFFER(tmp);
 }
 
-// trim a scalar for scalar multiplication
+// Trim a scalar for scalar multiplication
 void crypto_eddsa_trim_scalar(u8 out[32], const u8 in[32])
 {
 	COPY(out, in, 32);
@@ -1544,10 +1545,10 @@ void crypto_eddsa_trim_scalar(u8 out[32], const u8 in[32])
 	out[31] |= 64;
 }
 
-// get bit from scalar at position i
+// Get bit from scalar at position i
 static int scalar_bit(const u8 s[32], int i)
 {
-	if (i < 0) { return 0; } // handle -1 for sliding windows
+	if (i < 0) { return 0; } // Handle -1 for sliding windows
 	return (s[i>>3] >> (i&7)) & 1;
 }
 
@@ -1557,15 +1558,11 @@ static int scalar_bit(const u8 s[32], int i)
 static void scalarmult(u8 q[32], const u8 scalar[32], const u8 p[32],
                        int nb_bits)
 {
-	// computes the scalar product
-	fe x1;
-	fe_frombytes(x1, p);
-
-	// computes the actual scalar product (the result is in x2 and z2)
-	fe x2, z2, x3, z3, t0, t1;
 	// Montgomery ladder
 	// In projective coordinates, to avoid divisions: x = X / Z
 	// We don't care about the y coordinate, it's only 1 bit of information
+	fe x1, x2, z2, x3, z3, t0, t1;
+	fe_frombytes(x1, p);
 	fe_1(x2);        fe_0(z2); // "zero" point
 	fe_copy(x3, x1); fe_1(z3); // "one"  point
 	int swap = 0;
@@ -1577,7 +1574,7 @@ static void scalarmult(u8 q[32], const u8 scalar[32], const u8 p[32],
 		fe_cswap(z2, z3, swap);
 		swap = b;  // anticipates one last swap after the loop
 
-		// Montgomery ladder step: replaces (P2, P3) by (P2*2, P2+P3)
+		// Montgomery ladder step: replace (P2, P3) by (P2*2, P2+P3)
 		// with differential addition
 		fe_sub(t0, x3, z3);
 		fe_sub(t1, x2, z2);
@@ -1598,12 +1595,12 @@ static void scalarmult(u8 q[32], const u8 scalar[32], const u8 p[32],
 		fe_mul(z3, x1, z2);
 		fe_mul(z2, t1, t0);
 	}
-	// last swap is necessary to compensate for the xor trick
+	// Last swap is necessary to compensate for the xor trick
 	// Note: after this swap, P3 == P2 + P1.
 	fe_cswap(x2, x3, swap);
 	fe_cswap(z2, z3, swap);
 
-	// normalises the coordinates: x == X / Z
+	// Normalise the coordinates: x == X / Z
 	fe_invert(z2, z2);
 	fe_mul(x2, x2, z2);
 	fe_tobytes(q, x2);
@@ -1617,7 +1614,6 @@ void crypto_x25519(u8       raw_shared_secret[32],
                    const u8 your_secret_key  [32],
                    const u8 their_public_key [32])
 {
-	// restrict the possible scalar values
 	u8 e[32];
 	crypto_eddsa_trim_scalar(e, your_secret_key);
 	scalarmult(raw_shared_secret, e, their_public_key, 255);
@@ -2011,7 +2007,7 @@ static int slide_step(slide_ctx *ctx, int width, int i, const u8 scalar[32])
 		if (scalar_bit(scalar, i) == scalar_bit(scalar, i - 1)) {
 			ctx->next_check--;
 		} else {
-			// compute digit of next window
+			// Compute digit of next window
 			int w = MIN(width, i + 1);
 			int v = -(scalar_bit(scalar, i) << (w-1));
 			FOR_T (int, j, 0, w-1) {
@@ -2055,7 +2051,7 @@ int crypto_eddsa_check_equation(const u8 signature[64], const u8 public_key[32],
 		}
 	}
 
-	// look-up table for minus_A
+	// Look-up table for minus_A
 	ge_cached lutA[P_W_SIZE];
 	{
 		ge minus_A2, tmp;
@@ -2229,7 +2225,7 @@ static void lookup_add(ge *p, ge_precomp *tmp_c, fe tmp_a, fe tmp_b,
 // p = [scalar]B, where B is the base point
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
 {
-	// twin 4-bits signed combs, from Mike Hamburg's
+	// Twin 4-bits signed combs, from Mike Hamburg's
 	// Fast and compact elliptic-curve cryptography (2012)
 	// 1 / 2 modulo L
 	static const u8 half_mod_L[32] = {
@@ -2322,9 +2318,9 @@ static void hash_reduce(u8 h[32],
 // - The public key                  (secret_key[32..63])
 //
 // The seed and the public key are bundled together to make sure users
-// don't use mismatched seeds and public keys, which would instantly
-// leak the secret scalar and allow forgeries (allowing this to happen
-// has resulted in critical vulnerabilities in the wild).
+// don't use mismatch seeds and public keys, which would instantly leak
+// the secret scalar and allow forgeries (allowing this to happen has
+// resulted in critical vulnerabilities in the wild).
 //
 // The seed is hashed to derive the secret scalar and a secret prefix.
 // The sole purpose of the prefix is to generate a secret random nonce.
@@ -2375,7 +2371,7 @@ void crypto_eddsa_sign(u8 signature [64], const u8 secret_key[64],
 {
 	u8 a[64];  // secret scalar and prefix
 	u8 r[32];  // secret deterministic "random" nonce
-	u8 h[32];  // publically verifiable hash of the message (not wiped)
+	u8 h[32];  // publicly verifiable hash of the message (not wiped)
 	u8 R[32];  // first half of the signature (allows overlapping inputs)
 
 	crypto_blake2b(a, 64, secret_key, 32);
@@ -2443,7 +2439,7 @@ void crypto_x25519_to_eddsa(u8 eddsa[32], const u8 x25519[32])
 /// Dirty ephemeral public key generation ///
 /////////////////////////////////////////////
 
-// Those functions generates a public key, *without* clearing the
+// Those functions generates a public key *without* clearing the
 // cofactor.  Sending that key over the network leaks 3 bits of the
 // private key.  Use only to generate ephemeral keys that will be hidden
 // with crypto_curve_to_hidden().
@@ -2526,7 +2522,7 @@ void crypto_x25519_dirty_small(u8 public_key[32], const u8 secret_key[32])
 		0xce, 0x36, 0x9a, 0x1e, 0x5e, 0x31, 0x47, 0xa2,
 		0x6d, 0x37, 0x7c, 0xfd, 0x20, 0xb5, 0xdf, 0x75,
 	};
-	// separate the main factor & the cofactor of the scalar
+	// Separate the main factor & the cofactor of the scalar
 	u8 scalar[32];
 	crypto_eddsa_trim_scalar(scalar, secret_key);
 
@@ -2634,7 +2630,7 @@ static const fe A = {486662};
 
 // Elligator direct map
 //
-// Computes the point corresponding to a representative, encoded in 32
+// Compute the point corresponding to a representative, encoded in 32
 // bytes (little Endian).  Since positive representatives fits in 254
 // bits, The two most significant bits are ignored.
 //
@@ -2721,13 +2717,13 @@ void crypto_elligator_map(u8 curve[32], const u8 hidden[32])
 
 // Elligator inverse map
 //
-// Computes the representative of a point, if possible.  If not, it does
-// nothing and returns -1.  Note that the success of the operation
+// Compute the representative of a point, if possible.  If not, do
+// nothing and return -1.  Note that the success of the operation
 // depends only on the point (more precisely its u coordinate).  The
-// tweak parameter is used only upon success
+// tweak parameter is used only upon success.
 //
 // The tweak should be a random byte.  Beyond that, its contents are an
-// implementation detail. Currently, the tweak comprises:
+// implementation detail.  Currently, the tweak comprises:
 // - Bit  1  : sign of the v coordinate (0 if positive, 1 if negative)
 // - Bit  2-5: not used
 // - Bits 6-7: random padding
@@ -2808,7 +2804,7 @@ void crypto_elligator_key_pair(u8 hidden[32], u8 secret_key[32], u8 seed[32])
 ///////////////////////
 
 // Montgomery reduction.
-// Divides x by (2^256), and reduces the result modulo L
+// Divide x by (2^256), and reduce the result modulo L
 //
 // Precondition:
 //   x < L * 2^256
@@ -2932,7 +2928,7 @@ static void lock_auth(u8 mac[16], const u8  auth_key[32],
 	u8 sizes[16]; // Not secret, not wiped
 	store64_le(sizes + 0, ad_size);
 	store64_le(sizes + 8, text_size);
-	crypto_poly1305_ctx poly_ctx;           // auto wiped...
+	crypto_poly1305_ctx poly_ctx;           // Auto wiped...
 	crypto_poly1305_init  (&poly_ctx, auth_key);
 	crypto_poly1305_update(&poly_ctx, ad         , ad_size);
 	crypto_poly1305_update(&poly_ctx, zero       , gap(ad_size, 16));
@@ -2970,7 +2966,7 @@ void crypto_aead_write(crypto_aead_ctx *ctx, u8 *cipher_text, u8 mac[16],
                        const u8 *ad,         size_t ad_size,
                        const u8 *plain_text, size_t text_size)
 {
-	u8 auth_key[64]; // the last 32 bytes are used for rekeying.
+	u8 auth_key[64]; // The last 32 bytes are used for rekeying.
 	crypto_chacha20_djb(auth_key, 0, 64, ctx->key, ctx->nonce, ctx->counter);
 	crypto_chacha20_djb(cipher_text, plain_text, text_size,
 	                    ctx->key, ctx->nonce, ctx->counter + 1);
@@ -2983,7 +2979,7 @@ int crypto_aead_read(crypto_aead_ctx *ctx, u8 *plain_text, const u8 mac[16],
                      const u8 *ad,          size_t ad_size,
                      const u8 *cipher_text, size_t text_size)
 {
-	u8 auth_key[64]; // the last 32 bytes are used for rekeying.
+	u8 auth_key[64]; // The last 32 bytes are used for rekeying.
 	u8 real_mac[16];
 	crypto_chacha20_djb(auth_key, 0, 64, ctx->key, ctx->nonce, ctx->counter);
 	lock_auth(real_mac, auth_key, ad, ad_size, cipher_text, text_size);
