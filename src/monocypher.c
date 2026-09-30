@@ -789,67 +789,40 @@ void crypto_argon2_init(crypto_argon2_ctx *ctx, u32 hash_size, void *work_area,
 	}
 
 	// Prepare context for further iterations
-	ctx->constant_time = config.algorithm != CRYPTO_ARGON2_D;
 	ctx->config        = config;
 	ctx->work_area     = work_area;
-	ctx->pass          = -1u;
-	ctx->slice         = -1u;
 	ctx->hash_size     = hash_size;
 }
 
-int crypto_argon2_slice(crypto_argon2_ctx *ctx)
+void crypto_argon2_segment(const crypto_argon2_ctx *ctx,
+                           u32 pass, u32 slice, u32 lane)
 {
-	// Increment to current slice & pass numbers
-	ctx->slice++;
-	ctx->slice %= 4;
-	if (ctx->slice == 0) {
-		ctx->pass++;
-	}
-	// Stop if all passes are already done
-	if (ctx->pass == ctx->config.nb_passes) {
-		return 0;
-	}
-
-	// On the first slice of the first pass,
-	// blocks 0 and 1 are already filled, hence pass_offset.
-	const u32 segment_size = ctx->config.nb_blocks / ctx->config.nb_lanes / 4;
-	ctx->pass_offset       = ctx->pass == 0 && ctx->slice == 0 ? 2 : 0;
-	ctx->slice_offset      = ctx->slice * segment_size;
-
-	// Argon2id switches back to non-constant time indexing
-	// after the first two slices of the first pass
-	if (ctx->slice == 2 && ctx->config.algorithm == CRYPTO_ARGON2_ID) {
-		ctx->constant_time = 0;
-	}
-
-	return 1;
-}
-
-void crypto_argon2_segment(const crypto_argon2_ctx *ctx, u32 lane)
-{
-	const u32 segment_size = ctx->config.nb_blocks / ctx->config.nb_lanes / 4;
-	const u32 lane_size    = segment_size * 4;
-	const u32 nb_blocks    = lane_size * ctx->config.nb_lanes; // rounding down
-	const u32 pass         = ctx->pass;
-	const u32 slice        = ctx->slice;
-	blk      *blocks       = (blk*)ctx->work_area;
+	const u32 segment_size  = ctx->config.nb_blocks / ctx->config.nb_lanes / 4;
+	const u32 lane_size     = segment_size * 4;
+	const u32 nb_blocks     = lane_size * ctx->config.nb_lanes; // rounding down
+	const u32 pass_offset   = pass == 0 && slice == 0 ? 2 : 0;
+	const u32 slice_offset  = slice * segment_size;
+	const int argon2_i      = ctx->config.algorithm == CRYPTO_ARGON2_I;
+	const int argon2_id     = ctx->config.algorithm == CRYPTO_ARGON2_ID;
+	const int constant_time = argon2_i || (argon2_id && slice < 2 && pass == 0);
+	blk      *blocks        = (blk*)ctx->work_area;
 	blk       tmp;
 
 	blk index_block;
 	u32 index_ctr = 1;
-	FOR_T (u32, block, ctx->pass_offset, segment_size) {
+	FOR_T (u32, block, pass_offset, segment_size) {
 		// Current and previous blocks
 		u32  lane_offset   = lane * lane_size;
-		blk *segment_start = blocks + lane_offset + ctx->slice_offset;
+		blk *segment_start = blocks + lane_offset + slice_offset;
 		blk *current       = segment_start + block;
 		blk *previous      =
-			block == 0 && ctx->slice_offset == 0
+			block == 0 && slice_offset == 0
 			? segment_start + lane_size - 1
 			: segment_start + block - 1;
 
 		u64 index_seed;
-		if (ctx->constant_time) {
-			if (block == ctx->pass_offset || (block % 128) == 0) {
+		if (constant_time) {
+			if (block == pass_offset || (block % 128) == 0) {
 				// Fill or refresh deterministic indices block
 
 				// Seed the beginning of the block...
@@ -914,7 +887,7 @@ void crypto_argon2_segment(const crypto_argon2_ctx *ctx, u32 lane)
 	ZERO(p, 128);
 }
 
-void crypto_argon2_final(crypto_argon2_ctx *ctx, u8 *hash)
+void crypto_argon2_final(const crypto_argon2_ctx *ctx, u8 *hash)
 {
 	const u32 segment_size = ctx->config.nb_blocks / ctx->config.nb_lanes / 4;
 	const u32 lane_size    = segment_size * 4;
@@ -928,7 +901,7 @@ void crypto_argon2_final(crypto_argon2_ctx *ctx, u8 *hash)
 		last_block = next_block;
 	}
 
-	// Serialize last block
+	// Serialize last block (copy is necessary to allow aliasing inputs)
 	u8 final_block[1024];
 	store64_le_buf(final_block, last_block->a, 128);
 
@@ -949,12 +922,14 @@ void crypto_argon2(u8 *hash, u32 hash_size, void *work_area,
 	crypto_argon2_ctx ctx;
 	crypto_argon2_init(&ctx, hash_size, work_area, config, inputs, extras);
 
-	while (crypto_argon2_slice(&ctx)) {
-		// May be done in parallel, one thread per lane.
-		FOR_T(u32, lane, 0, config.nb_lanes) {
-			crypto_argon2_segment(&ctx, lane);
+	FOR_T (u32, pass, 0, config.nb_passes) {
+		FOR_T (u32, slice, 0, 4) {
+			// May be done in parallel, one thread per lane.
+			FOR_T(u32, lane, 0, config.nb_lanes) {
+				crypto_argon2_segment(&ctx, pass, slice, lane);
+			}
+			// Sync point: wait for all lanes to complete.
 		}
-		// Sync point: wait for all lanes to complete.
 	}
 
 	crypto_argon2_final(&ctx, hash);

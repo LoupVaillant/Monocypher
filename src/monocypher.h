@@ -188,11 +188,6 @@ void crypto_argon2(uint8_t *hash, uint32_t hash_size, void *work_area,
 typedef struct {
 	crypto_argon2_config config;
 	void    *work_area;
-	int      constant_time;
-	uint32_t pass_offset;
-	uint32_t slice_offset;
-	uint32_t pass;
-	uint32_t slice;
 	uint32_t hash_size;
 } crypto_argon2_ctx;
 
@@ -201,9 +196,9 @@ void crypto_argon2_init(crypto_argon2_ctx *ctx, uint32_t hash_size,
                         crypto_argon2_config config,
                         crypto_argon2_inputs inputs,
                         crypto_argon2_extras extras);
-int crypto_argon2_slice(crypto_argon2_ctx *ctx);
-void crypto_argon2_segment(const crypto_argon2_ctx *ctx, uint32_t lane);
-void crypto_argon2_final(crypto_argon2_ctx *ctx, uint8_t *hash);
+void crypto_argon2_segment(const crypto_argon2_ctx *ctx,
+                           uint32_t pass, uint32_t slice, uint32_t lane);
+void crypto_argon2_final(const crypto_argon2_ctx *ctx, uint8_t *hash);
 
 
 // Key exchange (X-25519)
