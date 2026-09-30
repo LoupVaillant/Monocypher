@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.16)
+project(monocypher C)
+add_library(monocypher STATIC ../src/monocypher.c ../src/optional/monocypher-ed25519.c)
+target_include_directories(monocypher PUBLIC ../src ../src/optional)
+set_target_properties(monocypher PROPERTIES C_STANDARD 11)
+target_compile_options(monocypher PRIVATE -fno-short-enums -fsigned-char)
