@@ -3,7 +3,10 @@
 *.a
 *.so
 *.so.*
+*.dll
+*.dylib
 *.out
+*.out.exe
 *.vec
 *.gch
 *.sav

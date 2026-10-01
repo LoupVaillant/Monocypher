@@ -49,8 +49,13 @@
 # with this software.  If not, see
 # <https://creativecommons.org/publicdomain/zero/1.0/>
 
-CC     ?= gcc -std=gnu99
-CFLAGS ?= -pedantic -Wall -Wextra -O3 -march=native
+CC       ?= gcc -std=gnu99
+CFLAGS   ?= -pedantic -Wall -Wextra -O3 -march=native
+ifeq ($(OS),Windows_NT)
+EXESUFFIX = .exe
+else
+EXESUFFIX =
+endif
 
 .PHONY: speed speed-sodium speed-hydrogen speed-tweetnacl speed-c25519 \
         speed-donna \
@@ -62,23 +67,23 @@ CFLAGS ?= -pedantic -Wall -Wextra -O3 -march=native
 ##################
 all: speed
 
-speed          : speed.out
+speed          : speed.out$(EXESUFFIX)
 	./$<
-speed-sodium   : speed-sodium.out
+speed-sodium   : speed-sodium.out$(EXESUFFIX)
 	./$<
-speed-hydrogen : speed-hydrogen.out
+speed-hydrogen : speed-hydrogen.out$(EXESUFFIX)
 	./$<
-speed-tweetnacl: speed-tweetnacl.out
+speed-tweetnacl: speed-tweetnacl.out$(EXESUFFIX)
 	./$<
-speed-c25519   : speed-c25519.out
+speed-c25519   : speed-c25519.out$(EXESUFFIX)
 	./$<
-speed-donna    : speed-donna.out
+speed-donna    : speed-donna.out$(EXESUFFIX)
 	./$<
-speed-tinyssh  : speed-tinyssh.out
+speed-tinyssh  : speed-tinyssh.out$(EXESUFFIX)
 	./$<
 
 clean:
-	rm -f *.o *.out
+	rm -f *.o *.out$(EXESUFFIX)
 
 ####################
 ## Base libraries ##
@@ -186,23 +191,23 @@ speed-donna.o     : speed-donna.c     speed.h ../utils.h $(DONNA_HEADERS)
 speed-tinyssh.o   : speed-tinyssh.c   speed.h ../utils.h $(TSSH_H)
 	$(CC) -c $(CFLAGS) $< -o $@ -I .. -I $(TSSH)
 
-speed.out: speed.o utils.o monocypher.o monocypher-ed25519.o
+speed.out$(EXESUFFIX): speed.o utils.o monocypher.o monocypher-ed25519.o
 	$(CC) $(CFLAGS) -o $@ $^
-speed-sodium.out: speed-sodium.o utils.o
+speed-sodium.out$(EXESUFFIX): speed-sodium.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^            \
 	    `pkg-config --cflags libsodium` \
 	    `pkg-config --libs   libsodium`
-speed-donna.out: speed-donna.o donna.o utils.o
+speed-donna.out$(EXESUFFIX): speed-donna.o donna.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^            \
 	    `pkg-config --cflags libsodium` \
 	    `pkg-config --libs   libsodium`
-speed-hydrogen.out: speed-hydrogen.o utils.o
+speed-hydrogen.out$(EXESUFFIX): speed-hydrogen.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^              \
 	    `pkg-config --cflags libhydrogen` \
 	    `pkg-config --libs   libhydrogen`
-speed-tweetnacl.out: speed-tweetnacl.o tweetnacl.o utils.o
+speed-tweetnacl.out$(EXESUFFIX): speed-tweetnacl.o tweetnacl.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^
-speed-c25519.out   : speed-c25519.o $(C25519_OBJECTS) utils.o
+speed-c25519.out$(EXESUFFIX)   : speed-c25519.o $(C25519_OBJECTS) utils.o
 	$(CC) $(CFLAGS) -o $@ $^
-speed-tinyssh.out : speed-tinyssh.o $(TSSH_O) utils.o
+speed-tinyssh.out$(EXESUFFIX) : speed-tinyssh.o $(TSSH_O) utils.o
 	$(CC) $(CFLAGS) -o $@ $^
