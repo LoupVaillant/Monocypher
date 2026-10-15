@@ -50,11 +50,14 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 25, 2023
+.Dd October 16, 2026
 .Dt CRYPTO_ARGON2 3MONOCYPHER
 .Os
 .Sh NAME
-.Nm crypto_argon2
+.Nm crypto_argon2 ,
+.Nm crypto_argon2_init ,
+.Nm crypto_argon2_segment ,
+.Nm crypto_argon2_final
 .Nd password-based key derivation
 .Sh SYNOPSIS
 .In monocypher.h
@@ -66,6 +69,27 @@
 .Fa "crypto_argon2_config config"
 .Fa "crypto_argon2_inputs inputs"
 .Fa "crypto_argon2_extras extras"
+.Fc
+.Ft void
+.Fo crypto_argon2_init
+.Fa "crypto_argon2_ctx *ctx"
+.Fa "uint32_t hash_size"
+.Fa "void *work_area"
+.Fa "crypto_argon2_config config"
+.Fa "crypto_argon2_inputs inputs"
+.Fa "crypto_argon2_extras extras"
+.Fc
+.Ft void
+.Fo crypto_argon2_segment
+.Fa "const crypto_argon2_ctx *ctx"
+.Fa "uint32_t pass"
+.Fa "uint32_t slice"
+.Fa "uint32_t lane"
+.Fc
+.Ft void
+.Fo crypto_argon2_final
+.Fa "const crypto_argon2_ctx *ctx"
+.Fa "uint8_t *hash"
 .Fc
 .Pp
 .Fa "extern const crypto_argon2_extras crypto_argon2_no_extras;"
@@ -79,9 +103,10 @@ key derivation (for encryption).
 Derived keys can be used to encrypt, for example, private keys or
 password databases.
 .Pp
-The version provided by Monocypher has no threading support, so the
-degree of parallelism is limited to 1.
-This is considered good enough for most purposes.
+.Fn crypto_argon2
+computes the hash in the calling thread.
+The parallel interface described below can compute lanes in separate
+threads instead.
 .Pp
 The arguments to
 .Fn crypto_argon2
@@ -174,19 +199,19 @@ A value of 3 is
 recommended when using Argon2i;
 any value lower than 3 enables significantly more efficient attacks.
 .It Fa nb_lanes
-The level of parallelism.
+The number of lanes, or level of parallelism.
 Must be at least 1.
-Since Monocypher does not support threads,
-this does not actually increase the number of threads.
-It is only provided for completeness to match the Argon2 specification.
-Otherwise, leaving it to 1 is strongly recommended.
-.Pp
-Users who want to take actual advantage of parallelism should instead
-call several instances of Argon2 in parallel.
-The
-.Fa extras
-parameter may be used to differentiate the inputs and produce
-independent digests that can be hashed together.
+With the parallel interface, each lane can be computed in its own
+thread.
+.Fn crypto_argon2
+computes them one after the other.
+.Fa nb_lanes
+is part of the hash:
+changing it changes the output,
+regardless of how many threads compute it.
+.Fa nb_blocks
+must be at least 8 ×
+.Fa nb_lanes .
 .El
 .Pp
 The
@@ -270,12 +295,6 @@ is zero.
 This is additional data that goes into the hash, similar to the
 authenticated encryption construction in
 .Xr crypto_aead_lock 3monocypher .
-Can be used to differentiate inputs when invoking several Argon2
-instances in parallel:
-each instance gets a different thread number as additional data,
-generating as many independent digests as we need.
-We can then hash those digests with
-.Xr crypto_blake2b 3monocypher .
 .It Fa ad_size
 Length of
 .Fa ad ,
@@ -317,9 +336,64 @@ Adjust
 first.
 If using all available memory is not slow enough, increase
 .Fa nb_passes .
-.Sh RETURN VALUES
+.Ss Parallel interface
+A parallel interface is provided.
+It splits the work of
 .Fn crypto_argon2
-returns nothing.
+into segments that can be computed in separate threads.
+Monocypher creates no threads:
+the caller decides which thread computes what.
+This interface uses three steps:
+.Bl -bullet
+.It
+Initialisation with
+.Fn crypto_argon2_init ,
+called once.
+It takes the same arguments as
+.Fn crypto_argon2 ,
+except for
+.Fa hash ,
+initialises the work area,
+and sets up a
+.Ft crypto_argon2_ctx .
+The
+.Fa inputs
+and
+.Fa extras
+are no longer needed once it returns.
+.It
+Computation with
+.Fn crypto_argon2_segment .
+For each pass from 0 to
+.Fa config.nb_passes
+\- 1, then for each slice from 0 to 3,
+call
+.Fn crypto_argon2_segment
+on every lane from 0 to
+.Fa config.nb_lanes
+\- 1.
+The lanes of a slice can be computed in any order, in any thread.
+All lanes must finish a slice before any lane starts the next one.
+The context is only read, and can be shared by all threads.
+.It
+Finalisation with
+.Fn crypto_argon2_final ,
+called once after the last slice of the last pass.
+It writes the hash and wipes the work area.
+.El
+.Pp
+Calling
+.Fn crypto_argon2
+is the same as calling
+.Fn crypto_argon2_init ,
+then
+.Fn crypto_argon2_segment
+on every pass, slice, and lane in order,
+then
+.Fn crypto_argon2_final .
+Both produce the same hash from the same parameters.
+.Sh RETURN VALUES
+These functions return nothing.
 .Sh EXAMPLES
 The following example assumes the existence of
 .Fn arc4random_buf ,
@@ -370,15 +444,62 @@ if (work_area == NULL) {
 
 
 .Ed
+.Pp
+This example hashes a password with 4 lanes,
+using the parallel interface.
+Each call to
+.Fn crypto_argon2_segment
+in the inner loop may run in its own thread:
+.Bd -literal -offset indent
+uint8_t              hash[32];               /* Output hash     */
+uint8_t              salt[16];               /* Random salt     */
+crypto_argon2_config config = {
+    .algorithm = CRYPTO_ARGON2_I,            /* Argon2i         */
+    .nb_blocks = 100000,                     /* 100 megabytes   */
+    .nb_passes = 3,                          /* 3 iterations    */
+    .nb_lanes  = 4                           /* 4 lanes         */
+};
+uint8_t password[] = "Okay Password!";
+crypto_argon2_inputs inputs = {
+    .pass      = password,                   /* User password */
+    .salt      = salt,                 /* Salt for the password */
+    .pass_size = sizeof(password) - 1,       /* Password length */
+    .salt_size = 16
+};
+crypto_argon2_ctx ctx;
+uint32_t pass, slice, lane;
+
+void *work_area = malloc((size_t)config.nb_blocks * 1024);
+if (work_area == NULL) {
+    /* Handle malloc() failure */
+    /* Wipe secrets if they are no longer needed */
+    crypto_wipe(password, sizeof(password));
+} else {
+    arc4random_buf(salt, 16);
+    crypto_argon2_init(&ctx, 32, work_area,
+                       config, inputs, crypto_argon2_no_extras);
+    /* Inputs are no longer needed after init: wipe secrets */
+    crypto_wipe(password, sizeof(password));
+    for (pass = 0; pass < config.nb_passes; pass++) {
+        for (slice = 0; slice < 4; slice++) {
+            /* Each lane may run in its own thread */
+            for (lane = 0; lane < config.nb_lanes; lane++) {
+                crypto_argon2_segment(&ctx, pass, slice, lane);
+            }
+            /* Sync point: wait for all lanes to finish */
+        }
+    }
+    crypto_argon2_final(&ctx, hash);  /* Also wipes work_area */
+    free(work_area);
+}
+.Ed
 .Sh SEE ALSO
 .Xr crypto_aead_lock 3monocypher ,
 .Xr crypto_verify16 3monocypher ,
 .Xr crypto_wipe 3monocypher ,
 .Xr intro 3monocypher
 .Sh STANDARDS
-.Fn crypto_argon2
-implements Argon2 as described in RFC 9106,
-but does not support actual parallelism.
+These functions implement Argon2 as described in RFC 9106.
 .Sh HISTORY
 In Monocypher 0.1,
 .Fn crypto_argon2i
@@ -391,6 +512,12 @@ function in Monocypher 1.1.0.
 Both were replaced by
 .Fn crypto_argon2
 in Monocypher 4.0.0.
+The
+.Fn crypto_argon2_init ,
+.Fn crypto_argon2_segment ,
+and
+.Fn crypto_argon2_final
+functions first appeared in Monocypher 4.1.0.
 .Sh CAVEATS
 Monocypher does not perform any input validation.
 Any deviation from the algorithm constants,
