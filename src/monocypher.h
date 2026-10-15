@@ -159,7 +159,7 @@ typedef struct {
 	uint32_t algorithm;  // Argon2d, Argon2i, Argon2id
 	uint32_t nb_blocks;  // memory hardness, >= 8 * nb_lanes
 	uint32_t nb_passes;  // CPU hardness, >= 1 (>= 3 recommended for Argon2i)
-	uint32_t nb_lanes;   // parallelism level (single threaded anyway)
+	uint32_t nb_lanes;   // parallelism level, >= 1
 } crypto_argon2_config;
 
 typedef struct {
