@@ -54,7 +54,7 @@
 set -e
 
 CC="clang -std=c99"
-CFLAGS="-pedantic -Wall -Wextra -g -O2"
+CFLAGS="-pedantic -Wall -Wextra -g -O2 -Werror=shadow"
 
 make clean;  make tis-ci
 make clean;  make test

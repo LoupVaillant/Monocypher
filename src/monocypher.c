@@ -758,19 +758,19 @@ void crypto_argon2_init(crypto_argon2_ctx *ctx, u32 hash_size, void *work_area,
 	blk *blocks = (blk*)work_area;
 	{
 		u8 initial_hash[72]; // 64 bytes plus 2 words for future hashes
-		crypto_blake2b_ctx ctx;
-		crypto_blake2b_init (&ctx, 64);
-		blake_update_32     (&ctx, config.nb_lanes ); // p: number of "threads"
-		blake_update_32     (&ctx, hash_size);
-		blake_update_32     (&ctx, config.nb_blocks);
-		blake_update_32     (&ctx, config.nb_passes);
-		blake_update_32     (&ctx, 0x13);             // v: version number
-		blake_update_32     (&ctx, config.algorithm); // y: Argon2i, Argon2d...
-		blake_update_32_buf (&ctx, inputs.pass, inputs.pass_size);
-		blake_update_32_buf (&ctx, inputs.salt, inputs.salt_size);
-		blake_update_32_buf (&ctx, extras.key,  extras.key_size);
-		blake_update_32_buf (&ctx, extras.ad,   extras.ad_size);
-		crypto_blake2b_final(&ctx, initial_hash); // Fill 64 first bytes only
+		crypto_blake2b_ctx hash_ctx;
+		crypto_blake2b_init (&hash_ctx, 64);
+		blake_update_32     (&hash_ctx, config.nb_lanes ); // p: number of "threads"
+		blake_update_32     (&hash_ctx, hash_size);
+		blake_update_32     (&hash_ctx, config.nb_blocks);
+		blake_update_32     (&hash_ctx, config.nb_passes);
+		blake_update_32     (&hash_ctx, 0x13);             // v: version number
+		blake_update_32     (&hash_ctx, config.algorithm); // y: Argon2i, Argon2d...
+		blake_update_32_buf (&hash_ctx, inputs.pass, inputs.pass_size);
+		blake_update_32_buf (&hash_ctx, inputs.salt, inputs.salt_size);
+		blake_update_32_buf (&hash_ctx, extras.key,  extras.key_size);
+		blake_update_32_buf (&hash_ctx, extras.ad,   extras.ad_size);
+		crypto_blake2b_final(&hash_ctx, initial_hash); // Fill 64 first bytes only
 
 		// Fill the first 2 blocks of each lane.
 		// Could be done in parallel, but it would complicate the API.
