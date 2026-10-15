@@ -638,6 +638,73 @@ static void argon2(vector_reader *reader)
 	free(work_area);
 }
 
+// Runs the parallel API as nb_lanes threads would.  Each segment is
+// computed on a private copy of the work area where every other
+// lane's current slice is garbage, and may change nothing outside
+// its own segment: a stray read changes the hash, a stray write
+// shows up in the copy.
+static void argon2_parallel(u32 algorithm, u32 nb_blocks, u32 nb_passes,
+                            u32 nb_lanes)
+{
+	RANDOM_INPUT(pass, 16);
+	RANDOM_INPUT(salt, 16);
+	RANDOM_INPUT(key , 32);
+	RANDOM_INPUT(ad  , 32);
+	crypto_argon2_config config = {
+		.algorithm = algorithm, .nb_blocks = nb_blocks,
+		.nb_passes = nb_passes, .nb_lanes  = nb_lanes,
+	};
+	crypto_argon2_inputs inputs = {
+		.pass = pass, .salt = salt,
+		.pass_size = sizeof(pass), .salt_size = sizeof(salt),
+	};
+	crypto_argon2_extras extras = {
+		.key = key, .ad = ad, .key_size = sizeof(key), .ad_size = sizeof(ad),
+	};
+	size_t size      = (size_t)nb_blocks * 1024;
+	size_t segment   = (size_t)(nb_blocks / nb_lanes / 4) * 1024;
+	u8    *work_area = (u8*)alloc(size);
+	u8    *view      = (u8*)alloc(size); // what one thread sees
+	u8    *before    = (u8*)alloc(size);
+	u8     hash1[32];
+	u8     hash2[32];
+
+	crypto_argon2(hash1, 32, work_area, config, inputs, extras);
+
+	crypto_argon2_ctx ctx;
+	crypto_argon2_init(&ctx, 32, work_area, config, inputs, extras);
+	crypto_argon2_ctx thread = ctx;
+	thread.work_area = view;
+	FOR (pass_nb, 0, nb_passes) {
+		FOR (slice, 0, 4) {
+			FOR (lane, 0, nb_lanes) {
+				memcpy(view, work_area, size);
+				FOR (other, 0, nb_lanes) {
+					if (other != lane) {
+						p_random(view + (other*4 + slice) * segment, segment);
+					}
+				}
+				memcpy(before, view, size);
+				crypto_argon2_segment(&thread, (u32)pass_nb, (u32)slice,
+				                      (u32)lane);
+				size_t start = (lane*4 + slice) * segment;
+				memcpy(work_area + start, view   + start, segment);
+				memcpy(view      + start, before + start, segment);
+				ASSERT_EQUAL(view, before, size);
+			}
+		}
+	}
+	crypto_argon2_final(&ctx, hash2);
+	ASSERT_EQUAL(hash1, hash2, 32);
+
+	// The context is only read: it can be shared by all threads
+	ASSERT(thread.work_area == view && thread.hash_size == 32);
+	ASSERT_EQUAL(&thread.config, &config, sizeof(config));
+	free(work_area);
+	free(view);
+	free(before);
+}
+
 static void test_argon2(void)
 {
 	VECTORS(argon2);
@@ -690,6 +757,13 @@ static void test_argon2(void)
 	}
 	free(work_area);
 	free(clean_work_area);
+
+	printf("\tArgon2 (parallel API)\n");
+	argon2_parallel(CRYPTO_ARGON2_D , 256, 3, 4);
+	argon2_parallel(CRYPTO_ARGON2_I , 256, 3, 4);
+	argon2_parallel(CRYPTO_ARGON2_ID, 256, 3, 4);
+	argon2_parallel(CRYPTO_ARGON2_ID,  64, 1, 1);
+	argon2_parallel(CRYPTO_ARGON2_ID, 512, 2, 8);
 }
 
 //////////////
