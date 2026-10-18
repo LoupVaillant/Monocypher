@@ -2062,15 +2062,15 @@ int crypto_eddsa_check_equation(const u8 signature[64], const u8 public_key[32],
 	// The multiplication by 8 eliminates any low-order component
 	// and ensures consistency with batched verification.
 	ge_cached cached;
-	u8 check[32];
-	static const u8 zero_point[32] = {1}; // Point of order 1
 	ge_cache(&cached, &minus_R);
 	ge_add(sum, sum, &cached);
 	ge_double(sum, sum, &minus_R); // reuse minus_R as temporary
 	ge_double(sum, sum, &minus_R); // reuse minus_R as temporary
 	ge_double(sum, sum, &minus_R); // reuse minus_R as temporary
-	ge_tobytes(check, sum);
-	return crypto_verify32(check, zero_point);
+	// The zero point is the only point with y == 1, that is Y == Z
+	// (Z is never zero: the Edwards addition law is complete).
+	// Checking this directly saves a field inversion.
+	return fe_isequal(sum->Y, sum->Z) - 1;
 }
 
 // 5-bit signed comb in cached format (Niels coordinates, Z=1)
