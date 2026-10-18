@@ -1595,8 +1595,8 @@ void crypto_x25519(u8       raw_shared_secret[32],
 	WIPE_BUFFER(e);
 }
 
-void crypto_x25519_public_key(u8       public_key[32],
-                              const u8 secret_key[32])
+void crypto_x25519_public_key_small(u8       public_key[32],
+                                    const u8 secret_key[32])
 {
 	static const u8 base_point[32] = {9};
 	crypto_x25519(public_key, secret_key, base_point);
@@ -2380,6 +2380,32 @@ int crypto_eddsa_check(const u8  signature[64], const u8 public_key[32],
 /////////////////////////
 /// EdDSA <--> X25519 ///
 /////////////////////////
+// Montgomery u coordinate: u = (1+y)/(1-y) = (Z+Y)/(Z-Y)
+static void ge_to_x25519(u8 x25519[32], const ge *p)
+{
+	fe t1, t2;
+	fe_add(t1, p->Z, p->Y);
+	fe_sub(t2, p->Z, p->Y);
+	fe_invert(t2, t2);
+	fe_mul(t1, t1, t2);
+	fe_tobytes(x25519, t1);
+	WIPE_BUFFER(t1);
+	WIPE_BUFFER(t2);
+}
+
+void crypto_x25519_public_key(u8       public_key[32],
+                              const u8 secret_key[32])
+{
+	// Scalar multiplication is about twice as fast in Edwards space.
+	u8 scalar[32];
+	ge pk;
+	crypto_eddsa_trim_scalar(scalar, secret_key);
+	ge_scalarmult_base(&pk, scalar);
+	ge_to_x25519(public_key, &pk);
+	WIPE_CTX(&pk);
+	WIPE_BUFFER(scalar);
+}
+
 void crypto_eddsa_to_x25519(u8 x25519[32], const u8 eddsa[32])
 {
 	// (u, v) = ((1+y)/(1-y), sqrt(-486664)*u/x)
@@ -2586,12 +2612,7 @@ void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
 	ge_madd(&pk, &pk, &low_order_point, t1, t2);
 
 	// Convert to Montgomery u coordinate (we ignore the sign)
-	fe_add(t1, pk.Z, pk.Y);
-	fe_sub(t2, pk.Z, pk.Y);
-	fe_invert(t2, t2);
-	fe_mul(t1, t1, t2);
-
-	fe_tobytes(public_key, t1);
+	ge_to_x25519(public_key, &pk);
 
 	WIPE_BUFFER(t1);    WIPE_CTX(&pk);
 	WIPE_BUFFER(t2);    WIPE_CTX(&low_order_point);

@@ -320,6 +320,10 @@ static int p_dirty(void)
 	u8 pkf [32];  crypto_x25519_dirty_fast (pkf , sk1);
 	u8 pkfc[32];  crypto_x25519_dirty_fast (pkfc, skc);
 	u8 pk1 [32];  crypto_x25519_public_key (pk1 , sk1);
+	u8 pk2 [32];  crypto_x25519_public_key_small(pk2, sk1);
+
+	// Both public key functions behave the same
+	status |= memcmp(pk1, pk2, 32);
 
 	// Both dirty functions behave the same
 	status |= memcmp(pks, pkf, 32);

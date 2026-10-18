@@ -53,12 +53,13 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd January 26, 2023
+.Dd October 19, 2026
 .Dt CRYPTO_X25519 3MONOCYPHER
 .Os
 .Sh NAME
 .Nm crypto_x25519 ,
 .Nm crypto_x25519_public_key ,
+.Nm crypto_x25519_public_key_small ,
 .Nm crypto_x25519_dirty_fast ,
 .Nm crypto_x25519_dirty_small ,
 .Nm crypto_x25519_inverse ,
@@ -74,6 +75,11 @@
 .Fc
 .Ft void
 .Fo crypto_x25519_public_key
+.Fa "uint8_t your_public_key[32]"
+.Fa "const uint8_t your_secret_key[32]"
+.Fc
+.Ft void
+.Fo crypto_x25519_public_key_small
 .Fa "uint8_t your_public_key[32]"
 .Fa "const uint8_t your_secret_key[32]"
 .Fc
@@ -106,7 +112,17 @@ and
 .Fa their_public_key .
 It is a low-level building block for protocols such as X3DH.
 .Fn crypto_x25519_public_key
-Generates a public key from a secret key.
+and
+.Fn crypto_x25519_public_key_small
+generate a public key from a secret key.
+Both yield the same result with different code size and speed:
+.Fn crypto_x25519_public_key
+uses functions that are normally used internally for
+.Xr crypto_eddsa_sign 3monocypher ,
+and accordingly uses more code
+(unless the signing code is already compiled in elsewhere).
+.Fn crypto_x25519_public_key_small
+uses less code and about twice as much time.
 The arguments are:
 .Bl -tag -width Ds
 .It Fa raw_shared_secret
@@ -166,9 +182,10 @@ and the public half with
 Or go the other way and implement XEdDSA with the help of
 .Fn crypto_x25519_to_eddsa .
 .Sh RETURN VALUES
-.Fn crypto_x25519
+.Fn crypto_x25519 ,
+.Fn crypto_x25519_public_key ,
 and
-.Fn crypto_x25519_public_key
+.Fn crypto_x25519_public_key_small
 return nothing.
 .Sh EXAMPLES
 The following example assumes the existence of
@@ -298,6 +315,9 @@ The
 and
 .Fn crypto_x25519_to_eddsa
 functions first appeared in Monocypher 3.1.0.
+The
+.Fn crypto_x25519_public_key_small
+function first appeared in Monocypher 4.1.0.
 .Sh CAVEATS
 Monocypher does not perform any input validation.
 Any deviation from the specified input and output length ranges results

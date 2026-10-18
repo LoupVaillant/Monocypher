@@ -231,6 +231,15 @@ static u64 x25519_inverse(void)
 	TIMING_END;
 }
 
+static u64 x25519_pk(void)
+{
+	RANDOM_INPUT(sk, 32);
+	TIMING_START {
+		crypto_x25519_public_key(sk, sk);
+	}
+	TIMING_END;
+}
+
 static u64 x25519_sp_fast(void)
 {
 	RANDOM_INPUT(sk, 32);
@@ -260,6 +269,7 @@ int main()
 	print("SHA-512 (small)     ",sha512_small()      ,"cycles     per second");
 	print("Argon2i, 3 passes   ",argon2i()      *MUL ,"megabytes  per second");
 	print("x25519              ",x25519()            ,"exchanges  per second");
+	print("x25519 public key   ",x25519_pk()         ,"keys       per second");
 	print("EdDSA(sign)         ",edDSA_sign()        ,"signatures per second");
 	print("EdDSA(check)        ",edDSA_check()       ,"checks     per second");
 	print("x25519 inverse      ",x25519_inverse()    ,"scalar inv per second");

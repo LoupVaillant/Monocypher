@@ -170,6 +170,7 @@ and
 .Xr crypto_x25519_dirty_small 3monocypher ,
 .Xr crypto_x25519_inverse 3monocypher ,
 .Xr crypto_x25519_public_key 3monocypher ,
+.Xr crypto_x25519_public_key_small 3monocypher ,
 .Xr crypto_x25519_to_eddsa 3monocypher
 .Ss Optional code
 .Xr crypto_ed25519_check 3monocypher ,

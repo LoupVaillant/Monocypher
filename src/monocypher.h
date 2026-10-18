@@ -208,6 +208,8 @@ void crypto_argon2_final(const crypto_argon2_ctx *ctx, uint8_t *hash);
 // Hash them to derive an actual shared key.
 void crypto_x25519_public_key(uint8_t       public_key[32],
                               const uint8_t secret_key[32]);
+void crypto_x25519_public_key_small(uint8_t       public_key[32],
+                                    const uint8_t secret_key[32]);
 void crypto_x25519(uint8_t       raw_shared_secret[32],
                    const uint8_t your_secret_key  [32],
                    const uint8_t their_public_key [32]);
