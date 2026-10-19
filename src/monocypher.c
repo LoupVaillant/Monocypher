@@ -2380,32 +2380,6 @@ int crypto_eddsa_check(const u8  signature[64], const u8 public_key[32],
 /////////////////////////
 /// EdDSA <--> X25519 ///
 /////////////////////////
-// Montgomery u coordinate: u = (1+y)/(1-y) = (Z+Y)/(Z-Y)
-static void ge_to_x25519(u8 x25519[32], const ge *p)
-{
-	fe t1, t2;
-	fe_add(t1, p->Z, p->Y);
-	fe_sub(t2, p->Z, p->Y);
-	fe_invert(t2, t2);
-	fe_mul(t1, t1, t2);
-	fe_tobytes(x25519, t1);
-	WIPE_BUFFER(t1);
-	WIPE_BUFFER(t2);
-}
-
-void crypto_x25519_public_key(u8       public_key[32],
-                              const u8 secret_key[32])
-{
-	// Scalar multiplication is about twice as fast in Edwards space.
-	u8 scalar[32];
-	ge pk;
-	crypto_eddsa_trim_scalar(scalar, secret_key);
-	ge_scalarmult_base(&pk, scalar);
-	ge_to_x25519(public_key, &pk);
-	WIPE_CTX(&pk);
-	WIPE_BUFFER(scalar);
-}
-
 void crypto_eddsa_to_x25519(u8 x25519[32], const u8 eddsa[32])
 {
 	// (u, v) = ((1+y)/(1-y), sqrt(-486664)*u/x)
@@ -2590,7 +2564,8 @@ static void select_lop(fe out, const fe x, const fe k, u8 cofactor)
 // then add a low order point.  The scalar multiplication is done in
 // Edwards space for more speed (*2 compared to the "small" version).
 // The cost is a bigger binary for programs that don't also sign messages.
-void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
+static void x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32],
+                              int add_lop)
 {
 	// Compute clean scalar multiplication
 	u8 scalar[32];
@@ -2600,23 +2575,41 @@ void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
 
 	// Compute low order point
 	fe t1, t2;
-	select_lop(t1, lop_x, sqrtm1, secret_key[0]);
-	select_lop(t2, lop_y, fe_one, secret_key[0] + 2);
 	ge_precomp low_order_point;
-	fe_add(low_order_point.Yp, t2, t1);
-	fe_sub(low_order_point.Ym, t2, t1);
-	fe_mul(low_order_point.T2, t2, t1);
-	fe_mul(low_order_point.T2, low_order_point.T2, D2);
+	if (add_lop) {
+		select_lop(t1, lop_x, sqrtm1, secret_key[0]);
+		select_lop(t2, lop_y, fe_one, secret_key[0] + 2);
+		fe_add(low_order_point.Yp, t2, t1);
+		fe_sub(low_order_point.Ym, t2, t1);
+		fe_mul(low_order_point.T2, t2, t1);
+		fe_mul(low_order_point.T2, low_order_point.T2, D2);
 
-	// Add low order point to the public key
-	ge_madd(&pk, &pk, &low_order_point, t1, t2);
+		// Add low order point to the public key
+		ge_madd(&pk, &pk, &low_order_point, t1, t2);
+	}
 
 	// Convert to Montgomery u coordinate (we ignore the sign)
-	ge_to_x25519(public_key, &pk);
+	// u = (1+y)/(1-y) = (Z+Y)/(Z-Y)
+	fe_add(t1, pk.Z, pk.Y);
+	fe_sub(t2, pk.Z, pk.Y);
+	fe_invert(t2, t2);
+	fe_mul(t1, t1, t2);
+	fe_tobytes(public_key, t1);
 
 	WIPE_BUFFER(t1);    WIPE_CTX(&pk);
 	WIPE_BUFFER(t2);    WIPE_CTX(&low_order_point);
 	WIPE_BUFFER(scalar);
+}
+
+void crypto_x25519_dirty_fast(u8 public_key[32], const u8 secret_key[32])
+{
+	x25519_dirty_fast(public_key, secret_key, 1);
+}
+
+void crypto_x25519_public_key(u8 public_key[32], const u8 secret_key[32])
+{
+	// Scalar multiplication is about twice as fast in Edwards space.
+	x25519_dirty_fast(public_key, secret_key, 0);
 }
 
 ///////////////////
