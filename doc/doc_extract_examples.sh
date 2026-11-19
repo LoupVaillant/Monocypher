@@ -13,6 +13,7 @@
 #
 # Copyright (c) 2019 Michael Savage
 # Copyright (c) 2020 Fabio Scotoni
+# Copyright (c) 2026 Loup vaillant
 # All rights reserved.
 #
 #
@@ -42,7 +43,7 @@
 #
 # ------------------------------------------------------------------------
 #
-# Written in 2019-2020 by Michael Savage and Fabio Scotoni
+# Written in 2019-2026 by Michael Savage, Fabio Scotoni, and Loup vaillant
 #
 # To the extent possible under law, the author(s) have dedicated all copyright
 # and related neighboring rights to this software to the public domain
@@ -54,6 +55,8 @@
 
 cat << END
 #include <assert.h>
+#include <errno.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,7 +73,12 @@ do
     if [ ! -h "$f" ]
     then
         echo "// $f"
-        cat "$f" | sed -n "/^\.Bd/,/^\.Ed/p" | sed "s/\.Bd.*/{/" | sed "s/\.Ed/}/"
+        cat "$f"                      |\
+            sed -n "/^\.Bd/,/^\.Ed/p" |\
+            sed "s/\.Bd.*/{/"         |\
+            sed "s/\.Ed/}/"           |\
+            sed "s/#include.*//"      |\
+            sed "s/static //"
     fi
 done
 
