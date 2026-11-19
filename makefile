@@ -60,7 +60,19 @@ LIBDIR       ?= $(PREFIX)/lib
 INCLUDEDIR   ?= $(PREFIX)/include
 PKGCONFIGDIR ?= $(LIBDIR)/pkgconfig
 MANDIR       ?= $(PREFIX)/share/man/man3
-SONAME        = libmonocypher.so.4
+
+UNAME := $(shell uname)
+SOVER := 4
+
+ifeq ($(UNAME),Darwin)
+	SOEXT = dylib
+	SONAME = libmonocypher.$(SOVER).$(SOEXT)
+	SOFLAGS = -dynamiclib -install_name $(SONAME)
+else
+	SOEXT = so
+	SONAME = libmonocypher.$(SOEXT).$(SOVER)
+	SOFLAGS = -shared -Wl,-soname,$(SONAME)
+endif
 
 .PHONY: all library static-library dynamic-library  \
         install install-lib install-pc install-doc  \
@@ -91,12 +103,24 @@ clean:
 #############
 install: install-lib install-pc install-doc
 
-install-lib: library
-	mkdir -p $(DESTDIR)$(INCLUDEDIR)
+install-static-lib:
 	mkdir -p $(DESTDIR)$(LIBDIR)
-	cp -P lib/libmonocypher.a lib/libmonocypher.so* $(DESTDIR)$(LIBDIR)
-	cp -P src/monocypher.h                          $(DESTDIR)$(INCLUDEDIR)
-	cp -P src/optional/monocypher-ed25519.h         $(DESTDIR)$(INCLUDEDIR)
+	cp -PR lib/libmonocypher.a $(DESTDIR)$(LIBDIR)
+
+install-so: library
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	cp -PR lib/libmonocypher.so* $(DESTDIR)$(LIBDIR)
+
+install-dylib: library
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	cp -PR lib/libmonocypher.*dylib $(DESTDIR)$(LIBDIR)
+
+install-header: library
+	mkdir -p $(DESTDIR)$(INCLUDEDIR)
+	cp -PR src/monocypher.h                  $(DESTDIR)$(INCLUDEDIR)
+	cp -PR src/optional/monocypher-ed25519.h $(DESTDIR)$(INCLUDEDIR)
+
+install-lib: library install-static-lib install-$(SOEXT) install-header
 
 install-pc: monocypher.pc
 	mkdir -p $(DESTDIR)$(PKGCONFIGDIR)
@@ -110,6 +134,7 @@ install-doc: doc/man3/intro.3monocypher
 uninstall:
 	rm -f $(DESTDIR)$(LIBDIR)/libmonocypher.a
 	rm -f $(DESTDIR)$(LIBDIR)/libmonocypher.so*
+	rm -f $(DESTDIR)$(LIBDIR)/libmonocypher.*dylib
 	rm -f $(DESTDIR)$(INCLUDEDIR)/monocypher.h
 	rm -f $(DESTDIR)$(INCLUDEDIR)/monocypher-ed25519.h
 	rm -f $(DESTDIR)$(PKGCONFIGDIR)/monocypher.pc
@@ -120,7 +145,7 @@ uninstall:
 ##################
 library: static-library dynamic-library
 static-library : lib/libmonocypher.a
-dynamic-library: lib/libmonocypher.so lib/$(SONAME)
+dynamic-library: lib/libmonocypher.$(SOEXT) lib/$(SONAME)
 
 MAIN_O=lib/monocypher.o lib/monocypher-ed25519.o
 MAIN_I=-I src -I src/optional
@@ -131,8 +156,11 @@ lib/libmonocypher.a: $(MAIN_O)
 lib/libmonocypher.so: lib/$(SONAME)
 	ln -sf `basename lib/$(SONAME)` $@
 
+lib/libmonocypher.dylib: lib/$(SONAME)
+	ln -sf `basename lib/$(SONAME)` $@
+
 lib/$(SONAME): $(MAIN_O)
-	$(CC) $(CFLAGS) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $(MAIN_O)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(SOFLAGS) -o $@ $(MAIN_O)
 
 lib/monocypher.o: src/monocypher.c src/monocypher.h
 	@mkdir -p $(@D)
