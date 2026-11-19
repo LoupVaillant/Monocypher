@@ -318,8 +318,8 @@ static void poly_blocks(crypto_poly1305_ctx *ctx, const u8 *in,
 	const u32 r3 = ctx->r[3];
 	const u32 rr0 = (r0 >> 2) * 5;  // lose 2 bits...
 	const u32 rr1 = (r1 >> 2) + r1; // rr1 == (r1 >> 2) * 5
-	const u32 rr2 = (r2 >> 2) + r2; // rr1 == (r2 >> 2) * 5
-	const u32 rr3 = (r3 >> 2) + r3; // rr1 == (r3 >> 2) * 5
+	const u32 rr2 = (r2 >> 2) + r2; // rr2 == (r2 >> 2) * 5
+	const u32 rr3 = (r3 >> 2) + r3; // rr3 == (r3 >> 2) * 5
 	const u32 rr4 = r0 & 3;         // ...recover 2 bits
 	u32 h0 = ctx->h[0];
 	u32 h1 = ctx->h[1];
