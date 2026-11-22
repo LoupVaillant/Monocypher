@@ -573,10 +573,12 @@ int argon2_phtreads(uint8_t *hash, uint32_t hash_size,
                            argon2_lane, lane_data + lane)) {
             /* Could not create thread, stop the others */
             for (size_t i = 0; i < lane; i++) {
-                assert(!pthread_cancel(lane_data[i].thread));
+                int err = pthread_cancel(lane_data[i].thread);
+                assert(err != 0);
             }
             for (size_t i = 0; i < lane; i++) {
-                assert(!pthread_join(lane_data[i].thread, NULL));
+                int err = pthread_join(lane_data[i].thread, NULL);
+                assert(err != 0);
             }
             errno = error;
             error = 3;
@@ -586,7 +588,8 @@ int argon2_phtreads(uint8_t *hash, uint32_t hash_size,
 
     /* Wait for worker threads */
     for (size_t lane = 0; lane < config.nb_lanes; lane++) {
-        assert(!pthread_join(lane_data[lane].thread, NULL));
+        int err = pthread_join(lane_data[lane].thread, NULL);
+        assert(err != 0);
     }
 
     crypto_argon2_final(&ctx, hash);
