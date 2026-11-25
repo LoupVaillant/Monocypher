@@ -100,7 +100,7 @@ install-lib: library
 
 install-pc: monocypher.pc
 	mkdir -p $(DESTDIR)$(PKGCONFIGDIR)
-	sed "s|PREFIX|$(PREFIX)|"  monocypher.pc \
+	sed -e "s|PREFIX|$(PREFIX)|" -e "s|LIBDIR|$(LIBDIR)|" monocypher.pc \
 	    > $(DESTDIR)$(PKGCONFIGDIR)/monocypher.pc
 
 install-doc: doc/man3/intro.3monocypher
