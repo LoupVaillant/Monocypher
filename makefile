@@ -64,6 +64,8 @@ SONAME        = libmonocypher.so.4
 
 .PHONY: all library static-library dynamic-library  \
         install install-lib install-pc install-doc  \
+        install-headers install-static-library      \
+        install-dynamic-library                     \
         check test tis-ci ctgrind                   \
         clean uninstall dist
 
@@ -91,12 +93,20 @@ clean:
 #############
 install: install-lib install-pc install-doc
 
-install-lib: library
-	mkdir -p $(DESTDIR)$(INCLUDEDIR)
+install-lib: install-static-library install-dynamic-library
+
+install-static-library: static-library install-headers
 	mkdir -p $(DESTDIR)$(LIBDIR)
-	cp -P lib/libmonocypher.a lib/libmonocypher.so* $(DESTDIR)$(LIBDIR)
-	cp -P src/monocypher.h                          $(DESTDIR)$(INCLUDEDIR)
-	cp -P src/optional/monocypher-ed25519.h         $(DESTDIR)$(INCLUDEDIR)
+	cp -P lib/libmonocypher.a $(DESTDIR)$(LIBDIR)
+
+install-dynamic-library: dynamic-library install-headers
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	cp -P lib/libmonocypher.so* $(DESTDIR)$(LIBDIR)
+
+install-headers:
+	mkdir -p $(DESTDIR)$(INCLUDEDIR)
+	cp -P src/monocypher.h                  $(DESTDIR)$(INCLUDEDIR)
+	cp -P src/optional/monocypher-ed25519.h $(DESTDIR)$(INCLUDEDIR)
 
 install-pc: monocypher.pc
 	mkdir -p $(DESTDIR)$(PKGCONFIGDIR)
